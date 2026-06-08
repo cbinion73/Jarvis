@@ -21836,12 +21836,12 @@ body::after {{
               <div class="legacy-home-grid">
                 <div class="legacy-card legacy-hero-card">
                   <div class="legacy-hero-visual">
-                    <div class="legacy-hero-overline">Good evening, Chris.</div>
+                    <div class="legacy-hero-overline" id="legacy-hero-overline">Good evening, Chris.</div>
                     <div>
-                      <div class="legacy-hero-title">Your story is still unfolding.</div>
-                      <div class="legacy-hero-copy">Capture the moments that shaped today, then connect them to the people, places, and reflections that matter over time.</div>
+                      <div class="legacy-hero-title" id="legacy-hero-title">Your story is still unfolding.</div>
+                      <div class="legacy-hero-copy" id="legacy-hero-copy">Capture the moments that shaped today, then connect them to the people, places, and reflections that matter over time.</div>
                     </div>
-                    <div class="legacy-hero-button">Begin Reflection</div>
+                    <button class="legacy-hero-button" id="legacy-hero-button" type="button">Begin Reflection</button>
                   </div>
                 </div>
                 <div class="legacy-home-side">
@@ -21849,7 +21849,7 @@ body::after {{
                     <div class="legacy-card-heading">
                       <div class="legacy-card-label">Life Themes<strong>What keeps resurfacing</strong></div>
                     </div>
-                    <div class="legacy-pill-row">
+                    <div class="legacy-pill-row" id="legacy-theme-pills">
                       <span class="legacy-pill">Family</span>
                       <span class="legacy-pill">Faith</span>
                       <span class="legacy-pill">Adventure</span>
@@ -21861,7 +21861,8 @@ body::after {{
                     <div class="legacy-card-heading">
                       <div class="legacy-card-label">Prompt Lane<strong>Moments worth preserving</strong></div>
                     </div>
-                    <p>You have open memory lanes around family trips, formative conversations, and the nights that brought clarity back into focus.</p>
+                    <p id="legacy-prompt-lane">You have open memory lanes around family trips, formative conversations, and the nights that brought clarity back into focus.</p>
+                    <p id="legacy-runtime-note" style="margin-top:12px;font-size:11px;color:var(--legacy-copy-faint);"></p>
                   </div>
                 </div>
               </div>
@@ -21912,7 +21913,7 @@ body::after {{
                     <div class="legacy-card-heading">
                       <div class="legacy-card-label">What JARVIS Does<strong>Intake synthesis</strong></div>
                     </div>
-                    <p>The note is sorted into people, themes, places, and follow-up prompts so it can become part of a longer story instead of a disconnected entry.</p>
+                    <p id="legacy-capture-copy">The note is sorted into people, themes, places, and follow-up prompts so it can become part of a longer story instead of a disconnected entry.</p>
                   </div>
                 </div>
               </div>
@@ -21937,7 +21938,7 @@ body::after {{
                   <div class="legacy-card-heading">
                     <div class="legacy-card-label">Context<strong>What the thread means</strong></div>
                   </div>
-                  <div class="legacy-points">
+                  <div class="legacy-points" id="legacy-thread-points">
                     <div class="legacy-point"><strong>Story Themes</strong><span>Adventure, family bond, nature, gratitude, and the moments that slow life down enough to be felt.</span></div>
                     <div class="legacy-point"><strong>People in This Story</strong><span>Mom, Dad, Emma, Alex, and the family conversations that keep resurfacing.</span></div>
                     <div class="legacy-point"><strong>Story Summary</strong><span>Legacy is treating these entries as one connected chapter rather than several isolated notes.</span></div>
@@ -21956,7 +21957,7 @@ body::after {{
                     <div class="skel" style="height:24px;width:60px;border-radius:99px;"></div>
                     <div class="skel" style="height:24px;width:80px;border-radius:99px;"></div>
                   </div>
-                  <div class="legacy-points" style="margin-top:14px;">
+                  <div class="legacy-points" id="legacy-archive-points" style="margin-top:14px;">
                     <div class="legacy-point"><strong>Missing origin stories</strong><span>Which milestones still need to be told by the people who lived them?</span></div>
                     <div class="legacy-point"><strong>Timeline gaps</strong><span>Where do place, date, and relationship threads still need evidence before they become part of the record?</span></div>
                     <div class="legacy-point"><strong>Faith continuity</strong><span>Which reflections from the Chronicle faith app should bridge into this wider family archive?</span></div>
@@ -21979,7 +21980,7 @@ body::after {{
                   <div class="legacy-card-heading">
                     <div class="legacy-card-label">Narrative Synthesis<strong>A chapter emerges</strong></div>
                   </div>
-                  <div class="legacy-points">
+                  <div class="legacy-points" id="legacy-synthesis-points">
                     <div class="legacy-point"><strong>Suggested Title</strong><span>A Place That Shaped Us</span></div>
                     <div class="legacy-point"><strong>This Chapter</strong><span>The mountain, the conversation, the quiet ride home, and the moment everything slowed down enough to be felt.</span></div>
                     <div class="legacy-point"><strong>Why It Matters</strong><span>Legacy is turning repeated moments into chapter candidates so meaning accumulates over time rather than disappearing into fragments.</span></div>
@@ -22003,7 +22004,7 @@ body::after {{
                   <div class="legacy-card-heading">
                     <div class="legacy-card-label">Voice Consultation<strong>Legacy Voice</strong></div>
                   </div>
-                  <div class="legacy-voice-thread">
+                  <div class="legacy-voice-thread" id="legacy-voice-thread">
                     <div class="legacy-bubble user">Tell me about the moments this family will still care about in ten years.</div>
                     <div class="legacy-bubble agent">I’m seeing a thread around shared trips, gratitude after hard seasons, and the conversations that made ordinary days feel formative. I can build a reflection, a story chapter, or a family archive entry from those signals.</div>
                     <div class="legacy-voice-footer">
@@ -33545,11 +33546,74 @@ async function chrQuickCapture() {{
 /* ═══ SPIRITUAL CONTEXT (Phase 4) ═══════════════════════════════════════ */
 
 let _chronicleContext = null;
+let _legacyModuleState = null;
+let _legacyRecentState = null;
+let _legacyPatternState = null;
+
+function legacySetText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function legacySetHtml(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = value;
+}}
+
+function legacySnippet(text, limit = 180) {{
+  const value = String(text || '').replace(/\\s+/g, ' ').trim();
+  if (!value) return '';
+  return value.length > limit ? value.slice(0, limit - 1).trimEnd() + '…' : value;
+}}
+
+function legacyTitleCase(text) {{
+  return String(text || '')
+    .split(/\\s+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}}
+
+function legacyDateLabel(value) {{
+  if (!value) return '';
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return String(value);
+  return dt.toLocaleDateString(undefined, {{ month: 'short', day: 'numeric', year: 'numeric' }});
+}}
+
+function legacyRuntimeNote(message) {{
+  legacySetText('legacy-runtime-note', message || '');
+}}
+
+function legacyModuleFallbackRecent(module) {{
+  const timeline = Array.isArray(module?.timeline) ? module.timeline : [];
+  const entries = timeline.map(item => ({{
+    id: item.entry_id || item.timestamp || '',
+    entry_id: item.entry_id || item.timestamp || '',
+    date: String(item.timestamp || '').slice(0, 10),
+    type: 'reflection',
+    title: legacyTitleCase(item.theme || 'Legacy reflection'),
+    body: item.reflection || item.note || '',
+    passage: '',
+    themes: item.theme ? [item.theme] : [],
+  }}));
+  return {{
+    ok: true,
+    entries,
+    total: entries.length,
+    tags: (module?.theme_summary?.themes || []).map(item => item.theme).filter(Boolean),
+    prayer_items: [],
+    active_prayers: module?.morning_context?.prayer_count || 0,
+    answered_prayers: (module?.morning_context?.answered_recently || []).filter(Boolean).length,
+    formation_rhythms: [],
+    owned_books: [],
+  }};
+}}
 
 async function loadChronicleContext() {{
   try {{
-    const data = await fetch('/api/chronicle/context').then(r => r.json());
-    if (!data.ok) return;
+    const data = await _fetchJsonSafe('/api/chronicle/context');
+    if (!data?.ok) return;
     _chronicleContext = data;
     injectSpiritualContext(data);
   }} catch(e) {{
@@ -33602,8 +33666,9 @@ function injectSpiritualContext(ctx) {{
 
 async function loadPatterns() {{
   try {{
-    const data = await fetch('/api/chronicle/patterns').then(r => r.json());
-    if (!data.ok) return;
+    const data = await _fetchJsonSafe('/api/chronicle/patterns');
+    if (!data?.ok) return;
+    _legacyPatternState = data;
     renderPatterns(data);
   }} catch(e) {{ console.warn('loadPatterns', e); }}
 }}
@@ -33715,14 +33780,177 @@ function advanceLegacyPage(delta) {{
 
 async function loadChronicle() {{
   try {{
-    const res = await fetch('/api/chronicle/recent');
-    if (!res.ok) {{ console.warn('loadChronicle', res.status); return; }}
-    const data = await res.json();
+    legacyRuntimeNote('Loading Legacy…');
+    const [recent, context, patterns, module] = await Promise.all([
+      _fetchJsonSafe('/api/chronicle/recent'),
+      _fetchJsonSafe('/api/chronicle/context'),
+      _fetchJsonSafe('/api/chronicle/patterns'),
+      _fetchJsonSafe('/api/chronicle/module'),
+    ]);
+    const data = recent || legacyModuleFallbackRecent(module || {{}});
+    _legacyRecentState = data;
+    _legacyModuleState = module || {{}};
+    _chronicleContext = context?.ok ? context : null;
+    _legacyPatternState = patterns?.ok ? patterns : null;
     renderChronicle(data);
-    loadChronicleContext();
-    loadPatterns();
+    if (_chronicleContext) injectSpiritualContext(_chronicleContext);
+    if (_legacyPatternState) renderPatterns(_legacyPatternState);
+    renderLegacyDesktop(_legacyModuleState, _legacyRecentState, _chronicleContext, _legacyPatternState);
     syncLegacyStoryboard();
-  }} catch(e) {{ console.error('loadChronicle failed', e); }}
+  }} catch(e) {{
+    console.error('loadChronicle failed', e);
+    legacyRuntimeNote(`Legacy unavailable: ${{String(e)}}`);
+  }}
+}}
+
+function renderLegacyDesktop(module, recent, context, patterns) {{
+  const payload = module || {{}};
+  const dashboard = recent || {{}};
+  const entries = Array.isArray(dashboard.entries) ? dashboard.entries : [];
+  const topThemes = (payload?.theme_summary?.themes || []).map(item => item.theme).filter(Boolean);
+  const fallbackThemes = Array.isArray(dashboard.tags) ? dashboard.tags : [];
+  const themes = (topThemes.length ? topThemes : fallbackThemes).slice(0, 5);
+  const primaryEntry = entries[0] || null;
+  const workflow = payload.workflow_status || {{}};
+  const morning = payload.morning_context || {{}};
+  const scripture = morning.scripture_of_day || {{}};
+  const reflections = entries.map(entry => entry.body || '').filter(Boolean);
+  const actorNames = [...new Set(
+    (payload.timeline || []).map(item => item.actor).filter(Boolean).concat(
+      (entries || []).map(item => item.actor || item.actor_id).filter(Boolean)
+    )
+  )];
+  const pendingCount = Number(payload.pending_entry_count || workflow.pending_entries || 0);
+  const reviewCount = Number(payload.counts?.review_count || 0);
+  const activePrayerCount = Number(dashboard.active_prayers || morning.prayer_count || 0);
+  const answeredPrayerCount = Number(dashboard.answered_prayers || (morning.answered_recently || []).filter(Boolean).length || 0);
+  const rhythmCount = Array.isArray(dashboard.formation_rhythms) ? dashboard.formation_rhythms.length : 0;
+
+  legacySetText('legacy-hero-overline', `${{dailyBriefSalute()}}, ${{dailyBriefName()}}.`);
+  legacySetText('legacy-hero-title', scripture.ref ? `Today's anchor: ${{scripture.ref}}` : (primaryEntry?.title || 'Your story is still unfolding.'));
+  legacySetText(
+    'legacy-hero-copy',
+    scripture.text
+      ? legacySnippet(`${{scripture.text}} ${{morning.reflection_prompt || payload.summary || ''}}`, 240)
+      : legacySnippet(payload.summary || primaryEntry?.body || 'Capture the moments that shaped today, then connect them to the people, places, and reflections that matter over time.', 240)
+  );
+  const heroButton = document.getElementById('legacy-hero-button');
+  if (heroButton) {{
+    heroButton.textContent = scripture.ref ? 'Open Study' : 'Review Timeline';
+    heroButton.onclick = scripture.ref
+      ? () => openBibleStudyModal(scripture.ref)
+      : () => {{ legacyStoryboardPage = 3; syncLegacyStoryboard(); }};
+  }}
+
+  legacySetHtml(
+    'legacy-theme-pills',
+    themes.length
+      ? themes.map(theme => `<span class="legacy-pill">${{escHtml(legacyTitleCase(theme))}}</span>`).join('')
+      : '<span class="legacy-pill">No themes surfaced yet</span>'
+  );
+  legacySetText(
+    'legacy-prompt-lane',
+    legacySnippet(
+      workflow.recent_entry_titles?.[0]
+        ? `Pending lane: "${{workflow.recent_entry_titles[0]}}" is still waiting to be surfaced into the living record.`
+        : morning.reflection_prompt || payload.remains_partial || payload.what_became_real || 'Legacy will keep showing the next memory lane worth preserving as the signal becomes available.',
+      220
+    )
+  );
+
+  const availability = [];
+  if (payload.summary) availability.push(payload.summary);
+  if (payload.remains_partial) availability.push(payload.remains_partial);
+  if (Array.isArray(payload.errors) && payload.errors.length) availability.push(`Partial sources: ${{payload.errors.join(' · ')}}`);
+  legacyRuntimeNote(availability.join(' • ') || 'Legacy is live and connected.');
+
+  legacySetText(
+    'legacy-capture-copy',
+    pendingCount
+      ? `Chronicle currently has ${{pendingCount}} pending entr${{pendingCount === 1 ? 'y' : 'ies'}} waiting for review or handoff. New captures join that same queue immediately without losing their themes, scripture, or context.`
+      : 'New captures are written into the Chronicle bridge queue immediately so they can be reviewed, surfaced, or handed off without becoming disconnected notes.'
+  );
+
+  const threadPoints = [
+    {{
+      label: 'Story Themes',
+      copy: themes.length
+        ? `${{themes.slice(0, 4).map(legacyTitleCase).join(', ')}} keep resurfacing across the current thread.`
+        : 'No recurring theme has surfaced strongly enough yet to dominate the thread.'
+    }},
+    {{
+      label: 'People in This Story',
+      copy: actorNames.length
+        ? `${{actorNames.join(', ')}} are the names currently attached to the live story thread.`
+        : 'No named people were attached to the visible thread yet.'
+    }},
+    {{
+      label: 'Story Summary',
+      copy: payload.what_became_real || payload.summary || 'Legacy is treating these entries as one connected chapter rather than several isolated notes.'
+    }},
+  ];
+  legacySetHtml('legacy-thread-points', threadPoints.map(point => `<div class="legacy-point"><strong>${{escHtml(point.label)}}</strong><span>${{escHtml(point.copy)}}</span></div>`).join(''));
+
+  const archivePoints = [
+    {{
+      label: 'Missing origin stories',
+      copy: pendingCount
+        ? `${{pendingCount}} pending entr${{pendingCount === 1 ? 'y still needs' : 'ies still need'}} to be reviewed before the wider family archive can absorb them.`
+        : 'The family archive is caught up enough that new origin stories can be added from fresh captures instead of backlog.'
+    }},
+    {{
+      label: 'Timeline gaps',
+      copy: entries.length
+        ? `The visible archive only has ${{entries.length}} connected entr${{entries.length === 1 ? 'y' : 'ies'}} in this runtime, so date and place continuity still need more evidence.`
+        : 'No connected entries are visible yet, so Legacy is honestly holding the archive open instead of fabricating continuity.'
+    }},
+    {{
+      label: 'Faith continuity',
+      copy: payload.bridge_status === 'loaded'
+        ? `Chronicle faith context is bridged in. ${{activePrayerCount}} active prayer signal${{activePrayerCount === 1 ? '' : 's'}} and ${{answeredPrayerCount}} answered lane${{answeredPrayerCount === 1 ? '' : 's'}} are available for continuity.`
+        : payload.bridge_note || 'Chronicle faith continuity has not hydrated in this runtime yet.'
+    }},
+  ];
+  legacySetHtml('legacy-archive-points', archivePoints.map(point => `<div class="legacy-point"><strong>${{escHtml(point.label)}}</strong><span>${{escHtml(point.copy)}}</span></div>`).join(''));
+
+  const leadTheme = themes[0] || (primaryEntry?.themes || [])[0] || 'Legacy';
+  const leadReflection = primaryEntry?.body || reflections[0] || payload.summary || '';
+  const synthesisPoints = [
+    {{
+      label: 'Suggested Title',
+      copy: leadTheme ? legacyTitleCase(leadTheme) : 'A chapter is still emerging'
+    }},
+    {{
+      label: 'This Chapter',
+      copy: legacySnippet(leadReflection || 'Legacy is still waiting on enough surfaced entries to draft a coherent chapter summary.', 180)
+    }},
+    {{
+      label: 'Why It Matters',
+      copy: payload.what_became_real || payload.remains_partial || `Legacy is using ${{entries.length}} surfaced entr${{entries.length === 1 ? 'y' : 'ies'}} and ${{pendingCount}} pending memory lanes to keep meaning from disappearing into fragments.`
+    }},
+  ];
+  legacySetHtml('legacy-synthesis-points', synthesisPoints.map(point => `<div class="legacy-point"><strong>${{escHtml(point.label)}}</strong><span>${{escHtml(point.copy)}}</span></div>`).join(''));
+
+  const voicePrompt = primaryEntry?.title
+    ? `Tell me about "${{primaryEntry.title}}" and why it still matters.`
+    : 'Tell me about the moments this family will still care about in ten years.';
+  const voiceReply = leadTheme
+    ? `I’m seeing a thread around ${{legacyTitleCase(leadTheme)}}.${{pendingCount ? ` There are also ${{pendingCount}} pending Chronicle entr${{pendingCount === 1 ? 'y' : 'ies'}} waiting for review.` : ''}} ${{legacySnippet(payload.summary || leadReflection || 'I can build a reflection, a story chapter, or a family archive entry from those signals.', 220)}}`
+    : 'Legacy is waiting for enough connected memory to speak confidently. Capture a few more real moments and the chapter thread will become clearer.';
+  legacySetHtml(
+    'legacy-voice-thread',
+    `<div class="legacy-bubble user">${{escHtml(voicePrompt)}}</div>
+     <div class="legacy-bubble agent">${{escHtml(voiceReply)}}</div>
+     <div class="legacy-voice-footer">
+       <div class="legacy-wave"></div>
+       <div class="legacy-voice-chip">${{payload.available === false ? 'Partial' : 'Listening'}}</div>
+     </div>`
+  );
+
+  legacySetText('chronicle-total', dashboard.total ?? entries.length ?? '—');
+  legacySetText('chr-active-prayers', activePrayerCount || '—');
+  legacySetText('chr-answered-prayers', answeredPrayerCount || '—');
+  legacySetText('chr-rhythms-count', rhythmCount || reviewCount || '—');
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -38711,6 +38939,17 @@ function openEntryModal(entry) {{
   document.body.insertAdjacentHTML('beforeend', html);
 }}
 
+function openChronicleEntryCard(el) {{
+  try {{
+    const payload = el?.dataset?.entry;
+    if (!payload) return;
+    openEntryModal(JSON.parse(decodeURIComponent(payload)));
+  }} catch(e) {{
+    console.warn('openChronicleEntryCard', e);
+    showToast('Could not open entry details', 'warning');
+  }}
+}}
+
 // ── Prayer Item Modal ──────────────────────────────────────────
 function openPrayerModal(prayer) {{
   const catLabels = {{people:'People',needs:'Needs',praise:'Praise',world:'World'}};
@@ -38757,6 +38996,17 @@ function openPrayerModal(prayer) {{
       </div>
     </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+}}
+
+function openChroniclePrayerCard(el) {{
+  try {{
+    const payload = el?.dataset?.prayer;
+    if (!payload) return;
+    openPrayerModal(JSON.parse(decodeURIComponent(payload)));
+  }} catch(e) {{
+    console.warn('openChroniclePrayerCard', e);
+    showToast('Could not open prayer details', 'warning');
+  }}
 }}
 
 // ── Bible Study Modal — Faith Council ─────────────────────────
@@ -39065,7 +39315,8 @@ function renderChronicle(data) {{
         const typeLbl   = TYPE_LABELS[e.type] || e.type || 'Note';
         const themes    = (e.themes || []).map(t => `<span class="chr-theme-tag">${{escHtml(t)}}</span>`).join('');
         const passage   = e.passage ? `<span class="chr-passage">${{escHtml(e.passage)}}</span>` : '';
-        return `<div class="chr-entry-card ${{typeClass}}" onclick="openEntryModal(${{JSON.stringify(e).replace(/\'/g,'&apos;')}})" style="cursor:pointer;">
+        const encodedEntry = encodeURIComponent(JSON.stringify(e));
+        return `<div class="chr-entry-card ${{typeClass}}" data-entry="${{encodedEntry}}" onclick="openChronicleEntryCard(this)" style="cursor:pointer;">
           <div class="chr-entry-type-bar"></div>
           <div class="chr-entry-header">
             <span class="chr-entry-type-pill">${{escHtml(typeLbl)}}</span>
@@ -39091,7 +39342,8 @@ function renderChronicle(data) {{
         const catClass = 'chr-cat-' + (p.category || 'needs');
         const answered = p.answered ? 'chr-prayer-answered' : '';
         const count    = p.timesPrayed ? `${{p.timesPrayed}}×` : '';
-        return `<div class="chr-prayer-item" onclick="openPrayerModal(${{JSON.stringify(p).replace(/\'/g,'&apos;')}})" style="cursor:pointer;">
+        const encodedPrayer = encodeURIComponent(JSON.stringify(p));
+        return `<div class="chr-prayer-item" data-prayer="${{encodedPrayer}}" onclick="openChroniclePrayerCard(this)" style="cursor:pointer;">
           <span class="chr-prayer-cat ${{catClass}}">${{escHtml(p.category || '—')}}</span>
           <span class="chr-prayer-text ${{answered}}">${{escHtml(p.text || '—')}}</span>
           ${{count ? `<span class="chr-prayer-count">${{escHtml(count)}}</span>` : ''}}
@@ -39224,6 +39476,10 @@ function updateActiveCounts() {{
 async function searchChronicle(query) {{
   const input = document.getElementById('chronicle-search');
   if (input && query && input.value !== query) input.value = query;
+  if (!String(query || '').trim()) {{
+    loadChronicle();
+    return;
+  }}
   try {{
     const q = encodeURIComponent(query || '');
     const res = await fetch('/api/chronicle/search?q=' + q);

@@ -2068,6 +2068,74 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertGreaterEqual(chronicle_snapshot["counts"]["review_count"], 1)
         self.assertTrue(any(item.get("related_kind") == "chronicle-review" for item in recent_activity))
 
+    def test_legacy_chronicle_routes_expose_recent_context_patterns_and_capture(self) -> None:
+        from jarvis.chronicle_bridge import init_chronicle_bridge
+
+        init_chronicle_bridge()
+
+        capture_response = self._json_body(
+            asyncio.run(
+                self._route("/api/chronicle/quick-capture", "POST")(
+                    {
+                        "type": "gratitude",
+                        "content": "Thank God for a calm evening after a loud day.",
+                        "passage": "Psalm 46:10",
+                    }
+                )
+            )
+        )
+        write_response = self._json_body(
+            asyncio.run(
+                self._route("/api/chronicle/write-entry", "POST")(
+                    {
+                        "entry": {
+                            "type": "study",
+                            "title": "Bible Study — Psalm 23",
+                            "body": "The Lord is my shepherd. I want to remember the quiet trust here.",
+                            "passage": "Psalm 23",
+                            "themes": ["study", "trust"],
+                        }
+                    }
+                )
+            )
+        )
+        recent_payload = self._json_body(asyncio.run(self._route("/api/chronicle/recent", "GET")()))
+        context_payload = self._json_body(asyncio.run(self._route("/api/chronicle/context", "GET")()))
+        patterns_payload = self._json_body(asyncio.run(self._route("/api/chronicle/patterns", "GET")()))
+        search_payload = self._json_body(
+            asyncio.run(self._route("/api/chronicle/search", "GET")(q="shepherd"))
+        )
+        prayer_response = self._json_body(
+            asyncio.run(
+                self._route("/api/chronicle/update-prayer", "POST")(
+                    {
+                        "id": "legacy-prayer-1",
+                        "timesPrayed": 3,
+                        "lastPrayedAt": "2026-06-08",
+                        "answered": True,
+                        "dateAnswered": "2026-06-08",
+                        "answerSummary": "Marked answered from Legacy.",
+                    }
+                )
+            )
+        )
+
+        self.assertTrue(capture_response["ok"])
+        self.assertTrue(write_response["ok"])
+        self.assertTrue(recent_payload["ok"])
+        self.assertIn("entries", recent_payload)
+        self.assertGreaterEqual(recent_payload["total"], 2)
+        self.assertTrue(any("Psalm 23" in str(item.get("title")) for item in recent_payload["entries"]))
+        self.assertTrue(context_payload["ok"])
+        self.assertIn("top_themes", context_payload)
+        self.assertTrue(patterns_payload["ok"])
+        self.assertIn("entry_type_breakdown", patterns_payload)
+        self.assertTrue(search_payload["ok"])
+        self.assertTrue(any("Psalm 23" in str(item.get("title")) for item in search_payload["entries"]))
+        self.assertTrue(prayer_response["ok"])
+        self.assertEqual(prayer_response["prayer"]["timesPrayed"], 3)
+        self.assertTrue(prayer_response["prayer"]["answered"])
+
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {
             "ok": True,

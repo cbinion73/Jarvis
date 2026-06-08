@@ -80,6 +80,32 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/activity/operator-action", html)
         self.assertIn("Needs You is live and connected.", html)
 
+    def test_render_glass_shell_wires_legacy_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="legacy-hero-overline"', html)
+        self.assertIn('id="legacy-hero-title"', html)
+        self.assertIn('id="legacy-hero-copy"', html)
+        self.assertIn('id="legacy-hero-button"', html)
+        self.assertIn('id="legacy-runtime-note"', html)
+        self.assertIn('id="legacy-thread-points"', html)
+        self.assertIn('id="legacy-archive-points"', html)
+        self.assertIn('id="legacy-synthesis-points"', html)
+        self.assertIn('id="legacy-voice-thread"', html)
+        self.assertIn("function renderLegacyDesktop(", html)
+        self.assertIn("legacyRuntimeNote(", html)
+        self.assertIn("function openChronicleEntryCard(", html)
+        self.assertIn("function openChroniclePrayerCard(", html)
+        self.assertIn("data-entry=", html)
+        self.assertIn("data-prayer=", html)
+        self.assertIn("/api/chronicle/module", html)
+        self.assertIn("/api/chronicle/recent", html)
+        self.assertIn("/api/chronicle/context", html)
+        self.assertIn("/api/chronicle/patterns", html)
+        self.assertIn("/api/chronicle/quick-capture", html)
+        self.assertIn("/api/chronicle/write-entry", html)
+        self.assertIn("/api/chronicle/update-prayer", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

@@ -8331,6 +8331,471 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["remains_partial"] = "Some Chronicle sources still failed to hydrate; inspect the payload preview for details."
         return payload
 
+    def _chronicle_prayer_updates_path() -> Path:
+        root = Path("data") / "logs"
+        root.mkdir(parents=True, exist_ok=True)
+        return root / "chronicle_prayer_updates.json"
+
+    def _load_chronicle_prayer_updates() -> dict[str, dict[str, Any]]:
+        path = _chronicle_prayer_updates_path()
+        if not path.exists():
+            return {}
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        if not isinstance(raw, dict):
+            return {}
+        return {str(key): value for key, value in raw.items() if isinstance(value, dict)}
+
+    def _write_chronicle_prayer_updates(payload: dict[str, dict[str, Any]]) -> None:
+        path = _chronicle_prayer_updates_path()
+        path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def _apply_chronicle_prayer_updates(prayer_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        updates = _load_chronicle_prayer_updates()
+        patched: list[dict[str, Any]] = []
+        for item in prayer_items:
+            merged = dict(item)
+            update = updates.get(str(item.get("id") or ""))
+            if update:
+                merged.update(update)
+            patched.append(merged)
+        return patched
+
+    def _legacy_entry_from_bridge(entry: Any) -> dict[str, Any]:
+        if hasattr(entry, "to_dict"):
+            data = dict(entry.to_dict())
+        elif isinstance(entry, dict):
+            data = dict(entry)
+        else:
+            data = {}
+        created_at = str(data.get("created_at") or "")
+        return {
+            "id": str(data.get("entry_id") or data.get("id") or created_at or ""),
+            "entry_id": str(data.get("entry_id") or data.get("id") or created_at or ""),
+            "date": created_at[:10] or str(data.get("date") or ""),
+            "type": str(data.get("entry_type") or data.get("type") or "note"),
+            "title": str(data.get("title") or "Chronicle entry"),
+            "body": str(data.get("body") or data.get("note") or data.get("reflection") or ""),
+            "passage": str(data.get("scripture_ref") or data.get("passage") or ""),
+            "themes": list(data.get("themes") or data.get("tags") or []),
+            "autoCapture": False,
+            "source": str(data.get("source") or "jarvis"),
+            "sent_to_chronicle": bool(data.get("sent_to_chronicle", False)),
+            "created_at": created_at or str(data.get("timestamp") or ""),
+        }
+
+    def _legacy_entry_from_timeline(item: dict[str, Any]) -> dict[str, Any]:
+        timestamp = str(item.get("timestamp") or "")
+        body = str(item.get("reflection") or item.get("note") or "")
+        theme = str(item.get("theme") or "").strip()
+        themes = [theme] if theme else []
+        return {
+            "id": str(item.get("entry_id") or timestamp),
+            "entry_id": str(item.get("entry_id") or timestamp),
+            "date": timestamp[:10],
+            "type": "reflection",
+            "title": theme.title() if theme else "Chronicle reflection",
+            "body": body,
+            "passage": "",
+            "themes": themes,
+            "autoCapture": False,
+            "source": "chronicle-module",
+            "created_at": timestamp,
+        }
+
+    def _merge_chronicle_entries(*entry_groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        merged: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for group in entry_groups:
+            for raw in group:
+                entry = dict(raw)
+                key = (
+                    str(entry.get("entry_id") or "").strip()
+                    or str(entry.get("id") or "").strip()
+                    or f"{entry.get('title','')}::{entry.get('body','')}::{entry.get('date','')}"
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                merged.append(entry)
+
+        def _sort_key(entry: dict[str, Any]) -> tuple[str, str]:
+            created = str(entry.get("created_at") or "")
+            date = str(entry.get("date") or "")
+            return (created or date, date)
+
+        merged.sort(key=_sort_key, reverse=True)
+        return merged
+
+    async def _build_chronicle_recent_payload() -> dict[str, Any]:
+        from .chronicle_bridge import ChronicleSnapshotReader
+
+        reader = ChronicleSnapshotReader()
+        dashboard = await asyncio.to_thread(reader.get_dashboard)
+        if not isinstance(dashboard, dict) or not dashboard.get("ok"):
+            dashboard = {
+                "ok": True,
+                "entries": [],
+                "total": 0,
+                "tags": [],
+                "prayer_items": [],
+                "active_prayers": 0,
+                "answered_prayers": 0,
+                "formation_rhythms": [],
+                "owned_books": [],
+                "chronicle_available": False,
+            }
+
+        snapshot_entries = [dict(item) for item in list(dashboard.get("entries") or []) if isinstance(item, dict)]
+        prayer_items = _apply_chronicle_prayer_updates([dict(item) for item in list(dashboard.get("prayer_items") or []) if isinstance(item, dict)])
+        rhythms = [dict(item) for item in list(dashboard.get("formation_rhythms") or []) if isinstance(item, dict)]
+        books = [dict(item) for item in list(dashboard.get("owned_books") or []) if isinstance(item, dict)]
+
+        pending_entries: list[dict[str, Any]] = []
+        bridge = _get_chronicle_bridge()
+        if bridge is not None:
+            try:
+                pending = await asyncio.to_thread(bridge.get_pending_entries)
+                pending_entries = [_legacy_entry_from_bridge(item) for item in list(pending or [])]
+            except Exception:
+                pending_entries = []
+
+        module_payload = await _build_chronicle_module_payload()
+        timeline_entries = [_legacy_entry_from_timeline(item) for item in list(module_payload.get("timeline") or []) if isinstance(item, dict)]
+        entries = _merge_chronicle_entries(pending_entries, snapshot_entries, timeline_entries)
+
+        theme_counts: dict[str, int] = {}
+        for entry in entries:
+            for theme in list(entry.get("themes") or []):
+                name = str(theme).strip()
+                if not name:
+                    continue
+                theme_counts[name] = theme_counts.get(name, 0) + 1
+        tags = [theme for theme, _count in sorted(theme_counts.items(), key=lambda item: (-item[1], item[0]))]
+
+        active_prayers = sum(1 for item in prayer_items if not item.get("answered"))
+        answered_prayers = sum(1 for item in prayer_items if item.get("answered"))
+
+        return {
+            "ok": True,
+            "entries": entries,
+            "total": len(entries),
+            "tags": tags,
+            "prayer_items": prayer_items,
+            "active_prayers": active_prayers,
+            "answered_prayers": answered_prayers,
+            "formation_rhythms": rhythms,
+            "owned_books": books,
+            "chronicle_available": bool(dashboard.get("chronicle_available") or module_payload.get("available")),
+        }
+
+    def _chronicle_context_from_recent(payload: dict[str, Any]) -> dict[str, Any]:
+        entries = [dict(item) for item in list(payload.get("entries") or []) if isinstance(item, dict)]
+        prayers = [dict(item) for item in list(payload.get("prayer_items") or []) if isinstance(item, dict)]
+        rhythms = [dict(item) for item in list(payload.get("formation_rhythms") or []) if isinstance(item, dict)]
+
+        study_entry = next((entry for entry in entries if entry.get("passage")), None)
+        active_prayers = [item for item in prayers if not item.get("answered")][:3]
+        today = __import__("datetime").datetime.now().strftime("%A").lower()
+        todays_rhythm = None
+        for rhythm in rhythms:
+            days = [str(day).lower() for day in list(rhythm.get("days") or [])]
+            if today in days or "daily" in days:
+                todays_rhythm = rhythm
+                break
+        if not todays_rhythm and rhythms:
+            todays_rhythm = rhythms[0]
+
+        return {
+            "ok": True,
+            "study": {
+                "passage": study_entry.get("passage"),
+                "title": study_entry.get("title"),
+                "date": study_entry.get("date"),
+            } if study_entry else None,
+            "active_prayers": [
+                {
+                    "id": item.get("id"),
+                    "text": item.get("text"),
+                    "category": item.get("category"),
+                }
+                for item in active_prayers
+            ],
+            "todays_rhythm": {
+                "name": todays_rhythm.get("title") or todays_rhythm.get("name"),
+                "description": todays_rhythm.get("focus") or todays_rhythm.get("description", ""),
+            } if todays_rhythm else None,
+            "top_themes": list(payload.get("tags") or [])[:5],
+            "total_entries": int(payload.get("total") or 0),
+            "active_prayer_count": sum(1 for item in prayers if not item.get("answered")),
+            "answered_prayer_count": sum(1 for item in prayers if item.get("answered")),
+        }
+
+    def _chronicle_patterns_from_recent(payload: dict[str, Any]) -> dict[str, Any]:
+        from collections import Counter
+        from datetime import datetime, timedelta
+
+        entries = [dict(item) for item in list(payload.get("entries") or []) if isinstance(item, dict)]
+        prayers = [dict(item) for item in list(payload.get("prayer_items") or []) if isinstance(item, dict)]
+        cutoff = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        recent_entries = [item for item in entries if str(item.get("date") or "") >= cutoff]
+        type_counts = Counter(str(item.get("type") or "note") for item in recent_entries)
+        theme_counts = Counter(
+            str(theme).strip()
+            for item in recent_entries
+            for theme in list(item.get("themes") or [])
+            if str(theme).strip()
+        )
+        answered = [item for item in prayers if item.get("answered")]
+        dates = sorted({str(item.get("date") or "") for item in entries if str(item.get("date") or "")}, reverse=True)
+        streak = 0
+        if dates:
+            check = datetime.now()
+            for date_value in dates:
+                if date_value in {
+                    check.strftime("%Y-%m-%d"),
+                    (check - timedelta(days=1)).strftime("%Y-%m-%d"),
+                }:
+                    streak += 1
+                    check = datetime.strptime(date_value, "%Y-%m-%d") - timedelta(days=1)
+                else:
+                    break
+        return {
+            "ok": True,
+            "window_days": 30,
+            "total_recent_entries": len(recent_entries),
+            "entry_type_breakdown": dict(type_counts),
+            "recurring_themes": [
+                {"theme": theme, "count": count}
+                for theme, count in theme_counts.most_common(8)
+            ],
+            "prayer_arc": {
+                "total_active": sum(1 for item in prayers if not item.get("answered")),
+                "answered_total": len(answered),
+                "answered_recent": len([item for item in answered if str(item.get("dateAnswered") or "") >= cutoff]),
+            },
+            "writing_streak_days": streak,
+        }
+
+    def _chronicle_bridge_entry_from_legacy_payload(entry_payload: dict[str, Any]) -> Any:
+        from .chronicle_bridge import ChronicleEntry
+        from .chronicle_bridge import _now_iso as _chronicle_now_iso
+        import uuid
+
+        entry_type = str(entry_payload.get("type") or entry_payload.get("entry_type") or "note").strip().lower() or "note"
+        body = str(entry_payload.get("body") or entry_payload.get("note") or "").strip()
+        title = str(entry_payload.get("title") or "").strip() or f"{entry_type.title()} entry"
+        passage = str(entry_payload.get("passage") or entry_payload.get("scripture_ref") or "").strip()
+        created_at = str(entry_payload.get("created_at") or "") or _chronicle_now_iso()
+        themes = [str(theme).strip() for theme in list(entry_payload.get("themes") or []) if str(theme).strip()]
+        if not themes and entry_type == "gratitude":
+            themes = ["gratitude"]
+        if not themes and entry_type == "prayer":
+            themes = ["faith"]
+        tags = [str(tag).strip() for tag in list(entry_payload.get("tags") or []) if str(tag).strip()]
+        if not tags:
+            tags = [entry_type] + themes[:3]
+        return ChronicleEntry(
+            entry_id=str(entry_payload.get("entry_id") or entry_payload.get("id") or uuid.uuid4()),
+            entry_type=entry_type,
+            title=title,
+            body=body,
+            scripture_ref=passage,
+            scripture_text=str(entry_payload.get("scripture_text") or ""),
+            themes=themes,
+            actor_id=str(entry_payload.get("actor_id") or "chris"),
+            created_at=created_at,
+            source=str(entry_payload.get("source") or "user_initiated"),
+            mood=str(entry_payload.get("mood") or ("grateful" if entry_type == "gratitude" else "hopeful")),
+            linked_events=list(entry_payload.get("linked_events") or []),
+            tags=tags,
+            sent_to_chronicle=False,
+            sent_at="",
+        )
+
+    @app.get("/api/chronicle/recent")
+    async def api_chronicle_recent() -> JSONResponse:
+        return _json(await _build_chronicle_recent_payload())
+
+    @app.get("/api/chronicle/context")
+    async def api_chronicle_context() -> JSONResponse:
+        payload = await _build_chronicle_recent_payload()
+        context = _chronicle_context_from_recent(payload)
+        bridge = _get_chronicle_bridge()
+        if bridge is not None:
+            try:
+                morning = await asyncio.to_thread(bridge.get_morning_spiritual_context, "chris")
+                if isinstance(morning, dict):
+                    if not context.get("study") and isinstance(morning.get("scripture_of_day"), dict):
+                        context["study"] = {
+                            "passage": str(morning["scripture_of_day"].get("ref") or ""),
+                            "title": "Scripture of the day",
+                            "date": "",
+                        }
+                    if not context.get("active_prayers"):
+                        context["active_prayers"] = [
+                            {"id": "", "text": text, "category": "needs"}
+                            for text in list(morning.get("answered_recently") or [])
+                            if str(text).strip()
+                        ][:3]
+            except Exception:
+                pass
+        return _json(context)
+
+    @app.get("/api/chronicle/patterns")
+    async def api_chronicle_patterns() -> JSONResponse:
+        payload = await _build_chronicle_recent_payload()
+        return _json(_chronicle_patterns_from_recent(payload))
+
+    @app.get("/api/chronicle/search")
+    async def api_chronicle_search(q: str = Query("", alias="q")) -> JSONResponse:
+        payload = await _build_chronicle_recent_payload()
+        query = str(q or "").strip().lower()
+        if not query:
+            return _json(payload)
+        filtered_entries = []
+        for item in list(payload.get("entries") or []):
+            haystack = " ".join(
+                [
+                    str(item.get("title") or ""),
+                    str(item.get("body") or ""),
+                    str(item.get("passage") or ""),
+                    " ".join(str(theme) for theme in list(item.get("themes") or [])),
+                ]
+            ).lower()
+            if query in haystack:
+                filtered_entries.append(item)
+        result = dict(payload)
+        result["entries"] = filtered_entries
+        result["total"] = len(filtered_entries)
+        return _json(result)
+
+    @app.post("/api/chronicle/quick-capture")
+    async def api_chronicle_quick_capture(payload: dict[str, Any]) -> JSONResponse:
+        bridge = _get_chronicle_bridge()
+        if bridge is None:
+            raise HTTPException(status_code=503, detail="ChronicleBridge not initialised")
+        entry_type = str(payload.get("type") or "note").strip().lower() or "note"
+        content = str(payload.get("content") or "").strip()
+        passage = str(payload.get("passage") or "").strip()
+        if not content:
+            raise HTTPException(status_code=400, detail="Capture content is required")
+
+        if entry_type == "gratitude":
+            entry = await asyncio.to_thread(bridge.capture_gratitude, content, {"actor_id": "chris"})
+            if entry is None:
+                entry = _chronicle_bridge_entry_from_legacy_payload({
+                    "entry_type": "gratitude",
+                    "title": f"Gratitude — {content[:40].strip().rstrip('.,!?')}",
+                    "body": content,
+                    "passage": passage,
+                    "themes": ["gratitude"],
+                })
+                await asyncio.to_thread(bridge.save_entry_local, entry)
+        elif entry_type == "prayer":
+            entry = await asyncio.to_thread(bridge.package_prayer_request, content, "chris")
+        elif entry_type == "milestone":
+            title = f"Milestone — {content[:40].strip().rstrip('.,!?')}" if content else "Milestone"
+            entry = await asyncio.to_thread(bridge.record_milestone, title, content, "life")
+        else:
+            entry = _chronicle_bridge_entry_from_legacy_payload({
+                "entry_type": entry_type,
+                "title": f"{entry_type.title()} — {content[:40].strip().rstrip('.,!?')}" if content else entry_type.title(),
+                "body": content,
+                "passage": passage,
+                "themes": [entry_type] if entry_type in {"insight", "reflection", "study"} else [],
+            })
+            await asyncio.to_thread(bridge.save_entry_local, entry)
+
+        AuditLog(Path("data/logs")).log_event(
+            "operator-action",
+            {
+                "actor": "Chris",
+                "domain": "chronicle",
+                "action": f"Captured {entry_type}",
+                "title": getattr(entry, "title", None) or (entry.get("title") if isinstance(entry, dict) else "Legacy capture"),
+                "detail": content[:220],
+                "why_now": "Legacy capture turned a real moment into a Chronicle-ready entry from the desktop module.",
+                "result_summary": "Legacy queued a Chronicle entry for review or handoff.",
+                "related_route": "/chronicle-center",
+                "route_label": "Open Chronicle",
+                "related_kind": "chronicle-entry",
+                "related_label": getattr(entry, "title", None) or (entry.get("title") if isinstance(entry, dict) else "Legacy capture"),
+                "source_kind": "operator-action",
+                "succeeded": True,
+            },
+        )
+        response_entry = entry.to_dict() if hasattr(entry, "to_dict") else dict(entry)
+        return _json({"ok": True, "entry": response_entry})
+
+    @app.post("/api/chronicle/write-entry")
+    async def api_chronicle_write_entry(payload: dict[str, Any]) -> JSONResponse:
+        bridge = _get_chronicle_bridge()
+        if bridge is None:
+            raise HTTPException(status_code=503, detail="ChronicleBridge not initialised")
+        raw_entry = payload.get("entry")
+        if not isinstance(raw_entry, dict):
+            raise HTTPException(status_code=400, detail="Entry payload is required")
+        entry = _chronicle_bridge_entry_from_legacy_payload(raw_entry)
+        await asyncio.to_thread(bridge.save_entry_local, entry)
+        AuditLog(Path("data/logs")).log_event(
+            "operator-action",
+            {
+                "actor": "Chris",
+                "domain": "chronicle",
+                "action": "Saved Legacy entry",
+                "title": entry.title,
+                "detail": entry.body[:220],
+                "why_now": "Legacy promoted a visible desktop memory into the Chronicle pending lane.",
+                "result_summary": "The entry is now queued in Chronicle bridge storage.",
+                "related_route": "/chronicle-center",
+                "route_label": "Open Chronicle",
+                "related_kind": "chronicle-entry",
+                "related_label": entry.title,
+                "source_kind": "operator-action",
+                "succeeded": True,
+            },
+        )
+        return _json({"ok": True, "entry": entry.to_dict()})
+
+    @app.post("/api/chronicle/update-prayer")
+    async def api_chronicle_update_prayer(payload: dict[str, Any]) -> JSONResponse:
+        prayer_id = str(payload.get("id") or "").strip()
+        if not prayer_id:
+            raise HTTPException(status_code=400, detail="Prayer id is required")
+        updates = _load_chronicle_prayer_updates()
+        current = dict(updates.get(prayer_id) or {})
+        if "timesPrayed" in payload:
+            current["timesPrayed"] = int(payload.get("timesPrayed") or 0)
+        if "lastPrayedAt" in payload:
+            current["lastPrayedAt"] = str(payload.get("lastPrayedAt") or "")
+        if "answered" in payload:
+            current["answered"] = bool(payload.get("answered"))
+        if "dateAnswered" in payload:
+            current["dateAnswered"] = str(payload.get("dateAnswered") or "")
+        if "answerSummary" in payload:
+            current["answerSummary"] = str(payload.get("answerSummary") or "")
+        updates[prayer_id] = current
+        _write_chronicle_prayer_updates(updates)
+
+        bridge = _get_chronicle_bridge()
+        if bridge is not None and current.get("answered"):
+            try:
+                await asyncio.to_thread(
+                    bridge.receive_answered_prayer,
+                    {
+                        "entry_id": prayer_id,
+                        "title": str(payload.get("title") or prayer_id),
+                        "answerSummary": current.get("answerSummary") or "Marked answered from Legacy.",
+                    },
+                )
+            except Exception:
+                pass
+
+        return _json({"ok": True, "prayer": {"id": prayer_id, **current}})
+
     @app.get("/api/chronicle/entries/pending")
     async def api_chronicle_pending_entries() -> JSONResponse:
         """Return Chronicle entries waiting to be pushed to Chronicle."""
