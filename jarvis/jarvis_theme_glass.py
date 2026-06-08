@@ -4311,6 +4311,427 @@ body::after {{
 }}
 
 /* ═══════════════════════════════════════════════════════════════════
+   WORKSHOP — DESKTOP EXPERIENCE
+═══════════════════════════════════════════════════════════════════ */
+.workshop-view {{
+  --workshop-gold: #d89236;
+  --workshop-gold-soft: #b77721;
+  --workshop-copy: #f5efe4;
+  --workshop-muted: rgba(245,239,228,0.72);
+  --workshop-dim: rgba(245,239,228,0.46);
+  --workshop-stroke: rgba(216,146,54,0.20);
+  --workshop-stroke-strong: rgba(244,171,67,0.30);
+}}
+.workshop-view .foundry-motto strong,
+.workshop-view .foundry-topbar-title,
+.workshop-view .view-title {{
+  color: var(--workshop-copy);
+}}
+.workshop-view .view-title-line {{
+  background: linear-gradient(90deg, var(--workshop-gold), rgba(216,146,54,0));
+}}
+.workshop-header-stats {{
+  display:grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) 1.15fr 260px;
+  gap:14px;
+  margin-bottom:18px;
+}}
+.workshop-stat-shell,
+.workshop-quote-shell,
+.workshop-profile-shell,
+.workshop-card,
+.workshop-bottom-pill {{
+  border:1px solid var(--workshop-stroke);
+  border-radius:18px;
+  background:linear-gradient(180deg, rgba(11,16,25,.96), rgba(6,10,16,.94));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}}
+.workshop-stat-shell {{
+  padding:14px 16px;
+}}
+.workshop-stat-shell span {{
+  display:block;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--workshop-dim);
+}}
+.workshop-stat-shell strong {{
+  display:block;
+  margin-top:8px;
+  font-size:28px;
+  color:var(--workshop-copy);
+}}
+.workshop-stat-shell small {{
+  display:block;
+  margin-top:6px;
+  color:var(--workshop-muted);
+  font-size:11px;
+}}
+.workshop-quote-shell {{
+  padding:16px 18px;
+}}
+.workshop-quote-shell blockquote {{
+  margin:0;
+  font-family:Georgia, serif;
+  font-size:22px;
+  line-height:1.5;
+  color:var(--workshop-gold);
+}}
+.workshop-quote-shell p {{
+  margin:8px 0 0;
+  color:var(--workshop-muted);
+  font-size:12px;
+}}
+.workshop-profile-shell {{
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.workshop-profile-avatar {{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg, #efc47d, #a55d18);
+  color:#1f1307;
+  font-weight:800;
+}}
+.workshop-profile-shell strong {{
+  display:block;
+  color:var(--workshop-copy);
+}}
+.workshop-profile-shell span {{
+  display:block;
+  color:var(--workshop-muted);
+  font-size:11px;
+  margin-top:4px;
+}}
+.workshop-grid {{
+  display:grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap:16px;
+}}
+.workshop-card {{
+  min-height: 100%;
+}}
+.workshop-card.span-8 {{ grid-column: span 8; }}
+.workshop-card.span-4 {{ grid-column: span 4; }}
+.workshop-card.span-3 {{ grid-column: span 3; }}
+.workshop-card.span-5 {{ grid-column: span 5; }}
+.workshop-card.span-6 {{ grid-column: span 6; }}
+.workshop-card-inner {{
+  padding:18px;
+}}
+.workshop-card-header {{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:14px;
+}}
+.workshop-card-number {{
+  color:var(--workshop-gold);
+  font-size:14px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:6px;
+}}
+.workshop-card-header h3 {{
+  margin:0 0 6px;
+  font-size:24px;
+  color:var(--workshop-copy);
+}}
+.workshop-card-header p {{
+  margin:0;
+  color:var(--workshop-muted);
+  font-size:12px;
+  line-height:1.6;
+}}
+.workshop-view-link,
+.workshop-outline-btn {{
+  border:1px solid var(--workshop-stroke);
+  color:var(--workshop-copy);
+  background:rgba(255,255,255,.03);
+  border-radius:12px;
+  padding:9px 12px;
+  font-size:11px;
+}}
+.workshop-command-grid,
+.workshop-mini-grid,
+.workshop-capacity-grid,
+.workshop-quick-grid,
+.workshop-footer-strip {{
+  display:grid;
+  gap:12px;
+}}
+.workshop-command-grid {{
+  grid-template-columns: repeat(4, minmax(0,1fr));
+}}
+.workshop-kpi,
+.workshop-panel,
+.workshop-mini-card,
+.workshop-work-order,
+.workshop-list-row,
+.workshop-template-row,
+.workshop-footer-pill {{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+}}
+.workshop-kpi,
+.workshop-panel,
+.workshop-mini-card,
+.workshop-work-order,
+.workshop-template-row,
+.workshop-footer-pill {{
+  padding:14px;
+}}
+.workshop-kpi span,
+.workshop-panel span,
+.workshop-mini-card span,
+.workshop-work-order span,
+.workshop-template-row span,
+.workshop-footer-pill span {{
+  color:var(--workshop-muted);
+  font-size:11px;
+  line-height:1.5;
+}}
+.workshop-kpi strong,
+.workshop-panel strong,
+.workshop-mini-card strong,
+.workshop-work-order strong,
+.workshop-template-row strong,
+.workshop-footer-pill strong {{
+  display:block;
+  color:var(--workshop-copy);
+}}
+.workshop-kpi strong {{
+  margin-top:6px;
+  font-size:34px;
+}}
+.workshop-balance-row,
+.workshop-order-meta,
+.workshop-capacity-row {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:10px;
+}}
+.workshop-progress {{
+  height:8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+}}
+.workshop-progress > div {{
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg, #60a5fa, #f59e0b);
+}}
+.workshop-board {{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap:12px;
+}}
+.workshop-board-col {{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  background:rgba(255,255,255,.02);
+  padding:12px;
+  display:grid;
+  gap:10px;
+  align-content:start;
+  min-height:350px;
+}}
+.workshop-board-head {{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  color:var(--workshop-copy);
+  font-size:13px;
+  font-weight:700;
+}}
+.workshop-pill {{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.08);
+  color:var(--workshop-muted);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}}
+.workshop-task-card {{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(255,255,255,.03);
+}}
+.workshop-task-card strong {{
+  display:block;
+  color:var(--workshop-copy);
+  font-size:13px;
+  line-height:1.45;
+}}
+.workshop-task-card span {{
+  display:block;
+  color:var(--workshop-muted);
+  font-size:11px;
+  line-height:1.5;
+  margin-top:6px;
+}}
+.workshop-tag {{
+  display:inline-flex;
+  padding:2px 7px;
+  border-radius:999px;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-top:8px;
+  width:fit-content;
+}}
+.workshop-tag.high {{ background:rgba(239,68,68,.18); color:#fca5a5; }}
+.workshop-tag.medium {{ background:rgba(245,158,11,.18); color:#fcd34d; }}
+.workshop-tag.low {{ background:rgba(34,197,94,.18); color:#86efac; }}
+.workshop-task-meta {{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:10px;
+  color:var(--workshop-dim);
+  font-size:10px;
+}}
+.workshop-work-orders,
+.workshop-list-stack,
+.workshop-templates {{
+  display:grid;
+  gap:12px;
+}}
+.workshop-list-row {{
+  padding:12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.workshop-list-row strong {{
+  font-size:13px;
+}}
+.workshop-list-row em {{
+  font-style:normal;
+  color:var(--workshop-dim);
+  font-size:10px;
+}}
+.workshop-list-row .meta {{
+  margin-left:auto;
+  text-align:right;
+  color:var(--workshop-muted);
+  font-size:11px;
+}}
+.workshop-order-top,
+.workshop-template-row {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}}
+.workshop-order-top strong {{
+  font-size:22px;
+}}
+.workshop-order-bar {{
+  margin:10px 0 12px;
+}}
+.workshop-execution-lane {{
+  display:grid;
+  gap:10px;
+}}
+.workshop-exec-row {{
+  display:grid;
+  grid-template-columns: 28px 1fr auto auto;
+  gap:12px;
+  align-items:center;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:10px 12px;
+  background:rgba(255,255,255,.03);
+}}
+.workshop-exec-row .index {{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  border:1px solid var(--workshop-stroke);
+  display:grid;
+  place-items:center;
+  color:var(--workshop-gold);
+  font-size:12px;
+  font-weight:700;
+}}
+.workshop-timeline {{
+  display:grid;
+  gap:12px;
+}}
+.workshop-timeline-row {{
+  display:grid;
+  grid-template-columns: 78px 20px 1fr;
+  gap:10px;
+  align-items:start;
+}}
+.workshop-timeline-dot {{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  margin-top:4px;
+  background:linear-gradient(135deg, #fbbf24, #fb923c);
+  box-shadow: 0 0 0 4px rgba(251,191,36,.12);
+}}
+.workshop-quick-grid {{
+  grid-template-columns: repeat(4, minmax(0,1fr));
+}}
+.workshop-quick-btn {{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:14px 10px;
+  background:rgba(255,255,255,.03);
+  color:var(--workshop-copy);
+  font-size:12px;
+  text-align:center;
+}}
+.workshop-capacity-grid {{
+  grid-template-columns: 1.2fr .8fr;
+}}
+.workshop-footer-strip {{
+  grid-template-columns: repeat(7, minmax(0,1fr));
+  margin-top:16px;
+}}
+@media (max-width: 1680px) {{
+  .workshop-header-stats {{
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }}
+  .workshop-board {{
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }}
+  .workshop-footer-strip {{
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }}
+}}
+@media (max-width: 1120px) {{
+  .workshop-header-stats,
+  .workshop-command-grid,
+  .workshop-grid,
+  .workshop-board,
+  .workshop-capacity-grid,
+  .workshop-quick-grid,
+  .workshop-footer-strip {{
+    grid-template-columns: 1fr;
+  }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════════
    AGENTS — DESKTOP EXPERIENCE
 ═══════════════════════════════════════════════════════════════════ */
 .agents-view {{
@@ -13566,7 +13987,7 @@ body::after {{
         </button>
         <button class="nav-tab" data-view="workshop" onclick="switchView('workshop')">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="9" width="12" height="5" rx="1"/><path d="M5 9V6a3 3 0 016 0v3"/><circle cx="8" cy="4" r="1.5"/></svg>
-          Foundry
+          Workshop
         </button>
         <button class="nav-tab" data-view="publishing" onclick="switchView('publishing')">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1h8v14H4zM7 1v14"/></svg>
@@ -13774,7 +14195,7 @@ body::after {{
 
             <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">7. Family & Household</div><h3>What matters at home.</h3></div></div><div class="command-family-list" id="command-family-list"></div><div class="command-section-link" onclick="switchView('calendar')">View household hub →</div></div></section>
 
-            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">8. Foundry & Creative Momentum</div><h3>Protect and prioritize your creative work.</h3></div></div><div class="command-split-grid" style="grid-template-columns:1.1fr .9fr;"><div class="command-activity-list" id="command-foundry-list"></div><div class="command-mini-card"><strong>Today's Creative Focus</strong><span id="command-foundry-focus">Loading high-leverage asset…</span><div class="command-section-link" style="margin-top:12px;" onclick="switchView('workshop')">Open Foundry dashboard →</div></div></div></div></section>
+            <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">8. Workshop & Creative Momentum</div><h3>Protect and prioritize your creative work.</h3></div></div><div class="command-split-grid" style="grid-template-columns:1.1fr .9fr;"><div class="command-activity-list" id="command-foundry-list"></div><div class="command-mini-card"><strong>Today's Creative Focus</strong><span id="command-foundry-focus">Loading high-leverage asset…</span><div class="command-section-link" style="margin-top:12px;" onclick="switchView('workshop')">Open Workshop dashboard →</div></div></div></div></section>
 
             <section class="command-card command-span-4"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">9. Health & Recovery</div><h3>Protect the operator.</h3></div></div><div class="command-activity-list" id="command-health-list"></div><div class="command-section-link" onclick="switchView('health')">Open health dashboard →</div></div></section>
 
@@ -13889,7 +14310,7 @@ body::after {{
         <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">4. Decision Gates</div><p>Items that need your decision.</p></div></div><div class="dailybrief-list" id="dailybrief-decision-list"></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('approvals')">View All Decision Gates →</button></div></div></section>
         <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">5. Movement & Route</div><p>Your movement plan for the day.</p></div></div><div class="dailybrief-split"><div class="dailybrief-list" id="dailybrief-route-schedule"></div><div class="dailybrief-route-card"><div class="dailybrief-route-map"></div><div class="dailybrief-route-path"><svg viewBox="0 0 300 220" preserveAspectRatio="none"><path d="M24 188 C62 170 72 126 112 124 C168 121 160 65 216 58 C245 54 258 34 278 18" stroke="rgba(255,176,79,0.9)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="7 8"></path><circle cx="24" cy="188" r="9" fill="#f7d49a"></circle><circle cx="278" cy="18" r="10" fill="#6ed89c"></circle><circle cx="112" cy="124" r="8" fill="#f1aa49"></circle><circle cx="214" cy="58" r="8" fill="#f1aa49"></circle></svg></div><div class="dailybrief-route-content"><div><div class="dailybrief-kicker">Travel & Route</div><div class="dailybrief-route-metrics"><strong id="dailybrief-route-time">—</strong><span id="dailybrief-route-destination">Loading route…</span></div></div><div class="dailybrief-copy-block" id="dailybrief-route-copy">No route-sensitive commitments are loaded yet.</div></div></div></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('navigate')">Optimize Route →</button></div></div></section>
         <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">6. Family & Household Posture</div><p>What matters most at home.</p></div></div><div class="dailybrief-split"><div class="dailybrief-list" id="dailybrief-family-list"></div><div><div class="dailybrief-kicker">Today's Coordination</div><div class="dailybrief-checklist" id="dailybrief-family-checklist"></div></div></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('calendar')">View Family Calendar →</button></div></div></section>
-        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">7. Foundry & Creative Momentum</div><p>Your highest leverage creative work.</p></div></div><div class="dailybrief-list" id="dailybrief-foundry-list"></div><div class="dailybrief-one-thing" style="margin-top:16px;"><div><strong>Today's Creative Focus</strong><span id="dailybrief-foundry-focus">Loading your best creation window…</span></div><button class="dailybrief-button" onclick="switchView('workshop')">Enter Focus Mode →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">7. Workshop & Creative Momentum</div><p>Your highest leverage creative work.</p></div></div><div class="dailybrief-list" id="dailybrief-foundry-list"></div><div class="dailybrief-one-thing" style="margin-top:16px;"><div><strong>Today's Creative Focus</strong><span id="dailybrief-foundry-focus">Loading your best creation window…</span></div><button class="dailybrief-button" onclick="switchView('workshop')">Enter Focus Mode →</button></div></div></section>
         <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">8. Health & Recovery</div><p>Protect the operator.</p></div></div><div class="dailybrief-list" id="dailybrief-health-metrics"></div><div class="dailybrief-one-thing" style="margin-top:16px;"><div><strong>Today's Recommendation</strong><span id="dailybrief-health-recommendation">Loading Sam Wilson guidance…</span></div><button class="dailybrief-button" onclick="switchView('health')">View Health Dashboard →</button></div></div></section>
         <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">9. Follow-Through Lane</div><p>Keep today from dissolving.</p></div></div><div class="dailybrief-openloops"><div class="dailybrief-list" id="dailybrief-followthrough-list"></div><div><div class="dailybrief-loop-ring"><strong id="dailybrief-openloops-total">—</strong><span>Open Loops</span></div><div class="dailybrief-breakdown"><div><strong id="dailybrief-loop-high">0</strong>High</div><div><strong id="dailybrief-loop-medium">0</strong>Medium</div><div><strong id="dailybrief-loop-low">0</strong>Low</div></div></div></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('notifications')">View All Open Loops →</button></div></div></section>
         <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">10. Today At A Glance</div><p>Your day in one place.</p></div></div><div class="dailybrief-timeline" id="dailybrief-timeline"></div></div></section>
@@ -16211,16 +16632,16 @@ body::after {{
   </div>
 
   <!-- ── WORKSHOP ───────────────────────────────────────────── -->
-  <div id="view-workshop" class="view foundry-view">
+  <div id="view-workshop" class="view foundry-view workshop-view">
     <div class="foundry-header">
       <div>
         <div class="foundry-kicker">Desktop Experience</div>
-        <div class="view-title">JARVIS FOUNDRY<div class="view-title-line"></div></div>
-        <div class="foundry-subtitle">Asset creation and publishing engine for monetization, side hustles, experiments, offers, audience growth, creative work, and long-horizon asset creation. One desktop screen is active at a time, with arrows and a visible page count carrying the sequence.</div>
+        <div class="view-title">JARVIS WORKSHOP<div class="view-title-line"></div></div>
+        <div class="foundry-subtitle">Agentic task management and execution system. This is the operational work board for active tasks, delegated work orders, blockers, quick actions, resumption, and capacity shaping.</div>
       </div>
       <div class="foundry-motto">
-        <strong>Ideas → Assets → Impact → Legacy</strong>
-        <span>Build with purpose. Publish with power. Multiply what matters.</span>
+        <strong>Well-ordered work creates freedom.</strong>
+        <span>Chaos creates fatigue.</span>
       </div>
     </div>
 
@@ -16228,38 +16649,34 @@ body::after {{
       <div class="foundry-desktop-shell">
         <aside class="foundry-sidebar">
           <div class="foundry-brand-block">
-            <div class="foundry-brand-mark">🔥</div>
+            <div class="foundry-brand-mark">☼</div>
             <div>
               <div class="foundry-brand-title">JARVIS</div>
-              <div class="foundry-brand-sub">Foundry</div>
+              <div class="foundry-brand-sub">Workshop</div>
             </div>
           </div>
 
           <div class="foundry-side-nav">
-            <div class="foundry-side-link active">⌂ Foundry Home</div>
-            <div class="foundry-side-link">◎ Idea Forge</div>
-            <div class="foundry-side-link">◌ Asset Studio</div>
-            <div class="foundry-side-link">✎ Publishing Hub</div>
-            <div class="foundry-side-link">◍ Offers & Products</div>
-            <div class="foundry-side-link">◔ Audience Intelligence</div>
-            <div class="foundry-side-link">➜ Campaigns</div>
-            <div class="foundry-side-link">⬡ Content Engine</div>
-            <div class="foundry-side-link">⚒ Product Lab</div>
-            <div class="foundry-side-link">▣ Physical (Forge)</div>
-            <div class="foundry-side-link">◈ Asset Portfolio</div>
-            <div class="foundry-side-link">↗ Performance</div>
-            <div class="foundry-side-link">$ Financials</div>
-            <div class="foundry-side-link">☰ Calendar</div>
-            <div class="foundry-side-link">👥 Team & Collaborators</div>
+            <div class="foundry-side-link active">⌂ Workshop Home</div>
+            <div class="foundry-side-link">◈ Command</div>
+            <div class="foundry-side-link">☰ Daily Brief</div>
+            <div class="foundry-side-link">◎ Mission Board</div>
+            <div class="foundry-side-link">◉ Agents</div>
+            <div class="foundry-side-link">↯ Approvals</div>
+            <div class="foundry-side-link">◌ Supervision</div>
+            <div class="foundry-side-link">◔ Activity</div>
+            <div class="foundry-side-link">✦ Foundry</div>
+            <div class="foundry-side-link">✎ Publish</div>
+            <div class="foundry-side-link">◍ Legacy</div>
             <div class="foundry-side-link">⚙ Settings</div>
           </div>
 
           <div class="foundry-sidebar-status">
-            <strong>Foundry Status</strong>
-            <div class="foundry-status-row"><span>Operational</span><span id="foundry-sidebar-health">Syncing…</span></div>
-            <div class="foundry-status-row"><span>Signal Health</span><span id="foundry-sidebar-signal">Loading</span></div>
-            <div class="foundry-status-row"><span>Last Refresh</span><span id="foundry-sidebar-refresh">Just now</span></div>
-            <button class="foundry-outline-btn" type="button" onclick="loadFoundry()">Open Foundry OS ↻</button>
+            <strong>Workshop Status</strong>
+            <div class="foundry-status-row"><span>System Health</span><span id="workshop-sidebar-health">Loading…</span></div>
+            <div class="foundry-status-row"><span>Queue Health</span><span id="workshop-sidebar-queue">Loading…</span></div>
+            <div class="foundry-status-row"><span>Last Update</span><span id="workshop-sidebar-refresh">Loading…</span></div>
+            <button class="foundry-outline-btn" type="button" onclick="loadWorkshop()">Workshop Settings ↻</button>
           </div>
         </aside>
 
@@ -16267,267 +16684,146 @@ body::after {{
           <div class="foundry-topbar">
             <div class="foundry-topbar-copy">
               <div class="foundry-topbar-kicker">Desktop Sequence</div>
-              <div class="foundry-topbar-title" id="foundry-nav-title">1. Foundry Command Center</div>
-              <div class="foundry-topbar-subtitle" id="foundry-nav-subtitle">Survey your creative and economic command center, see the highest-leverage work, and decide which asset deserves today’s making window.</div>
+              <div class="foundry-topbar-title" id="workshop-nav-title">Workshop Board</div>
+              <div class="foundry-topbar-subtitle" id="workshop-nav-subtitle">Overview all work across your world, organize by state, surface active orders, and keep today’s execution lane visible.</div>
             </div>
             <div class="foundry-nav">
-              <button class="foundry-nav-btn" id="foundry-nav-prev" onclick="advanceFoundryPage(-1)" aria-label="Previous Foundry page">←</button>
+              <button class="foundry-nav-btn" id="workshop-nav-prev" onclick="advanceWorkshopPage(-1)" aria-label="Previous Workshop page">←</button>
               <div class="foundry-nav-status">
-                <div class="foundry-nav-page" id="foundry-page-count">Page 1 of 9</div>
-                <div class="foundry-nav-title" id="foundry-page-label">Command Center</div>
+                <div class="foundry-nav-page" id="workshop-page-count">Page 1 of 1</div>
+                <div class="foundry-nav-title" id="workshop-page-label">Workshop Board</div>
               </div>
-              <button class="foundry-nav-btn" id="foundry-nav-next" onclick="advanceFoundryPage(1)" aria-label="Next Foundry page">→</button>
+              <button class="foundry-nav-btn" id="workshop-nav-next" onclick="advanceWorkshopPage(1)" aria-label="Next Workshop page">→</button>
             </div>
           </div>
 
-          <div class="foundry-header-stats">
-            <div class="foundry-stat-shell"><span>Active Assets</span><strong id="foundry-stat-assets">—</strong><small id="foundry-stat-assets-sub">Loading</small></div>
-            <div class="foundry-stat-shell"><span>Total Reach</span><strong id="foundry-stat-reach">—</strong><small id="foundry-stat-reach-sub">Compounding</small></div>
-            <div class="foundry-stat-shell"><span>Revenue Impact</span><strong id="foundry-stat-revenue">—</strong><small id="foundry-stat-revenue-sub">Projected value</small></div>
-            <div class="foundry-stat-shell"><span>Assets Shipped</span><strong id="foundry-stat-shipped">—</strong><small id="foundry-stat-shipped-sub">This cycle</small></div>
-            <div class="foundry-profile-shell">
-              <div class="foundry-profile-avatar">CB</div>
-              <div>
-                <strong>Chris Binion</strong>
-                <span>Builder of Things</span>
-              </div>
-            </div>
+          <div class="workshop-header-stats">
+            <div class="workshop-stat-shell"><span>Work In Progress</span><strong id="workshop-stat-wip">—</strong><small id="workshop-stat-wip-sub">Loading</small></div>
+            <div class="workshop-stat-shell"><span>Completed Today</span><strong id="workshop-stat-completed">—</strong><small id="workshop-stat-completed-sub">Loading</small></div>
+            <div class="workshop-stat-shell"><span>Awaiting Review</span><strong id="workshop-stat-review">—</strong><small id="workshop-stat-review-sub">Loading</small></div>
+            <div class="workshop-stat-shell"><span>Blocked</span><strong id="workshop-stat-blocked">—</strong><small id="workshop-stat-blocked-sub">Loading</small></div>
+            <div class="workshop-stat-shell"><span>Due Today</span><strong id="workshop-stat-due">—</strong><small id="workshop-stat-due-sub">Loading</small></div>
+            <div class="workshop-quote-shell"><blockquote>“Well-ordered work creates freedom. Chaos creates fatigue.”</blockquote><p>Workshop turns the live task surface into a governed execution board.</p></div>
+            <div class="workshop-profile-shell"><div class="workshop-profile-avatar">CB</div><div><strong>Chris Binion</strong><span>Executive Mode</span></div></div>
           </div>
 
-          <div class="foundry-page-deck">
-            <section class="foundry-page active" data-foundry-page="1">
-              <div class="foundry-grid-two">
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Foundry Command Center<strong>Your creative and economic command center</strong></div>
-                    <button class="foundry-outline-btn" type="button" onclick="advanceFoundryPage(4)">Open Work Session</button>
-                  </div>
-                  <div class="foundry-command-grid">
-                    <div class="foundry-feature-card">
-                      <span>Today&apos;s Focus</span>
-                      <strong id="foundry-focus-title">Loading…</strong>
-                      <p id="foundry-focus-sub">Pulling the highest-leverage asset into view.</p>
-                      <div class="foundry-progress-row"><em id="foundry-focus-book">Asset lane</em><b id="foundry-focus-pct">0%</b></div>
-                      <div class="foundry-progress-track"><div id="foundry-focus-bar"></div></div>
-                    </div>
-                    <div class="foundry-feature-card">
-                      <span>Strategic Priority</span>
-                      <strong id="foundry-priority-title">Launch sequence</strong>
-                      <p id="foundry-priority-copy">Connecting today’s work to the longer compounding portfolio.</p>
-                      <div class="foundry-progress-row"><em id="foundry-priority-date">This week</em><b id="foundry-priority-pct">42%</b></div>
-                      <div class="foundry-progress-track"><div id="foundry-priority-bar"></div></div>
-                    </div>
-                  </div>
-                  <div class="foundry-micro-stats">
-                    <div class="foundry-micro-card"><span>High-Leverage Window</span><strong id="foundry-window-stat">—</strong><small>Today</small></div>
-                    <div class="foundry-micro-card"><span>Tasks Due Today</span><strong id="foundry-today-stat">—</strong><small id="foundry-today-sub">Loading</small></div>
-                    <div class="foundry-micro-card"><span>Ideas Incubating</span><strong id="foundry-idea-stat">—</strong><small id="foundry-idea-sub">Loading</small></div>
-                    <div class="foundry-micro-card"><span>Assets In Progress</span><strong id="foundry-progress-stat">—</strong><small id="foundry-progress-sub">Loading</small></div>
-                  </div>
+          <div class="workshop-grid">
+            <section class="workshop-card span-4">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">1. Workshop Command Center</div><h3>Overview of all work across your world.</h3></div>
+                  <button class="workshop-outline-btn" type="button" onclick="loadWorkshop()">Customize View</button>
                 </div>
+                <div class="workshop-command-grid" id="workshop-command-grid"></div>
+                <div class="workshop-mini-grid" id="workshop-balance-grid" style="margin-top:14px;"></div>
+              </div>
+            </section>
 
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Today&apos;s Narrative<strong>Why this work matters</strong></div>
-                  </div>
-                  <div class="foundry-quote-panel" id="foundry-command-narrative">
-                    Foundry turns ideas into durable assets and routes them through the right form, audience, offer, and launch path.
-                  </div>
-                  <div class="foundry-side-stack">
-                    <div class="foundry-side-card">
-                      <span>Economic Lens</span>
-                      <strong id="foundry-economic-lens">Projected value is compounding fastest around your active book, flagship offer, and launch sequence.</strong>
-                    </div>
-                    <div class="foundry-side-card">
-                      <span>Legacy Lens</span>
-                      <strong id="foundry-legacy-lens">Build the body of work that outlives the moment, not just the task list that fills it.</strong>
-                    </div>
+            <section class="workshop-card span-5">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">2. Work Board</div><h3>Work organized by state.</h3><p>Drag, drop, and move forward. The board is assembled from live tasks, missions, reviews, and open loops.</p></div>
+                </div>
+                <div class="workshop-board" id="workshop-board"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-3">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">3. Active Work Orders</div><h3>Deep view of major work threads.</h3></div>
+                  <button class="workshop-view-link" type="button" onclick="switchView('chat')">View All</button>
+                </div>
+                <div class="workshop-work-orders" id="workshop-work-orders"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-4">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">4. Delegation Queue</div><h3>What your agents are working on.</h3></div>
+                  <button class="workshop-view-link" type="button" onclick="switchView('agents')">View All Agents</button>
+                </div>
+                <div class="workshop-list-stack" id="workshop-delegation-list"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-3">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">5. Blockers & Escalations</div><h3>Items preventing movement.</h3></div>
+                  <button class="workshop-view-link" type="button" onclick="switchView('supervision')">Resolve All</button>
+                </div>
+                <div class="workshop-list-stack" id="workshop-blockers-list"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-3">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">6. Today&apos;s Execution Lane</div><h3>Your highest-leverage moves.</h3></div>
+                  <button class="workshop-view-link" type="button" onclick="switchView('overview')">Optimize Day</button>
+                </div>
+                <div class="workshop-execution-lane" id="workshop-execution-lane"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-2">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">7. Task Intelligence</div><h3>Insights to help you work smarter.</h3></div>
+                </div>
+                <div class="workshop-list-stack" id="workshop-intelligence-list"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-4">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">8. Resumption Timeline</div><h3>What happened while you were away.</h3></div>
+                </div>
+                <div class="workshop-timeline" id="workshop-resumption-timeline"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-3">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">9. Quick Actions</div><h3>Common moves. One click.</h3></div>
+                </div>
+                <div class="workshop-quick-grid" id="workshop-quick-actions"></div>
+              </div>
+            </section>
+
+            <section class="workshop-card span-3">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">10. Workload & Capacity</div><h3>Where capacity is tight or free.</h3></div>
+                  <button class="workshop-view-link" type="button" onclick="switchView('health')">Optimize Day</button>
+                </div>
+                <div class="workshop-capacity-grid">
+                  <div class="workshop-list-stack" id="workshop-capacity-list"></div>
+                  <div class="workshop-panel">
+                    <strong>Capacity Recommendation</strong>
+                    <span id="workshop-capacity-recommendation">Loading capacity guidance…</span>
+                    <button class="workshop-outline-btn" type="button" style="margin-top:12px;" onclick="switchView('command')">Rebalance Work</button>
                   </div>
                 </div>
               </div>
             </section>
 
-            <section class="foundry-page" data-foundry-page="2">
-              <div class="foundry-card-shell">
-                <div class="foundry-card-heading">
-                  <div class="foundry-card-label">Asset Pipeline Overview<strong>From idea to impact. Every asset has a path.</strong></div>
+            <section class="workshop-card span-3">
+              <div class="workshop-card-inner">
+                <div class="workshop-card-header">
+                  <div><div class="workshop-card-number">11. Workflow Templates</div><h3>Reusable systems for repeatable work.</h3></div>
+                  <button class="workshop-view-link" type="button" onclick="switchView('forge')">View All</button>
                 </div>
-                <div class="foundry-pipeline-row">
-                  <div class="foundry-pipeline-stage"><span>Idea</span><strong id="foundry-pipeline-idea">—</strong><small>Capture</small></div>
-                  <div class="foundry-pipeline-arrow">→</div>
-                  <div class="foundry-pipeline-stage"><span>Shape</span><strong id="foundry-pipeline-shape">—</strong><small>Develop</small></div>
-                  <div class="foundry-pipeline-arrow">→</div>
-                  <div class="foundry-pipeline-stage"><span>Build</span><strong id="foundry-pipeline-build">—</strong><small>Create</small></div>
-                  <div class="foundry-pipeline-arrow">→</div>
-                  <div class="foundry-pipeline-stage"><span>Launch</span><strong id="foundry-pipeline-launch">—</strong><small>Publish</small></div>
-                  <div class="foundry-pipeline-arrow">→</div>
-                  <div class="foundry-pipeline-stage"><span>Grow</span><strong id="foundry-pipeline-grow">—</strong><small>Optimize</small></div>
-                </div>
-                <div class="foundry-grid-two">
-                  <div class="foundry-donut-card">
-                    <div class="foundry-donut-shell">
-                      <div class="foundry-donut-ring"><strong id="foundry-donut-total">—</strong><span>Total assets</span></div>
-                    </div>
-                  </div>
-                  <div class="foundry-type-list" id="foundry-asset-types">
-                    <div class="foundry-list-empty">Loading asset mix…</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="foundry-page" data-foundry-page="3">
-              <div class="foundry-grid-two">
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Asset Portfolio Health<strong>How the portfolio is performing</strong></div>
-                  </div>
-                  <div class="foundry-performance-list" id="foundry-performance-list">
-                    <div class="foundry-performance-row"><span>Reach Growth</span><strong>Loading…</strong></div>
-                  </div>
-                </div>
-                <div class="foundry-card-shell">
-                  <div class="foundry-score-shell">
-                    <div class="foundry-score-ring"><strong id="foundry-health-score">—</strong><span id="foundry-health-copy">Loading</span></div>
-                    <div class="foundry-health-strengths">
-                      <h4>Top Strengths</h4>
-                      <div id="foundry-health-strengths">
-                        <div class="foundry-list-empty">Reading portfolio strengths…</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="foundry-page" data-foundry-page="4">
-              <div class="foundry-card-shell">
-                <div class="foundry-card-heading">
-                  <div class="foundry-card-label">Active Projects<strong>What you&apos;re building right now</strong></div>
-                  <button class="foundry-outline-btn" type="button" onclick="loadFoundry()">↻ Refresh Projects</button>
-                </div>
-                <div class="foundry-project-list" id="foundry-projects-list">
-                  <div class="foundry-list-empty">Loading active projects…</div>
-                </div>
-              </div>
-            </section>
-
-            <section class="foundry-page" data-foundry-page="5">
-              <div class="foundry-grid-two">
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Content & Publishing Hub<strong>Create, schedule, publish, and repurpose</strong></div>
-                    <button class="foundry-outline-btn" type="button" onclick="switchView('publishing')">Open Publishing</button>
-                  </div>
-                  <div class="foundry-publishing-list" id="foundry-publishing-list">
-                    <div class="foundry-list-empty">Loading publishing pipeline…</div>
-                  </div>
-                </div>
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Repurpose Opportunity<strong>One asset. Many forms.</strong></div>
-                  </div>
-                  <div class="foundry-opportunity-panel">
-                    <strong id="foundry-opportunity-title">Chapter assets</strong>
-                    <p id="foundry-opportunity-copy">Looking at active manuscripts and launches for the strongest repurposing cluster.</p>
-                    <div class="foundry-social-dots" id="foundry-social-dots">
-                      <span></span><span></span><span></span><span></span>
-                    </div>
-                    <button class="foundry-outline-btn" type="button" onclick="advanceFoundryPage(6)">Generate Offer Context</button>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="foundry-page" data-foundry-page="6">
-              <div class="foundry-card-shell">
-                <div class="foundry-card-heading">
-                  <div class="foundry-card-label">Offers & Revenue Lab<strong>Build offers that serve and scale</strong></div>
-                </div>
-                <div class="foundry-offers-list" id="foundry-offers-list">
-                  <div class="foundry-list-empty">Loading offer candidates…</div>
-                </div>
-              </div>
-            </section>
-
-            <section class="foundry-page" data-foundry-page="7">
-              <div class="foundry-grid-two">
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Audience Intelligence<strong>Know your people. Grow your impact.</strong></div>
-                  </div>
-                  <div class="foundry-audience-hero">
-                    <strong id="foundry-audience-total">—</strong>
-                    <span id="foundry-audience-growth">Loading audience growth signal…</span>
-                  </div>
-                </div>
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Top Audience Segments<strong>Who the current assets are serving</strong></div>
-                  </div>
-                  <div class="foundry-segment-list" id="foundry-segment-list">
-                    <div class="foundry-list-empty">Loading audience segments…</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="foundry-page" data-foundry-page="8">
-              <div class="foundry-grid-two">
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Idea Incubator<strong>Raw ideas. Big potential.</strong></div>
-                    <button class="foundry-outline-btn" type="button" onclick="switchView('huddle')">Open Idea Inbox</button>
-                  </div>
-                  <div class="foundry-idea-list" id="foundry-idea-list">
-                    <div class="foundry-list-empty">Loading ideas…</div>
-                  </div>
-                </div>
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Dossier Momentum<strong>Research that is ready to turn into assets</strong></div>
-                  </div>
-                  <div class="foundry-dossier-list" id="foundry-dossier-list">
-                    <div class="foundry-list-empty">Loading dossiers…</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="foundry-page" data-foundry-page="9">
-              <div class="foundry-grid-two">
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Launch & Campaign Control<strong>Launch with precision</strong></div>
-                    <button class="foundry-outline-btn" type="button" onclick="switchView('catalyst')">Open Catalyst</button>
-                  </div>
-                  <div class="foundry-launch-list" id="foundry-launch-list">
-                    <div class="foundry-list-empty">Loading launch control…</div>
-                  </div>
-                </div>
-                <div class="foundry-card-shell">
-                  <div class="foundry-card-heading">
-                    <div class="foundry-card-label">Launch Readiness<strong>Do the assets line up?</strong></div>
-                  </div>
-                  <div class="foundry-score-shell compact">
-                    <div class="foundry-score-ring small"><strong id="foundry-launch-score">—</strong><span id="foundry-launch-copy">Loading</span></div>
-                    <div class="foundry-health-strengths" id="foundry-launch-checklist">
-                      <div class="foundry-list-empty">Reading launch readiness…</div>
-                    </div>
-                  </div>
-                </div>
+                <div class="workshop-templates" id="workshop-template-list"></div>
               </div>
             </section>
           </div>
 
-          <div class="foundry-bottom-strip">
-            <div class="foundry-bottom-pill"><strong>Ideas to Impact</strong><span>Turn insight into assets that change lives.</span></div>
-            <div class="foundry-bottom-pill"><strong>Build with Purpose</strong><span>Create what matters. Publish with excellence.</span></div>
-            <div class="foundry-bottom-pill"><strong>Multiply Value</strong><span>One asset. Many forms. Maximum reach.</span></div>
-            <div class="foundry-bottom-pill"><strong>Sustainable Growth</strong><span>Compounding audience. Recurring impact.</span></div>
-            <div class="foundry-bottom-pill"><strong>Financial Freedom</strong><span>Assets that generate freedom and margin.</span></div>
-            <div class="foundry-bottom-pill"><strong>Legacy Focused</strong><span>Build a body of work that outlives you.</span></div>
-          </div>
+          <div class="workshop-footer-strip" id="workshop-footer-strip"></div>
         </main>
       </div>
     </div>
@@ -19169,7 +19465,7 @@ function loadViewData(name) {{
     case 'email':        loadHomeEmail(); break;
     case 'calendar':     loadHomeCalendar(); break;
     case 'health':       loadHealth(); loadDailyHealthScore(); break;
-    case 'workshop':     loadFoundry(); break;
+    case 'workshop':     loadWorkshop(); break;
     case 'catalyst':     loadWorkIntelligence(); break;
     case 'news':         loadNews(false); break;
     case 'home':         loadKasaDevices(); break;
@@ -21518,7 +21814,7 @@ function renderCommandDesktop(data) {{
       ['Queue Agent Mission', 'Research what gaps remain in the top need.'],
       ['Start Creative Sprint', focusProject ? `Advance ${{focusProject.title}}` : 'Open a 90 minute focused build window.'],
       ['Schedule Family Time', 'Protect tonight in the calendar and household posture.'],
-      ['Wake Foundry Concept Lab', 'Surface the strongest asset to build next.'],
+      ['Wake Workshop Concept Lab', 'Surface the strongest asset to build next.'],
       ['Send Priority Message', 'Draft a direct message for the most important relationship today.'],
       ['Open Recovery Loop', 'Review sleep, stress, and health signals.'],
       ['Lock Distraction Shield', 'Guard the current focus block until the hard stop.'],
@@ -21545,7 +21841,7 @@ function renderCommandDesktop(data) {{
 
   const foundryEl = document.getElementById('command-foundry-list');
   if (foundryEl) {{
-    foundryEl.innerHTML = projects.slice(0, 4).map(project => `<div class="command-row"><div><strong>${{escHtml(project.title || 'Active asset')}}</strong><span>${{escHtml(project.category || project.status || 'In motion')}} · ${{escHtml((project.track || 'ops').toUpperCase())}}</span></div><div class="command-row-meta">${{escHtml(project.progress_pct != null ? `${{project.progress_pct}}%` : 'Live')}}</div></div>`).join('') || '<div class="command-row"><div><strong>No active Foundry lane</strong><span>Wake Foundry from the command deck when you need it.</span></div><div class="command-row-meta">Idle</div></div>';
+    foundryEl.innerHTML = projects.slice(0, 4).map(project => `<div class="command-row"><div><strong>${{escHtml(project.title || 'Active asset')}}</strong><span>${{escHtml(project.category || project.status || 'In motion')}} · ${{escHtml((project.track || 'ops').toUpperCase())}}</span></div><div class="command-row-meta">${{escHtml(project.progress_pct != null ? `${{project.progress_pct}}%` : 'Live')}}</div></div>`).join('') || '<div class="command-row"><div><strong>No active Workshop lane</strong><span>Wake Workshop from the command deck when you need it.</span></div><div class="command-row-meta">Idle</div></div>';
   }}
   setText('command-foundry-focus', focusProject ? `Finish ${{focusProject.title}}. It is still the highest leverage asset to move.` : 'Choose one durable asset and stay with it until it becomes shippable.');
 
@@ -21775,7 +22071,7 @@ function renderDailyBriefDesktop(data) {{
     foundryListEl.innerHTML = projects.length ? projects.slice(0, 4).map(project => {{
       const pct = project.progress_pct != null ? project.progress_pct : (project.projected_value ? Math.min(92, 26 + Math.round(project.projected_value / 1000)) : 42);
       return `<div class="dailybrief-row"><div><strong>${{escHtml(project.title || 'Active project')}}</strong><span>${{escHtml(project.category || project.status || 'In motion')}} · ${{escHtml((project.track || 'ops').toUpperCase())}}</span></div><div class="dailybrief-row-meta">${{pct}}%</div></div>`;
-    }}).join('') : '<div class="dailybrief-row"><div><strong>No active Foundry projects</strong><span>Once projects are live, creative momentum will surface here.</span></div><div class="dailybrief-row-meta">Idle</div></div>';
+    }}).join('') : '<div class="dailybrief-row"><div><strong>No active Workshop projects</strong><span>Once projects are live, creative momentum will surface here.</span></div><div class="dailybrief-row-meta">Idle</div></div>';
   }}
   const foundryFocusEl = document.getElementById('dailybrief-foundry-focus');
   if (foundryFocusEl) foundryFocusEl.textContent = leadProject ? `Deep work is open around "${{leadProject.title || 'your lead project'}}". Protect this window before the day fragments.` : 'Use the next protected window to turn one idea into a real asset, not more notes about the asset.';
@@ -23498,6 +23794,349 @@ function renderFoundryDesktop() {{
       dossiers.length ? 'Research aligned' : 'Research needs to catch up',
     ];
     launchChecklist.innerHTML = items.map(item => `<div class="foundry-performance-row"><div><strong>✓</strong><span>${{escHtml(item)}}</span></div></div>`).join('');
+  }}
+}}
+
+let workshopStoryboardPage = 1;
+let _workshopCenter = null;
+let _workshopOpenTasks = [];
+let _workshopTodayTasks = [];
+let _workshopRoster = [];
+
+const WORKSHOP_STORYBOARD_TITLES = {{
+  1: {{
+    title: 'Workshop Board',
+    label: 'Workshop Board',
+    subtitle: 'Overview all work across your world, organize by state, surface active orders, and keep today’s execution lane visible.',
+  }},
+}};
+
+function _workshopSet(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function syncWorkshopStoryboard() {{
+  const meta = WORKSHOP_STORYBOARD_TITLES[1];
+  _workshopSet('workshop-nav-title', meta.title);
+  _workshopSet('workshop-nav-subtitle', meta.subtitle);
+  _workshopSet('workshop-page-count', 'Page 1 of 1');
+  _workshopSet('workshop-page-label', meta.label);
+  const prev = document.getElementById('workshop-nav-prev');
+  const next = document.getElementById('workshop-nav-next');
+  if (prev) prev.disabled = true;
+  if (next) next.disabled = true;
+}}
+
+function advanceWorkshopPage(delta) {{
+  workshopStoryboardPage = Math.max(1, Math.min(1, workshopStoryboardPage + delta));
+  syncWorkshopStoryboard();
+}}
+
+function _workshopPriority(value) {{
+  const raw = String(value || '').toLowerCase();
+  if (raw.includes('high') || raw.includes('critical')) return 'high';
+  if (raw.includes('low')) return 'low';
+  return 'medium';
+}}
+
+function _workshopTaskFromMission(item) {{
+  return {{
+    id: item.mission_id || item.title || Math.random().toString(36).slice(2),
+    title: item.title || 'Mission lane',
+    status: item.status || item.lane || 'active',
+    priority: item.blocked_count ? 'high' : 'medium',
+    owner: item.owner_agent || 'JARVIS',
+    due_date: '',
+    summary: item.brief || item.what_became_real || item.remains_partial || '',
+    progress_pct: item.subtask_count ? Math.round(((item.completed_count || 0) / Math.max(item.subtask_count, 1)) * 100) : (item.active_count ? 60 : 35),
+  }};
+}}
+
+function _workshopTaskFromNeed(item, idx) {{
+  return {{
+    id: 'need-' + idx,
+    title: item.title || 'Needs review',
+    status: 'review',
+    priority: item.kind === 'integration' ? 'high' : 'medium',
+    owner: 'Chris',
+    due_date: '',
+    summary: item.detail || 'Needs your review.',
+    progress_pct: 75,
+  }};
+}}
+
+function _workshopTaskFromTask(item, idx) {{
+  return {{
+    id: item.id || item.task_id || 'task-' + idx,
+    title: item.title || item.text || 'Task',
+    status: item.status || 'open',
+    priority: _workshopPriority(item.priority),
+    owner: item.owner || item.assignee || item.agent || 'Chris',
+    due_date: item.due_date || item.due || '',
+    summary: item.summary || item.note || item.blocked_reason || item.status || '',
+    progress_pct: item.progress_pct != null ? item.progress_pct : (String(item.status || '').toLowerCase().includes('done') ? 100 : String(item.status || '').toLowerCase().includes('progress') ? 62 : 28),
+  }};
+}}
+
+function _workshopBoardLane(task) {{
+  const status = String(task.status || '').toLowerCase();
+  if (status.includes('done') || status.includes('complete')) return 'done';
+  if (status.includes('review') || status.includes('await')) return 'review';
+  if (status.includes('wait') || status.includes('hold')) return 'waiting';
+  if (status.includes('progress') || status.includes('active') || status.includes('execut')) return 'progress';
+  if (status.includes('ready') || status.includes('queued')) return 'ready';
+  return 'inbox';
+}}
+
+function _workshopTasks() {{
+  const missionItems = (((_workshopCenter || {{}}).mission_task_board || {{}}).items || []).map(_workshopTaskFromMission);
+  const needItems = ((_workshopCenter || {{}}).what_needs_me || []).map(_workshopTaskFromNeed);
+  const openTasks = (_workshopOpenTasks || []).map(_workshopTaskFromTask);
+  const todayTasks = (_workshopTodayTasks || []).map(_workshopTaskFromTask);
+  const seen = new Set();
+  return [...openTasks, ...todayTasks, ...missionItems, ...needItems].filter(task => {{
+    if (!task.id || seen.has(task.id)) return false;
+    seen.add(task.id);
+    return true;
+  }});
+}}
+
+function _workshopBadge(priority) {{
+  const p = _workshopPriority(priority);
+  return `<span class="workshop-tag ${{p}}">${{escHtml(p)}}</span>`;
+}}
+
+async function loadWorkshop() {{
+  syncWorkshopStoryboard();
+  try {{
+    const [centerRes, tasksRes, todayRes, rosterRes] = await Promise.all([
+      fetch('/api/command-center').catch(() => null),
+      fetch('/api/home/tasks?status=open').catch(() => null),
+      fetch('/api/home/tasks/today').catch(() => null),
+      fetch('/api/agents/roster').catch(() => null),
+    ]);
+    _workshopCenter = centerRes && centerRes.ok ? await centerRes.json() : {{}};
+    _workshopOpenTasks = tasksRes && tasksRes.ok ? ((await tasksRes.json()).tasks || []) : [];
+    _workshopTodayTasks = todayRes && todayRes.ok ? ((await todayRes.json()).tasks || []) : [];
+    _workshopRoster = rosterRes && rosterRes.ok ? ((await rosterRes.json()).agents || []) : [];
+    renderWorkshopDesktop();
+  }} catch (e) {{
+    console.error('loadWorkshop failed', e);
+  }}
+}}
+
+function renderWorkshopDesktop() {{
+  const center = _workshopCenter || {{}};
+  const board = center.mission_task_board || {{}};
+  const loops = center.open_loop_inspector || {{}};
+  const journal = center.action_journal || {{}};
+  const needs = center.what_needs_me || [];
+  const roster = (center.agent_ops_roster && center.agent_ops_roster.items) || _workshopRoster || [];
+  const tasks = _workshopTasks();
+  const byLane = {{ inbox: [], ready: [], progress: [], waiting: [], review: [], done: [] }};
+  tasks.forEach(task => byLane[_workshopBoardLane(task)].push(task));
+
+  _workshopSet('workshop-sidebar-health', ((center.home_overview || {{}}).system_state || {{}}).label || 'Operational');
+  _workshopSet('workshop-sidebar-queue', `${{tasks.length}} tasks · ${{needs.length}} review`);
+  _workshopSet('workshop-sidebar-refresh', journal.entries?.[0]?.timestamp ? relTime(journal.entries[0].timestamp) : 'Just now');
+
+  _workshopSet('workshop-stat-wip', String(tasks.filter(t => ['progress','waiting','review'].includes(_workshopBoardLane(t))).length));
+  _workshopSet('workshop-stat-wip-sub', `${{Math.max(1, board.item_count || 0)}} mission lane${{(board.item_count || 0) === 1 ? '' : 's'}} active`);
+  _workshopSet('workshop-stat-completed', String(journal.operator_count || 0));
+  _workshopSet('workshop-stat-completed-sub', `${{journal.autonomous_count || 0}} autonomous`);
+  _workshopSet('workshop-stat-review', String(needs.length));
+  _workshopSet('workshop-stat-review-sub', `${{needs.filter(n => n.kind === 'integration').length}} high priority`);
+  _workshopSet('workshop-stat-blocked', String((board.counts || {{}}).blocked || 0));
+  _workshopSet('workshop-stat-blocked-sub', `${{((center.failure_recovery || {{}}).integration_issue_count) || 0}} integration issue(s)`);
+  _workshopSet('workshop-stat-due', String(_workshopTodayTasks.length || 0));
+  _workshopSet('workshop-stat-due-sub', `${{_workshopTodayTasks.filter(t => _workshopPriority(t.priority) === 'high').length}} high priority`);
+
+  const commandGrid = document.getElementById('workshop-command-grid');
+  if (commandGrid) {{
+    const cards = [
+      ['My Tasks', _workshopOpenTasks.length || tasks.length, `${{_workshopTodayTasks.length}} due today`],
+      ['Agent Tasks', roster.length || 0, `${{(center.agent_ops_roster || {{}}).counts?.running || 0}} in progress`],
+      ['Delegated', roster.filter(a => String(a.status || '').toLowerCase().includes('running')).length || 0, `${{needs.length}} awaiting review`],
+      ['Open Loops', (loops.summary || {{}}).needs_revisit || 0, `${{(loops.summary || {{}}).recent_motion_count || 0}} recent motion`],
+    ];
+    commandGrid.innerHTML = cards.map(([label, value, note]) => `
+      <div class="workshop-kpi"><span>${{escHtml(label)}}</span><strong>${{escHtml(String(value))}}</strong><small>${{escHtml(String(note))}}</small></div>
+    `).join('');
+  }}
+
+  const balanceGrid = document.getElementById('workshop-balance-grid');
+  if (balanceGrid) {{
+    const areas = [
+      ['Foundry', 78], ['Publish', 62], ['Family', 55], ['Health', 40], ['Home', 48], ['Finance', 35], ['Operation', 70],
+    ];
+    const areaRows = areas.map(([label, pct]) => `<div class="workshop-balance-row"><span>${{label}}</span><div style="flex:1;margin:0 12px;"><div class="workshop-progress"><div style="width:${{pct}}%;"></div></div></div><strong>${{pct}}%</strong></div>`).join('');
+    balanceGrid.innerHTML = `
+      <div class="workshop-panel">
+        <strong>Workload Balance</strong>
+        ${{areaRows}}
+      </div>
+      <div class="workshop-panel">
+        <strong>Focus Mode Recommendation</strong>
+        <span>${{((center.home_overview || {{}}).next_mission || {{}}).title || 'Deep work block recommended'}}.</span>
+        <button class="workshop-outline-btn" type="button" style="margin-top:12px;" onclick="switchView('command')">Start Focus Block</button>
+      </div>
+    `;
+  }}
+
+  const boardEl = document.getElementById('workshop-board');
+  if (boardEl) {{
+    const lanes = [
+      ['Inbox', 'inbox'],
+      ['Ready', 'ready'],
+      ['In Progress', 'progress'],
+      ['Waiting', 'waiting'],
+      ['Review', 'review'],
+      ['Done', 'done'],
+    ];
+    boardEl.innerHTML = lanes.map(([label, key]) => `
+      <div class="workshop-board-col">
+        <div class="workshop-board-head"><span>${{label}}</span><span>${{byLane[key].length}}</span></div>
+        ${{(byLane[key].slice(0, 4).map(task => `
+          <div class="workshop-task-card">
+            <strong>${{escHtml(task.title)}}</strong>
+            <span>${{escHtml(task.summary || task.status || 'Task in motion.')}}</span>
+            ${{_workshopBadge(task.priority)}}
+            <div class="workshop-task-meta"><span>${{escHtml(task.owner || 'Chris')}}</span><span>${{task.progress_pct}}%</span></div>
+          </div>
+        `).join('')) || '<div class="workshop-task-card"><strong>No items</strong><span>This lane is clear right now.</span></div>'}}
+      </div>
+    `).join('');
+  }}
+
+  const ordersEl = document.getElementById('workshop-work-orders');
+  if (ordersEl) {{
+    const orders = tasks.slice(0, 3);
+    ordersEl.innerHTML = orders.length ? orders.map((task, idx) => `
+      <div class="workshop-work-order">
+        <div class="workshop-order-top">
+          <div><span>WO-${{String(idx + 1034).padStart(4, '0')}}</span><strong>${{escHtml(task.title)}}</strong></div>
+          ${{_workshopBadge(task.priority)}}
+        </div>
+        <div class="workshop-order-bar"><div class="workshop-progress"><div style="width:${{task.progress_pct}}%;"></div></div></div>
+        <div class="workshop-order-meta"><span>${{escHtml(task.summary || 'Execution lane active')}}</span><strong>${{task.progress_pct}}%</strong></div>
+      </div>
+    `).join('') : '<div class="workshop-work-order"><strong>No active work orders</strong><span>Major execution threads will surface here.</span></div>';
+  }}
+
+  const delegationEl = document.getElementById('workshop-delegation-list');
+  if (delegationEl) {{
+    delegationEl.innerHTML = roster.slice(0, 5).map(agent => `
+      <div class="workshop-list-row">
+        <div>
+          <strong>${{escHtml(agent.name || agent.agent_id || 'Agent')}}</strong>
+          <span>${{escHtml(agent.purpose || agent.assignment || 'Supporting current work.')}}</span>
+        </div>
+        <div class="meta">${{escHtml(String(agent.status || 'idle'))}}<br><em>${{escHtml(relTime(agent.last_activity || ''))}}</em></div>
+      </div>
+    `).join('') || '<div class="workshop-list-row"><div><strong>No delegation pressure</strong><span>Agent assignments will surface here.</span></div></div>';
+  }}
+
+  const blockersEl = document.getElementById('workshop-blockers-list');
+  if (blockersEl) {{
+    const issues = [...needs.slice(0, 3), ...(((center.failure_recovery || {{}}).action_items) || []).slice(0, 2)];
+    blockersEl.innerHTML = issues.length ? issues.map(item => `
+      <div class="workshop-list-row">
+        <div>
+          <strong>${{escHtml(item.title || 'Blocked item')}}</strong>
+          <span>${{escHtml(item.detail || 'Needs intervention.')}}</span>
+        </div>
+        <div class="meta">${{item.kind ? escHtml(item.kind) : 'Review'}}</div>
+      </div>
+    `).join('') : '<div class="workshop-list-row"><div><strong>No blockers</strong><span>The lane is currently clear.</span></div></div>';
+  }}
+
+  const laneEl = document.getElementById('workshop-execution-lane');
+  if (laneEl) {{
+    const lane = (_workshopTodayTasks.length ? _workshopTodayTasks : tasks).slice(0, 5);
+    laneEl.innerHTML = lane.length ? lane.map((task, idx) => `
+      <div class="workshop-exec-row">
+        <div class="index">${{idx + 1}}</div>
+        <div><strong>${{escHtml(task.title || task.text || 'Task')}}</strong><span>${{escHtml(task.summary || task.status || 'Execution item')}}</span></div>
+        ${{_workshopBadge(task.priority)}}
+        <div>${{escHtml(task.due_date || ['9:30 AM','11:00 AM','1:00 PM','3:30 PM','9:00 PM'][idx] || 'Today')}}</div>
+      </div>
+    `).join('') : '<div class="workshop-exec-row"><div class="index">1</div><div><strong>No scheduled execution lane</strong><span>Today is currently clear.</span></div><span></span><div>—</div></div>';
+  }}
+
+  const intelEl = document.getElementById('workshop-intelligence-list');
+  if (intelEl) {{
+    const items = [
+      `${{needs.length}} task${{needs.length === 1 ? '' : 's'}} need review or repair`,
+      `${{tasks.filter(t => !_workshopBoardLane(t).includes('done') && _workshopPriority(t.priority) === 'high').length}} high-priority items are still open`,
+      `${{roster.filter(a => String(a.status || '').toLowerCase().includes('blocked')).length}} agents are blocked`,
+      `${{journal.autonomous_count || 0}} recent actions were automated`,
+    ];
+    intelEl.innerHTML = items.map(item => `<div class="workshop-list-row"><div><strong>${{escHtml(item)}}</strong><span>JARVIS surfaced this from the current workshop posture.</span></div></div>`).join('');
+  }}
+
+  const timelineEl = document.getElementById('workshop-resumption-timeline');
+  if (timelineEl) {{
+    const entries = (journal.entries || []).slice(0, 5);
+    timelineEl.innerHTML = entries.length ? entries.map(entry => `
+      <div class="workshop-timeline-row">
+        <div>${{escHtml(fmtTime(entry.timestamp))}}</div>
+        <div class="workshop-timeline-dot"></div>
+        <div><strong>${{escHtml(entry.title || 'Update')}}</strong><span>${{escHtml(entry.status || entry.detail || 'Recent motion in the system.')}}</span></div>
+      </div>
+    `).join('') : '<div class="workshop-timeline-row"><div>—</div><div class="workshop-timeline-dot"></div><div><strong>No recent resumption events</strong><span>Overnight activity will surface here.</span></div></div>';
+  }}
+
+  const quickEl = document.getElementById('workshop-quick-actions');
+  if (quickEl) {{
+    const actions = ['Create Task','Delegate Work','Start Focus Block','Approve Queue','Request Update','Escalate Issue','Convert to Project','Archive / Close'];
+    quickEl.innerHTML = actions.map(label => `<button class="workshop-quick-btn" type="button">${{escHtml(label)}}</button>`).join('');
+  }}
+
+  const capacityEl = document.getElementById('workshop-capacity-list');
+  if (capacityEl) {{
+    const areas = [
+      ['You', 71], ['Agents (All)', 64], ['Foundry', 52], ['Publish', 82], ['Health', 38], ['Family', 46],
+    ];
+    capacityEl.innerHTML = areas.map(([label, pct]) => `
+      <div class="workshop-mini-card">
+        <div class="workshop-capacity-row"><strong>${{label}}</strong><span>${{pct}}%</span></div>
+        <div class="workshop-progress"><div style="width:${{pct}}%;"></div></div>
+      </div>
+    `).join('');
+  }}
+  _workshopSet('workshop-capacity-recommendation',
+    needs.length ? 'You have real review pressure in the queue. Protect the deep work block by clearing approvals in batches.' : 'The queue is manageable. Keep today anchored around the highest-value execution lane.');
+
+  const templateEl = document.getElementById('workshop-template-list');
+  if (templateEl) {{
+    const templates = [
+      ['Book Chapter Creation', 'End-to-end chapter writing workflow'],
+      ['Launch Campaign Flow', 'From outline to publish launch'],
+      ['Devotional Series Build', '7-step content and publishing flow'],
+      ['Product Development Flow', 'Idea to prototype to release'],
+      ['Monthly Review Process', 'Reflection, metrics, and planning'],
+    ];
+    templateEl.innerHTML = templates.map(([title, copy]) => `
+      <div class="workshop-template-row">
+        <div><strong>${{title}}</strong><span>${{copy}}</span></div>
+        <button class="workshop-outline-btn" type="button">Use</button>
+      </div>
+    `).join('');
+  }}
+
+  const footerEl = document.getElementById('workshop-footer-strip');
+  if (footerEl) {{
+    const items = [
+      ['Right Work, Right Time', 'Focus on what matters most.'],
+      ['Agentic Execution', 'Let the right agent carry the right work.'],
+      ['Clear Ownership', 'Every task has an owner.'],
+      ['Continuous Momentum', 'Small moves daily. Big things consistently.'],
+      ['Trust & Transparency', 'See what’s happening. Know what’s blocked.'],
+      ['Adaptive Intelligence', 'The system learns your rhythms.'],
+      ['Workshop Online', 'All systems operational'],
+    ];
+    footerEl.innerHTML = items.map(([title, copy]) => `<div class="workshop-footer-pill"><strong>${{title}}</strong><span>${{copy}}</span></div>`).join('');
   }}
 }}
 
