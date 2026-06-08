@@ -552,18 +552,28 @@ body::after {{
   text-shadow: 0 0 20px rgba(59,158,255,0.6);
 }}
 
+.nav-scroll {{
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 0 12px;
+  scrollbar-width: none;
+}}
+.nav-scroll::-webkit-scrollbar {{ display: none; }}
+
 .nav-tabs {{
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 2px;
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 10px 8px;
-  scrollbar-width: none;
+  gap: 14px;
+  padding: 0 8px;
 }}
-.nav-tabs::-webkit-scrollbar {{ display: none; }}
+
+.nav-tab-group {{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}}
 
 .nav-tab {{
   display: flex;
@@ -602,6 +612,14 @@ body::after {{
 .nav-tab svg {{
   width: 13px; height: 13px;
   flex-shrink: 0;
+}}
+
+.nav-tab-eyebrow {{
+  margin: 0 12px 6px;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
 }}
 
 .nav-right {{
@@ -7262,6 +7280,34 @@ body::after {{
     text-transform: uppercase;
     color: var(--text-3);
 }}
+.nav-module-drawer {{
+    margin: 8px 8px 0;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.025);
+    overflow: hidden;
+}}
+.nav-module-drawer[open] {{
+    background: rgba(255,255,255,0.04);
+}}
+.nav-module-summary {{
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 600;
+}}
+.nav-module-summary::-webkit-details-marker {{ display: none; }}
+.nav-module-summary span {{
+    color: var(--text-3);
+    font-size: 10px;
+    font-family: var(--font-mono);
+}}
 .nav-route-links {{
     display: flex;
     flex-direction: column;
@@ -7315,110 +7361,130 @@ body::after {{
     <button onclick="closeMobileNav()" id="nav-close-btn" style="display:none;background:none;border:none;color:var(--text-2);font-size:18px;cursor:pointer;padding:4px;">✕</button>
   </div>
 
-  <div class="nav-tabs" id="nav-tabs">
-    <button class="nav-tab" data-view="chat" onclick="switchView('chat')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v9H9l-3 3v-3H2z"/></svg>
-      Chat
-    </button>
-    <button class="nav-tab" data-view="overview" onclick="switchView('overview')">
-      <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-      Overview
-    </button>
-    <button class="nav-tab" data-view="notifications" onclick="switchView('notifications')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a3 3 0 0 1 3 3v1.5c0 .8.3 1.5.8 2.1l.9 1V11H3.3V9.6l.9-1A3.2 3.2 0 0 0 5 6.5V5a3 3 0 0 1 3-3z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
-      Notifications
-    </button>
-    <button class="nav-tab" data-view="dining" onclick="switchView('dining')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2v5a3 3 0 0 0 6 0V2M8 9v5M6 14h4"/></svg>
-      Dining
-    </button>
-    <button class="nav-tab" data-view="forge" onclick="switchView('forge')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M4 6l4-4 4 4M3 14h10"/></svg>
-      Forge
-    </button>
-    <button class="nav-tab" data-view="vision" onclick="switchView('vision')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M1 8C2.5 4 5 2 8 2s5.5 2 7 6c-1.5 4-4 6-7 6S2.5 12 1 8z"/></svg>
-      Vision
-    </button>
-    <button class="nav-tab" data-view="catalyst" onclick="switchView('catalyst')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1L7 9h5L7 15"/></svg>
-      Catalyst
-    </button>
-    <button class="nav-tab" data-view="chronicle" onclick="switchView('chronicle')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 6h6M5 9h4"/></svg>
-      Legacy
-    </button>
-    <button class="nav-tab" data-view="faith" onclick="switchView('faith')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12" stroke-linecap="round"/></svg>
-      Faith
-    </button>
-        <button class="nav-tab" data-view="publishing" onclick="switchView('publishing')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1h8v14H4zM7 1v14"/></svg>
-      Publishing
-    </button>
-    <button class="nav-tab" data-view="workshop" onclick="switchView('workshop')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="9" width="12" height="5" rx="1"/><path d="M5 9V6a3 3 0 016 0v3"/><circle cx="8" cy="4" r="1.5"/></svg>
-      Workshop
-    </button>
-    <button class="nav-tab" data-view="huddle" onclick="switchView('huddle')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="8" cy="4" r="2"/><path d="M1 14c0-2 1.5-3 3-3h2m4 0h2c1.5 0 3 1 3 3"/><path d="M6 11c0-1.5 1-2.5 2-2.5s2 1 2 2.5"/></svg>
-      Huddle
-    </button>
-    <button class="nav-tab" data-view="agents" onclick="switchView('agents')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.5"/><circle cx="11" cy="5" r="2"/><path d="M1 14c0-3 2-4.5 5-4.5s5 1.5 5 4.5"/><path d="M12 9.5c2 .5 3 1.5 3 3.5"/></svg>
-      Agents
-    </button>
-    <button class="nav-tab" data-view="intelligence" onclick="switchView('intelligence')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 100 12A5 5 0 008 2z"/><path d="M8 6v2l1.5 1.5"/></svg>
-      Intel
-    </button>
-    <button class="nav-tab" data-view="email" onclick="switchView('email')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 5l7 5 7-5"/></svg>
-      Email
-    </button>
-    <button class="nav-tab" data-view="calendar" onclick="switchView('calendar')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="13" rx="1.5"/><path d="M5 1v3M11 1v3M1 7h14"/></svg>
-      Calendar
-    </button>
-    <button class="nav-tab" data-view="health" onclick="switchView('health')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-      HEALTH
-    </button>
-    <button class="nav-tab" data-view="news" onclick="switchView('news')">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9h5"/></svg>
-      News
-    </button>
-    <button class="nav-tab" data-view="home" onclick="switchView('home')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Home
-    </button>
-    <button class="nav-tab" data-view="navigate" onclick="switchView('navigate')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-      Navigate
-    </button>
-    <button class="nav-tab" data-view="journey" onclick="switchView('journey')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/><circle cx="8" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
-      Journey
-    </button>
-  </div>
+  <div class="nav-scroll">
+    <div class="nav-tabs" id="nav-tabs">
+      <div class="nav-tab-group">
+        <div class="nav-tab-eyebrow">Command</div>
+        <button class="nav-tab" data-view="overview" onclick="switchView('overview')">
+          <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          Daily Brief
+        </button>
+        <button class="nav-tab" data-view="chat" onclick="switchView('chat')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2h12v9H9l-3 3v-3H2z"/></svg>
+          Command
+        </button>
+        <button class="nav-tab" data-view="notifications" onclick="switchView('notifications')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a3 3 0 0 1 3 3v1.5c0 .8.3 1.5.8 2.1l.9 1V11H3.3V9.6l.9-1A3.2 3.2 0 0 0 5 6.5V5a3 3 0 0 1 3-3z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
+          Needs You
+        </button>
+      </div>
 
-  <div class="nav-section-label">Web Modules</div>
-  <div class="nav-route-links">
-    <a class="nav-route-link" href="/briefing-center"><span>Daily Briefing</span><code>/briefing-center</code></a>
-    <a class="nav-route-link" href="/command-center"><span>Command Center</span><code>/command-center</code></a>
-    <a class="nav-route-link" href="/progress-center"><span>Progress Center</span><code>/progress-center</code></a>
-    <a class="nav-route-link" href="/activity-center"><span>Activity Feed</span><code>/activity-center</code></a>
-    <a class="nav-route-link" href="/recovery-center"><span>Recovery Center</span><code>/recovery-center</code></a>
-    <a class="nav-route-link" href="/publish"><span>Publish</span><code>/publish</code></a>
-    <a class="nav-route-link" href="/agent-ops-center"><span>Agent Ops</span><code>/agent-ops-center</code></a>
-    <a class="nav-route-link" href="/mission-board"><span>Mission Board</span><code>/mission-board</code></a>
-    <a class="nav-route-link" href="/approval-queue"><span>Approval Queue</span><code>/approval-queue</code></a>
-    <a class="nav-route-link" href="/supervision-snapshot"><span>Supervision</span><code>/supervision-snapshot</code></a>
-    <a class="nav-route-link" href="/settings-center"><span>Settings Center</span><code>/settings-center</code></a>
-    <a class="nav-route-link" href="/health-center"><span>Health Center</span><code>/health-center</code></a>
-    <a class="nav-route-link" href="/huddle-center"><span>Huddle Center</span><code>/huddle-center</code></a>
-    <a class="nav-route-link" href="/chronicle-center"><span>Legacy Module</span><code>/chronicle-center</code></a>
-    <a class="nav-route-link" href="/navigation-center"><span>Navigation Center</span><code>/navigation-center</code></a>
+      <div class="nav-tab-group">
+        <div class="nav-tab-eyebrow">Core</div>
+        <button class="nav-tab" data-view="chronicle" onclick="switchView('chronicle')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 6h6M5 9h4"/></svg>
+          Legacy
+        </button>
+        <button class="nav-tab" data-view="faith" onclick="switchView('faith')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12" stroke-linecap="round"/></svg>
+          Faith
+        </button>
+        <button class="nav-tab" data-view="agents" onclick="switchView('agents')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="2.5"/><circle cx="11" cy="5" r="2"/><path d="M1 14c0-3 2-4.5 5-4.5s5 1.5 5 4.5"/><path d="M12 9.5c2 .5 3 1.5 3 3.5"/></svg>
+          Agents
+        </button>
+        <button class="nav-tab" data-view="intelligence" onclick="switchView('intelligence')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 100 12A5 5 0 008 2z"/><path d="M8 6v2l1.5 1.5"/></svg>
+          Intel
+        </button>
+      </div>
+
+      <div class="nav-tab-group">
+        <div class="nav-tab-eyebrow">Build</div>
+        <button class="nav-tab" data-view="forge" onclick="switchView('forge')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M4 6l4-4 4 4M3 14h10"/></svg>
+          Forge
+        </button>
+        <button class="nav-tab" data-view="catalyst" onclick="switchView('catalyst')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 1L7 9h5L7 15"/></svg>
+          Catalyst
+        </button>
+        <button class="nav-tab" data-view="workshop" onclick="switchView('workshop')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="9" width="12" height="5" rx="1"/><path d="M5 9V6a3 3 0 016 0v3"/><circle cx="8" cy="4" r="1.5"/></svg>
+          Workshop
+        </button>
+        <button class="nav-tab" data-view="publishing" onclick="switchView('publishing')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1h8v14H4zM7 1v14"/></svg>
+          Publishing
+        </button>
+        <button class="nav-tab" data-view="huddle" onclick="switchView('huddle')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="4" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="8" cy="4" r="2"/><path d="M1 14c0-2 1.5-3 3-3h2m4 0h2c1.5 0 3 1 3 3"/><path d="M6 11c0-1.5 1-2.5 2-2.5s2 1 2 2.5"/></svg>
+          Huddle
+        </button>
+      </div>
+
+      <div class="nav-tab-group">
+        <div class="nav-tab-eyebrow">Life</div>
+        <button class="nav-tab" data-view="calendar" onclick="switchView('calendar')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="13" rx="1.5"/><path d="M5 1v3M11 1v3M1 7h14"/></svg>
+          Calendar
+        </button>
+        <button class="nav-tab" data-view="email" onclick="switchView('email')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 5l7 5 7-5"/></svg>
+          Email
+        </button>
+        <button class="nav-tab" data-view="health" onclick="switchView('health')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          Health
+        </button>
+        <button class="nav-tab" data-view="home" onclick="switchView('home')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Home
+        </button>
+        <button class="nav-tab" data-view="dining" onclick="switchView('dining')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 2v5a3 3 0 0 0 6 0V2M8 9v5M6 14h4"/></svg>
+          Dining
+        </button>
+        <button class="nav-tab" data-view="navigate" onclick="switchView('navigate')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          Navigate
+        </button>
+        <button class="nav-tab" data-view="journey" onclick="switchView('journey')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/><circle cx="8" cy="12" r="2" fill="currentColor" stroke="none"/></svg>
+          Journey
+        </button>
+        <button class="nav-tab" data-view="vision" onclick="switchView('vision')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M1 8C2.5 4 5 2 8 2s5.5 2 7 6c-1.5 4-4 6-7 6S2.5 12 1 8z"/></svg>
+          Vision
+        </button>
+        <button class="nav-tab" data-view="news" onclick="switchView('news')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9h5"/></svg>
+          News
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-section-label">Standalone Pages</div>
+    <details class="nav-module-drawer">
+      <summary class="nav-module-summary">Open direct web routes <span>Optional</span></summary>
+      <div class="nav-route-links">
+        <a class="nav-route-link" href="/briefing-center"><span>Daily Briefing</span><code>/briefing-center</code></a>
+        <a class="nav-route-link" href="/command-center"><span>Command Center</span><code>/command-center</code></a>
+        <a class="nav-route-link" href="/progress-center"><span>Progress Center</span><code>/progress-center</code></a>
+        <a class="nav-route-link" href="/activity-center"><span>Activity Feed</span><code>/activity-center</code></a>
+        <a class="nav-route-link" href="/recovery-center"><span>Recovery Center</span><code>/recovery-center</code></a>
+        <a class="nav-route-link" href="/publish"><span>Publish</span><code>/publish</code></a>
+        <a class="nav-route-link" href="/agent-ops-center"><span>Agent Ops</span><code>/agent-ops-center</code></a>
+        <a class="nav-route-link" href="/mission-board"><span>Mission Board</span><code>/mission-board</code></a>
+        <a class="nav-route-link" href="/approval-queue"><span>Approval Queue</span><code>/approval-queue</code></a>
+        <a class="nav-route-link" href="/supervision-snapshot"><span>Supervision</span><code>/supervision-snapshot</code></a>
+        <a class="nav-route-link" href="/settings-center"><span>Settings Center</span><code>/settings-center</code></a>
+        <a class="nav-route-link" href="/health-center"><span>Health Center</span><code>/health-center</code></a>
+        <a class="nav-route-link" href="/huddle-center"><span>Huddle Center</span><code>/huddle-center</code></a>
+        <a class="nav-route-link" href="/chronicle-center"><span>Legacy Module</span><code>/chronicle-center</code></a>
+        <a class="nav-route-link" href="/navigation-center"><span>Navigation Center</span><code>/navigation-center</code></a>
+      </div>
+    </details>
   </div>
 
   <div class="nav-right">
