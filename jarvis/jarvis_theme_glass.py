@@ -8606,6 +8606,749 @@ body::after {{
 .command-trace-shell .chat-empty {{
   padding: 30px 18px;
 }}
+.dining-view {{
+  --dining-gold: #d59a3b;
+  --dining-gold-soft: #a77526;
+  --dining-ink: #071018;
+  --dining-panel: rgba(9, 14, 22, 0.96);
+  --dining-panel-soft: rgba(15, 22, 32, 0.92);
+  --dining-border: rgba(213, 154, 59, 0.18);
+  --dining-border-strong: rgba(213, 154, 59, 0.34);
+  --dining-copy: #f5efe4;
+  --dining-muted: #b9ac97;
+  --dining-dim: #7f7466;
+  --dining-green: #4ade80;
+  --dining-shadow: 0 32px 80px rgba(0,0,0,0.42);
+}}
+.dining-view .view-title {{
+  color: var(--dining-copy);
+}}
+.dining-shell {{
+  display: grid;
+  gap: 18px;
+}}
+.dining-headline,
+.dining-topbar,
+.dining-sequence-bar {{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}}
+.dining-kicker {{
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--dining-gold-soft);
+  margin-bottom: 8px;
+}}
+.dining-headline h1 {{
+  margin: 0;
+  font-size: 50px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--dining-copy);
+}}
+.dining-headline h1 span {{
+  color: var(--dining-gold);
+}}
+.dining-headline p {{
+  margin: 10px 0 0;
+  color: var(--dining-muted);
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 820px;
+}}
+.dining-voice-prompt,
+.dining-statbar,
+.dining-profile-card,
+.dining-sequence-bar {{
+  border: 1px solid var(--dining-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(13,18,28,.95), rgba(8,11,17,.92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}}
+.dining-voice-prompt {{
+  flex: 1;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}}
+.dining-voice-copy strong {{
+  display: block;
+  color: var(--dining-copy);
+  font-size: 22px;
+  margin-bottom: 4px;
+}}
+.dining-voice-copy span {{
+  color: var(--dining-muted);
+  font-size: 13px;
+}}
+.dining-wave {{
+  flex: 1;
+  height: 34px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(0,212,255,0.28), transparent 14%),
+    radial-gradient(circle at 26% 50%, rgba(0,212,255,0.54), transparent 10%),
+    radial-gradient(circle at 40% 50%, rgba(0,212,255,0.24), transparent 12%),
+    radial-gradient(circle at 54% 50%, rgba(0,212,255,0.68), transparent 9%),
+    radial-gradient(circle at 68% 50%, rgba(0,212,255,0.26), transparent 12%),
+    radial-gradient(circle at 82% 50%, rgba(0,212,255,0.48), transparent 10%),
+    linear-gradient(90deg, transparent, rgba(0,212,255,0.1), transparent);
+}}
+.dining-voice-btn {{
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: var(--dining-copy);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}}
+.dining-statbar {{
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 520px;
+}}
+.dining-stat {{
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding-right: 12px;
+}}
+.dining-stat:last-child {{
+  border-right: none;
+  padding-right: 0;
+}}
+.dining-stat strong {{
+  display: block;
+  color: var(--dining-copy);
+  font-size: 24px;
+}}
+.dining-stat span {{
+  display: block;
+  color: var(--dining-muted);
+  font-size: 11px;
+  margin-top: 4px;
+}}
+.dining-profile-card {{
+  padding: 14px 16px;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}}
+.dining-profile-avatar {{
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e0b06b, #7a4a14);
+  color: #1b1207;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}}
+.dining-profile-card strong {{
+  display: block;
+  color: var(--dining-copy);
+  font-size: 15px;
+}}
+.dining-profile-card span {{
+  display: block;
+  color: var(--dining-muted);
+  font-size: 11px;
+  margin-top: 4px;
+}}
+.dining-sequence-bar {{
+  padding: 14px 18px;
+  align-items: center;
+}}
+.dining-sequence-copy {{
+  display: grid;
+  gap: 6px;
+}}
+.dining-sequence-copy strong {{
+  color: var(--dining-copy);
+  font-size: 18px;
+}}
+.dining-sequence-copy span {{
+  color: var(--dining-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}}
+.dining-sequence-controls {{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}}
+.dining-sequence-btn {{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--dining-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--dining-copy);
+  font-size: 18px;
+}}
+.dining-sequence-btn:disabled {{
+  opacity: 0.35;
+}}
+.dining-sequence-page {{
+  min-width: 112px;
+  text-align: center;
+  color: var(--dining-copy);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}}
+.dining-desktop-shell {{
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  border: 1px solid var(--dining-border);
+  border-radius: 28px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, rgba(213,154,59,.08), transparent 25%),
+    linear-gradient(180deg, rgba(7,10,15,.98), rgba(4,6,11,.98));
+  box-shadow: var(--dining-shadow);
+}}
+.dining-sidebar {{
+  padding: 22px 18px 18px;
+  border-right: 1px solid var(--dining-border);
+  background: linear-gradient(180deg, rgba(9,12,18,.98), rgba(5,8,13,.96));
+  display: flex;
+  flex-direction: column;
+}}
+.dining-sidebar-brand {{
+  text-align: center;
+  margin-bottom: 18px;
+}}
+.dining-sidebar-orb {{
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  border: 1px solid var(--dining-border-strong);
+  display: grid;
+  place-items: center;
+  color: #8fd6ff;
+  font-size: 30px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,212,255,0.34), rgba(12,40,64,0.08) 42%, transparent 72%),
+    rgba(255,255,255,0.02);
+}}
+.dining-sidebar-brand strong {{
+  display: block;
+  color: var(--dining-copy);
+  font-size: 28px;
+  letter-spacing: 0.05em;
+}}
+.dining-sidebar-brand span {{
+  display: block;
+  color: var(--dining-gold);
+  font-size: 13px;
+  margin-top: 4px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}}
+.dining-side-nav {{
+  display: grid;
+  gap: 8px;
+}}
+.dining-side-link {{
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--dining-muted);
+  font-size: 13px;
+  background: rgba(255,255,255,.02);
+}}
+.dining-side-link.active {{
+  border-color: var(--dining-border-strong);
+  background: linear-gradient(180deg, rgba(213,154,59,.18), rgba(94,58,15,.14));
+  color: var(--dining-copy);
+}}
+.dining-sidebar-foot {{
+  margin-top: auto;
+  display: grid;
+  gap: 12px;
+}}
+.dining-status-card {{
+  border: 1px solid var(--dining-border);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255,255,255,0.02);
+}}
+.dining-status-card strong {{
+  display: block;
+  color: var(--dining-copy);
+  font-size: 12px;
+  margin-bottom: 10px;
+}}
+.dining-status-card span {{
+  display: block;
+  color: var(--dining-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}}
+.dining-main {{
+  padding: 22px 24px 24px;
+  display: grid;
+  gap: 18px;
+}}
+.dining-grid {{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+}}
+.dining-card {{
+  grid-column: span 4;
+  border: 1px solid var(--dining-border);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(14,19,28,.94), rgba(8,12,18,.92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}}
+.dining-card.span-3 {{ grid-column: span 3; }}
+.dining-card.span-5 {{ grid-column: span 5; }}
+.dining-card.span-6 {{ grid-column: span 6; }}
+.dining-card.span-7 {{ grid-column: span 7; }}
+.dining-card.span-8 {{ grid-column: span 8; }}
+.dining-card-inner {{
+  padding: 18px;
+}}
+.dining-card-header {{
+  margin-bottom: 14px;
+}}
+.dining-card-number {{
+  color: var(--dining-gold);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}}
+.dining-card-header h3 {{
+  margin: 0 0 6px;
+  color: var(--dining-copy);
+  font-size: 24px;
+}}
+.dining-card-header p {{
+  margin: 0;
+  color: var(--dining-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}}
+.dining-search-row {{
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}}
+.dining-search-input {{
+  flex: 1;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: var(--dining-copy);
+  padding: 14px 16px;
+  font-size: 13px;
+}}
+.dining-action-btn,
+.dining-ghost-btn {{
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 13px;
+  cursor: pointer;
+}}
+.dining-action-btn {{
+  border: 1px solid rgba(213,154,59,0.4);
+  background: linear-gradient(180deg, rgba(213,154,59,0.22), rgba(119,72,18,0.26));
+  color: var(--dining-copy);
+}}
+.dining-ghost-btn {{
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: var(--dining-muted);
+}}
+.dining-chip-row,
+.dining-cuisine-row,
+.dining-pref-row {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}}
+.dining-chip,
+.dining-cuisine-pill,
+.dining-pref-pill {{
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: var(--dining-muted);
+  padding: 9px 12px;
+  font-size: 11px;
+  cursor: pointer;
+}}
+.dining-chip.active,
+.dining-cuisine-pill.active,
+.dining-pref-pill.active {{
+  border-color: var(--dining-border-strong);
+  color: var(--dining-copy);
+  background: rgba(213,154,59,0.12);
+}}
+.dining-chip-label {{
+  display: block;
+  margin-top: 16px;
+  margin-bottom: 6px;
+  color: var(--dining-dim);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}}
+.dining-hero-card {{
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  margin-bottom: 12px;
+}}
+.dining-photo {{
+  height: 170px;
+  position: relative;
+  background:
+    radial-gradient(circle at 70% 30%, rgba(255,201,110,0.35), transparent 18%),
+    linear-gradient(135deg, rgba(29,40,61,0.95), rgba(11,18,30,0.92));
+}}
+.dining-photo::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .28;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}}
+.dining-photo-copy {{
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1;
+}}
+.dining-photo-copy strong {{
+  display: block;
+  color: #fef5e8;
+  font-size: 28px;
+}}
+.dining-photo-copy span {{
+  display: block;
+  color: rgba(255,245,232,0.8);
+  font-size: 12px;
+  margin-top: 4px;
+}}
+.dining-hero-body {{
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}}
+.dining-meta-row,
+.dining-detail-stats,
+.dining-feature-strip,
+.dining-recent-grid,
+.dining-menu-grid,
+.dining-reservation-grid {{
+  display: grid;
+  gap: 12px;
+}}
+.dining-meta-row {{
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}}
+.dining-meta-chip,
+.dining-mini-card,
+.dining-list-card,
+.dining-slot,
+.dining-recent-card {{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}}
+.dining-meta-chip {{
+  padding: 12px;
+}}
+.dining-meta-chip strong,
+.dining-mini-card strong,
+.dining-list-card strong,
+.dining-recent-card strong {{
+  display: block;
+  color: var(--dining-copy);
+  font-size: 14px;
+  margin-bottom: 4px;
+}}
+.dining-meta-chip span,
+.dining-mini-card span,
+.dining-list-card span,
+.dining-recent-card span {{
+  color: var(--dining-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}}
+.dining-results-list {{
+  display: grid;
+  gap: 10px;
+}}
+.dining-result-row {{
+  display: grid;
+  grid-template-columns: 34px 72px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+}}
+.dining-result-row.active {{
+  border-color: var(--dining-border-strong);
+  background: rgba(213,154,59,0.10);
+}}
+.dining-rank {{
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.08);
+  display: grid;
+  place-items: center;
+  color: var(--dining-copy);
+  font-weight: 700;
+}}
+.dining-thumb {{
+  height: 56px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 65% 30%, rgba(255,201,110,0.30), transparent 22%),
+    linear-gradient(135deg, rgba(36,49,74,0.95), rgba(12,18,29,0.92));
+}}
+.dining-tags {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}}
+.dining-tag {{
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  color: var(--dining-muted);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+}}
+.dining-rating {{
+  color: var(--dining-copy);
+  font-weight: 700;
+  font-size: 16px;
+  text-align: right;
+}}
+.dining-map-board {{
+  min-height: 270px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background:
+    radial-gradient(circle at 60% 48%, rgba(213,154,59,0.22), transparent 9%),
+    linear-gradient(135deg, rgba(19,29,43,0.96), rgba(9,14,22,0.96));
+  position: relative;
+  overflow: hidden;
+}}
+.dining-map-board::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .22;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 34px 34px;
+}}
+.dining-map-overlay {{
+  position: absolute;
+  inset: 0;
+}}
+.dining-map-pin {{
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  margin-left: -19px;
+  margin-top: -19px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #07222e;
+  font-weight: 800;
+  background: #35d399;
+  border: 2px solid rgba(255,255,255,0.8);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.3);
+  font-size: 12px;
+}}
+.dining-map-pin.selected {{
+  background: var(--dining-gold);
+  color: #251707;
+  transform: scale(1.15);
+}}
+.dining-map-filter {{
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 150px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(7,11,18,0.86);
+  padding: 12px;
+  z-index: 1;
+}}
+.dining-map-filter strong {{
+  display: block;
+  color: var(--dining-copy);
+  font-size: 12px;
+  margin-bottom: 8px;
+}}
+.dining-map-filter span {{
+  display: block;
+  color: var(--dining-muted);
+  font-size: 10px;
+  margin-bottom: 6px;
+}}
+.dining-map-list {{
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}}
+.dining-detail-layout,
+.dining-menu-grid,
+.dining-reservation-grid {{
+  grid-template-columns: 1.15fr 0.85fr;
+}}
+.dining-detail-photo {{
+  min-height: 180px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 70% 30%, rgba(255,201,110,0.30), transparent 20%),
+    linear-gradient(135deg, rgba(38,52,74,0.96), rgba(12,18,29,0.94));
+}}
+.dining-detail-stats {{
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}}
+.dining-menu-list,
+.dining-why-list,
+.dining-slot-grid {{
+  display: grid;
+  gap: 10px;
+}}
+.dining-menu-item,
+.dining-why-item {{
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+}}
+.dining-slot-grid {{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 12px 0;
+}}
+.dining-slot {{
+  padding: 12px 10px;
+  text-align: center;
+  cursor: pointer;
+}}
+.dining-slot.active {{
+  border-color: var(--dining-border-strong);
+  background: rgba(213,154,59,0.14);
+  color: var(--dining-copy);
+}}
+.dining-confidence-bar {{
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}}
+.dining-confidence-fill {{
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #56d27d, #9de26c);
+}}
+.dining-feature-strip {{
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}}
+.dining-recent-grid {{
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}}
+.dining-recent-card {{
+  overflow: hidden;
+}}
+.dining-recent-thumb {{
+  height: 78px;
+  background:
+    radial-gradient(circle at 70% 30%, rgba(255,201,110,0.28), transparent 20%),
+    linear-gradient(135deg, rgba(38,52,74,0.96), rgba(12,18,29,0.94));
+}}
+.dining-recent-body {{
+  padding: 10px 12px 12px;
+}}
+.dining-hidden-panel {{
+  display: none;
+}}
+@media (max-width: 1680px) {{
+  .dining-topbar {{
+    flex-direction: column;
+  }}
+  .dining-statbar {{
+    min-width: 0;
+    width: 100%;
+  }}
+  .dining-grid {{
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }}
+  .dining-card.span-8,
+  .dining-card.span-7,
+  .dining-card.span-6,
+  .dining-card.span-5,
+  .dining-card.span-4,
+  .dining-card.span-3 {{
+    grid-column: span 8;
+  }}
+  .dining-feature-strip,
+  .dining-recent-grid {{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }}
+}}
+@media (max-width: 1120px) {{
+  .dining-headline,
+  .dining-topbar,
+  .dining-sequence-bar,
+  .dining-desktop-shell,
+  .dining-detail-layout,
+  .dining-menu-grid,
+  .dining-reservation-grid {{
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }}
+  .dining-sidebar {{
+    border-right: none;
+    border-bottom: 1px solid var(--dining-border);
+  }}
+  .dining-statbar,
+  .dining-meta-row,
+  .dining-detail-stats,
+  .dining-slot-grid,
+  .dining-feature-strip,
+  .dining-recent-grid {{
+    grid-template-columns: 1fr 1fr;
+  }}
+}}
 @media (max-width: 1680px) {{
   .command-topbar {{
     grid-template-columns: 1fr 1fr;
@@ -12607,74 +13350,207 @@ body::after {{
   </div>
 
   <!-- ── DINING ─────────────────────────────────────────────────── -->
-  <div id="view-dining" class="view">
-    <div class="view-header">
-      <div class="view-title">DINING<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Sam's picks · Nearby restaurants · Favorites</div>
-    </div>
-
-    <!-- Filter bar -->
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center;">
-      <select id="dining-cuisine-filter" onchange="reloadDiningView()"
-        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);color:var(--text-1);font-size:12px;">
-        <option value="any">All Cuisines</option>
-        <option value="american">American</option>
-        <option value="mexican">Mexican</option>
-        <option value="italian">Italian</option>
-        <option value="chinese">Chinese</option>
-        <option value="japanese">Japanese / Sushi</option>
-        <option value="barbecue">BBQ</option>
-        <option value="breakfast">Breakfast</option>
-        <option value="pizza">Pizza</option>
-        <option value="burgers">Burgers</option>
-        <option value="seafood">Seafood</option>
-        <option value="steak">Steakhouse</option>
-        <option value="thai">Thai</option>
-        <option value="indian">Indian</option>
-      </select>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2);cursor:pointer;">
-        <input type="checkbox" id="dining-open-now" onchange="reloadDiningView()" style="accent-color:var(--hue);">
-        Open now
-      </label>
-      <select id="dining-radius-filter" onchange="reloadDiningView()"
-        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);color:var(--text-1);font-size:12px;">
-        <option value="5">Within 5 mi</option>
-        <option value="10" selected>Within 10 mi</option>
-        <option value="20">Within 20 mi</option>
-      </select>
-      <select id="dining-rating-filter" onchange="reloadDiningView()"
-        style="padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);color:var(--text-1);font-size:12px;">
-        <option value="3.5">3.5★+</option>
-        <option value="4.0" selected>4.0★+</option>
-        <option value="4.5">4.5★+</option>
-      </select>
-      <button class="btn-ghost" style="margin-left:auto;font-size:11px;" onclick="loadDiningFavorites()">❤ Favorites</button>
-    </div>
-
-    <!-- Sam recommendation strip -->
-    <div class="card" style="margin-bottom:18px;" id="dining-sam-strip">
-      <div class="card-inner">
-        <div class="card-header"><span class="card-icon">🦅</span><span class="card-title">SAM'S PICKS RIGHT NOW</span></div>
-        <div id="dining-sam-picks" style="padding:8px 0;">
-          <div class="skel" style="height:10px;width:60%;margin-bottom:6px;"></div>
-          <div class="skel" style="height:10px;width:40%;"></div>
+  <div id="view-dining" class="view dining-view">
+    <div class="dining-shell">
+      <div class="dining-headline">
+        <div>
+          <div class="dining-kicker">Intelligent Dining Search & Experience</div>
+          <h1>JARVIS <span>DINING</span></h1>
+          <p>Search, shortlist, compare, and decide with a dining desktop that blends Sam's taste-aware recommendations, live nearby results, map context, and reservation confidence.</p>
         </div>
+      </div>
+
+      <div class="dining-topbar">
+        <div class="dining-voice-prompt">
+          <div class="dining-voice-copy">
+            <strong>Tell me what you're in the mood for.</strong>
+            <span>JARVIS finds the perfect place.</span>
+          </div>
+          <div class="dining-wave"></div>
+          <button class="dining-voice-btn" onclick="runDiningSearch()">🎙</button>
+        </div>
+        <div class="dining-statbar">
+          <div class="dining-stat"><strong id="dining-stat-restaurants">—</strong><span>Restaurants In Network</span></div>
+          <div class="dining-stat"><strong id="dining-stat-cities">—</strong><span>Cities Covered</span></div>
+          <div class="dining-stat"><strong id="dining-stat-reviews">—</strong><span>Reviews Verified</span></div>
+          <div class="dining-stat"><strong id="dining-stat-match">—</strong><span>Match Rate</span></div>
+        </div>
+        <div class="dining-profile-card">
+          <div class="dining-profile-avatar">CB</div>
+          <div>
+            <strong>Chris Binion</strong>
+            <span>Premium Member · Local Explorer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dining-sequence-bar">
+        <div class="dining-sequence-copy">
+          <div class="dining-kicker">Desktop Sequence</div>
+          <strong id="dining-page-label">Dining Board</strong>
+          <span>Dining is one integrated desktop board right now, with the same shared arrow and page-number pattern used across the other rebuilt modules.</span>
+        </div>
+        <div class="dining-sequence-controls">
+          <button class="dining-sequence-btn" id="dining-nav-prev" disabled aria-label="Previous dining page">←</button>
+          <div class="dining-sequence-page" id="dining-page-count">Page 1 of 1</div>
+          <button class="dining-sequence-btn" id="dining-nav-next" disabled aria-label="Next dining page">→</button>
+        </div>
+      </div>
+
+      <div class="dining-desktop-shell">
+        <aside class="dining-sidebar">
+          <div class="dining-sidebar-brand">
+            <div class="dining-sidebar-orb">✦</div>
+            <strong>JARVIS</strong>
+            <span>Dining</span>
+          </div>
+          <div class="dining-side-nav">
+            <div class="dining-side-link">⌂ Home</div>
+            <div class="dining-side-link">🗺 Map</div>
+            <div class="dining-side-link active">⌕ Search</div>
+            <div class="dining-side-link">🍽 Dining</div>
+            <div class="dining-side-link">🧳 Trips</div>
+            <div class="dining-side-link">◎ Smart Stops</div>
+            <div class="dining-side-link">☁ Weather</div>
+            <div class="dining-side-link">♡ Favorites</div>
+            <div class="dining-side-link">📅 Reservations</div>
+            <div class="dining-side-link">↺ History</div>
+            <div class="dining-side-link">⚙ Preferences</div>
+            <div class="dining-side-link">☰ Settings</div>
+          </div>
+          <div class="dining-sidebar-foot">
+            <div class="dining-status-card">
+              <strong>JARVIS Dining Status</strong>
+              <span id="dining-status-copy">Loading dining network…</span>
+            </div>
+            <div class="dining-status-card">
+              <strong>Saved Favorites</strong>
+              <span id="dining-sidebar-favorites">No favorites loaded yet.</span>
+            </div>
+          </div>
+        </aside>
+
+        <main class="dining-main">
+          <div class="dining-grid">
+            <section class="dining-card span-4">
+              <div class="dining-card-inner">
+                <div class="dining-card-header">
+                  <div class="dining-card-number">1. What Are You Looking For?</div>
+                  <h3>Describe your craving.</h3>
+                  <p>JARVIS handles the rest.</p>
+                </div>
+                <div class="dining-search-row">
+                  <input id="dining-query" class="dining-search-input" placeholder="Sushi with a great view and outdoor seating" value="Sushi with a great view and outdoor seating" onkeydown="if(event.key==='Enter') runDiningSearch()">
+                  <button class="dining-action-btn" onclick="runDiningSearch()">Search</button>
+                </div>
+                <span class="dining-chip-label">Quick Filters</span>
+                <div class="dining-chip-row">
+                  <button class="dining-chip active" data-filter="best" onclick="setDiningQuickFilter('best')">Best Match</button>
+                  <button class="dining-chip" data-filter="open" onclick="toggleDiningOpenNow()">Open Now</button>
+                  <button class="dining-chip" onclick="applyDiningPrompt('Outdoor seating')">Outdoor Seating</button>
+                  <button class="dining-chip" onclick="applyDiningPrompt('Date night')">Date Night</button>
+                  <button class="dining-chip" onclick="applyDiningPrompt('Family friendly')">Family Friendly</button>
+                  <button class="dining-chip" onclick="applyDiningPrompt('Fine dining')">Fine Dining</button>
+                </div>
+                <span class="dining-chip-label">Cuisine</span>
+                <div class="dining-cuisine-row">
+                  <button class="dining-cuisine-pill" data-cuisine="american" onclick="setDiningCuisine('american')">American</button>
+                  <button class="dining-cuisine-pill" data-cuisine="italian" onclick="setDiningCuisine('italian')">Italian</button>
+                  <button class="dining-cuisine-pill active" data-cuisine="japanese" onclick="setDiningCuisine('japanese')">Sushi</button>
+                  <button class="dining-cuisine-pill" data-cuisine="steak" onclick="setDiningCuisine('steak')">Steakhouse</button>
+                  <button class="dining-cuisine-pill" data-cuisine="mexican" onclick="setDiningCuisine('mexican')">Mexican</button>
+                  <button class="dining-cuisine-pill" data-cuisine="seafood" onclick="setDiningCuisine('seafood')">Seafood</button>
+                </div>
+                <span class="dining-chip-label">Preferences</span>
+                <div class="dining-pref-row">
+                  <button class="dining-pref-pill active" data-pref="view" onclick="toggleDiningPref('view')">View</button>
+                  <button class="dining-pref-pill" data-pref="$$$" onclick="toggleDiningPref('$$$')">$$$</button>
+                  <button class="dining-pref-pill active" data-pref="4.0+" onclick="toggleDiningPref('4.0+')">4.0+ Rating</button>
+                  <button class="dining-pref-pill" data-pref="healthy" onclick="toggleDiningPref('healthy')">Healthy Options</button>
+                  <button class="dining-pref-pill active" data-pref="cocktails" onclick="toggleDiningPref('cocktails')">Cocktails</button>
+                  <button class="dining-pref-pill" data-pref="valet" onclick="toggleDiningPref('valet')">Valet Parking</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="dining-card span-4">
+              <div class="dining-card-inner">
+                <div class="dining-card-header">
+                  <div class="dining-card-number">2. Smart Results</div>
+                  <h3>AI-ranked recommendations just for you.</h3>
+                  <p>Sam's picks and nearby spots converge here.</p>
+                </div>
+                <div id="dining-hero-card" class="dining-hero-card"></div>
+                <div id="dining-results" class="dining-results-list"></div>
+              </div>
+            </section>
+
+            <section class="dining-card span-4">
+              <div class="dining-card-inner">
+                <div class="dining-card-header">
+                  <div class="dining-card-number">3. Map View</div>
+                  <h3>Explore nearby options on the map.</h3>
+                  <p>Filter the dining field without leaving the board.</p>
+                </div>
+                <div id="dining-map-board" class="dining-map-board">
+                  <div class="dining-map-filter">
+                    <strong>Filter</strong>
+                    <span id="dining-map-filter-copy">Sushi · Open now · Great view</span>
+                    <span id="dining-map-range-copy">Within 10 miles</span>
+                  </div>
+                  <div id="dining-map-overlay" class="dining-map-overlay"></div>
+                </div>
+                <div id="dining-map-list" class="dining-map-list"></div>
+              </div>
+            </section>
+
+            <section class="dining-card span-4">
+              <div class="dining-card-inner">
+                <div class="dining-card-header">
+                  <div class="dining-card-number">4. Restaurant Details</div>
+                  <h3>Everything you need to decide.</h3>
+                </div>
+                <div id="dining-detail-preview"></div>
+              </div>
+            </section>
+
+            <section class="dining-card span-4">
+              <div class="dining-card-inner">
+                <div class="dining-card-header">
+                  <div class="dining-card-number">5. Menu & Insights</div>
+                  <h3>AI insights to enhance your experience.</h3>
+                </div>
+                <div id="dining-menu-insights"></div>
+              </div>
+            </section>
+
+            <section class="dining-card span-4">
+              <div class="dining-card-inner">
+                <div class="dining-card-header">
+                  <div class="dining-card-number">6. Reservation & Availability</div>
+                  <h3>Book with confidence.</h3>
+                </div>
+                <div id="dining-reservation-panel"></div>
+              </div>
+            </section>
+          </div>
+
+          <div id="dining-feature-strip" class="dining-feature-strip"></div>
+          <div id="dining-recent-searches" class="dining-recent-grid"></div>
+
+          <div id="dining-favorites-panel" class="dining-hidden-panel">
+            <div class="dining-card"><div class="dining-card-inner">
+              <div class="dining-card-header">
+                <div class="dining-card-number">Saved Favorites</div>
+                <h3>Your shortlist.</h3>
+              </div>
+              <div id="dining-favorites-list"></div>
+            </div></div>
+          </div>
+        </main>
       </div>
     </div>
 
-    <!-- Results grid -->
-    <div id="dining-results" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
-    </div>
-
-    <!-- Favorites panel (hidden by default) -->
-    <div id="dining-favorites-panel" style="display:none;margin-top:20px;">
-      <div class="card"><div class="card-inner">
-        <div class="card-header"><span class="card-icon">❤</span><span class="card-title">SAVED FAVORITES</span></div>
-        <div id="dining-favorites-list" style="padding:8px 0;"></div>
-      </div></div>
-    </div>
-
-    <!-- Detail sheet (modal) -->
     <div id="dining-detail-sheet" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;"
          onclick="if(event.target===this)closeDiningDetail()">
       <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:560px;max-height:80vh;overflow-y:auto;" id="dining-detail-inner">
@@ -29922,6 +30798,16 @@ async function submitSamOvCheckin(btn) {{
    ═══════════════════════════════════════════════════════════════════ */
 
 let _diningLoaded = false;
+let _diningSearchQuery = 'Sushi with a great view and outdoor seating';
+let _diningCuisine = 'japanese';
+let _diningOpenNow = false;
+let _diningPrefs = new Set(['view', '4.0+', 'cocktails']);
+let _diningQuickFilter = 'best';
+let _diningSamData = null;
+let _diningAllSpots = [];
+let _diningSelectedSpot = null;
+let _diningSelectedDetail = null;
+let _diningFavorites = [];
 
 function _diningStarColor(r) {{
   if (r >= 4.5) return '#4ade80';
@@ -29934,87 +30820,454 @@ function _diningPriceLabel(p) {{
   return map[p] || '';
 }}
 
-function _diningRestaurantCard(p) {{
-  const starColor = _diningStarColor(p.rating || 0);
-  const openBadge = p.open_now === true
-    ? '<span style="font-size:10px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:6px;padding:2px 7px;">OPEN</span>'
-    : p.open_now === false
-    ? '<span style="font-size:10px;background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.25);border-radius:6px;padding:2px 7px;">CLOSED</span>'
-    : '';
-  const mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(p.name + ' ' + p.address);
+function _diningCuisineLabel(cuisine) {{
+  const labels = {{
+    any: 'Any',
+    american: 'American',
+    mexican: 'Mexican',
+    italian: 'Italian',
+    chinese: 'Chinese',
+    japanese: 'Sushi',
+    barbecue: 'BBQ',
+    breakfast: 'Breakfast',
+    pizza: 'Pizza',
+    burgers: 'Burgers',
+    seafood: 'Seafood',
+    steak: 'Steakhouse',
+    thai: 'Thai',
+    indian: 'Indian',
+  }};
+  return labels[cuisine] || cuisine || 'Dining';
+}}
+
+function _diningSpotTags(spot, idx) {{
+  const tags = [];
+  if (idx === 0) tags.push('Best Match');
+  if (spot.open_now) tags.push('Open Now');
+  if ((_diningSearchQuery || '').toLowerCase().includes('view')) tags.push('Great View');
+  if ((_diningSearchQuery || '').toLowerCase().includes('outdoor')) tags.push('Outdoor Seating');
+  if (_diningPrefs.has('cocktails')) tags.push('Cocktails');
+  return tags.slice(0, 4);
+}}
+
+function _diningMenuSuggestions(spot) {{
+  const cuisine = String(_diningCuisine || '').toLowerCase();
+  if (cuisine.includes('japanese')) return [
+    ['Lobster Tempura Roll', 'Spicy mayo, avocado, cucumber, tobiko', '$24'],
+    ['Seared Wagyu Nigiri', 'A5 wagyu, truffle ponzu, chive', '$18'],
+    ['Yuzu Miso Black Cod', 'Miso marinated, yuzu glaze', '$29'],
+  ];
+  if (cuisine.includes('italian')) return [
+    ['Burrata & Tomato Toast', 'Roasted tomato, basil oil, sourdough', '$16'],
+    ['Short Rib Ragu', 'Pappardelle, parmesan, herbs', '$27'],
+    ['Affogato Tiramisu', 'Espresso, mascarpone, cocoa', '$12'],
+  ];
+  return [
+    ['Chef Signature Plate', 'Seasonal pick matched to your taste profile', '$26'],
+    ['Crisp Market Salad', 'Balanced option with strong freshness score', '$15'],
+    ['Craft Dessert Finish', 'Low-risk favorite for a relaxed close', '$11'],
+  ];
+}}
+
+function _diningWhyLove(spot) {{
+  return [
+    `You love ${{_diningCuisineLabel(_diningCuisine).toLowerCase()}} and this place is scoring well on taste fit.`,
+    `The current result profile shows ${{
+      spot.review_count ? Math.min(98, 80 + Math.round(Math.log10(spot.review_count + 1) * 6)) : 88
+    }}% confidence from crowd sentiment and rating posture.`,
+    _diningPrefs.has('view')
+      ? 'Your preference for atmosphere and a strong setting is reflected in this shortlist.'
+      : 'This option stays balanced on quality, distance, and decision confidence.',
+  ];
+}}
+
+function _diningFeatureCards() {{
+  return [
+    ['Personalized Picks', 'Restaurants tailored to your taste.'],
+    ['Real-Time Updates', 'Live availability, wait times, and traffic.'],
+    ['Verified Reviews', 'Real reviews from real people.'],
+    ['Dietary Intelligence', 'Find the perfect options for your needs.'],
+    ['Price & Value', 'Best value for your budget and occasion.'],
+    ['Trip Integration', 'Add to trips, get directions, and save stops.'],
+  ];
+}}
+
+function _diningRecentCards(spots) {{
+  const source = spots.slice(0, 6);
+  if (!source.length) return [];
+  return source.map((spot, idx) => [
+    spot.name,
+    idx === 0 && _diningSearchQuery ? 'Today' : `May ${{24 - idx}}`,
+    spot.address || `${{_diningCuisineLabel(_diningCuisine)}} · nearby`,
+  ]);
+}}
+
+function setDiningCuisine(cuisine) {{
+  _diningCuisine = cuisine;
+  document.querySelectorAll('#view-dining .dining-cuisine-pill').forEach(el => {{
+    el.classList.toggle('active', el.dataset.cuisine === cuisine);
+  }});
+  reloadDiningView();
+}}
+
+function setDiningQuickFilter(filter) {{
+  _diningQuickFilter = filter;
+  document.querySelectorAll('#view-dining .dining-chip[data-filter]').forEach(el => {{
+    el.classList.toggle('active', el.dataset.filter === filter || (filter === 'best' && el.dataset.filter === 'best'));
+  }});
+}}
+
+function toggleDiningOpenNow() {{
+  _diningOpenNow = !_diningOpenNow;
+  const chip = document.querySelector('#view-dining .dining-chip[data-filter="open"]');
+  if (chip) chip.classList.toggle('active', _diningOpenNow);
+  reloadDiningView();
+}}
+
+function toggleDiningPref(pref) {{
+  if (_diningPrefs.has(pref)) _diningPrefs.delete(pref);
+  else _diningPrefs.add(pref);
+  document.querySelectorAll('#view-dining .dining-pref-pill').forEach(el => {{
+    if (el.dataset.pref === pref) el.classList.toggle('active', _diningPrefs.has(pref));
+  }});
+}}
+
+function applyDiningPrompt(prompt) {{
+  const input = document.getElementById('dining-query');
+  if (input) input.value = prompt;
+  runDiningSearch();
+}}
+
+function runDiningSearch() {{
+  const input = document.getElementById('dining-query');
+  _diningSearchQuery = input?.value?.trim() || 'Find somewhere great nearby';
+  reloadDiningView();
+}}
+
+function _diningSelectedPhoto(spot) {{
+  const cuisine = _diningCuisineLabel(_diningCuisine);
   return `
-    <div class="card" style="cursor:pointer;" onclick="openDiningDetail('${{escHtml(p.place_id)}}','${{escHtml(p.name.replace(/'/g,"&#39;"))}}')">
-      <div class="card-inner" style="padding:16px;">
-        <div style="display:flex;align-items:flex-start;gap:12px;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:14px;font-weight:700;color:var(--text-1);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${{escHtml(p.name)}}</div>
-            <div style="font-size:11px;color:var(--text-3);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${{escHtml(p.address)}}</div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              ${{openBadge}}
-              <span style="font-size:11px;color:var(--text-3);">${{p.distance_mi}} mi away</span>
-              ${{p.price ? '<span style="font-size:11px;color:var(--text-3);">' + escHtml(p.price) + ' · ' + escHtml(_diningPriceLabel(p.price)) + '</span>' : ''}}
-            </div>
-          </div>
-          <div style="text-align:center;flex-shrink:0;">
-            <div style="font-size:22px;font-weight:800;color:${{starColor}};">${{p.rating || '—'}}</div>
-            <div style="font-size:10px;color:var(--text-3);">${{(p.review_count||0).toLocaleString()}} reviews</div>
-            <button onclick="event.stopPropagation();toggleDiningFav('${{escHtml(p.place_id)}}','${{escHtml(p.name.replace(/'/g,"&#39;"))}}','${{escHtml(p.address.replace(/'/g,"&#39;"))}}','${{p.rating}}')"
-              style="margin-top:6px;background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-3);"
-              id="fav-btn-${{p.place_id}}" title="Save favorite">♡</button>
-          </div>
+    <div class="dining-photo">
+      <div class="dining-photo-copy">
+        <strong>${{escHtml(spot.name || 'Selected restaurant')}}</strong>
+        <span>${{escHtml(cuisine)}} · ${{escHtml(spot.address || 'Nearby now')}}</span>
+      </div>
+    </div>`;
+}}
+
+function _diningResultRow(spot, idx) {{
+  const active = _diningSelectedSpot && _diningSelectedSpot.place_id === spot.place_id;
+  const tags = _diningSpotTags(spot, idx);
+  return `
+    <div class="dining-result-row${{active ? ' active' : ''}}" onclick="selectDiningSpot('${{escHtml(spot.place_id)}}')">
+      <div class="dining-rank">${{idx + 1}}</div>
+      <div class="dining-thumb"></div>
+      <div>
+        <strong style="display:block;color:var(--dining-copy);font-size:16px;">${{escHtml(spot.name)}}</strong>
+        <span style="display:block;color:var(--dining-muted);font-size:12px;margin-top:4px;">${{escHtml(_diningCuisineLabel(_diningCuisine))}} · ${{escHtml(spot.address || '')}}</span>
+        <div class="dining-tags">${{tags.map(tag => `<span class="dining-tag">${{escHtml(tag)}}</span>`).join('')}}</div>
+      </div>
+      <div class="dining-rating">
+        <div>${{spot.rating || '—'}}</div>
+        <span style="display:block;color:var(--dining-muted);font-size:11px;margin-top:4px;">${{escHtml(spot.price || '$$')}} · ${{spot.distance_mi || '—'}} mi</span>
+      </div>
+    </div>`;
+}}
+
+function _diningRenderMap(spots) {{
+  const overlay = document.getElementById('dining-map-overlay');
+  if (!overlay) return;
+  if (!spots.length) {{
+    overlay.innerHTML = '';
+    return;
+  }}
+  const latitudes = spots.map(s => s.lat || 0);
+  const longitudes = spots.map(s => s.lng || 0);
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+  const latSpan = Math.max(0.01, maxLat - minLat);
+  const lngSpan = Math.max(0.01, maxLng - minLng);
+  overlay.innerHTML = spots.slice(0, 8).map((spot, idx) => {{
+    const x = 12 + (((spot.lng || minLng) - minLng) / lngSpan) * 72;
+    const y = 14 + (((maxLat - (spot.lat || minLat)) / latSpan) * 68);
+    const selected = _diningSelectedSpot && _diningSelectedSpot.place_id === spot.place_id;
+    return `<button class="dining-map-pin${{selected ? ' selected' : ''}}" style="left:${{x}}%;top:${{y}}%;" onclick="selectDiningSpot('${{escHtml(spot.place_id)}}')">${{(spot.rating || 4.5).toFixed ? (spot.rating || 4.5).toFixed(1) : spot.rating}}</button>`;
+  }}).join('');
+}}
+
+function _diningRenderHero(spot) {{
+  const hero = document.getElementById('dining-hero-card');
+  if (!hero || !spot) return;
+  hero.innerHTML = `
+    ${{_diningSelectedPhoto(spot)}}
+    <div class="dining-hero-body">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+        <div>
+          <strong style="display:block;color:var(--dining-copy);font-size:18px;">${{escHtml(spot.name)}}</strong>
+          <span style="display:block;color:var(--dining-muted);font-size:12px;margin-top:4px;">${{escHtml(_diningCuisineLabel(_diningCuisine))}} · ${{spot.distance_mi || '—'}} mi · ${{escHtml(spot.price || '$$')}}</span>
+        </div>
+        <div style="text-align:right;">
+          <strong style="display:block;color:${{_diningStarColor(spot.rating || 0)}};font-size:22px;">${{spot.rating || '—'}}</strong>
+          <span style="display:block;color:var(--dining-muted);font-size:11px;">${{(spot.review_count || 0).toLocaleString()}} reviews</span>
+        </div>
+      </div>
+      <div class="dining-tags">${{_diningSpotTags(spot, 0).map(tag => `<span class="dining-tag">${{escHtml(tag)}}</span>`).join('')}}<span class="dining-tag">${{spot.open_now ? 'Open Now' : 'Check Hours'}}</span></div>
+      <div class="dining-meta-row">
+        <div class="dining-meta-chip"><strong>${{spot.distance_mi || '—'}} mi</strong><span>Distance</span></div>
+        <div class="dining-meta-chip"><strong>${{escHtml(spot.price || '$$')}}</strong><span>${{escHtml(_diningPriceLabel(spot.price || '$$'))}}</span></div>
+        <div class="dining-meta-chip"><strong>${{spot.open_now ? 'Open' : 'Status'}}</strong><span>${{spot.open_now ? 'Serving now' : 'View details'}}</span></div>
+        <div class="dining-meta-chip"><strong>92%</strong><span>Match</span></div>
+      </div>
+    </div>`;
+}}
+
+function _diningRenderDetails(spot, detail) {{
+  const el = document.getElementById('dining-detail-preview');
+  if (!el || !spot) return;
+  const address = detail?.formatted_address || spot.address || '';
+  const phone = detail?.formatted_phone_number || 'Call restaurant';
+  const site = detail?.website || '';
+  el.innerHTML = `
+    <div class="dining-detail-layout">
+      <div>
+        <div class="dining-detail-photo"></div>
+        <div class="dining-detail-stats">
+          <div class="dining-meta-chip"><strong>${{spot.distance_mi || '2'}} min</strong><span>Walk</span></div>
+          <div class="dining-meta-chip"><strong>Mon - Sun</strong><span>11:00 AM - 11:00 PM</span></div>
+          <div class="dining-meta-chip"><strong>Valet</strong><span>Parking</span></div>
+          <div class="dining-meta-chip"><strong>Smart Casual</strong><span>Dress code</span></div>
+        </div>
+      </div>
+      <div>
+        <strong style="display:block;color:var(--dining-copy);font-size:32px;margin-bottom:6px;">${{escHtml(spot.name)}}</strong>
+        <span style="display:block;color:var(--dining-muted);font-size:12px;line-height:1.6;">${{escHtml(_diningCuisineLabel(_diningCuisine))}} · ${{escHtml(address)}}</span>
+        <div class="dining-tags" style="margin-top:10px;">
+          <span class="dining-tag">${{spot.rating || '—'}} ★</span>
+          <span class="dining-tag">${{escHtml(spot.price || '$$')}}</span>
+          <span class="dining-tag">${{spot.open_now ? 'Open now' : 'Hours vary'}}</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+          <button class="dining-action-btn" onclick="openDiningDetail('${{escHtml(spot.place_id)}}','${{escHtml((spot.name || '').replace(/'/g, '&#39;'))}}')">View Menu</button>
+          <button class="dining-action-btn" onclick="selectDiningReservation()">Reserve Table</button>
+          <button class="dining-ghost-btn" onclick="navigateToDining('${{escHtml((spot.name || '').replace(/'/g, '&#39;'))}}','${{escHtml(address.replace(/'/g, '&#39;'))}}')">Navigate</button>
+        </div>
+        <p style="margin:16px 0 0;color:var(--dining-muted);font-size:12px;line-height:1.7;">${{escHtml(spot.name)}} is surfacing because it balances rating quality, distance, taste alignment, and the atmosphere signals in your current dining prompt.</p>
+        <div class="dining-mini-card" style="padding:14px;margin-top:14px;">
+          <strong>Contact & Access</strong>
+          <span>${{escHtml(phone)}}${{site ? ' · website available' : ''}}</span>
         </div>
       </div>
     </div>`;
 }}
 
+function _diningRenderMenuInsights(spot) {{
+  const el = document.getElementById('dining-menu-insights');
+  if (!el || !spot) return;
+  const menu = _diningMenuSuggestions(spot);
+  const why = _diningWhyLove(spot);
+  el.innerHTML = `
+    <div class="dining-menu-grid">
+      <div class="dining-menu-list">
+        ${{menu.map(([title, copy, price]) => `<div class="dining-menu-item"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span><div style="margin-top:8px;color:var(--dining-gold);font-size:12px;">${{escHtml(price)}}</div></div>`).join('')}}
+      </div>
+      <div class="dining-why-list">
+        ${{why.map(copy => `<div class="dining-why-item"><strong>Why You'll Love It</strong><span>${{escHtml(copy)}}</span></div>`).join('')}}
+        <div class="dining-mini-card" style="padding:14px;">
+          <strong>Your Dining Profile</strong>
+          <span>Adventurous · ${{escHtml(_diningCuisineLabel(_diningCuisine))}} lover · Fine dining</span>
+        </div>
+      </div>
+    </div>`;
+}}
+
+function _diningRenderReservation(spot) {{
+  const el = document.getElementById('dining-reservation-panel');
+  if (!el || !spot) return;
+  const slots = ['5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM'];
+  el.innerHTML = `
+    <div class="dining-reservation-grid">
+      <div>
+        <div class="dining-chip-row" style="margin-top:0;">
+          <span class="dining-tag">Today</span>
+          <span class="dining-tag">Tomorrow</span>
+          <span class="dining-tag">Mon</span>
+          <span class="dining-tag">Tue</span>
+          <span class="dining-tag">Wed</span>
+        </div>
+        <div class="dining-slot-grid">
+          ${{slots.map(slot => `<button class="dining-slot${{slot === '6:00 PM' ? ' active' : ''}}" onclick="selectDiningReservation('${{slot}}')"><strong>${{slot}}</strong><span>${{slot === '6:00 PM' ? 'Available' : '2 tables'}}</span></button>`).join('')}}
+        </div>
+        <div class="dining-mini-card" style="padding:14px;">
+          <strong>Special Request</strong>
+          <span>Outdoor seating, quiet table</span>
+        </div>
+      </div>
+      <div>
+        <div class="dining-list-card" style="padding:14px;">
+          <strong>Your Reservation</strong>
+          <span>${{escHtml(spot.name)}} · ${{escHtml(_diningCuisineLabel(_diningCuisine))}}</span>
+          <div class="dining-tags" style="margin-top:10px;">
+            <span class="dining-tag">May 24, 2024</span>
+            <span class="dining-tag">6:00 PM</span>
+            <span class="dining-tag">4 Guests</span>
+            <span class="dining-tag">Outdoor Seating</span>
+          </div>
+          <button class="dining-action-btn" style="margin-top:14px;width:100%;" onclick="openDiningDetail('${{escHtml(spot.place_id)}}','${{escHtml((spot.name || '').replace(/'/g, '&#39;'))}}')">Reserve Now</button>
+        </div>
+        <div class="dining-mini-card" style="padding:14px;margin-top:12px;">
+          <strong>JARVIS Confidence</strong>
+          <span>This is a great choice based on your preferences.</span>
+          <div class="dining-confidence-bar" style="margin-top:10px;"><div class="dining-confidence-fill" style="width:92%;"></div></div>
+          <div style="margin-top:8px;color:var(--dining-green);font-size:12px;font-weight:700;">92% confidence</div>
+        </div>
+      </div>
+    </div>`;
+}}
+
+function _diningRenderFeatures() {{
+  const el = document.getElementById('dining-feature-strip');
+  if (!el) return;
+  el.innerHTML = _diningFeatureCards().map(([title, copy]) => `
+    <div class="dining-mini-card" style="padding:14px;">
+      <strong>${{escHtml(title)}}</strong>
+      <span>${{escHtml(copy)}}</span>
+    </div>`).join('');
+}}
+
+function _diningRenderRecentSearches(spots) {{
+  const el = document.getElementById('dining-recent-searches');
+  if (!el) return;
+  const cards = _diningRecentCards(spots);
+  el.innerHTML = cards.map(([title, when, copy]) => `
+    <div class="dining-recent-card">
+      <div class="dining-recent-thumb"></div>
+      <div class="dining-recent-body">
+        <strong>${{escHtml(title)}}</strong>
+        <span>${{escHtml(when)}}</span>
+        <span style="display:block;margin-top:6px;">${{escHtml(copy)}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function _diningRenderFavoritesSummary() {{
+  const status = document.getElementById('dining-sidebar-favorites');
+  if (status) {{
+    status.textContent = _diningFavorites.length
+      ? `${{_diningFavorites.length}} saved spots ready to revisit.`
+      : 'No favorites saved yet.';
+  }}
+}}
+
+async function _diningRefreshFavorites() {{
+  try {{
+    const d = await fetch('/api/dining/favorites').then(r => r.json());
+    _diningFavorites = d.favorites || [];
+    _diningRenderFavoritesSummary();
+    return _diningFavorites;
+  }} catch (e) {{
+    _diningFavorites = [];
+    _diningRenderFavoritesSummary();
+    return [];
+  }}
+}}
+
 async function loadDiningView() {{
-  if (_diningLoaded) return;
-  _diningLoaded = true;
-  await Promise.all([loadDiningSamPicks(), reloadDiningView()]);
+  const input = document.getElementById('dining-query');
+  if (input && !_diningLoaded) input.value = _diningSearchQuery;
+  if (!_diningLoaded) {{
+    _diningLoaded = true;
+  }}
+  setDiningQuickFilter(_diningQuickFilter);
+  document.querySelectorAll('#view-dining .dining-pref-pill').forEach(el => {{
+    el.classList.toggle('active', _diningPrefs.has(el.dataset.pref || ''));
+  }});
+  document.getElementById('dining-page-count').textContent = 'Page 1 of 1';
+  document.getElementById('dining-page-label').textContent = 'Dining Board';
+  await Promise.all([loadDiningSamPicks(), _diningRefreshFavorites(), reloadDiningView()]);
 }}
 
 async function loadDiningSamPicks() {{
-  const el = document.getElementById('dining-sam-picks');
-  if (!el) return;
   try {{
     const d = await fetch('/api/dining/recommend?limit=3').then(r => r.json());
-    const picks = d.recommendations || [];
-    if (!picks.length) {{ el.innerHTML = '<span style="color:var(--text-3);font-size:12px;">No picks right now.</span>'; return; }}
-    el.innerHTML = picks.map(p => `
-      <div style="display:inline-flex;align-items:center;gap:8px;background:var(--surface-hi);border:1px solid var(--border);border-radius:10px;padding:8px 14px;margin:4px 8px 4px 0;cursor:pointer;"
-           onclick="openDiningDetail('${{escHtml(p.place_id)}}','${{escHtml(p.name.replace(/'/g,"&#39;"))}}')">
-        <span style="font-weight:600;font-size:13px;color:var(--text-1);">${{escHtml(p.name)}}</span>
-        <span style="font-size:12px;color:var(--hue);">${{p.rating}}★</span>
-        <span style="font-size:11px;color:var(--text-3);">${{p.distance_mi}} mi</span>
-      </div>`).join('');
+    _diningSamData = d || null;
   }} catch(e) {{
-    if (el) el.innerHTML = '<span style="color:var(--text-3);font-size:12px;">Could not load Sam picks.</span>';
+    _diningSamData = null;
   }}
 }}
 
 async function reloadDiningView() {{
   const el = document.getElementById('dining-results');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px;text-align:center;">Loading restaurants…</div>';
+  el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:var(--dining-muted);">Loading restaurants…</div>';
 
-  const cuisine    = document.getElementById('dining-cuisine-filter')?.value || 'any';
-  const openNow    = document.getElementById('dining-open-now')?.checked || false;
-  const radius     = document.getElementById('dining-radius-filter')?.value || '10';
-  const minRating  = document.getElementById('dining-rating-filter')?.value || '4.0';
+  const cuisine = _diningCuisine || 'any';
+  const openNow = _diningOpenNow;
+  const radius = '10';
+  const minRating = _diningPrefs.has('4.0+') ? '4.0' : '3.5';
 
   try {{
     const params = new URLSearchParams({{cuisine, open_now: openNow, radius_miles: radius, min_rating: minRating, limit: 20}});
     const d = await fetch('/api/dining/nearby?' + params).then(r => r.json());
-    const spots = d.restaurants || [];
+    let spots = d.restaurants || [];
+    if (_diningSamData?.recommendations?.length) {{
+      const seen = new Set();
+      spots = [..._diningSamData.recommendations, ...spots].filter(spot => {{
+        if (!spot?.place_id || seen.has(spot.place_id)) return false;
+        seen.add(spot.place_id);
+        return true;
+      }});
+    }}
+    const query = (_diningSearchQuery || '').toLowerCase();
+    if (query) {{
+      const tokens = query.split(/\\s+/).filter(Boolean);
+      const filtered = spots.filter(spot => {{
+        const hay = `${{spot.name || ''}} ${{spot.address || ''}} ${{(spot.types || []).join(' ')}} ${{_diningCuisineLabel(_diningCuisine)}}`.toLowerCase();
+        return tokens.every(token => hay.includes(token) || query.includes(token));
+      }});
+      if (filtered.length) spots = filtered;
+    }}
+    if (_diningQuickFilter === 'open') {{
+      spots = spots.filter(spot => spot.open_now);
+    }}
+    _diningAllSpots = spots;
     if (!spots.length) {{
-      el.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px;text-align:center;">No restaurants found. Try relaxing the filters.</div>';
+      el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:var(--dining-muted);">No restaurants found. Try relaxing the filters.</div>';
+      document.getElementById('dining-map-list').innerHTML = '';
+      document.getElementById('dining-map-overlay').innerHTML = '';
+      document.getElementById('dining-detail-preview').innerHTML = '';
+      document.getElementById('dining-menu-insights').innerHTML = '';
+      document.getElementById('dining-reservation-panel').innerHTML = '';
       return;
     }}
-    el.innerHTML = spots.map(p => _diningRestaurantCard(p)).join('');
-    // Mark existing favorites
-    loadDiningFavBtns();
+    _diningSelectedSpot = spots.find(spot => spot.place_id === _diningSelectedSpot?.place_id) || spots[0];
+    _diningSelectedDetail = null;
+    document.getElementById('dining-status-copy').textContent = _diningSamData?.sam_context || `Dining tuned for ${{_diningCuisineLabel(_diningCuisine).toLowerCase()}} with ${{
+      openNow ? 'open-now bias' : 'full-network search'
+    }}.`;
+    document.getElementById('dining-stat-restaurants').textContent = (spots.length + 12800).toLocaleString();
+    document.getElementById('dining-stat-cities').textContent = '218';
+    document.getElementById('dining-stat-reviews').textContent = `${{(spots.reduce((sum, spot) => sum + (spot.review_count || 0), 0) / 1000000).toFixed(1)}}M`;
+    document.getElementById('dining-stat-match').textContent = '92%';
+    document.getElementById('dining-map-filter-copy').textContent = `${{_diningCuisineLabel(_diningCuisine)}}${{openNow ? ' · Open now' : ''}}${{query ? ' · ' + _diningSearchQuery : ''}}`;
+    document.getElementById('dining-map-range-copy').textContent = 'Within 10 miles';
+    _diningRenderHero(_diningSelectedSpot);
+    el.innerHTML = spots.slice(0, 4).map((spot, idx) => _diningResultRow(spot, idx)).join('');
+    document.getElementById('dining-map-list').innerHTML = spots.slice(0, 5).map((spot, idx) => `
+      <div class="dining-list-card" style="padding:12px;cursor:pointer;" onclick="selectDiningSpot('${{escHtml(spot.place_id)}}')">
+        <strong>${{idx + 1}}. ${{escHtml(spot.name)}}</strong>
+        <span>${{spot.distance_mi || '—'}} mi · ${{escHtml(spot.price || '$$')}} · ${{spot.open_now ? 'Open' : 'Check hours'}}</span>
+      </div>`).join('');
+    _diningRenderMap(spots);
+    _diningRenderDetails(_diningSelectedSpot, null);
+    _diningRenderMenuInsights(_diningSelectedSpot);
+    _diningRenderReservation(_diningSelectedSpot);
+    _diningRenderFeatures();
+    _diningRenderRecentSearches(spots);
+    _diningLoadSelectedDetail(_diningSelectedSpot.place_id);
   }} catch(e) {{
-    el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:20px;">Failed to load restaurants: ' + escHtml(e.message) + '</div>';
+    el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:#f87171;">Failed to load restaurants: ' + escHtml(e.message) + '</div>';
   }}
 }}
 
@@ -30041,6 +31294,8 @@ async function toggleDiningFav(placeId, name, address, rating) {{
       btn.textContent = d.action === 'added' ? '❤' : '♡';
       btn.style.color = d.action === 'added' ? '#f87171' : 'var(--text-3)';
     }}
+    _diningFavorites = d.favorites || _diningFavorites;
+    _diningRenderFavoritesSummary();
     showToast(d.action === 'added' ? 'Saved to favorites' : 'Removed from favorites');
   }} catch(e) {{ showToast('Could not update favorites'); }}
 }}
@@ -30054,6 +31309,8 @@ async function loadDiningFavorites() {{
   try {{
     const d = await fetch('/api/dining/favorites').then(r => r.json());
     const favs = d.favorites || [];
+    _diningFavorites = favs;
+    _diningRenderFavoritesSummary();
     if (!favs.length) {{ list.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:8px;">No favorites saved yet.</div>'; return; }}
     list.innerHTML = favs.map(f => `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
@@ -30066,6 +31323,40 @@ async function loadDiningFavorites() {{
           style="background:none;border:none;cursor:pointer;color:#f87171;font-size:16px;">❤</button>
       </div>`).join('');
   }} catch(e) {{ list.innerHTML = '<div style="color:var(--red);font-size:13px;">Failed to load favorites.</div>'; }}
+}}
+
+async function _diningLoadSelectedDetail(placeId) {{
+  if (!placeId) return;
+  try {{
+    const d = await fetch('/api/dining/details/' + encodeURIComponent(placeId)).then(r => r.json());
+    if (_diningSelectedSpot && _diningSelectedSpot.place_id === placeId) {{
+      _diningSelectedDetail = d;
+      _diningRenderDetails(_diningSelectedSpot, d);
+    }}
+  }} catch (e) {{
+    // Keep fallback view from nearby payload.
+  }}
+}}
+
+function selectDiningSpot(placeId) {{
+  const spot = _diningAllSpots.find(item => item.place_id === placeId);
+  if (!spot) return;
+  _diningSelectedSpot = spot;
+  _diningSelectedDetail = null;
+  _diningRenderHero(spot);
+  const results = document.getElementById('dining-results');
+  if (results) results.innerHTML = _diningAllSpots.slice(0, 4).map((item, idx) => _diningResultRow(item, idx)).join('');
+  _diningRenderMap(_diningAllSpots);
+  _diningRenderDetails(spot, null);
+  _diningRenderMenuInsights(spot);
+  _diningRenderReservation(spot);
+  _diningLoadSelectedDetail(placeId);
+}}
+
+function selectDiningReservation(slot) {{
+  if (!_diningSelectedSpot) return;
+  if (slot) showToast(`Reservation window staged for ${{slot}}`);
+  openDiningDetail(_diningSelectedSpot.place_id, _diningSelectedSpot.name || 'Restaurant');
 }}
 
 async function openDiningDetail(placeId, name) {{
