@@ -3507,6 +3507,559 @@ body::after {{
 .layout-card.alert-pulse-red   {{ animation: pulse-red-ring   2s   ease-in-out infinite; }}
 .layout-card.alert-pulse-blue  {{ animation: pulse-blue-ring  2s   ease-in-out infinite; }}
 
+.dailybrief-shell {{
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}}
+.dailybrief-masthead {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.05fr) minmax(360px, 1.1fr) auto;
+  gap: 16px;
+  align-items: stretch;
+}}
+.dailybrief-brand {{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(214, 161, 76, 0.24);
+  background:
+    radial-gradient(circle at 16% 24%, rgba(214,161,76,0.20), transparent 42%),
+    linear-gradient(135deg, rgba(14,18,28,0.98), rgba(8,12,20,0.92));
+  box-shadow:
+    0 18px 44px rgba(0,0,0,0.34),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}}
+.dailybrief-brand-mark {{
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(214,161,76,0.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f4bf66;
+  font-size: 24px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,209,122,0.34), rgba(255,179,0,0.06) 48%, transparent 70%),
+    rgba(255,255,255,0.02);
+  box-shadow: 0 0 34px rgba(214,161,76,0.22);
+}}
+.dailybrief-brand-copy h1 {{
+  margin: 0;
+  font-family: "SF Pro Display", "Georgia", serif;
+  font-size: clamp(30px, 2.8vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #f7f3ea;
+}}
+.dailybrief-brand-copy h1 span {{
+  color: #f0a43e;
+}}
+.dailybrief-brand-copy p {{
+  margin: 6px 0 0;
+  color: rgba(248,242,231,0.72);
+  font-size: 14px;
+  line-height: 1.55;
+}}
+.dailybrief-top-card {{
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(214,161,76,0.18);
+  background: linear-gradient(180deg, rgba(15,20,30,0.95), rgba(8,12,20,0.90));
+  box-shadow: 0 14px 36px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.dailybrief-greeting-card {{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}}
+.dailybrief-kicker {{
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: rgba(236,220,188,0.58);
+  margin-bottom: 10px;
+}}
+.dailybrief-greeting-card h2 {{
+  margin: 0;
+  font-family: "Georgia", serif;
+  font-size: 32px;
+  letter-spacing: -0.04em;
+  color: #f7f3ea;
+}}
+.dailybrief-greeting-card p {{
+  margin: 10px 0 0;
+  color: rgba(244,236,223,0.72);
+  font-size: 14px;
+}}
+.dailybrief-scripture-card {{
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}}
+.dailybrief-scripture-card blockquote {{
+  margin: 0;
+  font-family: "Georgia", serif;
+  font-size: 18px;
+  line-height: 1.65;
+  color: #f5e5bf;
+}}
+.dailybrief-scripture-card footer {{
+  margin-top: 14px;
+  color: #f0a43e;
+  font-size: 13px;
+  font-weight: 600;
+}}
+.dailybrief-top-metrics {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}}
+.dailybrief-top-metric {{
+  padding: 16px 16px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(214,161,76,0.18);
+  background: linear-gradient(180deg, rgba(12,18,28,0.96), rgba(8,12,18,0.90));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.dailybrief-top-metric strong {{
+  display: block;
+  font-size: 12px;
+  color: rgba(244,236,223,0.66);
+  font-family: var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 9px;
+}}
+.dailybrief-top-metric span {{
+  display: block;
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 700;
+  color: #f7f3ea;
+}}
+.dailybrief-top-metric small {{
+  display: block;
+  margin-top: 7px;
+  color: rgba(244,236,223,0.64);
+  font-size: 12px;
+}}
+.dailybrief-profile-card {{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}}
+.dailybrief-avatar {{
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(245,177,78,0.36), rgba(149,91,24,0.18)), rgba(255,255,255,0.03);
+  border: 1px solid rgba(214,161,76,0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #f7d49a;
+}}
+.dailybrief-profile-meta strong {{
+  display: block;
+  color: #f7f3ea;
+  font-size: 17px;
+}}
+.dailybrief-profile-meta span {{
+  display: block;
+  color: rgba(244,236,223,0.66);
+  font-size: 12px;
+  line-height: 1.45;
+}}
+.dailybrief-board {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}}
+.dailybrief-card {{
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(214,161,76,0.18);
+  background: linear-gradient(180deg, rgba(10,15,24,0.97), rgba(7,10,17,0.93));
+  box-shadow: 0 18px 42px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.dailybrief-card::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(214,161,76,0.10), transparent 28%);
+  pointer-events: none;
+}}
+.dailybrief-card-inner {{
+  position: relative;
+  z-index: 1;
+  padding: 18px 20px 20px;
+}}
+.dailybrief-card-header {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}}
+.dailybrief-card-header p {{
+  margin: 4px 0 0;
+  color: rgba(244,236,223,0.64);
+  font-size: 13px;
+}}
+.dailybrief-card-number {{
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .14em;
+  color: #f0a43e;
+}}
+.dailybrief-hero-art {{
+  height: 190px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255,213,120,0.34), transparent 18%),
+    linear-gradient(180deg, rgba(255,173,78,0.18), rgba(12,14,20,0.02)),
+    linear-gradient(180deg, rgba(18,24,32,0.14), rgba(8,10,16,0.72)),
+    linear-gradient(135deg, #5f3f1d 0%, #8f5d2b 18%, #1c2230 56%, #10131d 100%);
+  position: relative;
+  margin-bottom: 14px;
+  overflow: hidden;
+}}
+.dailybrief-hero-art::after {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.44)), radial-gradient(circle at 74% 48%, rgba(255,208,122,0.10), transparent 22%);
+}}
+.dailybrief-hero-art span {{
+  position: absolute;
+  left: 18px;
+  bottom: 16px;
+  z-index: 1;
+  font-family: "Georgia", serif;
+  font-size: 14px;
+  color: rgba(255,247,235,0.88);
+}}
+.dailybrief-firstlight-grid,
+.dailybrief-split,
+.dailybrief-summary-grid {{
+  display: grid;
+  gap: 14px;
+}}
+.dailybrief-firstlight-grid,
+.dailybrief-split {{
+  grid-template-columns: 1.1fr .9fr;
+}}
+.dailybrief-copy-block {{
+  color: rgba(244,236,223,0.76);
+  font-size: 14px;
+  line-height: 1.7;
+}}
+.dailybrief-side-stack,
+.dailybrief-list,
+.dailybrief-checklist {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}}
+.dailybrief-tone-card,
+.dailybrief-pillar,
+.dailybrief-matter-card,
+.dailybrief-row,
+.dailybrief-timepoint,
+.dailybrief-checkitem {{
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.028);
+}}
+.dailybrief-tone-card,
+.dailybrief-pillar,
+.dailybrief-matter-card,
+.dailybrief-row,
+.dailybrief-timepoint {{
+  border-radius: 16px;
+  padding: 14px;
+}}
+.dailybrief-tone-card strong,
+.dailybrief-matter-label,
+.dailybrief-one-thing strong {{
+  display: block;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(244,236,223,0.58);
+  margin-bottom: 8px;
+}}
+.dailybrief-tone-card span,
+.dailybrief-pillar span,
+.dailybrief-matter-card span,
+.dailybrief-row span,
+.dailybrief-timepoint span,
+.dailybrief-summary-copy {{
+  color: rgba(244,236,223,0.72);
+  font-size: 13px;
+  line-height: 1.55;
+}}
+.dailybrief-pillars,
+.dailybrief-whatmatters-grid,
+.dailybrief-timeline {{
+  display: grid;
+  gap: 12px;
+}}
+.dailybrief-pillars {{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}}
+.dailybrief-pillar strong,
+.dailybrief-matter-card strong,
+.dailybrief-row strong,
+.dailybrief-score-badge strong,
+.dailybrief-breakdown strong {{
+  display: block;
+  color: #f7f3ea;
+}}
+.dailybrief-pillar strong {{
+  margin-bottom: 8px;
+  color: #f0a43e;
+  font-size: 12px;
+}}
+.dailybrief-whatmatters-grid {{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}}
+.dailybrief-matter-card {{
+  min-height: 144px;
+}}
+.dailybrief-matter-card.key {{ border-color: rgba(242,170,68,0.25); }}
+.dailybrief-matter-card.risk {{ border-color: rgba(209,86,73,0.25); }}
+.dailybrief-matter-card.opportunity {{ border-color: rgba(71,184,116,0.25); }}
+.dailybrief-matter-card.people {{ border-color: rgba(95,140,255,0.25); }}
+.dailybrief-matter-card.stewardship {{ border-color: rgba(171,127,233,0.25); }}
+.dailybrief-matter-card strong {{
+  font-size: 18px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}}
+.dailybrief-one-thing {{
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(214,161,76,0.16);
+  background: rgba(255,255,255,0.03);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}}
+.dailybrief-one-thing span {{
+  color: #f7f3ea;
+  font-size: 15px;
+}}
+.dailybrief-button {{
+  border: 1px solid rgba(214,161,76,0.26);
+  background: linear-gradient(180deg, rgba(153,96,27,0.18), rgba(83,48,13,0.18));
+  color: #f7d49a;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}}
+.dailybrief-row {{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}}
+.dailybrief-row-meta {{
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(244,236,223,0.48);
+  white-space: nowrap;
+}}
+.dailybrief-tag {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(244,236,223,0.68);
+}}
+.dailybrief-tag.high {{ color: #f6b25f; border-color: rgba(242,170,68,0.28); }}
+.dailybrief-tag.good {{ color: #6ed89c; border-color: rgba(92,206,139,0.22); }}
+.dailybrief-route-card {{
+  height: 100%;
+  min-height: 230px;
+  border-radius: 20px;
+  border: 1px solid rgba(214,161,76,0.16);
+  background: radial-gradient(circle at 70% 30%, rgba(242,170,68,0.10), transparent 22%), linear-gradient(135deg, rgba(16,19,28,0.94), rgba(8,12,19,0.94));
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}}
+.dailybrief-route-map {{
+  position: absolute;
+  inset: 0;
+  opacity: 0.42;
+  background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}}
+.dailybrief-route-path {{
+  position: absolute;
+  inset: 18% 10% 18% 16%;
+}}
+.dailybrief-route-card svg {{
+  width: 100%;
+  height: 100%;
+}}
+.dailybrief-route-content {{
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}}
+.dailybrief-route-metrics {{
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  color: #f7f3ea;
+}}
+.dailybrief-route-metrics strong {{
+  font-size: 38px;
+  letter-spacing: -0.05em;
+}}
+.dailybrief-route-metrics span {{
+  font-size: 13px;
+  color: rgba(244,236,223,0.66);
+}}
+.dailybrief-checkitem {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}}
+.dailybrief-openloops {{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+}}
+.dailybrief-loop-ring {{
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  border: 10px solid rgba(112,207,137,0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: #f7f3ea;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+}}
+.dailybrief-loop-ring strong {{
+  font-size: 34px;
+  line-height: 1;
+}}
+.dailybrief-loop-ring span {{
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(244,236,223,0.62);
+}}
+.dailybrief-breakdown {{
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+}}
+.dailybrief-breakdown div {{
+  font-size: 12px;
+  color: rgba(244,236,223,0.68);
+}}
+.dailybrief-breakdown strong {{
+  font-size: 20px;
+}}
+.dailybrief-timeline {{
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}}
+.dailybrief-timepoint {{
+  text-align: center;
+}}
+.dailybrief-timepoint strong {{
+  color: #f0a43e;
+  font-size: 12px;
+  margin-bottom: 8px;
+}}
+.dailybrief-summary-grid {{
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}}
+.dailybrief-score-badge {{
+  min-width: 140px;
+  padding: 18px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(112,207,137,0.18);
+  background: rgba(112,207,137,0.06);
+  text-align: center;
+}}
+.dailybrief-score-badge strong {{
+  font-size: 40px;
+  color: #9ff0b8;
+  line-height: 1;
+}}
+.dailybrief-score-badge span {{
+  display: block;
+  margin-top: 8px;
+  color: rgba(244,236,223,0.68);
+  font-size: 13px;
+}}
+.dailybrief-compat {{
+  display: none;
+}}
+@media (max-width: 1700px) {{
+  .dailybrief-masthead {{
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .95fr) minmax(0, 1fr);
+  }}
+  .dailybrief-top-metrics {{
+    grid-column: 1 / -1;
+  }}
+}}
+@media (max-width: 1440px) {{
+  .dailybrief-board,
+  .dailybrief-whatmatters-grid,
+  .dailybrief-timeline {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .dailybrief-split,
+  .dailybrief-firstlight-grid,
+  .dailybrief-summary-grid,
+  .dailybrief-pillars {{
+    grid-template-columns: 1fr;
+  }}
+}}
+@media (max-width: 1120px) {{
+  .dailybrief-masthead,
+  .dailybrief-board,
+  .dailybrief-top-metrics,
+  .dailybrief-whatmatters-grid,
+  .dailybrief-timeline {{
+    grid-template-columns: 1fr;
+  }}
+}}
+
 /* ═══════════════════════════════════════════════════════════════════
    CARD GRID
 ═══════════════════════════════════════════════════════════════════ */
@@ -11101,90 +11654,90 @@ body::after {{
 
   <!-- ── OVERVIEW ──────────────────────────────────────────────── -->
   <div id="view-overview" class="view">
-    <div class="view-header">
-      <div class="view-title">
-        OVERVIEW
-        <div class="view-title-line"></div>
+    <div class="dailybrief-shell">
+      <div class="dailybrief-masthead">
+        <div class="dailybrief-brand">
+          <div class="dailybrief-brand-mark">✦</div>
+          <div class="dailybrief-brand-copy">
+            <div class="dailybrief-kicker">JARVIS MORNING DESKTOP</div>
+            <h1>JARVIS <span>DAILY BRIEF</span></h1>
+            <p>Your day. Clarified. Aligned. Activated.</p>
+          </div>
+        </div>
+        <div class="dailybrief-top-card dailybrief-greeting-card">
+          <div class="dailybrief-kicker">Executive Posture</div>
+          <h2 id="dailybrief-top-greeting">Good morning, Chris.</h2>
+          <p id="brief-date">Loading your posture…</p>
+        </div>
+        <div class="dailybrief-top-card dailybrief-scripture-card">
+          <div class="dailybrief-kicker">Faithful Center</div>
+          <blockquote id="dailybrief-scripture-copy">Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.</blockquote>
+          <footer id="dailybrief-scripture-ref">Joshua 1:9</footer>
+        </div>
+        <div class="dailybrief-top-metrics">
+          <div class="dailybrief-top-metric"><strong>Sleep Quality</strong><span id="dailybrief-top-sleep">—</span><small id="dailybrief-top-sleep-copy">Loading</small></div>
+          <div class="dailybrief-top-metric"><strong>Readiness</strong><span id="dailybrief-top-readiness">—</span><small id="dailybrief-top-readiness-copy">Loading</small></div>
+          <div class="dailybrief-top-metric"><strong>Focus Window</strong><span id="dailybrief-top-focus">—</span><small id="dailybrief-top-focus-copy">Loading</small></div>
+          <div class="dailybrief-top-metric"><strong>Stress Level</strong><span id="dailybrief-top-stress">—</span><small id="dailybrief-top-stress-copy">Loading</small></div>
+        </div>
+        <div class="dailybrief-top-card dailybrief-profile-card">
+          <div class="dailybrief-avatar">👤</div>
+          <div class="dailybrief-profile-meta">
+            <strong id="dailybrief-profile-name">Chris</strong>
+            <span id="dailybrief-profile-role">Builder. Father. Executive. Steward.</span>
+          </div>
+        </div>
       </div>
-      <div class="view-subtitle" id="overview-subtitle">Tactical Command Dashboard · S.H.I.E.L.D. Priority View</div>
-      <div id="overview-greeting" style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:4px;letter-spacing:0.05em;"></div>
-    </div>
 
-    <!-- Mode Bar -->
-    <div class="overview-mode-bar" id="overview-mode-bar">
-      <button class="mode-pill" data-mode="morning_brief" onclick="setLayoutMode('morning_brief')">
-        🌅 Morning Brief
-      </button>
-      <button class="mode-pill" data-mode="lunch_brief" onclick="setLayoutMode('lunch_brief')">
-        ☀️ Lunch Brief
-      </button>
-      <button class="mode-pill" data-mode="daily_recap" onclick="setLayoutMode('daily_recap')">
-        🌙 Daily Recap
-      </button>
-      <span class="mode-auto-chip" id="mode-auto-chip">AUTO</span>
-      <span class="mode-clock" id="mode-clock">—</span>
-    </div>
-
-    <!-- Alert Banner (hidden by default) -->
-    <div class="overview-alert-banner" id="overview-alert-banner" style="display:none;">
-      <span id="alert-banner-icon">⚠️</span>
-      <span class="alert-banner-msg" id="alert-banner-msg"></span>
-      <button class="alert-banner-action" id="alert-banner-action-btn" onclick="alertBannerNavigate()">View →</button>
-      <button class="alert-banner-dismiss" onclick="dismissAlertBanner()">✕</button>
-    </div>
-
-    <!-- User Identity Bar (shown when non-Chris user is active) -->
-    <div id="overview-user-bar" style="display:none;margin-bottom:12px;padding:8px 14px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.18);border-radius:10px;align-items:center;gap:10px;font-size:12px;">
-      <span id="overview-user-avatar" style="font-size:20px;line-height:1;"></span>
-      <div style="flex:1;min-width:0;">
-        <div id="overview-user-name" style="font-weight:600;color:var(--text-1);"></div>
-        <div id="overview-user-role" style="font-size:10px;color:var(--text-3);"></div>
+      <div class="overview-mode-bar" id="overview-mode-bar">
+        <button class="mode-pill" data-mode="morning_brief" onclick="setLayoutMode('morning_brief')">🌅 Morning Brief</button>
+        <button class="mode-pill" data-mode="lunch_brief" onclick="setLayoutMode('lunch_brief')">☀️ Lunch Brief</button>
+        <button class="mode-pill" data-mode="daily_recap" onclick="setLayoutMode('daily_recap')">🌙 Daily Recap</button>
+        <span class="mode-auto-chip" id="mode-auto-chip">AUTO</span>
+        <span class="mode-clock" id="mode-clock">—</span>
       </div>
-      <button onclick="switchUser()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:var(--text-2);padding:4px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">Switch User</button>
-    </div>
 
-    <!-- Family Presence Bar (who's online right now) -->
-    <div id="overview-family-bar" style="display:none;margin-bottom:12px;"></div>
+      <div class="overview-alert-banner" id="overview-alert-banner" style="display:none;">
+        <span id="alert-banner-icon">⚠️</span>
+        <span class="alert-banner-msg" id="alert-banner-msg"></span>
+        <button class="alert-banner-action" id="alert-banner-action-btn" onclick="alertBannerNavigate()">View →</button>
+        <button class="alert-banner-dismiss" onclick="dismissAlertBanner()">✕</button>
+      </div>
 
-    <!-- Stats Strip -->
-    <div class="stats-strip">
-      <div class="card stat-tile accent">
-        <div class="stat-label">Active Agents</div>
-        <div class="stat-value" id="stat-agents">—</div>
-        <div class="stat-sub">of 56 total</div>
+      <div id="overview-user-bar" style="display:none;margin-bottom:0;padding:10px 14px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.18);border-radius:16px;align-items:center;gap:10px;font-size:12px;">
+        <span id="overview-user-avatar" style="font-size:20px;line-height:1;"></span>
+        <div style="flex:1;min-width:0;">
+          <div id="overview-user-name" style="font-weight:600;color:var(--text-1);"></div>
+          <div id="overview-user-role" style="font-size:10px;color:var(--text-3);"></div>
+        </div>
+        <button onclick="switchUser()" style="background:none;border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:var(--text-2);padding:4px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">Switch User</button>
       </div>
-      <div class="card stat-tile">
-        <div class="stat-label">Missions</div>
-        <div class="stat-value" id="stat-missions">—</div>
-        <div class="stat-sub">in progress</div>
+
+      <div class="dailybrief-board">
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">1. First Light</div><p>Center your mind. Align your heart. Enter the day with purpose.</p></div></div><div class="dailybrief-hero-art"><span id="dailybrief-firstlight-scene">The day is opening in front of you.</span></div><div class="dailybrief-firstlight-grid"><div class="dailybrief-copy-block" id="dailybrief-firstlight-orientation">Loading your orientation…</div><div class="dailybrief-side-stack"><div class="dailybrief-tone-card"><strong>Today's Orientation</strong><span id="dailybrief-firstlight-direction">Loading…</span></div><div class="dailybrief-tone-card"><strong>Current Focus</strong><span id="dailybrief-firstlight-focus">Loading…</span></div></div></div><div class="dailybrief-pillars"><div class="dailybrief-pillar"><strong>Calling Focus</strong><span id="dailybrief-pillar-calling">Loading…</span></div><div class="dailybrief-pillar"><strong>Character Focus</strong><span id="dailybrief-pillar-character">Loading…</span></div><div class="dailybrief-pillar"><strong>Spiritual Rhythm</strong><span id="dailybrief-pillar-rhythm">Loading…</span></div></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">2. What Matters Now</div><p>Your center of gravity for today.</p></div></div><div class="dailybrief-whatmatters-grid" id="dailybrief-whatmatters-list"></div><div class="dailybrief-one-thing"><div><strong>One Thing That Would Make Today Real</strong><span id="dailybrief-one-thing-copy">Loading…</span></div><button class="dailybrief-button" onclick="switchView('workshop')">Start First Focus →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">3. While You Were Away</div><p>Overnight summary from JARVIS and your agents.</p></div></div><div class="dailybrief-list" id="dailybrief-away-list"></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('agents')">Review All Updates →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">4. Decision Gates</div><p>Items that need your decision.</p></div></div><div class="dailybrief-list" id="dailybrief-decision-list"></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('approvals')">View All Decision Gates →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">5. Movement & Route</div><p>Your movement plan for the day.</p></div></div><div class="dailybrief-split"><div class="dailybrief-list" id="dailybrief-route-schedule"></div><div class="dailybrief-route-card"><div class="dailybrief-route-map"></div><div class="dailybrief-route-path"><svg viewBox="0 0 300 220" preserveAspectRatio="none"><path d="M24 188 C62 170 72 126 112 124 C168 121 160 65 216 58 C245 54 258 34 278 18" stroke="rgba(255,176,79,0.9)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="7 8"></path><circle cx="24" cy="188" r="9" fill="#f7d49a"></circle><circle cx="278" cy="18" r="10" fill="#6ed89c"></circle><circle cx="112" cy="124" r="8" fill="#f1aa49"></circle><circle cx="214" cy="58" r="8" fill="#f1aa49"></circle></svg></div><div class="dailybrief-route-content"><div><div class="dailybrief-kicker">Travel & Route</div><div class="dailybrief-route-metrics"><strong id="dailybrief-route-time">—</strong><span id="dailybrief-route-destination">Loading route…</span></div></div><div class="dailybrief-copy-block" id="dailybrief-route-copy">No route-sensitive commitments are loaded yet.</div></div></div></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('navigate')">Optimize Route →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">6. Family & Household Posture</div><p>What matters most at home.</p></div></div><div class="dailybrief-split"><div class="dailybrief-list" id="dailybrief-family-list"></div><div><div class="dailybrief-kicker">Today's Coordination</div><div class="dailybrief-checklist" id="dailybrief-family-checklist"></div></div></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('calendar')">View Family Calendar →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">7. Foundry & Creative Momentum</div><p>Your highest leverage creative work.</p></div></div><div class="dailybrief-list" id="dailybrief-foundry-list"></div><div class="dailybrief-one-thing" style="margin-top:16px;"><div><strong>Today's Creative Focus</strong><span id="dailybrief-foundry-focus">Loading your best creation window…</span></div><button class="dailybrief-button" onclick="switchView('workshop')">Enter Focus Mode →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">8. Health & Recovery</div><p>Protect the operator.</p></div></div><div class="dailybrief-list" id="dailybrief-health-metrics"></div><div class="dailybrief-one-thing" style="margin-top:16px;"><div><strong>Today's Recommendation</strong><span id="dailybrief-health-recommendation">Loading Sam Wilson guidance…</span></div><button class="dailybrief-button" onclick="switchView('health')">View Health Dashboard →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">9. Follow-Through Lane</div><p>Keep today from dissolving.</p></div></div><div class="dailybrief-openloops"><div class="dailybrief-list" id="dailybrief-followthrough-list"></div><div><div class="dailybrief-loop-ring"><strong id="dailybrief-openloops-total">—</strong><span>Open Loops</span></div><div class="dailybrief-breakdown"><div><strong id="dailybrief-loop-high">0</strong>High</div><div><strong id="dailybrief-loop-medium">0</strong>Medium</div><div><strong id="dailybrief-loop-low">0</strong>Low</div></div></div></div><div style="margin-top:14px;display:flex;justify-content:flex-end;"><button class="dailybrief-button" onclick="switchView('notifications')">View All Open Loops →</button></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">10. Today At A Glance</div><p>Your day in one place.</p></div></div><div class="dailybrief-timeline" id="dailybrief-timeline"></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">11. Today's Briefing Summary</div><p>The executive summary.</p></div></div><div class="dailybrief-summary-grid"><div class="dailybrief-summary-copy" id="dailybrief-summary-copy">Loading your briefing summary…</div><div class="dailybrief-score-badge"><strong id="dailybrief-overall-score">—</strong><span id="dailybrief-overall-copy">Overall day readiness</span></div></div></div></section>
+        <section class="dailybrief-card"><div class="dailybrief-card-inner"><div class="dailybrief-card-header"><div><div class="dailybrief-card-number">12. Next Decision Gate</div><p>Your next best move.</p></div></div><div class="dailybrief-list" id="dailybrief-nextgate-list"></div></div></section>
       </div>
-      <div class="card stat-tile gold-accent">
-        <div class="stat-label">Needs You</div>
-        <div class="stat-value" id="stat-approvals">—</div>
-        <div class="stat-sub">pending action</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="stat-label">Memory</div>
-        <div class="stat-value" id="stat-memory">—</div>
-        <div class="stat-sub">chronicle entries</div>
+
+      <div class="dailybrief-compat" aria-hidden="true">
+        <div id="overview-greeting"></div>
+        <div id="overview-subtitle"></div>
+        <div id="overview-family-bar"></div>
+        <div id="stat-agents"></div>
+        <div id="stat-missions"></div>
+        <div id="stat-approvals"></div>
+        <div id="stat-memory"></div>
       </div>
     </div>
-
-    <!-- Hero Zone (cockpit: two equal cards side-by-side) -->
-    <div class="overview-hero-zone" id="overview-hero-zone">
-      <!-- populated by applyLayout() -->
-    </div>
-
-    <!-- Priority Strip (3-column) -->
-    <div class="overview-priority-strip" id="overview-priority-strip">
-      <!-- populated by applyLayout() -->
-    </div>
-
-    <!-- Ambient Row (compact tiles) -->
-    <div class="overview-ambient-row" id="overview-ambient-row">
-      <!-- populated by applyLayout() -->
-    </div>
-
   </div>
 
   <!-- ── NOTIFICATIONS ───────────────────────────────────────── -->
@@ -15768,6 +16321,10 @@ function applyUserProfile(profile) {{
       greetEl.textContent = '';
     }}
   }}
+  const dailyProfileEl = document.getElementById('dailybrief-profile-name');
+  if (dailyProfileEl) {{
+    dailyProfileEl.textContent = profile.greeting_name || (_cfIdentity && _cfIdentity.display_name) || 'Chris';
+  }}
 }}
 
 // Returns a Set of card IDs that the current user's profile has hidden
@@ -15863,6 +16420,7 @@ let currentFilter  = 'all';
 let homeData       = {{}};
 let emailCache     = [];
 let emailFilter    = 'all';
+let _dailyBriefData = null;
 
 /* ═══════════════════════════════════════════════════════════════
    INIT
@@ -18327,9 +18885,296 @@ let _layoutState    = null;
 let _activeAlert    = null;
 let _alertDismissTimer = null;
 
+async function _fetchJsonSafe(url) {{
+  try {{
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.json();
+  }} catch (_) {{
+    return null;
+  }}
+}}
+
+function dailyBriefName() {{
+  return (_userProfile && _userProfile.greeting_name) || (_cfIdentity && _cfIdentity.display_name) || 'Chris';
+}}
+
+function dailyBriefSalute() {{
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}}
+
+function dailyBriefSummaryFromBriefing(data) {{
+  if (!data) return 'JARVIS is gathering the signal for today.';
+  if (Array.isArray(data.sections) && data.sections.length) {{
+    const bits = [];
+    data.sections.forEach(section => {{
+      if (section.text) bits.push(section.text);
+      if (Array.isArray(section.items) && section.items.length) {{
+        bits.push(section.items.map(item => item.title || item.text || '').filter(Boolean).slice(0, 2).join('; '));
+      }}
+      if (section.stats) {{
+        bits.push(Object.entries(section.stats).map(([key, value]) => `${{key}} ${{value}}`).join(', '));
+      }}
+    }});
+    const joined = bits.filter(Boolean).join(' ').replace(/\\s+/g, ' ').trim();
+    return joined || 'JARVIS is gathering the signal for today.';
+  }}
+  const raw = data.briefing || data.content || data.text || '';
+  return typeof raw === 'string' ? raw : (Array.isArray(raw) ? raw.join(' ') : 'JARVIS is gathering the signal for today.');
+}}
+
+function dailyBriefSnippet(text, max = 180) {{
+  const clean = String(text || '').replace(/\\s+/g, ' ').trim();
+  if (!clean) return 'No summary is available yet.';
+  if (clean.length <= max) return clean;
+  return clean.slice(0, max - 1).trimEnd() + '…';
+}}
+
+function dailyBriefPriorityTag(priority) {{
+  const val = String(priority || '').toLowerCase();
+  if (val === 'high' || val === 'urgent' || val === 'critical') return 'high';
+  if (val === 'low') return 'low';
+  return 'medium';
+}}
+
+function dailyBriefFormatDayTime(iso) {{
+  if (!iso) return '—';
+  try {{
+    return new Date(iso).toLocaleTimeString([], {{ hour: 'numeric', minute: '2-digit' }});
+  }} catch (_) {{
+    return '—';
+  }}
+}}
+
+function dailyBriefFormatDateLong() {{
+  return new Date().toLocaleDateString([], {{ weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }});
+}}
+
 // ---------------------------------------------------------------------------
 // Core functions
 // ---------------------------------------------------------------------------
+
+function renderDailyBriefDesktop(data) {{
+  _dailyBriefData = data;
+  const name = dailyBriefName();
+  const greeting = `${{dailyBriefSalute()}}, ${{name}}.`;
+  const topGreeting = document.getElementById('dailybrief-top-greeting');
+  if (topGreeting) topGreeting.textContent = greeting;
+  const greetEl = document.getElementById('overview-greeting');
+  if (greetEl) greetEl.textContent = greeting;
+  const dateEl = document.getElementById('brief-date');
+  if (dateEl) dateEl.textContent = dailyBriefFormatDateLong();
+  const subtitleEl = document.getElementById('overview-subtitle');
+  if (subtitleEl) subtitleEl.textContent = 'Daily Brief · Executive Morning Console';
+  const profileEl = document.getElementById('dailybrief-profile-name');
+  if (profileEl) profileEl.textContent = name;
+  const profileRoleEl = document.getElementById('dailybrief-profile-role');
+  if (profileRoleEl) profileRoleEl.textContent = data.projects?.length ? 'Builder of things. Steward of momentum. Keeper of the household.' : 'Builder. Father. Executive. Steward.';
+
+  const faithWord = data.faithWord || {{}};
+  const scriptureCopy = document.getElementById('dailybrief-scripture-copy');
+  if (scriptureCopy) scriptureCopy.textContent = faithWord.word || 'Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.';
+  const scriptureRef = document.getElementById('dailybrief-scripture-ref');
+  if (scriptureRef) scriptureRef.textContent = faithWord.passage || 'Joshua 1:9';
+
+  const health = data.health || {{}};
+  const readiness = health.readiness || {{}};
+  const metrics = health.metrics || {{}};
+  const sleepHours = Number(metrics.sleep_hours || 0);
+  const sleepLabel = sleepHours ? `${{sleepHours.toFixed(1)}}h` : '—';
+  const sleepCopy = sleepHours >= 7 ? 'Restored' : sleepHours >= 6 ? 'Good' : sleepHours ? 'Needs recovery' : 'Loading';
+  const readinessScore = readiness.score != null ? readiness.score : '—';
+  const readinessCopy = readiness.grade || (readiness.score >= 80 ? 'Good to go' : readiness.score >= 60 ? 'On track' : 'Recovery posture');
+  const stressValue = metrics.stress_load != null ? metrics.stress_load : (metrics.hrv != null ? Math.max(8, 100 - Math.round(metrics.hrv)) : '—');
+  const stressCopy = Number.isFinite(Number(stressValue))
+    ? (Number(stressValue) <= 35 ? 'Low' : Number(stressValue) <= 60 ? 'Manageable' : 'Needs caution')
+    : 'Loading';
+
+  const calendar = (data.home && data.home.calendar) || {{}};
+  const upcomingEvents = Array.isArray(calendar.upcoming_3_days) ? calendar.upcoming_3_days : [];
+  const focusEvent = upcomingEvents.find(ev => /deep work|focus|write|writing|chapter|study/i.test((ev.title || '').toLowerCase())) || upcomingEvents[0] || null;
+  const focusWindow = focusEvent ? dailyBriefFormatDayTime(focusEvent.start_time) : '90 min';
+  const focusCopy = focusEvent ? (focusEvent.title || 'Focused work window') : 'Protect the highest leverage block';
+
+  const topMetrics = [
+    ['dailybrief-top-sleep', sleepLabel],
+    ['dailybrief-top-sleep-copy', sleepCopy],
+    ['dailybrief-top-readiness', readinessScore],
+    ['dailybrief-top-readiness-copy', readinessCopy],
+    ['dailybrief-top-focus', focusWindow],
+    ['dailybrief-top-focus-copy', focusCopy],
+    ['dailybrief-top-stress', stressValue],
+    ['dailybrief-top-stress-copy', stressCopy],
+  ];
+  topMetrics.forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+
+  const projects = Array.isArray(data.projects) ? data.projects : [];
+  const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+  const approvals = Array.isArray(data.approvals?.items) ? data.approvals.items : [];
+  const reminders = Array.isArray(data.remindersState?.open_items) ? data.remindersState.open_items : [];
+  const leadProject = projects[0] || null;
+  const leadTask = tasks[0] || null;
+  const blockedTask = tasks.find(task => task.blocked_reason);
+
+  const firstLight = [
+    ['dailybrief-firstlight-orientation', leadProject ? `Lead with clarity, speak with grace, and build what lasts. The clearest momentum is around "${{leadProject.title || 'your active project'}}", and today is shaped by your willingness to finish what matters most.` : dailyBriefSnippet(dailyBriefSummaryFromBriefing(data.briefing), 230)],
+    ['dailybrief-firstlight-direction', leadProject ? `Move ${{leadProject.title || 'the flagship asset'}} across the next real threshold.` : 'Stay with the most meaningful work until it becomes tangible.'],
+    ['dailybrief-firstlight-focus', leadTask ? (leadTask.title || 'Protect the highest-value commitment.') : 'Protect the morning window and keep decisions scarce.'],
+    ['dailybrief-firstlight-scene', leadProject ? `Today’s focus is orbiting ${{leadProject.title || 'the flagship asset'}}.` : 'Build something durable before the noise arrives.'],
+    ['dailybrief-pillar-calling', leadProject ? `${{leadProject.title || 'Lead project'}} is the clearest place to convert calling into structure.` : 'Your calling focus is to protect the work that compounds.'],
+    ['dailybrief-pillar-character', approvals[0] ? `Integrity means facing "${{approvals[0].title || 'the first approval'}}" without delay.` : 'Keep your word in the small decisions so the larger ones stay clean.'],
+    ['dailybrief-pillar-rhythm', faithWord.passage ? `Abide. Pray. Listen. Let ${{faithWord.passage}} set the pace, not urgency.` : 'Abide. Pray. Listen. Let God set the pace, not urgency.'],
+  ];
+  firstLight.forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+
+  const whatMatters = [
+    {{ tone: 'key', label: 'Key Mission', title: leadProject?.title || leadTask?.title || 'Protect the morning window', copy: leadProject?.category || leadTask?.status || 'Highest leverage work for this day' }},
+    {{ tone: 'risk', label: 'Key Risk', title: approvals[0]?.title || blockedTask?.title || 'Schedule overload', copy: approvals[0]?.summary || blockedTask?.blocked_reason || 'Too many low-value decisions can fracture the day.' }},
+    {{ tone: 'opportunity', label: 'Key Opportunity', title: projects[1]?.title || 'Compounding creative output', copy: projects[1]?.category || 'Momentum is high if you protect one meaningful asset lane.' }},
+    {{ tone: 'people', label: 'Key People', title: data.onlineUsers?.length ? data.onlineUsers.map(u => u.name).slice(0, 2).join(' · ') : 'Family cadence', copy: data.onlineUsers?.length ? `${{data.onlineUsers.length}} people are active right now.` : 'Presence is a leadership decision, not an afterthought.' }},
+    {{ tone: 'stewardship', label: 'Key Stewardship', title: reminders[0]?.title || 'Protect your margin', copy: reminders[0]?.list || 'Guard attention, energy, and the household calendar.' }},
+  ];
+  const mattersEl = document.getElementById('dailybrief-whatmatters-list');
+  if (mattersEl) mattersEl.innerHTML = whatMatters.map(item => `<div class="dailybrief-matter-card ${{item.tone}}"><div class="dailybrief-matter-label">${{escHtml(item.label)}}</div><strong>${{escHtml(item.title || '—')}}</strong><span>${{escHtml(item.copy || '')}}</span></div>`).join('');
+  const oneThingEl = document.getElementById('dailybrief-one-thing-copy');
+  if (oneThingEl) oneThingEl.textContent = leadTask?.title || leadProject?.title || 'Choose the one movement that will make the day feel honest.';
+
+  const agents = data.agents?.agents || {{}};
+  const agentNames = Object.keys(agents);
+  const awayEl = document.getElementById('dailybrief-away-list');
+  if (awayEl) {{
+    awayEl.innerHTML = agentNames.length ? agentNames.slice(0, 6).map(name => {{
+      const agent = agents[name] || {{}};
+      const state = String(agent.state || 'idle').toLowerCase();
+      const prettyName = name.replace(/-/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase());
+      const summary = state === 'awake' ? 'Working live and ready to contribute.' : state === 'blocked' ? 'Waiting on a decision, fix, or missing context.' : 'Standing by with no urgent escalation.';
+      return `<div class="dailybrief-row"><div><strong>${{escHtml(prettyName)}}</strong><span>${{summary}}</span></div><div class="dailybrief-row-meta">${{escHtml(state.toUpperCase())}}</div></div>`;
+    }}).join('') : '<div class="dailybrief-row"><div><strong>No active overnight updates</strong><span>Agent summaries will appear here as work accumulates.</span></div><div class="dailybrief-row-meta">Quiet</div></div>';
+  }}
+
+  const decisionEl = document.getElementById('dailybrief-decision-list');
+  if (decisionEl) {{
+    decisionEl.innerHTML = approvals.length ? approvals.slice(0, 4).map(item => `<div class="dailybrief-row"><div><strong>${{escHtml(item.title || 'Approval item')}}</strong><span>${{escHtml(item.summary || item.detail || 'Decision needed.')}}</span></div><div class="dailybrief-tag ${{dailyBriefPriorityTag(item.priority)}}">${{escHtml(String(item.priority || 'medium').toUpperCase())}}</div></div>`).join('') : '<div class="dailybrief-row"><div><strong>No decision gates are live</strong><span>Your approval queue is clear right now.</span></div><div class="dailybrief-tag good">Clear</div></div>';
+  }}
+
+  const routeScheduleEl = document.getElementById('dailybrief-route-schedule');
+  if (routeScheduleEl) {{
+    routeScheduleEl.innerHTML = upcomingEvents.slice(0, 5).map(ev => `<div class="dailybrief-row"><div><strong>${{escHtml(ev.title || 'Upcoming event')}}</strong><span>${{escHtml(ev.location || 'Location pending')}}${{ev.source ? ' · ' + escHtml(ev.source) : ''}}</span></div><div class="dailybrief-row-meta">${{escHtml(dailyBriefFormatDayTime(ev.start_time))}}</div></div>`).join('') || '<div class="dailybrief-row"><div><strong>No route-sensitive events loaded</strong><span>Your day currently has no location-bound commitments.</span></div><div class="dailybrief-row-meta">Calm</div></div>';
+  }}
+  const routeFocus = focusEvent || upcomingEvents.find(ev => ev.location) || null;
+  const routeFields = [
+    ['dailybrief-route-time', routeFocus ? dailyBriefFormatDayTime(routeFocus.start_time) : 'Open'],
+    ['dailybrief-route-destination', routeFocus ? (routeFocus.location || routeFocus.title || 'Next commitment') : 'No route pressure'],
+    ['dailybrief-route-copy', routeFocus ? `Your next movement revolves around "${{routeFocus.title || 'the next event'}}". Protect margin, not just the meeting.` : 'The day is currently flexible enough to stay local and protect the work window.'],
+  ];
+  routeFields.forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+
+  const familyListEl = document.getElementById('dailybrief-family-list');
+  if (familyListEl) {{
+    const familyRows = (data.onlineUsers || []).map(person => `<div class="dailybrief-row"><div><strong>${{escHtml(person.name)}}</strong><span>${{escHtml(person.detail || 'Active on a connected device right now.')}}</span></div><div class="dailybrief-tag good">Online</div></div>`);
+    const fallbackRows = reminders.filter(item => /family|home|household|school|soccer|emma|liam|girls|kids/i.test(`${{item.title || ''}} ${{item.list || ''}}`)).slice(0, 4).map(item => `<div class="dailybrief-row"><div><strong>${{escHtml(item.title || 'Household reminder')}}</strong><span>${{escHtml(item.list || 'Family coordination item')}}</span></div><div class="dailybrief-row-meta">${{escHtml(item.minutes_away != null ? (item.minutes_away < 0 ? 'Overdue' : item.minutes_away + ' min') : 'Open')}}</div></div>`);
+    familyListEl.innerHTML = (familyRows.length ? familyRows : fallbackRows).join('') || '<div class="dailybrief-row"><div><strong>Family systems are quiet</strong><span>No immediate household posture shifts are active.</span></div><div class="dailybrief-row-meta">Stable</div></div>';
+  }}
+  const familyChecklistEl = document.getElementById('dailybrief-family-checklist');
+  if (familyChecklistEl) {{
+    const checklist = reminders.filter(item => /family|home|household|school|soccer|emma|liam|girls|kids/i.test(`${{item.title || ''}} ${{item.list || ''}}`)).slice(0, 4);
+    familyChecklistEl.innerHTML = checklist.length ? checklist.map((item, idx) => `<label class="dailybrief-checkitem"><input type="checkbox" ${{idx === 0 ? 'checked' : ''}} disabled><span>${{escHtml(item.title || 'Household coordination')}}</span></label>`).join('') : '<label class="dailybrief-checkitem"><input type="checkbox" checked disabled><span>Household systems are running quietly.</span></label><label class="dailybrief-checkitem"><input type="checkbox" disabled><span>Use the next family window for presence instead of triage.</span></label>';
+  }}
+
+  const foundryListEl = document.getElementById('dailybrief-foundry-list');
+  if (foundryListEl) {{
+    foundryListEl.innerHTML = projects.length ? projects.slice(0, 4).map(project => {{
+      const pct = project.progress_pct != null ? project.progress_pct : (project.projected_value ? Math.min(92, 26 + Math.round(project.projected_value / 1000)) : 42);
+      return `<div class="dailybrief-row"><div><strong>${{escHtml(project.title || 'Active project')}}</strong><span>${{escHtml(project.category || project.status || 'In motion')}} · ${{escHtml((project.track || 'ops').toUpperCase())}}</span></div><div class="dailybrief-row-meta">${{pct}}%</div></div>`;
+    }}).join('') : '<div class="dailybrief-row"><div><strong>No active Foundry projects</strong><span>Once projects are live, creative momentum will surface here.</span></div><div class="dailybrief-row-meta">Idle</div></div>';
+  }}
+  const foundryFocusEl = document.getElementById('dailybrief-foundry-focus');
+  if (foundryFocusEl) foundryFocusEl.textContent = leadProject ? `Deep work is open around "${{leadProject.title || 'your lead project'}}". Protect this window before the day fragments.` : 'Use the next protected window to turn one idea into a real asset, not more notes about the asset.';
+
+  const healthListEl = document.getElementById('dailybrief-health-metrics');
+  if (healthListEl) {{
+    const healthRows = [
+      {{ label: 'Sleep Quality', value: sleepLabel, note: sleepCopy }},
+      {{ label: 'HRV', value: metrics.hrv != null ? `${{metrics.hrv}} ms` : '—', note: metrics.hrv != null ? (metrics.hrv >= 45 ? 'Balanced' : 'Watch recovery load') : 'Waiting for signal' }},
+      {{ label: 'Resting HR', value: metrics.resting_hr != null ? `${{metrics.resting_hr}} bpm` : '—', note: metrics.resting_hr != null ? 'Baseline posture' : 'Waiting for signal' }},
+      {{ label: 'Energy Level', value: readiness.score != null ? `${{Math.max(1, Math.min(10, Math.round(readiness.score / 10)))}}/10` : '—', note: readinessCopy }},
+    ];
+    healthListEl.innerHTML = healthRows.map(row => `<div class="dailybrief-row"><div><strong>${{escHtml(row.label)}}</strong><span>${{escHtml(row.note)}}</span></div><div class="dailybrief-row-meta">${{escHtml(row.value)}}</div></div>`).join('');
+  }}
+  const samProtocol = data.samDaily?.protocol || {{}};
+  const healthRecEl = document.getElementById('dailybrief-health-recommendation');
+  if (healthRecEl) healthRecEl.textContent = samProtocol.movement?.primary || samProtocol.greeting || 'Hydrate, keep the lunch light, and use movement to stabilize the afternoon.';
+
+  const followListEl = document.getElementById('dailybrief-followthrough-list');
+  const openTasks = tasks.slice(0, 5);
+  if (followListEl) {{
+    followListEl.innerHTML = openTasks.length ? openTasks.map(task => `<div class="dailybrief-row"><div><strong>${{escHtml(task.title || 'Open task')}}</strong><span>${{escHtml(task.status || 'open')}}${{task.due ? ' · due ' + escHtml(task.due) : ''}}</span></div><div class="dailybrief-tag ${{dailyBriefPriorityTag(task.priority)}}">${{escHtml(String(task.priority || 'medium').toUpperCase())}}</div></div>`).join('') : '<div class="dailybrief-row"><div><strong>No open loops are loaded</strong><span>The task lane is clear right now.</span></div><div class="dailybrief-tag good">Clear</div></div>';
+  }}
+  const highCount = tasks.filter(task => dailyBriefPriorityTag(task.priority) === 'high').length;
+  const lowCount = tasks.filter(task => dailyBriefPriorityTag(task.priority) === 'low').length;
+  const mediumCount = Math.max(0, tasks.length - highCount - lowCount);
+  [['dailybrief-openloops-total', String(tasks.length || 0)], ['dailybrief-loop-high', String(highCount)], ['dailybrief-loop-medium', String(mediumCount)], ['dailybrief-loop-low', String(lowCount)]].forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+
+  const timelineEl = document.getElementById('dailybrief-timeline');
+  if (timelineEl) timelineEl.innerHTML = (upcomingEvents.slice(0, 8).map(ev => `<div class="dailybrief-timepoint"><strong>${{escHtml(dailyBriefFormatDayTime(ev.start_time))}}</strong><span>${{escHtml(ev.title || 'Open block')}}</span></div>`).join('') || '<div class="dailybrief-timepoint"><strong>Open</strong><span>The day is still unscripted.</span></div>');
+
+  const summaryText = dailyBriefSummaryFromBriefing(data.briefing);
+  const summaryCopyEl = document.getElementById('dailybrief-summary-copy');
+  if (summaryCopyEl) summaryCopyEl.textContent = dailyBriefSnippet(summaryText, 420);
+  const score = Math.max(58, Math.min(94, Math.round(((Number(readiness.score || 72)) + (projects.length ? 8 : 0) + (approvals.length ? -6 : 6) + (sleepHours >= 7 ? 8 : 0) + (highCount ? -4 : 6)) / 1.05)));
+  [['dailybrief-overall-score', `${{score}}%`], ['dailybrief-overall-copy', score >= 85 ? 'Excellent' : score >= 75 ? 'Strong' : 'Manageable']].forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+
+  const nextGateEl = document.getElementById('dailybrief-nextgate-list');
+  if (nextGateEl) {{
+    const nextGate = approvals[0] || leadTask || leadProject || null;
+    nextGateEl.innerHTML = nextGate ? `<div class="dailybrief-row"><div><strong>${{escHtml(nextGate.title || 'Next gate')}}</strong><span>${{escHtml(nextGate.summary || nextGate.status || nextGate.category || 'This is the next movement that deserves a real yes or no.')}}</span></div><div class="dailybrief-tag ${{dailyBriefPriorityTag(nextGate.priority || 'high')}}">Review</div></div><div class="dailybrief-row"><div><strong>JARVIS Reminder</strong><span>Faithful in little, faithful in much. Protect the smallest right next step and the larger day will usually follow.</span></div><div class="dailybrief-row-meta">${{escHtml(faithWord.passage || 'Luke 16:10')}}</div></div>` : '<div class="dailybrief-row"><div><strong>No decision gate is active</strong><span>Use the open space to choose the next right build step before noise chooses for you.</span></div><div class="dailybrief-row-meta">Open</div></div>';
+  }}
+
+  const chronicleTotal = data.chronicle?.total || data.chronicle?.entries?.length || 0;
+  [['stat-agents', String(agentNames.filter(name => agents[name]?.state === 'awake').length || 0)], ['stat-missions', String(projects.length || tasks.length || 0)], ['stat-approvals', String(approvals.length || 0)], ['stat-memory', String(chronicleTotal)]].forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+}}
+
+async function loadDailyBriefDesktop(layoutState = _layoutState) {{
+  const [briefing, faithWord, home, approvals, agents, tasksPayload, health, samDaily, projectsPayload, remindersPayload, chronicle, connectedDevices] = await Promise.all([
+    _fetchJsonSafe('/api/briefing'),
+    _fetchJsonSafe('/api/faith/daily-word'),
+    _fetchJsonSafe('/api/home/dashboard'),
+    _fetchJsonSafe('/api/approvals'),
+    _fetchJsonSafe('/api/agents'),
+    _fetchJsonSafe('/api/tasks'),
+    _fetchJsonSafe('/api/health/summary'),
+    _fetchJsonSafe('/api/health/sam/daily'),
+    _fetchJsonSafe('/api/home/projects?status=active'),
+    _fetchJsonSafe('/api/apple/reminders/state'),
+    _fetchJsonSafe('/api/chronicle/recent'),
+    _fetchJsonSafe('/api/connected-devices'),
+  ]);
+  const devices = Array.isArray(connectedDevices?.devices) ? connectedDevices.devices : [];
+  const now = Date.now();
+  const familyLookup = {{ chris: {{ name: 'Chris' }}, rebekah: {{ name: 'Rebekah' }}, caleb: {{ name: 'Caleb' }}, anna: {{ name: 'Anna' }} }};
+  const onlineUsers = [...new Set(devices.filter(d => d.owner_user_id && d.last_seen_at && (now - new Date(d.last_seen_at).getTime()) < 10 * 60 * 1000).map(d => d.owner_user_id))].map(uid => {{
+    const info = familyLookup[uid] || {{ name: uid }};
+    return {{ name: info.name, detail: 'Connected and active in the last ten minutes.' }};
+  }});
+  renderDailyBriefDesktop({{
+    layoutState,
+    briefing,
+    faithWord,
+    home,
+    approvals,
+    agents,
+    tasks: tasksPayload?.tasks || [],
+    health,
+    samDaily,
+    projects: projectsPayload?.projects || [],
+    remindersState: remindersPayload?.data || {{}},
+    chronicle,
+    onlineUsers,
+  }});
+}}
 
 async function loadLayoutState() {{
   try {{
@@ -18338,9 +19183,7 @@ async function loadLayoutState() {{
     _layoutState = await res.json();
     applyModeBar(_layoutState);
     applyAlertBanner(_layoutState.alerts || []);
-    applyLayout(_layoutState.layout || {{}}, _layoutState.alerts || [], true);
-    _fireLayoutLoaders(_layoutState.layout || {{}});
-    loadFamilyPresence();   // refresh who's online in the presence bar
+    await Promise.all([loadFamilyPresence(), loadDailyBriefDesktop(_layoutState)]);
   }} catch(e) {{ console.error('loadLayoutState failed', e); }}
 }}
 
