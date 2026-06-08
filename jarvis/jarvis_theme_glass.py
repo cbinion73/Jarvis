@@ -6916,6 +6916,168 @@ body::after {{
 .wi-surface-title {{ font-size:12px; color:var(--text-1); font-weight:500; }}
 .wi-surface-reason {{ font-size:11px; color:var(--text-3); margin-top:2px; }}
 
+/* ═══════════════════════════════════════════════════════════════════
+   CATALYST - DESKTOP EXPERIENCE
+═══════════════════════════════════════════════════════════════════ */
+.catalyst-view {{
+  --cat-cyan: #73d8ff;
+  --cat-cyan-soft: #4db4de;
+  --cat-gold: #d8af79;
+  --cat-gold-soft: #a57b48;
+  --cat-copy: #edf6ff;
+  --cat-copy-muted: rgba(237, 246, 255, 0.74);
+  --cat-copy-faint: rgba(237, 246, 255, 0.46);
+  --cat-stroke: rgba(115, 216, 255, 0.26);
+  --cat-stroke-strong: rgba(115, 216, 255, 0.54);
+  --cat-green: #8de1ab;
+  --cat-amber: #f0ba68;
+  --cat-red: #f78787;
+  position: relative;
+  color: var(--cat-copy);
+}}
+.catalyst-view::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top left, rgba(96, 194, 255, 0.10), transparent 32%),
+    radial-gradient(circle at top right, rgba(216, 175, 121, 0.08), transparent 26%),
+    radial-gradient(circle at bottom center, rgba(96, 194, 255, 0.06), transparent 34%);
+  pointer-events: none;
+}}
+.catalyst-view .view-title {{ color: var(--cat-copy); }}
+.catalyst-view .view-title-line {{ background: linear-gradient(90deg, var(--cat-cyan), rgba(115,216,255,0)); }}
+.catalyst-header {{ display:flex; justify-content:space-between; gap:18px; align-items:flex-start; margin-bottom:20px; }}
+.catalyst-kicker {{ font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:var(--cat-gold-soft); margin-bottom:10px; }}
+.catalyst-subtitle {{ max-width:760px; margin-top:10px; font-size:15px; line-height:1.62; color:var(--cat-copy-muted); }}
+.catalyst-motto {{ max-width:330px; padding:14px 16px; border-radius:18px; border:1px solid var(--cat-stroke); background:linear-gradient(180deg, rgba(17,22,32,0.94), rgba(9,12,18,0.99)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.05); }}
+.catalyst-motto-mark {{ width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid var(--cat-stroke-strong); color:var(--cat-cyan); font-size:20px; margin-bottom:10px; background:radial-gradient(circle, rgba(115,216,255,0.18), rgba(115,216,255,0.04) 62%, transparent 74%); }}
+.catalyst-motto strong {{ display:block; color:var(--cat-gold); font-size:15px; line-height:1.45; }}
+.catalyst-motto span {{ display:block; margin-top:6px; color:var(--cat-copy-faint); font-size:12px; }}
+.catalyst-desktop-stage {{ position:relative; overflow:hidden; border-radius:28px; border:1px solid var(--cat-stroke); background:radial-gradient(circle at top right, rgba(115,216,255,0.10), transparent 24%), linear-gradient(180deg, rgba(10,14,22,0.99), rgba(5,7,13,0.995)); box-shadow:0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04); }}
+.catalyst-desktop-stage::before {{ content:""; position:absolute; inset:0; background:linear-gradient(135deg, rgba(255,255,255,0.03), transparent 28%), repeating-linear-gradient(90deg, transparent 0 26px, rgba(255,255,255,0.012) 26px 27px); pointer-events:none; }}
+.catalyst-desktop-shell {{ position:relative; z-index:1; display:grid; grid-template-columns:238px minmax(0, 1fr); min-height:860px; }}
+.catalyst-sidebar {{ padding:18px 14px; border-right:1px solid rgba(255,255,255,0.06); background:linear-gradient(180deg, rgba(8,12,20,0.98), rgba(5,8,14,0.99)); display:flex; flex-direction:column; }}
+.catalyst-sidebar-top {{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }}
+.catalyst-sidebar-brand strong {{ display:block; color:var(--cat-copy); font-size:28px; letter-spacing:0.03em; }}
+.catalyst-sidebar-brand span {{ display:block; margin-top:2px; font-size:13px; color:var(--cat-cyan-soft); }}
+.catalyst-sidebar-mark {{ width:38px; height:38px; border-radius:50%; border:1px solid var(--cat-stroke); display:flex; align-items:center; justify-content:center; color:var(--cat-cyan); }}
+.catalyst-sidebar-nav {{ display:flex; flex-direction:column; gap:8px; }}
+.catalyst-sidebar-item {{ display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:12px; border:1px solid transparent; color:var(--cat-copy-faint); font-size:13px; }}
+.catalyst-sidebar-item.active {{ background:rgba(115,216,255,0.10); border-color:rgba(115,216,255,0.20); color:var(--cat-copy); }}
+.catalyst-sidebar-foot {{ margin-top:auto; padding-top:18px; border-top:1px solid rgba(255,255,255,0.06); }}
+.catalyst-sidebar-user {{ font-size:12px; color:var(--cat-copy-muted); }}
+.catalyst-sidebar-user strong {{ display:block; color:var(--cat-copy); margin-bottom:4px; }}
+.catalyst-main {{ padding:18px 18px 20px; display:flex; flex-direction:column; gap:16px; }}
+.catalyst-topbar {{ display:flex; justify-content:space-between; gap:14px; align-items:center; }}
+.catalyst-topbar-kicker {{ font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--cat-gold-soft); margin-bottom:4px; }}
+.catalyst-topbar-title {{ font-size:30px; color:var(--cat-copy); }}
+.catalyst-topbar-subtitle {{ margin-top:4px; font-size:13px; color:var(--cat-copy-muted); max-width:720px; }}
+.catalyst-nav {{ display:flex; align-items:center; gap:10px; flex-shrink:0; }}
+.catalyst-nav-btn {{ width:38px; height:38px; border-radius:50%; border:1px solid var(--cat-stroke); background:rgba(255,255,255,0.03); color:var(--cat-copy); cursor:pointer; }}
+.catalyst-nav-btn:disabled {{ opacity:0.4; cursor:default; }}
+.catalyst-nav-status {{ min-width:110px; text-align:center; }}
+.catalyst-nav-page {{ font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--cat-copy-faint); }}
+.catalyst-nav-title {{ margin-top:3px; font-size:14px; color:var(--cat-copy); }}
+.catalyst-page-deck {{ position:relative; min-height:0; }}
+.catalyst-page {{ display:none; flex-direction:column; gap:14px; }}
+.catalyst-page.active {{ display:flex; }}
+.catalyst-card, .catalyst-panel, .catalyst-mini-card {{ border-radius:20px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.024); box-shadow:inset 0 1px 0 rgba(255,255,255,0.03); padding:14px; }}
+.catalyst-card-heading {{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }}
+.catalyst-card-label {{ font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--cat-copy-faint); }}
+.catalyst-card-label strong {{ display:block; margin-top:4px; font-size:15px; letter-spacing:0; text-transform:none; color:var(--cat-copy); }}
+.catalyst-chip {{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; border:1px solid rgba(115,216,255,0.18); color:var(--cat-copy-muted); font-size:10px; text-transform:uppercase; letter-spacing:0.10em; background:rgba(255,255,255,0.03); }}
+.catalyst-chip.live {{ color:var(--cat-green); }}
+.catalyst-chip.warn {{ color:var(--cat-amber); border-color:rgba(216,175,121,0.24); }}
+.catalyst-chip.risk {{ color:var(--cat-red); border-color:rgba(247,135,135,0.24); }}
+.catalyst-grid-hero {{ display:grid; grid-template-columns:minmax(0, 1.3fr) minmax(320px, 0.85fr); gap:14px; }}
+.catalyst-hero-card {{ min-height:282px; overflow:hidden; }}
+.catalyst-hero-visual {{ min-height:250px; padding:22px; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg, rgba(5,9,16,0.22), rgba(5,8,15,0.80)), radial-gradient(circle at center, rgba(255,188,99,0.14), transparent 30%), url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='520' viewBox='0 0 900 520'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23142235'/%3E%3Cstop offset='0.45' stop-color='%23314968'/%3E%3Cstop offset='1' stop-color='%230b101b'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='900' height='520' fill='url(%23g)'/%3E%3Ccircle cx='446' cy='178' r='72' fill='rgba(255,193,102,0.20)'/%3E%3Cpath d='M0 425 L130 286 L262 334 L395 208 L538 296 L694 216 L900 428 V520 H0 Z' fill='rgba(7,11,18,0.72)'/%3E%3C/svg%3E\") center/cover no-repeat; }}
+.catalyst-hero-overline {{ font-size:13px; color:rgba(255,255,255,0.80); }}
+.catalyst-hero-title {{ font-size:38px; line-height:1.02; color:#f6fbff; }}
+.catalyst-hero-copy {{ max-width:420px; font-size:14px; line-height:1.6; color:rgba(255,255,255,0.80); }}
+.catalyst-stat-row {{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }}
+.catalyst-metric {{ padding:14px; border-radius:16px; border:1px solid rgba(255,255,255,0.07); background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); }}
+.catalyst-metric span {{ display:block; margin-bottom:8px; font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--cat-copy-faint); }}
+.catalyst-metric strong {{ display:block; font-size:28px; color:var(--cat-copy); }}
+.catalyst-metric em {{ display:block; margin-top:6px; font-style:normal; font-size:11px; color:var(--cat-copy-muted); }}
+.catalyst-metric strong.good {{ color:var(--cat-green); }}
+.catalyst-metric strong.accent {{ color:var(--cat-cyan); }}
+.catalyst-metric strong.warn {{ color:var(--cat-amber); }}
+.catalyst-home-side, .catalyst-side-stack {{ display:flex; flex-direction:column; gap:14px; }}
+.catalyst-ring {{ width:124px; height:124px; margin:12px auto 0; border-radius:50%; border:10px solid rgba(255,255,255,0.06); border-top-color:var(--cat-green); border-right-color:var(--cat-cyan); display:flex; align-items:center; justify-content:center; color:var(--cat-copy); font-size:28px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03); }}
+.catalyst-ring span {{ display:block; font-size:11px; color:var(--cat-copy-faint); text-align:center; }}
+.catalyst-list, .catalyst-queue-list, .catalyst-surface-list, .catalyst-briefing-copy {{ display:flex; flex-direction:column; gap:10px; }}
+.catalyst-list .wi-commit-row, .catalyst-list .wi-project-row, .catalyst-list .wi-surface-item, .catalyst-list .list-row {{ padding:11px 0; border-bottom-color:rgba(255,255,255,0.08); }}
+.catalyst-project-grid, .catalyst-voice-grid, .catalyst-governance-grid, .catalyst-pivot-grid {{ display:grid; gap:14px; }}
+.catalyst-project-grid {{ grid-template-columns:240px minmax(0, 1fr) 300px; }}
+.catalyst-blocks-list, .catalyst-properties, .catalyst-stage-list, .catalyst-approval-stack, .catalyst-action-column, .catalyst-mini-list {{ display:grid; gap:10px; }}
+.catalyst-block-item, .catalyst-property-row, .catalyst-stage-item, .catalyst-approval-item, .catalyst-insight-row, .catalyst-score-card, .catalyst-mini-row, .catalyst-side-panel {{ padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,0.07); background:rgba(255,255,255,0.03); }}
+.catalyst-block-item {{ display:flex; align-items:center; gap:10px; color:var(--cat-copy-muted); font-size:12px; }}
+.catalyst-block-icon {{ width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:rgba(115,216,255,0.10); color:var(--cat-cyan); flex-shrink:0; }}
+.catalyst-flow-board {{ min-height:510px; position:relative; overflow:hidden; background:linear-gradient(180deg, rgba(7,11,18,0.92), rgba(5,8,13,0.98)), repeating-linear-gradient(90deg, transparent 0 23px, rgba(255,255,255,0.018) 23px 24px), repeating-linear-gradient(0deg, transparent 0 23px, rgba(255,255,255,0.018) 23px 24px); }}
+.catalyst-flow-layout {{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); align-items:center; gap:18px; min-height:470px; }}
+.catalyst-node-column {{ display:grid; gap:18px; }}
+.catalyst-node {{ padding:14px; border-radius:16px; border:1px solid rgba(255,255,255,0.08); background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025)); color:var(--cat-copy); position:relative; }}
+.catalyst-node::after {{ content:\"\"; position:absolute; right:-22px; top:50%; width:20px; height:1px; background:rgba(115,216,255,0.32); }}
+.catalyst-node-column:last-child .catalyst-node::after, .catalyst-node.decision::after {{ display:none; }}
+.catalyst-node span, .catalyst-property-row span, .catalyst-score-card span {{ display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.12em; color:var(--cat-copy-faint); }}
+.catalyst-node strong, .catalyst-property-row strong, .catalyst-score-card strong, .catalyst-approval-item strong, .catalyst-insight-row strong, .catalyst-stage-item strong {{ display:block; color:var(--cat-copy); }}
+.catalyst-node strong {{ font-size:14px; margin-top:6px; }}
+.catalyst-node em, .catalyst-property-row em, .catalyst-stage-item span, .catalyst-approval-item span, .catalyst-insight-row span {{ display:block; margin-top:6px; font-style:normal; font-size:11px; color:var(--cat-copy-muted); }}
+.catalyst-node.decision {{ width:136px; height:136px; border-radius:28px; transform:rotate(45deg); margin:0 auto; display:flex; align-items:center; justify-content:center; border-color:rgba(216,175,121,0.32); }}
+.catalyst-node.decision > div {{ transform:rotate(-45deg); text-align:center; }}
+.catalyst-execution-grid {{ display:grid; grid-template-columns:280px minmax(0, 1fr) 260px; gap:14px; }}
+.catalyst-stage-item.active {{ border-color:rgba(216,175,121,0.30); background:rgba(216,175,121,0.08); }}
+.catalyst-avatar-row {{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }}
+.catalyst-avatar {{ width:38px; height:38px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:#07111b; background:linear-gradient(180deg, #f0d7b1, #cfa26e); border:1px solid rgba(255,255,255,0.16); }}
+.catalyst-avatar.you {{ background:linear-gradient(180deg, #93e1ff, #58b7e3); }}
+.catalyst-wave {{ height:36px; border-radius:14px; background:radial-gradient(circle at 8% 50%, rgba(115,216,255,0.76) 0 2px, transparent 3px), radial-gradient(circle at 18% 52%, rgba(115,216,255,0.62) 0 3px, transparent 4px), radial-gradient(circle at 30% 48%, rgba(115,216,255,0.44) 0 4px, transparent 5px), radial-gradient(circle at 44% 50%, rgba(216,175,121,0.76) 0 6px, transparent 7px), radial-gradient(circle at 60% 51%, rgba(115,216,255,0.38) 0 4px, transparent 5px), radial-gradient(circle at 74% 49%, rgba(216,175,121,0.68) 0 5px, transparent 6px), radial-gradient(circle at 88% 51%, rgba(115,216,255,0.52) 0 3px, transparent 4px); opacity:0.9; }}
+.catalyst-governance-grid {{ grid-template-columns:minmax(280px, 0.9fr) minmax(0, 1fr) 250px; }}
+.catalyst-document-card {{ min-height:420px; background:linear-gradient(180deg, rgba(15,19,28,0.92), rgba(8,11,18,0.98)), radial-gradient(circle at center, rgba(115,216,255,0.12), transparent 34%); }}
+.catalyst-document-card strong {{ display:block; font-size:44px; margin-top:80px; color:#f4f9ff; }}
+.catalyst-document-card span {{ display:block; margin-top:10px; color:var(--cat-copy-muted); font-size:13px; }}
+.catalyst-action-btn {{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); color:var(--cat-copy); font-size:12px; }}
+.catalyst-action-btn.primary {{ border-color:rgba(115,216,255,0.24); background:linear-gradient(180deg, rgba(42,111,146,0.88), rgba(21,66,94,0.96)); }}
+.catalyst-pivot-grid {{ grid-template-columns:minmax(0, 1.1fr) 280px 250px; }}
+.catalyst-photo-panel {{ min-height:380px; background:linear-gradient(180deg, rgba(14,18,28,0.40), rgba(7,10,16,0.86)), url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80') center/cover; }}
+.catalyst-photo-panel p, .catalyst-mini-card p, .catalyst-panel p {{ margin:0; color:var(--cat-copy-muted); font-size:12px; line-height:1.6; }}
+.catalyst-mini-row {{ display:flex; justify-content:space-between; gap:10px; }}
+.catalyst-mini-row span {{ color:var(--cat-copy-muted); font-size:12px; }}
+.catalyst-mini-row strong {{ color:var(--cat-copy); font-size:12px; }}
+.catalyst-voice-grid {{ grid-template-columns:minmax(0, 1fr) 260px; align-items:start; }}
+.catalyst-chat-card {{ padding:0; overflow:hidden; }}
+.catalyst-chat-header {{ display:flex; align-items:center; gap:12px; padding:16px 18px; border-bottom:1px solid rgba(255,255,255,0.08); }}
+.catalyst-chat-messages {{ display:flex; flex-direction:column; gap:12px; padding:18px; min-height:420px; }}
+.catalyst-chat-bubble {{ max-width:84%; padding:12px 14px; border-radius:16px; font-size:12px; line-height:1.6; }}
+.catalyst-chat-bubble.user {{ align-self:flex-end; background:rgba(115,216,255,0.14); border:1px solid rgba(115,216,255,0.24); }}
+.catalyst-chat-bubble.agent {{ align-self:flex-start; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); color:var(--cat-copy-muted); }}
+.catalyst-chat-footer {{ display:flex; align-items:center; gap:12px; padding:14px 18px 18px; border-top:1px solid rgba(255,255,255,0.08); }}
+.catalyst-chat-input {{ flex:1; padding:11px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04); color:var(--cat-copy); }}
+.catalyst-side-panel strong {{ display:block; color:var(--cat-gold); font-size:12px; letter-spacing:0.10em; text-transform:uppercase; margin-bottom:10px; }}
+.catalyst-side-panel p, .catalyst-side-panel li {{ color:var(--cat-copy-muted); font-size:12px; line-height:1.6; }}
+.catalyst-side-panel ul {{ margin:0; padding-left:18px; display:grid; gap:8px; }}
+.catalyst-bottom-values {{ display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:12px; }}
+.catalyst-bottom-values .catalyst-mini-card strong {{ display:block; color:var(--cat-copy); font-size:14px; margin-bottom:8px; }}
+.catalyst-bottom-values .catalyst-mini-card p {{ font-size:11px; }}
+.wi-status-dots {{ display:flex; align-items:center; flex-wrap:wrap; gap:4px; }}
+.wi-inline-stat {{ font-size:11px; color:var(--cat-copy-faint); }}
+@media (max-width: 1280px) {{
+  .catalyst-project-grid, .catalyst-execution-grid, .catalyst-governance-grid, .catalyst-pivot-grid, .catalyst-bottom-values {{ grid-template-columns:1fr; }}
+  .catalyst-stat-row {{ grid-template-columns:repeat(2, minmax(0, 1fr)); }}
+}}
+@media (max-width: 1180px) {{
+  .catalyst-desktop-shell, .catalyst-grid-hero, .catalyst-voice-grid {{ grid-template-columns:1fr; }}
+  .catalyst-sidebar {{ border-right:none; border-bottom:1px solid rgba(255,255,255,0.06); }}
+  .catalyst-header, .catalyst-topbar {{ flex-direction:column; align-items:flex-start; }}
+}}
+@media (max-width: 760px) {{
+  .catalyst-main {{ padding:16px; }}
+  .catalyst-hero-title {{ font-size:30px; }}
+  .catalyst-stat-row {{ grid-template-columns:1fr; }}
+}}
+
 /* ═══════════════════════════════════════════════════════════════
    NAVIGATION / WAZE
 ═══════════════════════════════════════════════════════════════ */
@@ -8286,139 +8448,403 @@ body::after {{
   </div>
 
   <!-- ── CATALYST / WORK INTELLIGENCE ───────────────────────── -->
-  <div id="view-catalyst" class="view" data-domain="catalyst">
-    <div class="view-header">
-      <div class="view-title">WORK INTELLIGENCE<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Projects · Commitments · Briefings · Signals</div>
-    </div>
-
-    <!-- Stats strip -->
-    <div class="stats-strip" style="grid-template-columns:repeat(4,1fr);">
-      <div class="card stat-tile accent">
-        <div class="stat-label">Active Projects</div>
-        <div class="stat-value" id="wi-stat-projects">—</div>
+  <div id="view-catalyst" class="view catalyst-view" data-domain="catalyst">
+    <div class="catalyst-header">
+      <div>
+        <div class="catalyst-kicker">Desktop Experience</div>
+        <div class="view-title">CATALYST<div class="view-title-line"></div></div>
+        <div class="catalyst-subtitle" id="catalyst-subtitle">A real desktop execution workspace for workflow design, live agent orchestration, governed approval flow, and voice-led intervention. One screen is active at a time, with arrows and a page count guiding the board.</div>
       </div>
-      <div class="card stat-tile accent">
-        <div class="stat-label">Open Tasks</div>
-        <div class="stat-value" id="wi-stat-tasks">—</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="stat-label">Overdue</div>
-        <div class="stat-value" id="wi-stat-overdue" style="color:var(--crimson);">—</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="stat-label">Workers</div>
-        <div class="stat-value" id="wi-stat-workers" style="font-size:13px;padding-top:4px;">—</div>
+      <div class="catalyst-motto">
+        <div class="catalyst-motto-mark">✦</div>
+        <div>
+          <strong>Intelligence becomes execution.</strong>
+          <span>JARVIS orchestrates the work that moves your world.</span>
+        </div>
       </div>
     </div>
 
-    <!-- Tab bar -->
-    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;">
-      <button class="launch-tab active" data-wi-tab="overview"  onclick="switchWITab(this,'overview')">🏠 Overview</button>
-      <button class="launch-tab"        data-wi-tab="projects"  onclick="switchWITab(this,'projects')">📂 Projects</button>
-      <button class="launch-tab"        data-wi-tab="tasks"     onclick="switchWITab(this,'tasks')">✅ Tasks</button>
-      <button class="launch-tab"        data-wi-tab="briefing"  onclick="switchWITab(this,'briefing')">📋 Briefing</button>
-      <button class="launch-tab"        data-wi-tab="signals"   onclick="switchWITab(this,'signals')">📡 Signals</button>
-    </div>
-
-    <!-- ── Overview pane ── -->
-    <div id="wi-pane-overview" class="wi-pane">
-      <div class="card-grid-2">
-        <div class="card card-hi">
-          <div class="card-inner">
-            <div class="card-header">
-              <span class="card-title">Today's ONE Recommendation</span>
-              <span class="pill pill-hue">AI</span>
+    <div class="catalyst-desktop-stage">
+      <div class="catalyst-desktop-shell">
+        <aside class="catalyst-sidebar">
+          <div class="catalyst-sidebar-top">
+            <div class="catalyst-sidebar-brand">
+              <strong>JARVIS</strong>
+              <span>Catalyst</span>
             </div>
-            <div id="wi-one-rec" style="font-size:13px;line-height:1.7;color:var(--text-2);padding-top:4px;">
-              <div class="skel" style="height:10px;width:90%;margin-bottom:6px;"></div>
-              <div class="skel" style="height:10px;width:70%;"></div>
+            <div class="catalyst-sidebar-mark">✦</div>
+          </div>
+          <div class="catalyst-sidebar-nav">
+            <div class="catalyst-sidebar-item active">⌂ Command Center</div>
+            <div class="catalyst-sidebar-item">⌘ Workflows</div>
+            <div class="catalyst-sidebar-item">✦ Agents</div>
+            <div class="catalyst-sidebar-item">▣ Executions</div>
+            <div class="catalyst-sidebar-item">☑ Approvals</div>
+            <div class="catalyst-sidebar-item">↺ Interventions</div>
+            <div class="catalyst-sidebar-item">⌁ Resources</div>
+            <div class="catalyst-sidebar-item">◌ Insights</div>
+            <div class="catalyst-sidebar-item">☷ Audit Log</div>
+            <div class="catalyst-sidebar-item">⚙ Settings</div>
+          </div>
+          <div class="catalyst-sidebar-foot">
+            <div class="catalyst-sidebar-user">
+              <strong>Chris</strong>
+              Executive Mode
             </div>
           </div>
-        </div>
-        <div class="card card-hi">
-          <div class="card-inner">
-            <div class="card-header"><span class="card-title">Proactive Surfaces</span></div>
-            <div id="wi-surfaces" style="font-size:12px;line-height:1.6;">
-              <div class="skel" style="height:10px;width:80%;margin-bottom:6px;"></div>
-              <div class="skel" style="height:10px;width:60%;"></div>
+        </aside>
+
+        <main class="catalyst-main">
+          <div class="catalyst-topbar">
+            <div>
+              <div class="catalyst-topbar-kicker">Desktop Sequence</div>
+              <div class="catalyst-topbar-title" id="catalyst-nav-title">1. Catalyst Operations Command Center</div>
+              <div class="catalyst-topbar-subtitle" id="catalyst-nav-subtitle">Track live operations, staged actions, approvals, and the one recommendation that should move first.</div>
+            </div>
+            <div class="catalyst-nav">
+              <button class="catalyst-nav-btn" id="catalyst-nav-prev" onclick="advanceCatalystPage(-1)" aria-label="Previous Catalyst page">←</button>
+              <div class="catalyst-nav-status">
+                <div class="catalyst-nav-page" id="catalyst-page-count">Page 1 of 6</div>
+                <div class="catalyst-nav-title" id="catalyst-page-label">Command Center</div>
+              </div>
+              <button class="catalyst-nav-btn" id="catalyst-nav-next" onclick="advanceCatalystPage(1)" aria-label="Next Catalyst page">→</button>
             </div>
           </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Open Commitments</span>
-            <span class="pill pill-hue" id="wi-commit-count">—</span>
-          </div>
-          <div id="wi-commitments">
-            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- ── Projects pane ── -->
-    <div id="wi-pane-projects" class="wi-pane" style="display:none;">
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Active Projects</span>
-            <span class="pill pill-hue" id="wi-proj-count">—</span>
-          </div>
-          <div id="wi-projects-list">
-            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
+          <div class="catalyst-page-deck">
+            <section class="catalyst-page active" data-catalyst-page="1">
+              <div class="catalyst-grid-hero">
+                <div class="catalyst-card catalyst-hero-card">
+                  <div class="catalyst-hero-visual">
+                    <div class="catalyst-hero-overline">Good morning, Chris. Your operations are orchestrated.</div>
+                    <div>
+                      <div class="catalyst-hero-title">Catalyst is already in motion.</div>
+                      <div class="catalyst-hero-copy">See active work, queued triggers, agent health, and the next high-leverage decision without leaving the desktop board.</div>
+                    </div>
+                    <div class="catalyst-stat-row">
+                      <div class="catalyst-metric">
+                        <span>Active Workflows</span>
+                        <strong class="accent" id="wi-stat-projects">—</strong>
+                        <em>Running now</em>
+                      </div>
+                      <div class="catalyst-metric">
+                        <span>Staged Actions</span>
+                        <strong id="wi-stat-tasks">—</strong>
+                        <em>Ready to run</em>
+                      </div>
+                      <div class="catalyst-metric">
+                        <span>Queued Automations</span>
+                        <strong class="warn" id="wi-stat-overdue">—</strong>
+                        <em>Awaiting triggers</em>
+                      </div>
+                      <div class="catalyst-metric">
+                        <span>Approvals Needed</span>
+                        <strong id="wi-stat-approvals">5</strong>
+                        <em>High-impact gates</em>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="catalyst-home-side">
+                  <div class="catalyst-panel">
+                    <div class="catalyst-card-heading">
+                      <div class="catalyst-card-label">System Health<strong>Agent fleet readiness</strong></div>
+                    </div>
+                    <div class="catalyst-ring">97<span>Operational</span></div>
+                    <div class="wi-status-dots" id="wi-stat-workers" style="margin-top:14px;">—</div>
+                    <div class="wi-inline-stat" id="wi-worker-note" style="margin-top:10px;">Checking worker posture…</div>
+                  </div>
+                  <div class="catalyst-panel">
+                    <div class="catalyst-card-heading">
+                      <div class="catalyst-card-label">JARVIS Recommendation<strong>Move this board pack forward</strong></div>
+                      <span class="catalyst-chip live">Priority</span>
+                    </div>
+                    <div id="wi-one-rec" style="font-size:13px; line-height:1.7; color:var(--cat-copy-muted);">
+                      <div class="skel" style="height:10px;width:90%;margin-bottom:6px;"></div>
+                      <div class="skel" style="height:10px;width:70%;"></div>
+                    </div>
+                    <button class="catalyst-action-btn primary" type="button" style="margin-top:14px;">Review Now</button>
+                  </div>
+                </div>
+              </div>
 
-    <!-- ── Tasks pane ── -->
-    <div id="wi-pane-tasks" class="wi-pane" style="display:none;">
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Open Tasks</span>
-            <span class="pill pill-hue" id="wi-tasks-count">—</span>
-          </div>
-          <div id="wi-tasks-list">
-            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
+              <div class="catalyst-governance-grid">
+                <div class="catalyst-panel catalyst-list">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Live Operations<strong>What is actively moving</strong></div>
+                    <span class="catalyst-chip" id="wi-commit-count">—</span>
+                  </div>
+                  <div id="wi-commitments">
+                    <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
+                  </div>
+                </div>
+                <div class="catalyst-panel catalyst-list">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Recent Insights<strong>What the system is surfacing</strong></div>
+                  </div>
+                  <div id="wi-surfaces">
+                    <div class="skel" style="height:10px;width:80%;margin-bottom:6px;"></div>
+                    <div class="skel" style="height:10px;width:60%;"></div>
+                  </div>
+                </div>
+                <div class="catalyst-side-stack">
+                  <div class="catalyst-side-panel">
+                    <strong>Finalizing</strong>
+                    <p>Q2 Board Pack is the next best candidate to push through executive review and packaging.</p>
+                  </div>
+                  <div class="catalyst-side-panel">
+                    <strong>Intervention Window</strong>
+                    <p>Finance and Comms are the two zones most likely to need a human nudge in the next 20 minutes.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
 
-    <!-- ── Briefing pane ── -->
-    <div id="wi-pane-briefing" class="wi-pane" style="display:none;">
-      <div class="card card-hi">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Daily Briefing</span>
-            <button class="wi-refresh-btn" onclick="wiRefreshBriefing()">↻ Refresh</button>
-          </div>
-          <div id="wi-briefing-content" style="font-size:13px;line-height:1.75;color:var(--text-2);">
-            <div class="skel" style="height:10px;width:85%;margin-bottom:6px;"></div>
-            <div class="skel" style="height:10px;width:70%;margin-bottom:6px;"></div>
-            <div class="skel" style="height:10px;width:60%;"></div>
-          </div>
-          <div id="wi-briefing-meta" style="font-size:10px;color:var(--text-3);margin-top:10px;font-family:var(--font-mono);"></div>
-        </div>
-      </div>
-    </div>
+            <section class="catalyst-page" data-catalyst-page="2">
+              <div class="catalyst-project-grid">
+                <div class="catalyst-panel">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Blocks<strong>Workflow primitives</strong></div>
+                  </div>
+                  <div class="catalyst-blocks-list">
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">↻</span>Trigger</div>
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">⚡</span>Action</div>
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">✦</span>Agent</div>
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">◇</span>Condition</div>
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">☑</span>Approval</div>
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">⏱</span>Delay</div>
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">⌁</span>Integration</div>
+                    <div class="catalyst-block-item"><span class="catalyst-block-icon">✓</span>End</div>
+                  </div>
+                </div>
 
-    <!-- ── Signals pane ── -->
-    <div id="wi-pane-signals" class="wi-pane" style="display:none;">
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Recent Signals</span>
-            <span class="pill pill-hue" id="wi-signals-count">—</span>
+                <div class="catalyst-panel catalyst-flow-board">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Workflow Builder Studio<strong>Q2 Board Pack Workflow</strong></div>
+                    <span class="catalyst-chip warn">Draft</span>
+                  </div>
+                  <div class="catalyst-flow-layout">
+                    <div class="catalyst-node-column">
+                      <div class="catalyst-node"><span>Trigger</span><strong>Board pack requested</strong><em>Manual kickoff</em></div>
+                      <div class="catalyst-node"><span>Strategy Agent</span><strong>Gather key insights</strong><em>Assemble narrative</em></div>
+                      <div class="catalyst-node"><span>Data Agent</span><strong>Assemble metrics</strong><em>Financial and risk data</em></div>
+                    </div>
+                    <div class="catalyst-node-column">
+                      <div class="catalyst-node decision"><div><span>Condition</span><strong>Confidence &gt; 85</strong><em>Proceed</em></div></div>
+                    </div>
+                    <div class="catalyst-node-column">
+                      <div class="catalyst-node"><span>Data Agent</span><strong>Fill gaps or re-run</strong><em>Route if confidence slips</em></div>
+                      <div class="catalyst-node"><span>Comms Agent</span><strong>Draft narrative</strong><em>Executive language</em></div>
+                      <div class="catalyst-node"><span>Finalize</span><strong>Package output</strong><em>Ready for review</em></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="catalyst-panel">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Properties<strong>Selected node</strong></div>
+                  </div>
+                  <div class="catalyst-properties">
+                    <div class="catalyst-property-row"><span>Node</span><strong>Condition</strong><em>If confidence is high</em></div>
+                    <div class="catalyst-property-row"><span>Expression</span><strong>Confidence Score &gt; 85</strong></div>
+                    <div class="catalyst-property-row"><span>True Path</span><strong>Yes</strong></div>
+                    <div class="catalyst-property-row"><span>False Path</span><strong>No</strong></div>
+                  </div>
+                  <div class="catalyst-action-column" style="margin-top:14px;">
+                    <button class="catalyst-action-btn primary" type="button">Save</button>
+                    <button class="catalyst-action-btn" type="button">Validate</button>
+                    <button class="catalyst-action-btn" type="button">Test Run</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="catalyst-page" data-catalyst-page="3">
+              <div class="catalyst-execution-grid">
+                <div class="catalyst-panel">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Execution Flow<strong>Q2 Board Pack</strong></div>
+                  </div>
+                  <div class="catalyst-stage-list">
+                    <div class="catalyst-stage-item"><strong>Trigger</strong><span>Board pack requested · 9:12 AM</span></div>
+                    <div class="catalyst-stage-item"><strong>Strategy Agent</strong><span>Gather key insights · 9:13 AM</span></div>
+                    <div class="catalyst-stage-item"><strong>Data Agent</strong><span>Assemble metrics · 9:14 AM</span></div>
+                    <div class="catalyst-stage-item active"><strong>Approval</strong><span>Executive Review · In progress</span></div>
+                    <div class="catalyst-stage-item"><strong>Comms Agent</strong><span>Draft narrative · Pending</span></div>
+                    <div class="catalyst-stage-item"><strong>Finalize</strong><span>Package output · Pending</span></div>
+                  </div>
+                </div>
+
+                <div class="catalyst-panel">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Now Running<strong>Approval: Executive Review</strong></div>
+                    <span class="catalyst-chip live">Waiting on 2 of 5</span>
+                  </div>
+                  <div class="catalyst-avatar-row">
+                    <div class="catalyst-avatar you">You</div>
+                    <div class="catalyst-avatar">AL</div>
+                    <div class="catalyst-avatar">JD</div>
+                    <div class="catalyst-avatar">PR</div>
+                    <div class="catalyst-avatar">MG</div>
+                  </div>
+                  <div class="catalyst-card-heading" style="margin-top:18px;">
+                    <div class="catalyst-card-label">Agent Reasoning<strong>What Catalyst sees</strong></div>
+                  </div>
+                  <p>All metrics are within expected range. Revenue trend is steady. Risk exposure is low. Recommendation: approve to proceed with communications packaging.</p>
+                  <div class="catalyst-wave" style="margin-top:14px;"></div>
+                  <div class="catalyst-score-grid" style="margin-top:14px;">
+                    <div class="catalyst-score-card"><span>Confidence</span><strong>91%</strong></div>
+                    <div class="catalyst-score-card"><span>Risk</span><strong>No blockers</strong></div>
+                  </div>
+                </div>
+
+                <div class="catalyst-side-stack">
+                  <div class="catalyst-side-panel">
+                    <strong>Outputs So Far</strong>
+                    <ul>
+                      <li>Executive summary ready</li>
+                      <li>Financial overview ready</li>
+                      <li>Risk assessment ready</li>
+                      <li>Market insights ready</li>
+                    </ul>
+                  </div>
+                  <div class="catalyst-side-panel">
+                    <strong>Next Up</strong>
+                    <p>Comms Agent will draft the narrative as soon as executive review clears.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="catalyst-page" data-catalyst-page="4">
+              <div class="catalyst-governance-grid">
+                <div class="catalyst-panel catalyst-document-card">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Draft to Live<strong>Q2 Board Pack</strong></div>
+                    <span class="catalyst-chip warn">Staged</span>
+                  </div>
+                  <strong>Q2</strong>
+                  <span>Board pack preview package. Review, policy check, then approval into live distribution.</span>
+                </div>
+                <div class="catalyst-panel catalyst-list">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Approval Required<strong>Live governance checks</strong></div>
+                    <span class="catalyst-chip live">2 of 4</span>
+                  </div>
+                  <div class="catalyst-approval-stack">
+                    <div class="catalyst-approval-item"><strong>Trust Zone</strong><span>Standard · within governance boundary</span></div>
+                    <div class="catalyst-approval-item"><strong>Policy Check</strong><span>Passed · all validations satisfied</span></div>
+                    <div class="catalyst-approval-item"><strong>Data Sensitivity</strong><span>Internal · no restricted data</span></div>
+                    <div class="catalyst-approval-item"><strong>Approver Set</strong><span>Jordan + Morgan still pending</span></div>
+                  </div>
+                </div>
+                <div class="catalyst-side-stack">
+                  <div class="catalyst-side-panel">
+                    <strong>JARVIS Notice</strong>
+                    <p>AI checks passed. Recommend approval to promote this package to live.</p>
+                  </div>
+                  <div class="catalyst-action-column">
+                    <button class="catalyst-action-btn" type="button">Request Changes</button>
+                    <button class="catalyst-action-btn primary" type="button">Promote to Live</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="catalyst-page" data-catalyst-page="5">
+              <div class="catalyst-pivot-grid">
+                <div class="catalyst-panel catalyst-photo-panel">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Intervention Required<strong>High-impact discrepancy</strong></div>
+                    <span class="catalyst-chip risk">High Impact</span>
+                  </div>
+                  <p>Vendor API returned inconsistent pricing data for the board pack. Confidence slipped below threshold, so Catalyst is holding before the approval chain advances.</p>
+                </div>
+                <div class="catalyst-panel catalyst-list">
+                  <div class="catalyst-card-heading">
+                    <div class="catalyst-card-label">Recommended Actions<strong>What Catalyst would do next</strong></div>
+                  </div>
+                  <div id="wi-signals-list">
+                    <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
+                  </div>
+                </div>
+                <div class="catalyst-side-stack">
+                  <div class="catalyst-side-panel">
+                    <strong>Why This Matters</strong>
+                    <p>This affects revenue projection accuracy, which is a key decision driver for the board.</p>
+                  </div>
+                  <div class="catalyst-side-panel">
+                    <strong>Confidence</strong>
+                    <p>62% · low. Enough to recommend a path, not enough to auto-promote the package.</p>
+                  </div>
+                  <div class="catalyst-action-column">
+                    <button class="catalyst-action-btn primary" type="button">Run Option A</button>
+                    <button class="catalyst-action-btn" type="button">Ask for Input</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="catalyst-page" data-catalyst-page="6">
+              <div class="catalyst-voice-grid">
+                <div class="catalyst-card catalyst-chat-card">
+                  <div class="catalyst-chat-header">
+                    <div class="catalyst-avatar you">JV</div>
+                    <div>
+                      <div style="font-size:15px;font-weight:700;color:var(--cat-copy);">JARVIS Voice</div>
+                      <div style="font-size:11px;color:var(--cat-copy-muted);">Voice Catalyst Consultation</div>
+                    </div>
+                  </div>
+                  <div class="catalyst-chat-messages">
+                    <div class="catalyst-chat-bubble user">Launch the Q2 board pack workflow and loop in Finance.</div>
+                    <div class="catalyst-chat-bubble agent">Starting Q2 Board Pack workflow. I’m notifying Finance Agent and routing the package into executive review.</div>
+                    <div class="catalyst-chat-bubble user">What’s the status of approvals?</div>
+                    <div class="catalyst-chat-bubble agent">2 of 5 approvals are in. Jordan and Morgan are still pending. I can send a reminder now or keep monitoring and alert you when it clears.</div>
+                    <div class="catalyst-chat-bubble agent">Reminders sent with high priority. I’ll stay on the workflow and nudge you when the review is complete.</div>
+                  </div>
+                  <div class="catalyst-chat-footer">
+                    <input class="catalyst-chat-input" type="text" value="Ask JARVIS to orchestrate..." readonly>
+                    <div class="catalyst-wave" style="width:120px; flex:0 0 120px;"></div>
+                  </div>
+                </div>
+                <div class="catalyst-side-stack">
+                  <div class="catalyst-side-panel">
+                    <strong>Context</strong>
+                    <p>Workflow: Q2 Board Pack. Progress: 62%. Next step: executive review.</p>
+                  </div>
+                  <div class="catalyst-side-panel">
+                    <strong>Actions</strong>
+                    <ul>
+                      <li>Send reminder</li>
+                      <li>View execution</li>
+                      <li>Pause workflow</li>
+                      <li>Add owner</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-          <div id="wi-signals-list">
-            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>
+
+          <div class="catalyst-bottom-values">
+            <div class="catalyst-mini-card"><strong>Intelligent Orchestration</strong><p>Plans, coordinates, and executes across agents and systems.</p></div>
+            <div class="catalyst-mini-card"><strong>Trust & Guardrails</strong><p>Built-in policies, approvals, and trust zones keep work safe.</p></div>
+            <div class="catalyst-mini-card"><strong>Agentic Execution</strong><p>Specialized agents do the work, think, and adapt in real time.</p></div>
+            <div class="catalyst-mini-card"><strong>Human in the Loop</strong><p>You stay in control with context, clarity, and the final word.</p></div>
+            <div class="catalyst-mini-card"><strong>Real-Time Intelligence</strong><p>Live signals, risk detection, and proactive interventions.</p></div>
+            <div class="catalyst-mini-card"><strong>From Plan to Impact</strong><p>Ideas become action. Outcomes you can measure.</p></div>
           </div>
-        </div>
+
+          <div style="display:none;">
+            <div id="wi-projects-list"></div>
+            <div id="wi-tasks-list"></div>
+            <div id="wi-briefing-content"></div>
+            <div id="wi-briefing-meta"></div>
+            <div id="wi-proj-count"></div>
+            <div id="wi-tasks-count"></div>
+            <div id="wi-signals-count"></div>
+          </div>
+        </main>
       </div>
     </div>
   </div>
@@ -11610,14 +12036,91 @@ async function runKasaScene(sceneId) {{
 ═══════════════════════════════════════════════════════════════ */
 let _wiCurrentTab = 'overview';
 let _wiBriefingData = null;
+let catalystStoryboardPage = 1;
+const CATALYST_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Catalyst Operations Command Center',
+    label: 'Command Center',
+    subtitle: 'Track live operations, staged actions, approvals, and the one recommendation that should move first.',
+  }},
+  2: {{
+    title: '2. Workflow Builder Studio',
+    label: 'Workflow Builder',
+    subtitle: 'Design the orchestration path, tune conditions, and shape how agents, approvals, and packaging fit together.',
+  }},
+  3: {{
+    title: '3. Live Agent Execution Board',
+    label: 'Execution Board',
+    subtitle: 'Watch the execution flow, see who is pending, and understand what the agents have already assembled.',
+  }},
+  4: {{
+    title: '4. Draft to Live Governance',
+    label: 'Governance',
+    subtitle: 'Review trust zones, policy checks, and the approval steps required to promote staged work into live action.',
+  }},
+  5: {{
+    title: '5. Need Orchestration & Pivoting',
+    label: 'Intervention',
+    subtitle: 'Catch confidence drops, see the signals that triggered the hold, and choose the safest next move.',
+  }},
+  6: {{
+    title: '6. Voice Catalyst Consultation',
+    label: 'Voice Consultation',
+    subtitle: 'Talk to Catalyst hands-free about workflow launch, approval status, reminders, and live execution posture.',
+  }},
+}};
+
+function catalystPageForTab(tabId) {{
+  const map = {{
+    overview: 1,
+    projects: 2,
+    briefing: 3,
+    tasks: 4,
+    signals: 5,
+  }};
+  return map[tabId] || 1;
+}}
+
+function syncCatalystStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-catalyst .catalyst-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  catalystStoryboardPage = Math.max(1, Math.min(catalystStoryboardPage, pageCount));
+
+  panels.forEach((panel, idx) => {{
+    panel.classList.toggle('active', idx + 1 === catalystStoryboardPage);
+  }});
+
+  const pageMeta = CATALYST_STORYBOARD_TITLES[catalystStoryboardPage];
+  const title = document.getElementById('catalyst-nav-title');
+  if (title) title.textContent = pageMeta?.title || `Page ${{catalystStoryboardPage}}`;
+
+  const subtitle = document.getElementById('catalyst-nav-subtitle');
+  if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
+
+  const count = document.getElementById('catalyst-page-count');
+  if (count) count.textContent = `Page ${{catalystStoryboardPage}} of ${{pageCount}}`;
+
+  const label = document.getElementById('catalyst-page-label');
+  if (label) label.textContent = pageMeta?.label || `Page ${{catalystStoryboardPage}}`;
+
+  const prev = document.getElementById('catalyst-nav-prev');
+  const next = document.getElementById('catalyst-nav-next');
+  if (prev) prev.disabled = catalystStoryboardPage === 1;
+  if (next) next.disabled = catalystStoryboardPage === pageCount;
+}}
+
+function advanceCatalystPage(delta) {{
+  catalystStoryboardPage += delta;
+  syncCatalystStoryboard();
+}}
 
 function switchWITab(btn, tabId) {{
   document.querySelectorAll('[data-wi-tab]').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.wi-pane').forEach(p => {{ p.style.display = 'none'; }});
-  const pane = document.getElementById('wi-pane-' + tabId);
-  if (pane) pane.style.display = '';
+  if (btn) btn.classList.add('active');
   _wiCurrentTab = tabId;
+  catalystStoryboardPage = catalystPageForTab(tabId);
+  syncCatalystStoryboard();
   if      (tabId === 'projects') wiLoadProjects();
   else if (tabId === 'tasks')    wiLoadTasks();
   else if (tabId === 'briefing') wiLoadBriefing();
@@ -11625,10 +12128,15 @@ function switchWITab(btn, tabId) {{
 }}
 
 async function loadWorkIntelligence() {{
+  syncCatalystStoryboard();
   wiLoadSummary();
   wiLoadCommitments();
   wiLoadWorkerStatus();
   wiLoadSurfaces();
+  wiLoadProjects();
+  wiLoadTasks();
+  wiLoadBriefing();
+  wiLoadSignals();
 }}
 
 async function wiLoadSummary() {{
@@ -11639,9 +12147,11 @@ async function wiLoadSummary() {{
     const ps = document.getElementById('wi-stat-projects');
     const ts = document.getElementById('wi-stat-tasks');
     const os = document.getElementById('wi-stat-overdue');
+    const ap = document.getElementById('wi-stat-approvals');
     if (ps) ps.textContent = d.active_projects ?? '—';
     if (ts) ts.textContent = d.open_tasks ?? '—';
     if (os) os.textContent = d.overdue_commitments ?? '0';
+    if (ap) ap.textContent = d.pending_approvals ?? d.approvals_needed ?? d.overdue_commitments ?? '5';
     if (d.one_recommendation) {{
       const el = document.getElementById('wi-one-rec');
       if (el) el.innerHTML = '<p style="margin:0;">' + escHtml(d.one_recommendation) + '</p>';
@@ -11651,18 +12161,26 @@ async function wiLoadSummary() {{
 
 async function wiLoadWorkerStatus() {{
   const el = document.getElementById('wi-stat-workers');
+  const note = document.getElementById('wi-worker-note');
   if (!el) return;
   try {{
     const res = await fetch('/api/wi/workers/status');
-    if (!res.ok) {{ el.textContent = '—'; return; }}
+    if (!res.ok) {{ el.textContent = '—'; if (note) note.textContent = 'Worker status unavailable right now.'; return; }}
     const d = await res.json();
     const workers = d.workers || [];
     const running = workers.filter(w => w.status === 'running').length;
+    const errorCount = workers.filter(w => w.status === 'error').length;
     el.innerHTML = workers.map(w => {{
       const cls = w.status === 'running' ? 'active' : w.status === 'error' ? 'error' : 'paused';
       return `<span class="wi-status-dot ${{cls}}"></span>`;
-    }}).join('') + ` <span style="font-size:11px;color:var(--text-3);">${{running}}/${{workers.length}}</span>`;
-  }} catch(e) {{ el.textContent = '—'; }}
+    }}).join('') + ` <span class="wi-inline-stat">${{running}}/${{workers.length}} running</span>`;
+    if (note) note.textContent = errorCount
+      ? `${{errorCount}} worker${{errorCount === 1 ? '' : 's'}} need attention.`
+      : 'All systems nominal.';
+  }} catch(e) {{
+    el.textContent = '—';
+    if (note) note.textContent = 'Worker status unavailable right now.';
+  }}
 }}
 
 async function wiLoadCommitments() {{
