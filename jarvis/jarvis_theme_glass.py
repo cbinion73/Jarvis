@@ -18949,6 +18949,195 @@ body::after {{
   background:rgba(255,255,255,0.04);
   color:var(--nav-copy-muted);
 }}
+.desktop-sequence-bar {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:18px 0 20px;
+  padding:18px 20px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:linear-gradient(180deg, rgba(14,18,26,0.94), rgba(8,11,18,0.98));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.desktop-sequence-copy {{
+  display:grid;
+  gap:6px;
+}}
+.desktop-sequence-kicker {{
+  font-size:11px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:rgba(228, 180, 98, 0.82);
+}}
+.desktop-sequence-copy strong {{
+  color:var(--text-1);
+  font-size:28px;
+  line-height:1.1;
+}}
+.desktop-sequence-copy span {{
+  color:var(--text-3);
+  font-size:13px;
+  line-height:1.6;
+}}
+.desktop-sequence-controls {{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-shrink:0;
+}}
+.desktop-sequence-btn {{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--text-1);
+  font-size:18px;
+  cursor:pointer;
+  transition:transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}}
+.desktop-sequence-btn:hover:not(:disabled) {{
+  transform:translateY(-1px);
+  border-color:rgba(228, 180, 98, 0.45);
+  background:rgba(228, 180, 98, 0.08);
+}}
+.desktop-sequence-btn:disabled {{
+  opacity:0.42;
+  cursor:not-allowed;
+}}
+.desktop-sequence-meta {{
+  min-width:170px;
+  text-align:right;
+  cursor:pointer;
+}}
+.desktop-sequence-page {{
+  color:var(--text-1);
+  font-size:13px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+}}
+.desktop-sequence-label {{
+  margin-top:5px;
+  color:var(--text-3);
+  font-size:12px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}}
+.desktop-sequence-card {{
+  cursor:pointer;
+}}
+.desktop-sequence-card:focus-visible {{
+  outline:2px solid rgba(255,255,255,0.24);
+  outline-offset:4px;
+}}
+.desktop-card-focus-overlay {{
+  position:fixed;
+  inset:0;
+  z-index:9997;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:28px;
+  background:rgba(2,4,9,0.78);
+  backdrop-filter:blur(14px);
+}}
+.desktop-card-focus-overlay.open {{
+  display:flex;
+}}
+.desktop-card-focus-backdrop {{
+  position:absolute;
+  inset:0;
+}}
+.desktop-card-focus-shell {{
+  position:relative;
+  z-index:1;
+  width:min(1180px, calc(100vw - 64px));
+  max-height:calc(100vh - 64px);
+  display:grid;
+  grid-template-rows:auto minmax(0, 1fr);
+  overflow:hidden;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(180deg, rgba(10,14,22,0.985), rgba(5,8,14,0.995));
+  box-shadow:0 36px 96px rgba(0,0,0,0.46), inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.desktop-card-focus-topbar {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:18px 20px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}}
+.desktop-card-focus-copy {{
+  display:grid;
+  gap:5px;
+}}
+.desktop-card-focus-kicker {{
+  font-size:11px;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:rgba(228, 180, 98, 0.82);
+}}
+.desktop-card-focus-title {{
+  color:var(--text-1);
+  font-size:26px;
+  line-height:1.15;
+}}
+.desktop-card-focus-subtitle {{
+  color:var(--text-3);
+  font-size:13px;
+}}
+.desktop-card-focus-actions {{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}}
+.desktop-card-focus-close {{
+  min-width:46px;
+  height:46px;
+  padding:0 16px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--text-1);
+  cursor:pointer;
+}}
+.desktop-card-focus-body {{
+  min-height:0;
+  overflow:auto;
+  padding:20px;
+}}
+.desktop-card-focus-card {{
+  margin:0 !important;
+  width:100% !important;
+  max-width:none !important;
+}}
+@media (max-width: 980px) {{
+  .desktop-sequence-bar,
+  .desktop-card-focus-topbar {{
+    flex-direction:column;
+    align-items:flex-start;
+  }}
+  .desktop-sequence-controls,
+  .desktop-card-focus-actions {{
+    width:100%;
+    justify-content:space-between;
+  }}
+  .desktop-sequence-meta {{
+    text-align:left;
+    min-width:0;
+  }}
+  .desktop-card-focus-overlay {{
+    padding:14px;
+  }}
+  .desktop-card-focus-shell {{
+    width:100%;
+    max-height:calc(100vh - 28px);
+  }}
+}}
 .navigation-consult-actions {{
   display:flex;
   flex-wrap:wrap;
@@ -26188,6 +26377,8 @@ async function init() {{
     try {{ handlePacket(INITIAL_PACKET); }} catch(e) {{ _showDbg('handlePacket', e); }}
   }}
 
+  initDesktopCardSequences();
+
   // Close dropdowns on outside click
   document.addEventListener('click', () => {{
     hchatCloseDropdown();
@@ -26198,6 +26389,7 @@ async function init() {{
    VIEW SWITCHING — CHROMATIC SHIFT LIVES HERE
 ═══════════════════════════════════════════════════════════════ */
 function switchView(name) {{
+  if (name === 'command') name = 'chat';
   closeMobileNav();  // close drawer on mobile when navigating
   document.querySelectorAll('.view').forEach(v => {{
     v.style.display = 'none';
@@ -26219,6 +26411,8 @@ function switchView(name) {{
 
   currentView = name;
   loadViewData(name);
+  syncDesktopCardSequence(name);
+  if (_desktopCardFocus.view && _desktopCardFocus.view !== name) closeDesktopCardFocus();
 }}
 
 function loadViewData(name) {{
@@ -26255,6 +26449,401 @@ function loadViewData(name) {{
     case 'vision':       loadVisionView(); break;
     case 'journey':      loadJourneyView(); break;
   }}
+}}
+
+const DESKTOP_CARD_SEQUENCES = {{
+  overview: {{
+    rootSelector: '#view-overview',
+    cardSelector: '.dailybrief-card',
+    titleSelector: '.dailybrief-card-number',
+    insertAfterSelector: '.dailybrief-runtime-bar',
+    label: 'Daily Brief',
+    subtitle: 'Each numbered Daily Brief card opens as its own focused page inside the experience.',
+  }},
+  chat: {{
+    rootSelector: '#view-chat',
+    cardSelector: '.command-card',
+    titleSelector: '.command-card-number',
+    existingBar: {{
+      countSelector: '#command-page-count',
+      labelSelector: '#command-page-label',
+      titleSelector: '#command-nav-title',
+      subtitleSelector: '#command-nav-subtitle',
+      prevSelector: '#command-nav-prev',
+      nextSelector: '#command-nav-next',
+    }},
+    label: 'Command',
+    subtitle: 'Each numbered Command card can now be opened as its own focused desktop page.',
+  }},
+  notifications: {{
+    rootSelector: '#view-notifications',
+    cardSelector: '.needs-card',
+    titleSelector: '.needs-card-number',
+    insertAfterSelector: '.needs-header',
+    label: 'Needs You',
+    subtitle: 'Authority cards now open as focused pages without leaving the Needs You experience.',
+  }},
+  agents: {{
+    rootSelector: '#view-agents',
+    cardSelector: '.agents-card',
+    titleSelector: '.agents-card-number',
+    existingBar: {{
+      countSelector: '#agents-page-count',
+      labelSelector: '#agents-page-label',
+      titleSelector: '#agents-nav-title',
+      subtitleSelector: '#agents-nav-subtitle',
+      prevSelector: '#agents-nav-prev',
+      nextSelector: '#agents-nav-next',
+    }},
+    label: 'Agents',
+    subtitle: 'Each numbered Agents card can now be focused as its own page in the staff workspace.',
+  }},
+  intelligence: {{
+    rootSelector: '#view-intelligence',
+    cardSelector: '.intel-card',
+    titleSelector: '.intel-card-number',
+    insertAfterSelector: '.intel-header',
+    label: 'Intel',
+    subtitle: 'Each numbered Intel card opens as a focused page inside the sensemaking floor.',
+  }},
+  social: {{
+    rootSelector: '#view-social',
+    cardSelector: '.social-card',
+    titleSelector: '.social-card-title',
+    insertAfterSelector: '.social-header',
+    label: 'Social Media',
+    subtitle: 'Each numbered Social Media card opens as a focused page inside the social command surface.',
+  }},
+  home: {{
+    rootSelector: '#view-home',
+    cardSelector: '.home-panel',
+    titleSelector: '.home-panel-header h3',
+    insertAfterSelector: '.home-top-metrics',
+    hideSelectors: ['#home-page-count'],
+    label: 'Home',
+    subtitle: 'Each numbered Home card opens as a focused household page without leaving the Home experience.',
+  }},
+  journey: {{
+    rootSelector: '#view-journey',
+    cardSelector: '.journey-card',
+    titleSelector: '.journey-card-number',
+    insertAfterSelector: '.journey-header-stats',
+    label: 'Journey',
+    subtitle: 'Each numbered Journey card opens as a focused page inside the learning record.',
+  }},
+  vision: {{
+    rootSelector: '#view-vision',
+    cardSelector: '.vision-card',
+    titleSelector: '.vision-card-number',
+    insertAfterSelector: '.vision-header',
+    label: 'Vision',
+    subtitle: 'Each numbered Vision card opens as a focused page inside the visual intelligence experience.',
+  }},
+  news: {{
+    rootSelector: '#view-news',
+    cardSelector: '.news-panel',
+    titleSelector: '.news-panel-header h3',
+    insertAfterSelector: '.news-top-metrics',
+    label: 'News',
+    subtitle: 'Each numbered News card opens as a focused page inside the news intelligence experience.',
+  }},
+  calendar: {{
+    rootSelector: '#view-calendar',
+    cardSelector: '.calendar-panel, .calendar-column',
+    titleSelector: '.calendar-panel-title, .calendar-week-topbar strong',
+    existingBar: {{
+      countSelector: '#calendar-page-count',
+      labelSelector: '#calendar-page-label',
+      prevSelector: '#view-calendar .calendar-nav-actions .calendar-nav-btn:first-child',
+      nextSelector: '#view-calendar .calendar-nav-actions .calendar-nav-btn:last-child',
+    }},
+    label: 'Calendar',
+    subtitle: 'Each numbered Calendar card opens as a focused page inside the planning surface.',
+  }},
+  email: {{
+    rootSelector: '#view-email',
+    cardSelector: '.email-card',
+    titleSelector: '.email-card-title',
+    insertAfterSelector: '.email-header',
+    label: 'Email',
+    subtitle: 'Each numbered Email card opens as a focused page inside the communication command center.',
+  }},
+}};
+
+const _desktopSequenceState = {{}};
+const _desktopSequenceCards = {{}};
+const _desktopSequenceBars = {{}};
+const _desktopCardFocus = {{ view: '', index: 0 }};
+
+function desktopSequenceParseTitle(raw) {{
+  const text = String(raw || '').trim().replace(/\s+/g, ' ');
+  const match = text.match(/^(\d+)\.\s*(.+)$/);
+  if (!match) return null;
+  return {{
+    number: Number(match[1]),
+    title: match[2].trim(),
+    raw: text,
+  }};
+}}
+
+function ensureDesktopCardFocusOverlay() {{
+  let overlay = document.getElementById('desktop-card-focus-overlay');
+  if (overlay) return overlay;
+  overlay = document.createElement('div');
+  overlay.id = 'desktop-card-focus-overlay';
+  overlay.className = 'desktop-card-focus-overlay';
+  overlay.innerHTML = ''
+    + '<div class="desktop-card-focus-backdrop" data-overlay-close="true"></div>'
+    + '<div class="desktop-card-focus-shell">'
+    +   '<div class="desktop-card-focus-topbar">'
+    +     '<div class="desktop-card-focus-copy">'
+    +       '<div class="desktop-card-focus-kicker" id="desktop-card-focus-kicker">Desktop Sequence</div>'
+    +       '<strong class="desktop-card-focus-title" id="desktop-card-focus-title">Focused Page</strong>'
+    +       '<span class="desktop-card-focus-subtitle" id="desktop-card-focus-subtitle">Each numbered card can be reviewed on its own.</span>'
+    +     '</div>'
+    +     '<div class="desktop-card-focus-actions">'
+    +       '<button class="desktop-sequence-btn" id="desktop-card-focus-prev" type="button" aria-label="Previous focused card">←</button>'
+    +       '<div class="desktop-sequence-meta">'
+    +         '<div class="desktop-sequence-page" id="desktop-card-focus-count">Page 1 of 1</div>'
+    +         '<div class="desktop-sequence-label" id="desktop-card-focus-label">Focused Card</div>'
+    +       '</div>'
+    +       '<button class="desktop-sequence-btn" id="desktop-card-focus-next" type="button" aria-label="Next focused card">→</button>'
+    +       '<button class="desktop-card-focus-close" id="desktop-card-focus-close" type="button">Close</button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="desktop-card-focus-body" id="desktop-card-focus-body"></div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(event) {{
+    if (event.target && event.target.getAttribute('data-overlay-close') === 'true') {{
+      closeDesktopCardFocus();
+    }}
+  }});
+  document.getElementById('desktop-card-focus-close').onclick = closeDesktopCardFocus;
+  document.getElementById('desktop-card-focus-prev').onclick = function() {{
+    stepDesktopCardSequence(_desktopCardFocus.view || currentView, -1);
+  }};
+  document.getElementById('desktop-card-focus-next').onclick = function() {{
+    stepDesktopCardSequence(_desktopCardFocus.view || currentView, 1);
+  }};
+  document.addEventListener('keydown', function(event) {{
+    const isOpen = document.getElementById('desktop-card-focus-overlay')?.classList.contains('open');
+    if (!isOpen) return;
+    if (event.key === 'Escape') closeDesktopCardFocus();
+    if (event.key === 'ArrowLeft') stepDesktopCardSequence(_desktopCardFocus.view || currentView, -1);
+    if (event.key === 'ArrowRight') stepDesktopCardSequence(_desktopCardFocus.view || currentView, 1);
+  }});
+  return overlay;
+}}
+
+function closeDesktopCardFocus() {{
+  const overlay = document.getElementById('desktop-card-focus-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  _desktopCardFocus.view = '';
+}}
+
+function getDesktopSequenceCards(viewName) {{
+  const config = DESKTOP_CARD_SEQUENCES[viewName];
+  if (!config) return [];
+  const root = document.querySelector(config.rootSelector);
+  if (!root) return [];
+  const titleNodes = Array.from(root.querySelectorAll(config.titleSelector));
+  const cards = [];
+  const seen = new Set();
+  titleNodes.forEach(function(titleNode, idx) {{
+    const parsed = desktopSequenceParseTitle(titleNode.textContent || '');
+    if (!parsed) return;
+    const card = titleNode.closest(config.cardSelector);
+    if (!card || seen.has(card)) return;
+    seen.add(card);
+    cards.push({{
+      index: cards.length + 1,
+      order: idx + 1,
+      number: parsed.number,
+      title: parsed.title,
+      raw: parsed.raw,
+      card,
+      titleNode,
+    }});
+  }});
+  _desktopSequenceCards[viewName] = cards;
+  return cards;
+}}
+
+function ensureDesktopSequenceBar(viewName) {{
+  if (_desktopSequenceBars[viewName]) return _desktopSequenceBars[viewName];
+  const config = DESKTOP_CARD_SEQUENCES[viewName];
+  if (!config) return null;
+  const root = document.querySelector(config.rootSelector);
+  if (!root) return null;
+
+  if (config.existingBar) {{
+    const bar = {{
+      bar: root.querySelector(config.existingBar.barSelector || '.command-sequence-bar, .agents-sequence-bar, .calendar-desktop-topbar'),
+      count: root.querySelector(config.existingBar.countSelector),
+      label: root.querySelector(config.existingBar.labelSelector),
+      title: config.existingBar.titleSelector ? root.querySelector(config.existingBar.titleSelector) : null,
+      subtitle: config.existingBar.subtitleSelector ? root.querySelector(config.existingBar.subtitleSelector) : null,
+      prev: root.querySelector(config.existingBar.prevSelector),
+      next: root.querySelector(config.existingBar.nextSelector),
+    }};
+    _desktopSequenceBars[viewName] = bar;
+    return bar;
+  }}
+
+  const host = root.querySelector(config.insertAfterSelector) || root.firstElementChild;
+  if (!host) return null;
+  const bar = document.createElement('div');
+  bar.className = 'desktop-sequence-bar';
+  bar.setAttribute('data-sequence-view', viewName);
+  bar.innerHTML = ''
+    + '<div class="desktop-sequence-copy">'
+    +   '<div class="desktop-sequence-kicker">Desktop Sequence</div>'
+    +   '<strong></strong>'
+    +   '<span></span>'
+    + '</div>'
+    + '<div class="desktop-sequence-controls">'
+    +   '<button class="desktop-sequence-btn" type="button" aria-label="Previous page">←</button>'
+    +   '<div class="desktop-sequence-meta">'
+    +     '<div class="desktop-sequence-page">Page 1 of 1</div>'
+    +     '<div class="desktop-sequence-label">Focused Card</div>'
+    +   '</div>'
+    +   '<button class="desktop-sequence-btn" type="button" aria-label="Next page">→</button>'
+    + '</div>';
+  host.insertAdjacentElement('afterend', bar);
+  const title = bar.querySelector('.desktop-sequence-copy strong');
+  const subtitle = bar.querySelector('.desktop-sequence-copy span');
+  const count = bar.querySelector('.desktop-sequence-page');
+  const label = bar.querySelector('.desktop-sequence-label');
+  const prev = bar.querySelector('.desktop-sequence-controls .desktop-sequence-btn:first-child');
+  const next = bar.querySelector('.desktop-sequence-controls .desktop-sequence-btn:last-child');
+  _desktopSequenceBars[viewName] = {{ bar, title, subtitle, count, label, prev, next }};
+  return _desktopSequenceBars[viewName];
+}}
+
+function desktopSequenceBindCard(viewName, cardMeta, pageIndex) {{
+  const card = cardMeta.card;
+  if (!card || card.dataset.sequenceBound === 'true') return;
+  card.dataset.sequenceBound = 'true';
+  card.classList.add('desktop-sequence-card');
+  if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '0');
+  const openCard = function(event) {{
+    if (event) {{
+      const interactive = event.target.closest('button, a, input, select, textarea, label, summary');
+      if (interactive) return;
+    }}
+    openDesktopCardSequenceModal(viewName, pageIndex);
+  }};
+  card.addEventListener('click', openCard);
+  card.addEventListener('keydown', function(event) {{
+    if (event.key === 'Enter' || event.key === ' ') {{
+      event.preventDefault();
+      openDesktopCardSequenceModal(viewName, pageIndex);
+    }}
+  }});
+}}
+
+function syncDesktopCardSequence(viewName) {{
+  const config = DESKTOP_CARD_SEQUENCES[viewName];
+  if (!config) return;
+  const cards = getDesktopSequenceCards(viewName);
+  if (!cards.length) return;
+  const state = _desktopSequenceState[viewName] || {{ page: 1 }};
+  const page = Math.max(1, Math.min(state.page || 1, cards.length));
+  _desktopSequenceState[viewName] = {{ page }};
+  const bar = ensureDesktopSequenceBar(viewName);
+  if (!bar) return;
+
+  (config.hideSelectors || []).forEach(function(selector) {{
+    const hidden = document.querySelector(config.rootSelector + ' ' + selector) || document.querySelector(selector);
+    if (hidden) hidden.style.display = 'none';
+  }});
+
+  const current = cards[page - 1];
+  if (bar.count) bar.count.textContent = 'Page ' + page + ' of ' + cards.length;
+  if (bar.label) bar.label.textContent = current.title;
+  if (bar.title) bar.title.textContent = current.title;
+  if (bar.subtitle) bar.subtitle.textContent = config.subtitle || ('Each numbered ' + (config.label || 'desktop') + ' card opens as its own focused page.');
+  if (bar.prev) {{
+    bar.prev.disabled = page === 1;
+    bar.prev.onclick = function() {{ stepDesktopCardSequence(viewName, -1); }};
+  }}
+  if (bar.next) {{
+    bar.next.disabled = page === cards.length;
+    bar.next.onclick = function() {{ stepDesktopCardSequence(viewName, 1); }};
+  }}
+  const metaClickTarget = bar.bar || bar.count?.parentElement || null;
+  if (metaClickTarget && !metaClickTarget.dataset.sequenceMetaBound) {{
+    metaClickTarget.dataset.sequenceMetaBound = 'true';
+    const opener = function(event) {{
+      if (event.target.closest('button')) return;
+      openDesktopCardSequenceModal(viewName, (_desktopSequenceState[viewName] || {{ page: 1 }}).page || 1);
+    }};
+    if (bar.count) bar.count.addEventListener('click', opener);
+    if (bar.label) bar.label.addEventListener('click', opener);
+  }}
+
+  cards.forEach(function(cardMeta, idx) {{
+    desktopSequenceBindCard(viewName, cardMeta, idx + 1);
+  }});
+}}
+
+function stepDesktopCardSequence(viewName, delta) {{
+  const cards = getDesktopSequenceCards(viewName);
+  if (!cards.length) return;
+  const state = _desktopSequenceState[viewName] || {{ page: 1 }};
+  const nextPage = Math.max(1, Math.min((state.page || 1) + delta, cards.length));
+  _desktopSequenceState[viewName] = {{ page: nextPage }};
+  syncDesktopCardSequence(viewName);
+  openDesktopCardSequenceModal(viewName, nextPage);
+}}
+
+function openDesktopCardSequenceModal(viewName, page) {{
+  const cards = getDesktopSequenceCards(viewName);
+  if (!cards.length) return;
+  const index = Math.max(1, Math.min(page || 1, cards.length));
+  _desktopSequenceState[viewName] = {{ page: index }};
+  syncDesktopCardSequence(viewName);
+  ensureDesktopCardFocusOverlay();
+
+  const current = cards[index - 1];
+  const config = DESKTOP_CARD_SEQUENCES[viewName] || {{}};
+  const overlay = document.getElementById('desktop-card-focus-overlay');
+  const body = document.getElementById('desktop-card-focus-body');
+  const title = document.getElementById('desktop-card-focus-title');
+  const subtitle = document.getElementById('desktop-card-focus-subtitle');
+  const kicker = document.getElementById('desktop-card-focus-kicker');
+  const count = document.getElementById('desktop-card-focus-count');
+  const label = document.getElementById('desktop-card-focus-label');
+  const prev = document.getElementById('desktop-card-focus-prev');
+  const next = document.getElementById('desktop-card-focus-next');
+  if (!overlay || !body || !current) return;
+
+  const clone = current.card.cloneNode(true);
+  clone.classList.add('desktop-card-focus-card');
+  body.innerHTML = '';
+  body.appendChild(clone);
+
+  if (kicker) kicker.textContent = (config.label || viewName).toUpperCase() + ' FOCUSED PAGE';
+  if (title) title.textContent = current.raw;
+  if (subtitle) subtitle.textContent = config.subtitle || 'Each numbered card now opens as its own focused page.';
+  if (count) count.textContent = 'Page ' + index + ' of ' + cards.length;
+  if (label) label.textContent = current.title;
+  if (prev) prev.disabled = index === 1;
+  if (next) next.disabled = index === cards.length;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  _desktopCardFocus.view = viewName;
+  _desktopCardFocus.index = index;
+}}
+
+function initDesktopCardSequences() {{
+  Object.keys(DESKTOP_CARD_SEQUENCES).forEach(function(viewName) {{
+    syncDesktopCardSequence(viewName);
+  }});
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -30140,6 +30729,7 @@ async function loadCommandDesktop() {{
     health: health || {{}},
     onlineUsers,
   }});
+  syncDesktopCardSequence('chat');
 }}
 
 // ---------------------------------------------------------------------------
@@ -30683,6 +31273,7 @@ async function loadDailyBriefDesktop(layoutState = _layoutState, actorOverride =
     onlineUsers,
     availabilityNotes,
   }});
+  syncDesktopCardSequence('overview');
 }}
 
 async function loadLayoutState() {{
@@ -33290,6 +33881,7 @@ function syncAgentsStoryboard() {{
   const next = document.getElementById('agents-nav-next');
   if (prev) prev.disabled = true;
   if (next) next.disabled = true;
+  syncDesktopCardSequence('agents');
 }}
 
 function advanceAgentsPage(delta) {{
@@ -33314,6 +33906,7 @@ async function loadAgentsDesktop() {{
     loadAgentsCommandCenter(),
     loadLiveAgents(),
   ]);
+  syncDesktopCardSequence('agents');
 }}
 
 function _agentsRosterItems() {{

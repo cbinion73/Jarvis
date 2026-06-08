@@ -45,6 +45,18 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/apple/health/summary", html)
         self.assertIn("/api/activity/operator-action", html)
 
+    def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn("function initDesktopCardSequences()", html)
+        self.assertIn("function ensureDesktopCardFocusOverlay()", html)
+        self.assertIn("function openDesktopCardSequenceModal(", html)
+        self.assertIn("data-sequence-view", html)
+        self.assertIn("Each numbered Daily Brief card opens as its own focused page", html)
+        self.assertIn("Each numbered Social Media card opens as a focused page", html)
+        self.assertIn("Each numbered Calendar card opens as a focused page", html)
+        self.assertIn("if (name === 'command') name = 'chat';", html)
+
 
 if __name__ == "__main__":
     unittest.main()
