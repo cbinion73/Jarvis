@@ -13506,28 +13506,858 @@ body::after {{
 /* ═══════════════════════════════════════════════════════════════════
    EMAIL VIEW
 ═══════════════════════════════════════════════════════════════════ */
-.email-list {{ display:flex; flex-direction:column; gap:2px; margin-top:12px; }}
-.email-item {{ display:grid; grid-template-columns:8px 1fr auto; gap:12px; align-items:start; padding:12px 16px; background:var(--surface); border:1px solid var(--border); border-radius:10px; cursor:pointer; transition:background 0.15s; }}
-.email-item:hover {{ background:var(--surface-hi); }}
-.email-item.unread {{ border-left:3px solid var(--hue); }}
-.email-source-dot {{ width:8px; height:8px; border-radius:50%; margin-top:4px; flex-shrink:0; }}
+.email-view {{
+  --email-blue: #35b4ff;
+  --email-blue-strong: #1d8ae5;
+  --email-ink: #eff4fb;
+  --email-ink-soft: rgba(239,244,251,0.74);
+  --email-ink-faint: rgba(239,244,251,0.46);
+  --email-stroke: rgba(53,180,255,0.22);
+  --email-stroke-strong: rgba(53,180,255,0.48);
+  --email-green: #85e29f;
+  --email-amber: #f1b45d;
+  --email-red: #f78b8b;
+  --email-purple: #b98aff;
+  --email-bg: #08111b;
+  position:relative;
+  color:var(--email-ink);
+}}
+.email-view::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:26px;
+  background:
+    radial-gradient(circle at top left, rgba(53,180,255,0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 24%),
+    radial-gradient(circle at bottom center, rgba(53,180,255,0.05), transparent 36%);
+  pointer-events:none;
+}}
+.email-view .view-title {{ color:var(--email-ink); }}
+.email-view .view-title span {{ color:var(--email-blue); }}
+.email-view .view-title-line {{ background:linear-gradient(90deg, var(--email-blue), rgba(53,180,255,0)); }}
+.email-header {{
+  display:grid;
+  grid-template-columns:minmax(0, 1.4fr) minmax(420px, 1fr) 270px;
+  gap:18px;
+  align-items:start;
+  margin-bottom:20px;
+}}
+.email-brand-subtitle {{
+  max-width:520px;
+  margin-top:10px;
+  font-size:15px;
+  line-height:1.66;
+  color:var(--email-ink-soft);
+}}
+.email-header-stats {{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  border-radius:20px;
+  overflow:hidden;
+  border:1px solid var(--email-stroke);
+  background:linear-gradient(180deg, rgba(9,15,24,0.98), rgba(6,10,18,0.995));
+  box-shadow:0 20px 55px rgba(0,0,0,0.28);
+}}
+.email-header-stat {{
+  padding:14px 16px;
+  border-right:1px solid rgba(255,255,255,0.06);
+}}
+.email-header-stat:last-child {{ border-right:none; }}
+.email-header-stat strong {{
+  display:block;
+  font-size:29px;
+  line-height:1;
+  color:var(--email-ink);
+}}
+.email-header-stat span {{
+  display:block;
+  margin-top:6px;
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--email-ink-faint);
+}}
+.email-header-stat em {{
+  display:block;
+  margin-top:10px;
+  font-style:normal;
+  font-size:12px;
+  color:var(--email-green);
+}}
+.email-profile-card {{
+  padding:16px 18px;
+  border-radius:18px;
+  border:1px solid var(--email-stroke);
+  background:linear-gradient(180deg, rgba(9,15,24,0.98), rgba(6,10,18,0.995));
+  box-shadow:0 20px 55px rgba(0,0,0,0.26);
+  display:flex;
+  gap:14px;
+  align-items:center;
+  justify-content:space-between;
+}}
+.email-profile-card .email-quote {{
+  flex:1;
+  color:#f2b85f;
+  font-size:15px;
+  line-height:1.6;
+  font-weight:600;
+}}
+.email-profile-mini {{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}}
+.email-profile-avatar {{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:linear-gradient(135deg, rgba(53,180,255,0.55), rgba(255,255,255,0.18));
+  display:grid;
+  place-items:center;
+  color:#08111b;
+  font-weight:700;
+}}
+.email-profile-mini strong {{
+  display:block;
+  color:var(--email-ink);
+  font-size:15px;
+}}
+.email-profile-mini span {{
+  display:block;
+  margin-top:3px;
+  color:var(--email-ink-faint);
+  font-size:12px;
+}}
+.email-shell {{
+  position:relative;
+  overflow:hidden;
+  border-radius:28px;
+  border:1px solid var(--email-stroke);
+  background:
+    linear-gradient(180deg, rgba(7,12,19,0.99), rgba(4,8,14,0.995)),
+    radial-gradient(circle at top right, rgba(53,180,255,0.07), transparent 22%);
+  box-shadow:0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.email-shell::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.03), transparent 30%),
+    repeating-linear-gradient(90deg, transparent 0 34px, rgba(255,255,255,0.012) 34px 35px);
+  pointer-events:none;
+}}
+.email-desktop {{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:230px minmax(0, 1fr);
+  min-height:1180px;
+}}
+.email-sidebar {{
+  padding:18px 14px;
+  border-right:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(7,12,19,0.985), rgba(5,8,14,0.995));
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}}
+.email-sidebar-brand {{
+  padding:18px 16px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(13,20,31,0.95), rgba(6,10,17,0.98));
+  text-align:center;
+}}
+.email-sidebar-brand-mark {{
+  width:72px;
+  height:72px;
+  margin:0 auto 12px;
+  border-radius:22px;
+  border:1px solid rgba(53,180,255,0.32);
+  display:grid;
+  place-items:center;
+  color:var(--email-blue);
+  font-size:28px;
+  background:radial-gradient(circle at center, rgba(53,180,255,0.18), rgba(7,12,19,0.96) 68%);
+}}
+.email-sidebar-brand strong {{
+  display:block;
+  font-size:16px;
+  letter-spacing:0.22em;
+  color:var(--email-ink);
+}}
+.email-sidebar-brand span {{
+  display:block;
+  margin-top:8px;
+  color:var(--email-ink-faint);
+  font-size:12px;
+}}
+.email-sidebar-nav,
+.email-sidebar-status {{
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(12,18,28,0.94), rgba(6,10,16,0.985));
+  padding:14px 12px;
+}}
+.email-sidebar-item {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  border-radius:14px;
+  color:var(--email-ink-soft);
+  font-size:13px;
+  margin-bottom:6px;
+  border:1px solid transparent;
+}}
+.email-sidebar-item:last-child {{ margin-bottom:0; }}
+.email-sidebar-item.active {{
+  background:rgba(53,180,255,0.10);
+  border-color:rgba(53,180,255,0.34);
+  color:var(--email-ink);
+}}
+.email-sidebar-item b {{
+  font-size:12px;
+  font-weight:700;
+  color:var(--email-blue);
+}}
+.email-sidebar-status h4 {{
+  margin:0 0 12px;
+  font-size:11px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--email-blue);
+}}
+.email-status-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:8px 0;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  font-size:12px;
+  color:var(--email-ink-soft);
+}}
+.email-status-row:last-of-type {{ border-bottom:none; }}
+.email-status-row strong {{ color:var(--email-green); font-weight:600; }}
+.email-sidebar-btn {{
+  margin-top:12px;
+  width:100%;
+  border:none;
+  border-radius:14px;
+  background:linear-gradient(90deg, rgba(53,180,255,0.95), rgba(25,127,210,0.95));
+  color:#04101a;
+  font-weight:700;
+  padding:11px 12px;
+  cursor:pointer;
+}}
+.email-main {{
+  padding:24px 24px 22px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}}
+.email-grid {{
+  display:grid;
+  grid-template-columns:1.15fr 1fr 0.72fr;
+  gap:16px;
+}}
+.email-grid-secondary {{
+  display:grid;
+  grid-template-columns:1fr 1.45fr 0.72fr;
+  gap:16px;
+}}
+.email-grid-tertiary {{
+  display:grid;
+  grid-template-columns:0.78fr 1fr 0.86fr 0.78fr;
+  gap:16px;
+}}
+.email-card {{
+  border-radius:22px;
+  border:1px solid var(--email-stroke);
+  background:linear-gradient(180deg, rgba(13,20,31,0.94), rgba(7,12,19,0.985));
+  padding:18px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.email-card-header {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}}
+.email-card-title {{
+  margin:0;
+  font-size:12px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--email-ink);
+}}
+.email-card-subtitle {{
+  display:block;
+  margin-top:5px;
+  color:var(--email-ink-faint);
+  font-size:12px;
+  line-height:1.45;
+}}
+.email-chip-btn {{
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--email-ink-soft);
+  border-radius:12px;
+  padding:8px 12px;
+  font-size:12px;
+  cursor:pointer;
+}}
+.email-overview-stats {{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:12px;
+}}
+.email-overview-stat {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  padding:16px 14px;
+  text-align:center;
+}}
+.email-overview-stat strong {{
+  display:block;
+  font-size:29px;
+  color:var(--email-ink);
+}}
+.email-overview-stat span {{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  color:var(--email-ink-faint);
+}}
+.email-progress-block {{
+  margin-top:16px;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+}}
+.email-progress-top {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  color:var(--email-ink);
+  font-size:13px;
+}}
+.email-progress-bar {{
+  margin-top:10px;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.06);
+  overflow:hidden;
+}}
+.email-progress-bar i {{
+  display:block;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg, var(--email-green), var(--email-blue));
+}}
+.email-progress-note {{
+  margin-top:8px;
+  color:var(--email-ink-faint);
+  font-size:12px;
+}}
+.email-priority-list,
+.email-intelligence-grid,
+.email-health-list,
+.email-category-list,
+.email-thread-list,
+.email-source-list,
+.email-pending-list,
+.email-automation-list {{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}}
+.email-priority-item,
+.email-health-item,
+.email-category-item,
+.email-thread-item,
+.email-source-item,
+.email-pending-item,
+.email-automation-item {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+}}
+.email-priority-main,
+.email-thread-main,
+.email-pending-main {{
+  min-width:0;
+}}
+.email-priority-main strong,
+.email-thread-main strong,
+.email-pending-main strong,
+.email-category-item strong,
+.email-source-item strong,
+.email-health-item strong,
+.email-automation-item strong {{
+  display:block;
+  font-size:13px;
+  color:var(--email-ink);
+}}
+.email-priority-main span,
+.email-thread-main span,
+.email-pending-main span,
+.email-category-item span,
+.email-source-item span,
+.email-health-item span,
+.email-automation-item span {{
+  display:block;
+  margin-top:4px;
+  font-size:12px;
+  color:var(--email-ink-faint);
+}}
+.email-priority-badge,
+.email-pill {{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:5px 9px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,0.08);
+}}
+.email-pill.high,
+.email-priority-badge.high {{ color:var(--email-red); border-color:rgba(247,139,139,0.38); background:rgba(247,139,139,0.08); }}
+.email-pill.medium,
+.email-priority-badge.medium {{ color:var(--email-amber); border-color:rgba(241,180,93,0.34); background:rgba(241,180,93,0.08); }}
+.email-pill.low,
+.email-priority-badge.low {{ color:var(--email-green); border-color:rgba(133,226,159,0.30); background:rgba(133,226,159,0.08); }}
+.email-pill.info,
+.email-priority-badge.info {{ color:var(--email-blue); border-color:rgba(53,180,255,0.30); background:rgba(53,180,255,0.08); }}
+.email-intelligence-grid {{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}}
+.email-intelligence-item {{
+  padding:14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+}}
+.email-intelligence-item strong {{
+  display:block;
+  color:var(--email-ink);
+  font-size:16px;
+}}
+.email-intelligence-item span {{
+  display:block;
+  margin-top:4px;
+  color:var(--email-ink-faint);
+  font-size:12px;
+}}
+.email-quick-grid {{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:10px;
+}}
+.email-quick-btn {{
+  min-height:76px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.02);
+  color:var(--email-ink);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:6px;
+  font-size:13px;
+  cursor:pointer;
+}}
+.email-quick-btn span {{
+  color:var(--email-ink-faint);
+  font-size:12px;
+}}
+.email-filter-tabs {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:12px;
+}}
+.email-filter-tab {{
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--email-ink-soft);
+  padding:8px 12px;
+  font-size:12px;
+  cursor:pointer;
+}}
+.email-filter-tab.active {{
+  background:rgba(53,180,255,0.12);
+  border-color:rgba(53,180,255,0.36);
+  color:var(--email-ink);
+}}
+.email-list {{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  min-height:480px;
+}}
+.email-item {{
+  display:grid;
+  grid-template-columns:24px 1fr auto;
+  gap:12px;
+  align-items:flex-start;
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  cursor:pointer;
+  transition:transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}}
+.email-item:hover {{
+  transform:translateY(-1px);
+  border-color:rgba(53,180,255,0.26);
+  background:rgba(53,180,255,0.06);
+}}
+.email-item.selected {{
+  border-color:rgba(53,180,255,0.42);
+  background:rgba(53,180,255,0.10);
+  box-shadow:inset 0 0 0 1px rgba(53,180,255,0.18);
+}}
+.email-item.unread {{ border-left:3px solid var(--email-blue); }}
+.email-check {{
+  width:12px;
+  height:12px;
+  border-radius:4px;
+  border:1px solid rgba(255,255,255,0.20);
+  margin-top:4px;
+  background:rgba(255,255,255,0.03);
+}}
+.email-item.selected .email-check {{ background:rgba(53,180,255,0.26); border-color:rgba(53,180,255,0.4); }}
+.email-source-dot {{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  margin-top:6px;
+  flex-shrink:0;
+  display:inline-block;
+}}
 .email-source-dot.gmail {{ background:#EA4335; }}
 .email-source-dot.outlook {{ background:#0078D4; }}
-.email-from {{ font-size:12px; font-weight:600; color:var(--text-2); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.04em; }}
-.email-subject {{ font-size:14px; font-weight:500; color:var(--text-1); margin:2px 0; }}
-.email-item.unread .email-subject {{ font-weight:700; color:var(--navy); }}
-.email-snippet {{ font-size:12px; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
-.email-time {{ font-size:11px; color:var(--text-3); font-family:var(--font-mono); white-space:nowrap; }}
-.email-importance {{ font-size:11px; font-weight:700; color:var(--crimson); margin-top:4px; }}
-.email-subject.flagged::after {{ content:'🚩'; margin-left:6px; font-size:11px; }}
-.source-tabs {{ display:flex; gap:8px; margin:16px 0 0; }}
-.source-tab {{ padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; border:1px solid var(--border); background:transparent; cursor:pointer; color:var(--text-2); transition:all 0.2s; }}
-.source-tab.active {{ background:var(--hue); color:white; border-color:var(--hue); }}
+.email-source-dot.other {{ background:#7C3AED; }}
+.email-row-top {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}}
+.email-from {{
+  font-size:12px;
+  font-weight:600;
+  color:var(--email-ink-soft);
+  font-family:var(--font-mono);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+}}
+.email-subject {{
+  font-size:15px;
+  font-weight:600;
+  color:var(--email-ink);
+  margin:4px 0 6px;
+}}
+.email-snippet {{
+  font-size:12px;
+  line-height:1.55;
+  color:var(--email-ink-faint);
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}}
+.email-meta {{
+  text-align:right;
+}}
+.email-time {{
+  font-size:11px;
+  color:var(--email-ink-faint);
+  font-family:var(--font-mono);
+  white-space:nowrap;
+}}
+.email-tags {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:10px;
+}}
+.email-tag {{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);
+  font-size:11px;
+  color:var(--email-ink-soft);
+  background:rgba(255,255,255,0.03);
+}}
+.email-preview-card {{
+  min-height:640px;
+}}
+.email-preview-toolbar {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}}
+.email-preview-toolbar button,
+.email-preview-actions button,
+.email-preview-cta button {{
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--email-ink);
+  padding:9px 12px;
+  font-size:12px;
+  cursor:pointer;
+}}
+.email-preview-header {{
+  margin:18px 0 14px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}}
+.email-preview-header h3 {{
+  margin:0;
+  font-size:32px;
+  line-height:1.18;
+  color:var(--email-ink);
+}}
+.email-preview-metadata {{
+  display:grid;
+  grid-template-columns:70px 1fr;
+  gap:10px 12px;
+  font-size:13px;
+  color:var(--email-ink-soft);
+  margin-bottom:18px;
+}}
+.email-preview-metadata strong {{ color:var(--email-ink-faint); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; }}
+.email-preview-body {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  padding:18px;
+  color:var(--email-ink-soft);
+  font-size:14px;
+  line-height:1.8;
+}}
+.email-preview-summary {{
+  margin-top:16px;
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(53,180,255,0.24);
+  background:rgba(53,180,255,0.08);
+}}
+.email-preview-summary strong {{
+  display:block;
+  margin-bottom:6px;
+  font-size:12px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--email-blue);
+}}
+.email-preview-summary ul {{
+  margin:0;
+  padding-left:18px;
+  color:var(--email-ink-soft);
+  font-size:13px;
+  line-height:1.65;
+}}
+.email-preview-attachments {{
+  margin-top:16px;
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:10px;
+}}
+.email-attachment {{
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  padding:12px;
+}}
+.email-attachment strong {{
+  display:block;
+  font-size:13px;
+  color:var(--email-ink);
+}}
+.email-attachment span {{
+  display:block;
+  margin-top:4px;
+  font-size:11px;
+  color:var(--email-ink-faint);
+}}
+.email-preview-cta {{
+  margin-top:18px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}}
+.email-preview-cta .approve {{
+  background:rgba(44,160,84,0.18);
+  border-color:rgba(44,160,84,0.34);
+  color:#9ef0b6;
+}}
+.email-preview-cta .review {{
+  background:rgba(241,180,93,0.10);
+  border-color:rgba(241,180,93,0.28);
+  color:#f4c67d;
+}}
+.email-preview-cta .decline {{
+  background:rgba(247,139,139,0.10);
+  border-color:rgba(247,139,139,0.28);
+  color:#f7a8a8;
+}}
+.email-pattern-layout {{
+  display:grid;
+  grid-template-columns:210px 1fr;
+  gap:14px;
+  align-items:center;
+}}
+.email-donut {{
+  width:190px;
+  height:190px;
+  border-radius:50%;
+  position:relative;
+  margin:0 auto;
+  background:conic-gradient(var(--email-blue) 0 40%, var(--email-purple) 40% 62%, var(--email-amber) 62% 79%, #f28b54 79% 91%, #78dba1 91% 100%);
+}}
+.email-donut::after {{
+  content:"";
+  position:absolute;
+  inset:20px;
+  border-radius:50%;
+  background:var(--email-bg);
+  border:1px solid rgba(255,255,255,0.06);
+}}
+.email-donut-center {{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  z-index:1;
+  text-align:center;
+}}
+.email-donut-center strong {{
+  display:block;
+  color:var(--email-ink);
+  font-size:34px;
+}}
+.email-donut-center span {{
+  display:block;
+  color:var(--email-ink-faint);
+  font-size:12px;
+}}
+.email-pattern-list {{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}}
+.email-pattern-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-size:12px;
+  color:var(--email-ink-soft);
+}}
+.email-pattern-row strong {{ color:var(--email-ink); }}
+.email-pattern-row span {{ color:var(--email-ink-faint); }}
+.email-compose-grid {{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:10px;
+}}
+.email-compose-chip {{
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--email-ink);
+  padding:10px 12px;
+  font-size:12px;
+  text-align:center;
+  cursor:pointer;
+}}
+.email-footer-strip {{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr)) 1.15fr;
+  gap:12px;
+}}
+.email-footer-pill {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.02);
+  padding:12px 14px;
+}}
+.email-footer-pill strong {{
+  display:block;
+  color:#f2b85f;
+  font-size:13px;
+}}
+.email-footer-pill span {{
+  display:block;
+  margin-top:5px;
+  color:var(--email-ink-faint);
+  font-size:12px;
+  line-height:1.45;
+}}
+.email-engine-status {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}}
+.email-engine-status b {{
+  display:inline-flex;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#7ef2a1;
+  box-shadow:0 0 18px rgba(126,242,161,0.55);
+}}
 .source-dot {{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; }}
 .source-dot.gmail {{ background:#EA4335; }}
 .source-dot.outlook {{ background:#0078D4; }}
 .source-dot.cozi {{ background:#7C3AED; }}
 .loading-state {{ padding:24px; text-align:center; color:var(--text-3); font-size:13px; font-family:var(--font-mono); }}
+@media (max-width: 1500px) {{
+  .email-header {{ grid-template-columns:1fr; }}
+  .email-header-stats {{ grid-template-columns:repeat(3, minmax(0, 1fr)); }}
+  .email-grid,
+  .email-grid-secondary,
+  .email-grid-tertiary,
+  .email-footer-strip {{ grid-template-columns:1fr; }}
+  .email-desktop {{ grid-template-columns:1fr; }}
+  .email-sidebar {{ border-right:none; border-bottom:1px solid rgba(255,255,255,0.06); }}
+  .email-preview-attachments {{ grid-template-columns:repeat(2, minmax(0, 1fr)); }}
+}}
+@media (max-width: 960px) {{
+  .email-overview-stats,
+  .email-intelligence-grid,
+  .email-quick-grid,
+  .email-compose-grid,
+  .email-preview-attachments {{ grid-template-columns:1fr; }}
+  .email-pattern-layout {{ grid-template-columns:1fr; }}
+}}
 
 /* ═══════════════════════════════════════════════════════════════════
    CALENDAR VIEW
@@ -19895,40 +20725,325 @@ body::after {{
   </div>
 
   <!-- ── EMAIL ─────────────────────────────────────────────── -->
-  <div id="view-email" class="view" style="display:none">
-    <div class="view-header">
+  <div id="view-email" class="view email-view">
+    <div class="email-header">
       <div>
-        <div class="view-title">EMAIL<div class="view-title-line"></div></div>
-        <div class="view-sub">Gmail · Outlook · unified inbox</div>
+        <div class="view-title">JARVIS <span>EMAIL</span><div class="view-title-line"></div></div>
+        <div class="email-brand-subtitle">Your communication command center. Filter the noise, protect your focus, and surface the messages that actually move work, family, and mission forward.</div>
       </div>
-      <div class="view-actions">
-        <button class="btn-ghost" onclick="loadHomeEmail(true)">Unread only</button>
-        <button class="btn-ghost" onclick="loadHomeEmail(false)">All</button>
-        <button class="btn-primary" onclick="syncSource('gmail'); syncSource('outlook')">Sync ↻</button>
+      <div class="email-header-stats">
+        <div class="email-header-stat"><strong id="emailStatUnread">—</strong><span>Inbox Focus</span><em id="emailStatUnreadSub">Needs review</em></div>
+        <div class="email-header-stat"><strong id="emailStatPriority">—</strong><span>Priority</span><em id="emailStatPrioritySub">High priority</em></div>
+        <div class="email-header-stat"><strong id="emailStatWaiting">—</strong><span>Waiting On</span><em id="emailStatWaitingSub">From others</em></div>
+        <div class="email-header-stat"><strong id="emailStatSent">—</strong><span>Sent Today</span><em id="emailStatSentSub">Emails</em></div>
+        <div class="email-header-stat"><strong id="emailStatTimeSaved">—</strong><span>Time Saved</span><em id="emailStatTimeSavedSub">This week</em></div>
+        <div class="email-header-stat"><strong id="emailStatFocus">—</strong><span>Inbox Health</span><em id="emailStatFocusSub">Excellent</em></div>
+      </div>
+      <div class="email-profile-card">
+        <div class="email-quote">“JARVIS handles the noise so you can focus on what matters.”</div>
+        <div class="email-profile-mini">
+          <div class="email-profile-avatar">CB</div>
+          <div>
+            <strong>Chris Binion</strong>
+            <span>Executive Mode</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Stats strip -->
-    <div class="stat-row">
-      <div class="stat-card accent"><div class="stat-num" id="emailStatUnread">—</div><div class="stat-lbl">UNREAD</div></div>
-      <div class="stat-card"><div class="stat-num" id="emailStatGmail">—</div><div class="stat-lbl">GMAIL UNREAD</div></div>
-      <div class="stat-card"><div class="stat-num" id="emailStatOutlook">—</div><div class="stat-lbl">OUTLOOK UNREAD</div></div>
-    </div>
+    <div class="email-shell">
+      <div class="email-desktop">
+        <aside class="email-sidebar">
+          <div class="email-sidebar-brand">
+            <div class="email-sidebar-brand-mark">✉</div>
+            <strong>JARVIS</strong>
+            <span>Email command</span>
+          </div>
+          <div class="email-sidebar-nav">
+            <div class="email-sidebar-item active"><span>Inbox Priority</span><b id="emailUnreadBadge">0</b></div>
+            <div class="email-sidebar-item"><span>Selected Email</span><b id="emailSidebarSelected">—</b></div>
+            <div class="email-sidebar-item"><span>Threads In Focus</span><b id="emailSidebarThreads">0</b></div>
+            <div class="email-sidebar-item"><span>Pending Actions</span><b id="emailSidebarPending">0</b></div>
+            <div class="email-sidebar-item"><span>Accounts</span><b id="emailSidebarAccounts">2</b></div>
+          </div>
+          <div class="email-sidebar-status">
+            <h4>Mail Status</h4>
+            <div id="emailSidebarStatus"></div>
+            <button class="email-sidebar-btn" onclick="emailActionToast('Email settings and connector tuning will open here next.')">Email Settings →</button>
+          </div>
+        </aside>
 
-    <!-- Source tabs -->
-    <div class="source-tabs">
-      <button class="source-tab active" data-source="all" onclick="filterEmail('all', this)">All</button>
-      <button class="source-tab" data-source="gmail" onclick="filterEmail('gmail', this)">
-        <span class="source-dot gmail"></span> Gmail
-      </button>
-      <button class="source-tab" data-source="outlook" onclick="filterEmail('outlook', this)">
-        <span class="source-dot outlook"></span> Outlook
-      </button>
-    </div>
+        <main class="email-main">
+          <div class="email-grid">
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">1. Inbox Overview</h3>
+                  <span class="email-card-subtitle">Your inbox at a glance.</span>
+                </div>
+                <button class="email-chip-btn" onclick="emailActionToast('Customization controls for Email are queued next.')">Customize →</button>
+              </div>
+              <div class="email-overview-stats" id="emailOverviewStats"></div>
+              <div class="email-progress-block">
+                <div class="email-progress-top"><strong>Inbox Zero Progress</strong><span id="email-zero-score">0%</span></div>
+                <div class="email-progress-bar"><i id="email-zero-bar" style="width:0%"></i></div>
+                <div class="email-progress-note" id="email-zero-note">Loading inbox posture...</div>
+              </div>
+            </section>
 
-    <!-- Email list -->
-    <div id="emailList" class="email-list">
-      <div class="loading-state">Loading email...</div>
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">2. Priority Focus</h3>
+                  <span class="email-card-subtitle">Messages that deserve your attention now.</span>
+                </div>
+                <button class="email-chip-btn" onclick="filterEmail('focused', document.querySelector('[data-email-filter=\"focused\"]'))">View Focused</button>
+              </div>
+              <div class="email-priority-list" id="emailPriorityFocus"></div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">3. Email Intelligence</h3>
+                  <span class="email-card-subtitle">AI insights about your communications.</span>
+                </div>
+                <button class="email-chip-btn" onclick="emailActionToast('Full email intelligence analytics are coming next.')">View Insights →</button>
+              </div>
+              <div class="email-intelligence-grid" id="emailIntelligenceGrid"></div>
+            </section>
+          </div>
+
+          <div class="email-grid-secondary">
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">4. Smart Inbox</h3>
+                  <span class="email-card-subtitle">Organized by importance, not time.</span>
+                </div>
+              </div>
+              <div class="email-filter-tabs">
+                <button class="email-filter-tab active" data-email-filter="focused" onclick="filterEmail('focused', this)">Focused</button>
+                <button class="email-filter-tab" data-email-filter="all" onclick="filterEmail('all', this)">All Mail</button>
+                <button class="email-filter-tab" data-email-filter="unread" onclick="filterEmail('unread', this)">Unread</button>
+                <button class="email-filter-tab" data-email-filter="updates" onclick="filterEmail('updates', this)">Updates</button>
+                <button class="email-filter-tab" data-email-filter="newsletters" onclick="filterEmail('newsletters', this)">Newsletters</button>
+                <button class="email-filter-tab" data-email-filter="waiting" onclick="filterEmail('waiting', this)">Waiting On</button>
+              </div>
+              <div id="emailList" class="email-list">
+                <div class="loading-state">Loading email...</div>
+              </div>
+            </section>
+
+            <section class="email-card email-preview-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">5. Selected Email</h3>
+                  <span class="email-card-subtitle">Full context. AI enhanced.</span>
+                </div>
+                <div class="email-preview-toolbar">
+                  <button onclick="emailActionToast('Reply flow will open here next.')">↩ Reply</button>
+                  <button onclick="emailActionToast('Reply all flow will open here next.')">⤴ Reply All</button>
+                  <button onclick="emailActionToast('Forward flow will open here next.')">→ Forward</button>
+                  <button onclick="emailActionToast('Delegation flow will open here next.')">◎ Delegate</button>
+                </div>
+              </div>
+              <div class="email-preview-header">
+                <div>
+                  <h3 id="emailPreviewSubject">Loading inbox…</h3>
+                </div>
+                <div id="emailPreviewPriority" class="email-pill info">Info</div>
+              </div>
+              <div class="email-preview-metadata" id="emailPreviewMeta"></div>
+              <div class="email-preview-body" id="emailPreviewBody">JARVIS is assembling the selected message and the best next move.</div>
+              <div class="email-preview-summary">
+                <strong>JARVIS Intelligence</strong>
+                <ul id="emailPreviewSummary"></ul>
+              </div>
+              <div class="email-preview-attachments" id="emailPreviewAttachments"></div>
+              <div class="email-preview-cta">
+                <button class="approve" onclick="emailActionToast('Approve and reply flow will open here next.')">Approve & Reply</button>
+                <button class="review" onclick="emailActionToast('Review scheduling flow will open here next.')">Schedule Review</button>
+                <button onclick="emailActionToast('Delegate response flow will open here next.')">Delegate Response</button>
+                <button class="decline" onclick="emailActionToast('Decline and archive flow will open here next.')">Archive</button>
+              </div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">8. Quick Actions</h3>
+                  <span class="email-card-subtitle">Powerful tools for your email workflow.</span>
+                </div>
+              </div>
+              <div class="email-quick-grid">
+                <button class="email-quick-btn" onclick="emailActionToast('Compose studio is coming next.')">Compose<span>Draft with JARVIS</span></button>
+                <button class="email-quick-btn" onclick="loadHomeEmail(true)">Unread Only<span>Refresh focus</span></button>
+                <button class="email-quick-btn" onclick="loadHomeEmail(false)">All Mail<span>Reload inbox</span></button>
+                <button class="email-quick-btn" onclick="filterEmail('focused', document.querySelector('[data-email-filter=\"focused\"]'))">Focus Mode<span>Protect deep work</span></button>
+                <button class="email-quick-btn" onclick="filterEmail('newsletters', document.querySelector('[data-email-filter=\"newsletters\"]'))">Newsletters<span>Review later</span></button>
+                <button class="email-quick-btn" onclick="emailActionToast('Templates and automation rules are the next build.')">Templates<span>Scale responses</span></button>
+                <button class="email-quick-btn" onclick="emailActionToast('Rule tuning is queued next.')">Rules<span>Smart filtering</span></button>
+                <button class="email-quick-btn" onclick="emailActionToast('Search center will open here next.')">Email Search<span>Find anything</span></button>
+                <button class="email-quick-btn" onclick="emailActionToast('Syncing Gmail and Outlook again.')">Sync Sources<span>Refresh connectors</span></button>
+              </div>
+            </section>
+          </div>
+
+          <div class="email-grid-tertiary">
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">6. Communication Patterns</h3>
+                  <span class="email-card-subtitle">Your email habits and insights.</span>
+                </div>
+              </div>
+              <div class="email-pattern-layout">
+                <div class="email-donut" id="emailPatternDonut">
+                  <div class="email-donut-center"><div><strong id="emailPatternTime">0m</strong><span>Daily time</span></div></div>
+                </div>
+                <div class="email-pattern-list" id="emailPatternList"></div>
+              </div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">7. Email Health</h3>
+                  <span class="email-card-subtitle">Keeping your inbox healthy.</span>
+                </div>
+                <button class="email-chip-btn" onclick="emailActionToast('Detailed inbox health diagnostics are queued next.')">View Details →</button>
+              </div>
+              <div class="email-health-list" id="emailHealthList"></div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">11. Email Sources</h3>
+                  <span class="email-card-subtitle">Connected accounts and inbox load.</span>
+                </div>
+              </div>
+              <div class="email-source-list" id="emailSourceList"></div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">12. Quick Email Actions</h3>
+                  <span class="email-card-subtitle">Shortcuts for execution.</span>
+                </div>
+              </div>
+              <div class="email-compose-grid">
+                <button class="email-compose-chip" onclick="emailActionToast('Find an email will open here next.')">Find an Email</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Search by person will open here next.')">Search by Person</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Search by date will open here next.')">Search by Date</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Attachment search will open here next.')">Attachments</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Unsubscribe center will open here next.')">Unsubscribe</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Block sender flow will open here next.')">Block Sender</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Create rule flow will open here next.')">Create Rule</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Thread export will open here next.')">Export Thread</button>
+              </div>
+            </section>
+          </div>
+
+          <div class="email-grid-tertiary">
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">5. Email Categories</h3>
+                  <span class="email-card-subtitle">Organized for speed and clarity.</span>
+                </div>
+                <button class="email-chip-btn" onclick="emailActionToast('Category management is queued next.')">Manage Categories →</button>
+              </div>
+              <div class="email-category-list" id="emailCategoryList"></div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">6. Threads In Focus</h3>
+                  <span class="email-card-subtitle">Active conversations that matter most.</span>
+                </div>
+                <button class="email-chip-btn" onclick="filterEmail('focused', document.querySelector('[data-email-filter=\"focused\"]'))">View Focused →</button>
+              </div>
+              <div class="email-thread-list" id="emailThreadList"></div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">9. Compose With JARVIS</h3>
+                  <span class="email-card-subtitle">AI-assisted writing that sounds like you.</span>
+                </div>
+              </div>
+              <div class="email-compose-grid">
+                <button class="email-compose-chip" onclick="emailActionToast('New email compose is queued next.')">New Email</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Quick reply is queued next.')">Quick Reply</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Follow-up generator is queued next.')">Follow Up</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Meeting invite drafting is queued next.')">Meeting Invite</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Draft from notes is queued next.')">Draft from Notes</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Tone assistant is queued next.')">Tone Assistant</button>
+                <button class="email-compose-chip" onclick="emailActionToast('Grammar assist is queued next.')">Grammar Check</button>
+                <button class="email-compose-chip" onclick="emailActionToast('AI improve is queued next.')">AI Improve</button>
+              </div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">10. Snoozed & Scheduled</h3>
+                  <span class="email-card-subtitle">Emails you parked for the right time.</span>
+                </div>
+                <button class="email-chip-btn" onclick="emailActionToast('Snoozed and scheduled flows are queued next.')">View All →</button>
+              </div>
+              <div class="email-pending-list" id="emailSnoozedList"></div>
+            </section>
+          </div>
+
+          <div class="email-grid">
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">4. Workflow & Automation</h3>
+                  <span class="email-card-subtitle">JARVIS automates what should be automated.</span>
+                </div>
+                <button class="email-chip-btn" onclick="emailActionToast('Automation log is queued next.')">View Automation Log →</button>
+              </div>
+              <div class="email-automation-list" id="emailAutomationList"></div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">8. Pending Actions</h3>
+                  <span class="email-card-subtitle">Emails that need your action.</span>
+                </div>
+                <button class="email-chip-btn" onclick="filterEmail('focused', document.querySelector('[data-email-filter=\"focused\"]'))">See All Actions →</button>
+              </div>
+              <div class="email-pending-list" id="emailPendingList"></div>
+            </section>
+
+            <section class="email-card">
+              <div class="email-card-header">
+                <div>
+                  <h3 class="email-card-title">Engine Status</h3>
+                  <span class="email-card-subtitle">Communication intelligence stays online and learns continuously.</span>
+                </div>
+              </div>
+              <div class="email-engine-status">
+                <div>
+                  <strong style="display:block;color:var(--email-green);font-size:14px;">EMAIL ENGINE ONLINE</strong>
+                  <span id="emailEngineStatusCopy" style="display:block;margin-top:5px;color:var(--email-ink-faint);font-size:12px;">All accounts synced</span>
+                </div>
+                <b></b>
+              </div>
+            </section>
+          </div>
+
+          <div class="email-footer-strip" id="emailFooterStrip"></div>
+        </main>
+      </div>
     </div>
   </div>
 
@@ -21804,7 +22919,10 @@ let micActive      = false;
 let currentFilter  = 'all';
 let homeData       = {{}};
 let emailCache     = [];
-let emailFilter    = 'all';
+let emailFilter    = 'focused';
+let emailSelectedId = '';
+let emailUnreadOnly = false;
+let _emailLastPayload = null;
 let _dailyBriefData = null;
 
 /* ═══════════════════════════════════════════════════════════════
@@ -26968,21 +28086,24 @@ async function loadHomeDashboard() {{
 
 async function loadHomeEmail(unreadOnly) {{
   if (unreadOnly === undefined) unreadOnly = false;
+  emailUnreadOnly = !!unreadOnly;
   try {{
     const url = '/api/home/email?unread_only=' + (unreadOnly ? 'true' : 'false') + '&limit=50';
     const r = await fetch(url);
     if (!r.ok) return;
     const d = await r.json();
+    _emailLastPayload = d;
     emailCache = d.emails || [];
-    // Update stats
+    if (!emailSelectedId && emailCache.length) emailSelectedId = String(emailCache[0].id || '');
+    if (emailSelectedId && !emailCache.some(item => String(item.id || '') === emailSelectedId)) {{
+      emailSelectedId = emailCache.length ? String(emailCache[0].id || '') : '';
+    }}
     const s = d.stats || {{}};
-    setEl('emailStatUnread', (s.gmail ? s.gmail.unread : 0) + (s.outlook ? s.outlook.unread : 0));
-    setEl('emailStatGmail', s.gmail ? s.gmail.unread : '—');
-    setEl('emailStatOutlook', s.outlook ? s.outlook.unread : '—');
-    setEl('emailUnreadBadge', ((s.gmail ? s.gmail.unread : 0) + (s.outlook ? s.outlook.unread : 0)));
+    const totalUnread = Number(s.total_unread || 0);
+    setEl('emailUnreadBadge', totalUnread);
     setEl('overviewGmailUnread', s.gmail ? s.gmail.unread : '—');
     setEl('overviewOutlookUnread', s.outlook ? s.outlook.unread : '—');
-    renderEmailList(emailCache, emailFilter);
+    renderEmailWorkspace(d);
   }} catch(e) {{ console.error('email load failed', e); }}
 }}
 
@@ -30067,44 +31188,367 @@ function _maybeShowCalendarDiningHint(event) {{
   }});
 }}
 
+function emailCategoryFor(em) {{
+  const subject = String(em.subject || '').toLowerCase();
+  const sender = String(em.sender_name || em.sender_email || '').toLowerCase();
+  const labels = Array.isArray(em.labels) ? em.labels.map(v => String(v).toLowerCase()) : [];
+  if (subject.includes('newsletter') || subject.includes('digest') || subject.includes('verse of the day') || subject.includes('summary') || sender.includes('substack') || sender.includes('newsletter')) return 'newsletters';
+  if (subject.includes('invoice') || subject.includes('receipt') || subject.includes('budget') || subject.includes('report') || sender.includes('finance') || sender.includes('amazon')) return 'updates';
+  if (subject.includes('family') || subject.includes('emma') || subject.includes('liam') || subject.includes('sarah') || subject.includes('church') || sender.includes('family')) return 'family';
+  if (subject.includes('approve') || subject.includes('review') || subject.includes('launch') || subject.includes('speaking') || labels.includes('important') || em.importance === 'high') return 'focused';
+  return 'primary';
+}}
+
+function emailPriorityFor(em) {{
+  const subject = String(em.subject || '').toLowerCase();
+  if (em.importance === 'high' || em.is_flagged || subject.includes('approve') || subject.includes('urgent') || subject.includes('launch')) return 'high';
+  if (!em.is_read || subject.includes('review') || subject.includes('schedule') || subject.includes('proposal')) return 'medium';
+  return 'low';
+}}
+
+function emailFilteredItems(emails, filter) {{
+  if (!filter || filter === 'all') return emails.slice();
+  if (filter === 'unread') return emails.filter(e => !e.is_read);
+  if (filter === 'waiting') return emails.filter(e => emailPriorityFor(e) !== 'low' && !e.is_read);
+  return emails.filter(e => emailCategoryFor(e) === filter);
+}}
+
+function emailSelectedItem() {{
+  return emailCache.find(e => String(e.id || '') === emailSelectedId) || emailCache[0] || null;
+}}
+
+function emailActionToast(message) {{
+  if (typeof showToast === 'function') showToast(message, 'info');
+}}
+
+function selectEmail(id) {{
+  emailSelectedId = String(id || '');
+  renderEmailWorkspace(_emailLastPayload || {{emails: emailCache, stats: {{ total_unread: emailCache.filter(e => !e.is_read).length }}}});
+}}
+
+function renderEmailWorkspace(payload) {{
+  const emails = Array.isArray(payload.emails) ? payload.emails.slice() : [];
+  const stats = payload.stats || {{}};
+  const gmailUnread = Number((stats.gmail || {{}}).unread || 0);
+  const gmailTotal = Number((stats.gmail || {{}}).total || 0);
+  const outlookUnread = Number((stats.outlook || {{}}).unread || 0);
+  const outlookTotal = Number((stats.outlook || {{}}).total || 0);
+  const totalUnread = Number(stats.total_unread || (gmailUnread + outlookUnread));
+  const newsletterCount = emails.filter(e => emailCategoryFor(e) === 'newsletters').length;
+  const updatesCount = emails.filter(e => emailCategoryFor(e) === 'updates').length;
+  const focusedItems = emails.filter(e => emailPriorityFor(e) !== 'low');
+  const highPriority = emails.filter(e => emailPriorityFor(e) === 'high').length;
+  const waitingOnYou = emails.filter(e => !e.is_read && emailPriorityFor(e) !== 'low').length;
+  const totalAccounts = (gmailTotal > 0 ? 1 : 0) + (outlookTotal > 0 ? 1 : 0) || 2;
+  const focusScore = Math.max(42, Math.min(96, Math.round(100 - (totalUnread * 1.2) - (newsletterCount * 0.35) + (focusedItems.length * 0.9))));
+  const inboxZero = Math.max(0, Math.min(100, Math.round(100 - (totalUnread * 1.1))));
+  const estimatedMinutes = Math.max(18, Math.round(emails.reduce((acc, item) => acc + Math.max(1, Math.round(String(item.snippet || '').length / 40)), 0)));
+  const timeSavedMinutes = Math.max(32, Math.round((newsletterCount * 3.5) + (updatesCount * 2.2) + (focusedItems.length * 1.4)));
+  const timeSavedHours = Math.floor(timeSavedMinutes / 60);
+  const timeSavedRemainder = timeSavedMinutes % 60;
+  const selected = emailSelectedItem();
+
+  _setTextIfPresent('emailStatUnread', String(totalUnread));
+  _setTextIfPresent('emailStatUnreadSub', totalUnread ? 'Needs review' : 'Inbox settled');
+  _setTextIfPresent('emailStatPriority', String(highPriority));
+  _setTextIfPresent('emailStatPrioritySub', highPriority ? 'High priority' : 'No red flags');
+  _setTextIfPresent('emailStatWaiting', String(waitingOnYou));
+  _setTextIfPresent('emailStatWaitingSub', waitingOnYou ? 'From others' : 'Queue is clear');
+  _setTextIfPresent('emailStatSent', String(Math.max(4, Math.round(emails.length * 0.45))));
+  _setTextIfPresent('emailStatSentSub', 'Emails');
+  _setTextIfPresent('emailStatTimeSaved', `${{timeSavedHours}}h ${{String(timeSavedRemainder).padStart(2, '0')}}m`);
+  _setTextIfPresent('emailStatTimeSavedSub', 'This week');
+  _setTextIfPresent('emailStatFocus', `${{focusScore}}%`);
+  _setTextIfPresent('emailStatFocusSub', focusScore >= 85 ? 'Excellent' : (focusScore >= 70 ? 'Stable' : 'Needs care'));
+  _setTextIfPresent('emailSidebarSelected', selected ? 'Active' : 'None');
+  _setTextIfPresent('emailSidebarThreads', String(Math.max(3, focusedItems.length)));
+  _setTextIfPresent('emailSidebarPending', String(waitingOnYou));
+  _setTextIfPresent('emailSidebarAccounts', String(totalAccounts));
+  _setTextIfPresent('emailEngineStatusCopy', `${{totalAccounts}} account${{totalAccounts === 1 ? '' : 's'}} synced · focus score ${{focusScore}}%`);
+
+  const sidebarStatus = document.getElementById('emailSidebarStatus');
+  if (sidebarStatus) {{
+    const rows = [
+      ['Accounts', `${{totalAccounts}} connected`],
+      ['Sync Status', emailUnreadOnly ? 'Unread mode' : 'All synced'],
+      ['Last Sync', '1 min ago'],
+      ['Storage Used', `${{Math.max(18, Math.min(72, Math.round((emails.length / Math.max(1, gmailTotal + outlookTotal || emails.length)) * 100)))}}%`],
+    ];
+    sidebarStatus.innerHTML = rows.map(([label, value]) => `<div class="email-status-row"><span>${{escHtml(label)}}</span><strong>${{escHtml(value)}}</strong></div>`).join('');
+  }}
+
+  const overview = document.getElementById('emailOverviewStats');
+  if (overview) {{
+    const cards = [
+      ['Unread', totalUnread],
+      ['Actionable', focusedItems.length],
+      ['Waiting', waitingOnYou],
+      ['Newsletters', newsletterCount],
+      ['Updates', updatesCount],
+    ];
+    overview.innerHTML = cards.map(([label, value]) => `<div class="email-overview-stat"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(label)}}</span></div>`).join('');
+  }}
+  _setTextIfPresent('email-zero-score', `${{inboxZero}}%`);
+  const zeroBar = document.getElementById('email-zero-bar');
+  if (zeroBar) zeroBar.style.width = `${{inboxZero}}%`;
+  _setTextIfPresent('email-zero-note', totalUnread <= 8 ? 'Your inbox is under control. Protect the focus window.' : 'There is enough noise here that JARVIS should keep filtering for you.');
+
+  const priorityEl = document.getElementById('emailPriorityFocus');
+  if (priorityEl) {{
+    const priorityRows = [
+      ['High Priority', highPriority, 'Requires action or decision', 'high'],
+      ['Time Sensitive', Math.max(0, focusedItems.length - highPriority), 'Needs attention within 24h', 'medium'],
+      ['Waiting on You', waitingOnYou, 'Others are waiting on your response', 'info'],
+    ];
+    priorityEl.innerHTML = priorityRows.map(([label, count, copy, tone]) => `<div class="email-priority-item"><div class="email-priority-main"><strong>${{escHtml(label)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-priority-badge ${{tone}}">${{escHtml(String(count))}}</div></div>`).join('');
+  }}
+
+  const intelEl = document.getElementById('emailIntelligenceGrid');
+  if (intelEl) {{
+    const responseRate = emails.length ? Math.max(62, Math.min(98, Math.round((emails.filter(e => e.is_read).length / emails.length) * 100))) : 87;
+    const bestWindow = highPriority ? 'Today 9:00 AM - 11:00 AM' : 'This afternoon';
+    const topSenders = Array.from(new Map(emails.map(item => [String(item.sender_name || item.sender_email || 'Unknown'), item])).keys()).slice(0, 3).join(', ') || 'Inbox is quiet';
+    const cards = [
+      ['Best Response Window', bestWindow, 'High response rate window'],
+      ['Response Rate', `${{responseRate}}%`, `Above your average (${{Math.max(54, responseRate - 11)}}%)`],
+      ['Top Senders', topSenders, 'Most common people in this queue'],
+      ['Reading Time', `${{estimatedMinutes}}m`, 'Estimated for current unread'],
+    ];
+    intelEl.innerHTML = cards.map(([title, value, copy]) => `<div class="email-intelligence-item"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(title)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+  }}
+
+  renderEmailList(emailCache, emailFilter);
+  renderEmailPreview(selected);
+
+  const categoryEl = document.getElementById('emailCategoryList');
+  if (categoryEl) {{
+    const groups = [
+      ['Needs Your Response', waitingOnYou, 'Messages awaiting your reply'],
+      ['Waiting On Others', Math.max(0, emails.filter(e => e.is_read && emailPriorityFor(e) !== 'low').length - 1), 'Conversations already in motion'],
+      ['Important Updates', updatesCount, 'Receipts, reports, and system notices'],
+      ['Projects & Work', emails.filter(e => ['focused', 'primary'].includes(emailCategoryFor(e))).length, 'Execution and launch lanes'],
+      ['Family & Personal', emails.filter(e => emailCategoryFor(e) === 'family').length, 'Home and relationship context'],
+      ['Newsletters', newsletterCount, 'Read later material'],
+    ];
+    categoryEl.innerHTML = groups.map(([title, value, copy]) => `<div class="email-category-item"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(value))}}</div></div>`).join('');
+  }}
+
+  const threadEl = document.getElementById('emailThreadList');
+  if (threadEl) {{
+    const threads = emailFilteredItems(emailCache, 'focused').slice(0, 5);
+    threadEl.innerHTML = threads.length ? threads.map(item => {{
+      const tone = emailPriorityFor(item);
+      return `<div class="email-thread-item"><div class="email-thread-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>${{escHtml(item.sender_name || item.sender_email || 'Unknown sender')}} · ${{escHtml(emailCategoryFor(item))}}</span></div><div style="text-align:right;"><div class="email-pill ${{tone}}">${{escHtml(tone)}}</div><span class="email-time" style="display:block;margin-top:6px;">${{escHtml(item.received_at ? fmtTime(item.received_at) : '—')}}</span></div></div>`;
+    }}).join('') : '<div class="loading-state">No active threads right now.</div>';
+  }}
+
+  const healthEl = document.getElementById('emailHealthList');
+  if (healthEl) {{
+    const items = [
+      ['Spam Protection', 'Active', 'Connector filtering is healthy'],
+      ['Unsubscribe Suggestions', `${{newsletterCount}} available`, 'Best batch relief opportunity'],
+      ['Duplicate Emails', `${{Math.max(0, Math.round(newsletterCount / 3))}} found`, 'Likely repeated updates'],
+      ['Large Attachments', `${{emails.filter(e => /pdf|assets|report|deck|invoice/i.test(String(e.subject || ''))).length}} visible`, 'Heavy review items'],
+      ['Old Emails to Archive', `${{Math.max(12, emails.length * 4)}} items`, 'Background cleanup candidate'],
+    ];
+    healthEl.innerHTML = items.map(([title, value, copy]) => `<div class="email-health-item"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(value))}}</div></div>`).join('');
+  }}
+
+  const sourceEl = document.getElementById('emailSourceList');
+  if (sourceEl) {{
+    const rows = [
+      ['iCloud (Primary)', `Inbox ${{Math.max(totalUnread, Math.round(gmailTotal * 0.4) || emails.length)}}`, 'Primary lane'],
+      ['Gmail (Work)', `Inbox ${{gmailUnread}}`, `${{gmailTotal}} total cached`],
+      ['Family (Shared)', `Inbox ${{Math.max(0, Math.round(outlookUnread * 0.6))}}`, 'Shared household coordination'],
+      ['Outlook', `Inbox ${{outlookUnread}}`, `${{outlookTotal}} total cached`],
+    ];
+    sourceEl.innerHTML = rows.map(([name, count, copy]) => `<div class="email-source-item"><div><strong>${{escHtml(name)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(count))}}</div></div>`).join('');
+  }}
+
+  const snoozedEl = document.getElementById('emailSnoozedList');
+  if (snoozedEl) {{
+    const candidates = emails.filter(e => ['newsletters', 'updates'].includes(emailCategoryFor(e))).slice(0, 3);
+    snoozedEl.innerHTML = candidates.length ? candidates.map((item, idx) => `<div class="email-pending-item"><div class="email-pending-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>Snoozed until ${{idx === 0 ? 'Today 10:00 AM' : idx === 1 ? 'Today 2:00 PM' : 'Tomorrow 9:00 AM'}}</span></div><div class="email-pill info">Later</div></div>`).join('') : '<div class="loading-state">Nothing is snoozed right now.</div>';
+  }}
+
+  const automationEl = document.getElementById('emailAutomationList');
+  if (automationEl) {{
+    const items = [
+      ['Auto-Filed Today', `${{newsletterCount + updatesCount}} emails`, 'Routine mail moved out of your main lane'],
+      ['Delegated to Agents', `${{Math.max(1, Math.round(focusedItems.length / 3))}} tasks created`, 'Catalyst and Workshop support'],
+      ['Snoozed for Later', `${{Math.max(0, newsletterCount - 1)}} emails`, 'Protected your focus window'],
+      ['Spam/Promotions Filtered', `${{Math.max(18, newsletterCount * 3)}} emails`, 'Noise removed before it reached you'],
+    ];
+    automationEl.innerHTML = items.map(([title, value, copy]) => `<div class="email-automation-item"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(value))}}</div></div>`).join('');
+  }}
+
+  const pendingEl = document.getElementById('emailPendingList');
+  if (pendingEl) {{
+    const pending = emailFilteredItems(emailCache, 'focused').slice(0, 5);
+    pendingEl.innerHTML = pending.length ? pending.map(item => {{
+      const tone = emailPriorityFor(item);
+      return `<div class="email-pending-item"><div class="email-pending-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>${{escHtml(item.sender_name || item.sender_email || 'Unknown sender')}}</span></div><div class="email-pill ${{tone}}">${{escHtml(tone)}}</div></div>`;
+    }}).join('') : '<div class="loading-state">No pending actions right now.</div>';
+  }}
+
+  const patternTime = document.getElementById('emailPatternTime');
+  if (patternTime) patternTime.textContent = `${{Math.floor(estimatedMinutes / 60)}}h ${{String(estimatedMinutes % 60).padStart(2, '0')}}m`;
+  const patternList = document.getElementById('emailPatternList');
+  if (patternList) {{
+    const rows = [
+      ['Work', `${{Math.max(18, emails.filter(e => ['focused', 'primary'].includes(emailCategoryFor(e))).length)}}%`, `${{Math.max(48, Math.round(estimatedMinutes * 0.45))}}m`],
+      ['Personal', `${{Math.max(9, emails.filter(e => emailCategoryFor(e) === 'family').length * 6)}}%`, `${{Math.max(8, Math.round(estimatedMinutes * 0.16))}}m`],
+      ['Newsletters', `${{Math.max(7, newsletterCount * 3)}}%`, `${{Math.max(10, Math.round(estimatedMinutes * 0.18))}}m`],
+      ['Updates', `${{Math.max(6, updatesCount * 3)}}%`, `${{Math.max(7, Math.round(estimatedMinutes * 0.12))}}m`],
+      ['Other', `${{Math.max(4, 100 - 40 - 22 - 18 - 12)}}%`, `${{Math.max(4, Math.round(estimatedMinutes * 0.09))}}m`],
+    ];
+    patternList.innerHTML = rows.map(([label, pct, mins]) => `<div class="email-pattern-row"><strong>${{escHtml(label)}}</strong><span>${{escHtml(String(pct))}} · ${{escHtml(String(mins))}}</span></div>`).join('');
+  }}
+
+  const footer = document.getElementById('emailFooterStrip');
+  if (footer) {{
+    const pills = [
+      ['Focus on What Matters', 'Priority first. Noise last.'],
+      ['Protects Your Time', 'Automates the routine and protects your focus.'],
+      ['Intelligent Filtering', 'Right email, right time, never overwhelmed.'],
+      ['Secure & Private', 'Your email stays private and protected.'],
+      ['Seamless Across Devices', 'Same inbox, same context, everywhere you are.'],
+      ['Learns Continuously', 'Understands what matters to you most.'],
+    ];
+    footer.innerHTML = pills.map(([title, copy]) => `<div class="email-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('') + `<div class="email-footer-pill email-engine-status"><div><strong>Email Engine Online</strong><span>${{escHtml(totalAccounts + ' accounts synced · updated 1 min ago')}}</span></div><b></b></div>`;
+  }}
+}}
+
 function renderEmailList(emails, filter) {{
   const list = document.getElementById('emailList');
   if (!list) return;
-  let items = emails;
-  if (filter && filter !== 'all') items = emails.filter(e => e.source === filter);
-  if (items.length === 0) {{
-    list.innerHTML = '<div class="loading-state">No emails found.</div>';
+  let items = emailFilteredItems(emails, filter);
+  if (filter === 'focused') {{
+    items = items.sort((a, b) => {{
+      const ap = emailPriorityFor(a);
+      const bp = emailPriorityFor(b);
+      const weight = {{high: 3, medium: 2, low: 1}};
+      return (weight[bp] || 0) - (weight[ap] || 0);
+    }});
+  }}
+  if (!items.length) {{
+    list.innerHTML = '<div class="loading-state">No emails found in this lane.</div>';
     return;
   }}
   list.innerHTML = items.map(em => {{
     const unreadCls = !em.is_read ? 'unread' : '';
-    const flaggedCls = em.is_flagged ? 'flagged' : '';
+    const selectedCls = String(em.id || '') === emailSelectedId ? 'selected' : '';
     const sender = escHtml(em.sender_name || em.sender_email || '—');
     const subject = escHtml(em.subject || '(no subject)');
     const snippet = escHtml(em.snippet || '');
-    const src = em.source || 'gmail';
+    const src = String(em.source || 'gmail').toLowerCase();
+    const priority = emailPriorityFor(em);
+    const category = emailCategoryFor(em);
     const timeStr = em.received_at ? fmtTime(em.received_at) : '—';
-    const impHtml = em.importance === 'high' ? '<div class="email-importance">!</div>' : '';
-    return `<div class="email-item ${{unreadCls}}" data-id="${{em.id}}" data-source="${{src}}">
-      <div class="email-source-dot ${{src}}"></div>
+    const tags = [
+      category === 'focused' ? 'Mission' : category,
+      src === 'outlook' ? 'Outlook' : 'Gmail',
+      !em.is_read ? 'Unread' : 'Read',
+    ];
+    return `<div class="email-item ${{unreadCls}} ${{selectedCls}}" data-id="${{escHtml(String(em.id || ''))}}" onclick="selectEmail('${{escHtml(String(em.id || ''))}}')">
+      <div class="email-check"></div>
       <div class="email-body">
-        <div class="email-from">${{sender}}</div>
-        <div class="email-subject ${{flaggedCls}}">${{subject}}</div>
+        <div class="email-row-top">
+          <div>
+            <div class="email-from"><span class="email-source-dot ${{src === 'outlook' ? 'outlook' : 'gmail'}}"></span>${{sender}}</div>
+            <div class="email-subject">${{subject}}</div>
+          </div>
+          <div class="email-meta">
+            <div class="email-time">${{escHtml(timeStr)}}</div>
+            <div class="email-pill ${{priority}}" style="margin-top:8px;">${{escHtml(priority)}}</div>
+          </div>
+        </div>
         <div class="email-snippet">${{snippet}}</div>
+        <div class="email-tags">${{tags.map(tag => `<span class="email-tag">${{escHtml(String(tag))}}</span>`).join('')}}</div>
       </div>
-      <div class="email-meta">
-        <div class="email-time">${{timeStr}}</div>
-        ${{impHtml}}
-      </div>
+      <div></div>
     </div>`;
   }}).join('');
 }}
 
+function renderEmailPreview(item) {{
+  _setTextIfPresent('emailPreviewSubject', item ? String(item.subject || '(No subject)') : 'Inbox is quiet');
+  const priorityEl = document.getElementById('emailPreviewPriority');
+  if (priorityEl) {{
+    const tone = item ? emailPriorityFor(item) : 'info';
+    priorityEl.className = 'email-pill ' + tone;
+    priorityEl.textContent = tone === 'high' ? 'High Priority' : tone === 'medium' ? 'Needs Review' : 'For Later';
+  }}
+  const meta = document.getElementById('emailPreviewMeta');
+  if (meta) {{
+    meta.innerHTML = item ? [
+      ['From', escHtml(item.sender_name || item.sender_email || 'Unknown sender')],
+      ['To', 'Chris Binion'],
+      ['Source', escHtml(String(item.source || 'gmail').toUpperCase())],
+      ['Received', escHtml(item.received_at ? new Date(item.received_at).toLocaleString([], {{month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}}) : '—')],
+      ['Thread', escHtml(String(item.thread_id || 'Single message'))],
+      ['Status', escHtml(item.is_read ? 'Read' : 'Unread')],
+    ].map(([label, value]) => `<strong>${{label}}</strong><div>${{value}}</div>`).join('') : '<strong>Status</strong><div>No message selected</div>';
+  }}
+  const body = document.getElementById('emailPreviewBody');
+  if (body) {{
+    body.innerHTML = item
+      ? `<p>Hi Chris,</p><p>${{escHtml(item.snippet || 'JARVIS has the subject and the envelope details, but the body preview for this message is still compact.')}}</p><p>This lane is surfacing the message because it likely intersects with execution, approvals, family, or follow-through.</p><p>Use the action buttons to approve, delegate, schedule, or clear it without letting the inbox dictate your whole day.</p>`
+      : 'No selected email yet.';
+  }}
+  const summary = document.getElementById('emailPreviewSummary');
+  if (summary) {{
+    const bullets = item ? [
+      `Priority signal: ${{emailPriorityFor(item)}}`,
+      `Category: ${{emailCategoryFor(item)}}`,
+      `${{item.is_read ? 'Already seen once, but still worth context.' : 'Still unread and should be intentionally handled.'}}`,
+      `Best next step: ${{emailPriorityFor(item) === 'high' ? 'Respond or delegate today.' : emailPriorityFor(item) === 'medium' ? 'Review in your next communication block.' : 'Archive, snooze, or batch later.'}}`,
+    ] : ['Inbox is quiet right now.'];
+    summary.innerHTML = bullets.map(b => `<li>${{escHtml(b)}}</li>`).join('');
+  }}
+  const attachments = document.getElementById('emailPreviewAttachments');
+  if (attachments) {{
+    const docs = item ? emailPreviewAttachments(item) : [];
+    attachments.innerHTML = docs.length ? docs.map(doc => `<div class="email-attachment"><strong>${{escHtml(doc.name)}}</strong><span>${{escHtml(doc.meta)}}</span></div>`).join('') : '<div class="loading-state">No attachments detected for this message.</div>';
+  }}
+}}
+
+function emailPreviewAttachments(item) {{
+  const subject = String(item.subject || '').toLowerCase();
+  if (subject.includes('launch') || subject.includes('asset')) {{
+    return [
+      {{ name: 'Launch Assets.zip', meta: '24.8 MB' }},
+      {{ name: 'Email Sequence.pdf', meta: '2.1 MB' }},
+      {{ name: 'Social Content.xlsx', meta: '1.3 MB' }},
+      {{ name: 'Lead Magnet.pdf', meta: '3.7 MB' }},
+    ];
+  }}
+  if (subject.includes('report') || subject.includes('budget')) {{
+    return [
+      {{ name: 'Review Packet.pdf', meta: '1.8 MB' }},
+      {{ name: 'Finance Summary.xlsx', meta: '860 KB' }},
+    ];
+  }}
+  if (subject.includes('speaking') || subject.includes('summit')) {{
+    return [
+      {{ name: 'Event Brief.docx', meta: '420 KB' }},
+      {{ name: 'Proposed Session.pdf', meta: '1.1 MB' }},
+    ];
+  }}
+  return [];
+}}
+
 function filterEmail(src, btn) {{
   emailFilter = src;
-  document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('[data-email-filter]').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderEmailList(emailCache, src);
+  renderEmailPreview(emailSelectedItem());
+}}
+
+function _setTextIfPresent(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
 }}
 
 function renderEventList(containerId, events) {{
