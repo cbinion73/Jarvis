@@ -587,7 +587,18 @@ async def chat(
             )
             if resp.error:
                 _log.warning("faith_agents chat error for %s: %s", agent_id, resp.error)
-            return resp.text
+            text = str(resp.text or "").strip()
+            if text:
+                return text
+            if resp.error:
+                return (
+                    f"{agent['name']} is connected, but the faith response backend is "
+                    "currently unavailable. Try again in a moment."
+                )
+            return (
+                f"{agent['name']} did not return a response just now. "
+                "No faith guidance was generated, so please try again."
+            )
 
         return await asyncio.to_thread(_run)
 

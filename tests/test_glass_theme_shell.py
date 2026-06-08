@@ -106,6 +106,23 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/chronicle/write-entry", html)
         self.assertIn("/api/chronicle/update-prayer", html)
 
+    def test_render_glass_shell_wires_faith_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="faith-runtime-note"', html)
+        self.assertIn('id="faith-hero-overline"', html)
+        self.assertIn('id="faith-journal-actions"', html)
+        self.assertIn('id="faith-voice-context"', html)
+        self.assertIn("function refreshFaithDesktop()", html)
+        self.assertIn("function renderFaithDesktop(", html)
+        self.assertIn("function faithSelectJournalEntry(", html)
+        self.assertIn("function faithMarkPrayerPrayed(", html)
+        self.assertIn("function faithMarkPrayerAnswered(", html)
+        self.assertIn("/api/faith/module", html)
+        self.assertIn("/api/faith/chat", html)
+        self.assertIn("/api/chronicle/update-prayer", html)
+        self.assertIn("Faith is live and connected.", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

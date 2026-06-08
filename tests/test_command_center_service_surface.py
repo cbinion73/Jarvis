@@ -2136,6 +2136,81 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(prayer_response["prayer"]["timesPrayed"], 3)
         self.assertTrue(prayer_response["prayer"]["answered"])
 
+    def test_faith_routes_expose_module_daily_word_agents_and_chat(self) -> None:
+        from jarvis.chronicle_bridge import init_chronicle_bridge
+
+        init_chronicle_bridge()
+
+        async def _fake_daily_word(_runtime):
+            return {
+                "ok": True,
+                "agent_id": "ezra",
+                "agent_name": "Ezra",
+                "agent_title": "The Scribe",
+                "color": "#C9A84C",
+                "domain": "Exegesis & the Text",
+                "passage": "Psalm 23",
+                "word": "The Shepherd is with you in the real work of today.",
+                "generated_at": "2026-06-08T12:00:00+00:00",
+            }
+
+        async def _fake_chat(*, agent_id: str, messages: list[dict], runtime, passage: str = ""):
+            return f"{agent_id}:{passage}:{messages[-1]['content']}"
+
+        with patch("jarvis.faith_agents.daily_word", _fake_daily_word), patch(
+            "jarvis.faith_agents.chat", _fake_chat
+        ):
+            daily_word_payload = self._json_body(asyncio.run(self._route("/api/faith/daily-word", "GET")()))
+            agents_payload = self._json_body(asyncio.run(self._route("/api/faith/agents", "GET")()))
+            module_payload = self._json_body(asyncio.run(self._route("/api/faith/module", "GET")()))
+            chat_payload = self._json_body(
+                asyncio.run(
+                    self._route("/api/faith/chat", "POST")(
+                        {
+                            "agent_id": "ezra",
+                            "passage": "Psalm 23",
+                            "messages": [{"role": "user", "content": "What should I notice?"}],
+                        }
+                    )
+                )
+            )
+
+        self.assertTrue(daily_word_payload["ok"])
+        self.assertTrue(daily_word_payload["available"])
+        self.assertEqual(daily_word_payload["passage"], "Psalm 23")
+        self.assertTrue(agents_payload["ok"])
+        self.assertGreater(len(agents_payload["agents"]), 0)
+        self.assertTrue(module_payload["ok"])
+        self.assertIn("daily_word", module_payload)
+        self.assertIn("chronicle_context", module_payload)
+        self.assertIn("chronicle_patterns", module_payload)
+        self.assertIn("prayer_items", module_payload)
+        self.assertIn("availability_notes", module_payload)
+        self.assertTrue(chat_payload["ok"])
+        self.assertIn("What should I notice?", chat_payload["reply"])
+
+    def test_faith_chat_route_surfaces_empty_reply_honestly(self) -> None:
+        async def _empty_chat(*, agent_id: str, messages: list[dict], runtime, passage: str = ""):
+            return ""
+
+        with patch("jarvis.faith_agents.chat", _empty_chat):
+            chat_payload = self._json_body(
+                asyncio.run(
+                    self._route("/api/faith/chat", "POST")(
+                        {
+                            "agent_id": "paul",
+                            "passage": "Philippians 4:6",
+                            "messages": [{"role": "user", "content": "Help me pray about anxiety."}],
+                        }
+                    )
+                )
+            )
+
+        self.assertFalse(chat_payload["ok"])
+        self.assertFalse(chat_payload["available"])
+        self.assertEqual(chat_payload["agent_id"], "paul")
+        self.assertIn("no faith response was returned", chat_payload["detail"].lower())
+
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {
             "ok": True,

@@ -5215,6 +5215,64 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return _json(result)
 
+    @app.get("/api/faith/daily-word")
+    async def api_faith_daily_word() -> JSONResponse:
+        payload = await _build_faith_daily_word_payload()
+        return _json(payload)
+
+    @app.get("/api/faith/agents")
+    async def api_faith_agents() -> JSONResponse:
+        payload = await _build_faith_agents_payload()
+        return _json(payload)
+
+    @app.get("/api/faith/module")
+    async def api_faith_module() -> JSONResponse:
+        return _json(await _build_faith_module_payload())
+
+    @app.post("/api/faith/chat")
+    async def api_faith_chat(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            from .faith_agents import chat as _faith_chat, get_agent as _get_faith_agent
+
+            agent_id = str(payload.get("agent_id") or "").strip().lower()
+            messages = payload.get("messages") or []
+            passage = str(payload.get("passage") or "").strip()
+            if not agent_id:
+                raise HTTPException(status_code=400, detail="agent_id is required")
+            if not isinstance(messages, list) or not messages:
+                raise HTTPException(status_code=400, detail="messages are required")
+            reply = await _faith_chat(agent_id=agent_id, messages=messages, runtime=runtime, passage=passage)
+            agent = _get_faith_agent(agent_id) or {}
+            reply_text = str(reply or "").strip()
+            if not reply_text:
+                agent_name = str(agent.get("name") or agent_id.title())
+                detail = (
+                    f"{agent_name} is connected, but no faith response was returned just now. "
+                    "Please try again."
+                )
+                return _json(
+                    {
+                        "ok": False,
+                        "available": False,
+                        "reply": "",
+                        "detail": detail,
+                        "agent_id": agent_id,
+                        "agent_name": agent_name,
+                    }
+                )
+            return _json(
+                {
+                    "ok": True,
+                    "reply": reply_text,
+                    "agent_id": agent_id,
+                    "agent_name": str(agent.get("name") or agent_id.title()),
+                }
+            )
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Faith chat unavailable: {exc}") from exc
+
     @app.get("/api/catalyst/capabilities")
     async def api_catalyst_capabilities() -> JSONResponse:
         return _json(runtime.interface_router.system_manifest("catalyst"))
@@ -8577,6 +8635,164 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "answered_recent": len([item for item in answered if str(item.get("dateAnswered") or "") >= cutoff]),
             },
             "writing_streak_days": streak,
+        }
+
+    async def _build_faith_daily_word_payload() -> dict[str, Any]:
+        try:
+            from .faith_agents import daily_word as _faith_daily_word
+
+            result = await _faith_daily_word(runtime)
+            if isinstance(result, dict) and result.get("ok"):
+                return {
+                    "ok": True,
+                    "available": True,
+                    "agent_id": str(result.get("agent_id") or ""),
+                    "agent_name": str(result.get("agent_name") or result.get("agent") or "JARVIS"),
+                    "agent_title": str(result.get("agent_title") or ""),
+                    "color": str(result.get("color") or ""),
+                    "domain": str(result.get("domain") or ""),
+                    "passage": str(result.get("passage") or ""),
+                    "word": str(result.get("word") or ""),
+                    "generated_at": str(result.get("generated_at") or ""),
+                }
+            message = str(result.get("error") or "Daily word unavailable") if isinstance(result, dict) else "Daily word unavailable"
+            return {
+                "ok": False,
+                "available": False,
+                "agent_id": "",
+                "agent_name": "JARVIS",
+                "agent_title": "",
+                "color": "",
+                "domain": "",
+                "passage": "",
+                "word": "",
+                "generated_at": "",
+                "message": message,
+            }
+        except Exception as exc:
+            return {
+                "ok": False,
+                "available": False,
+                "agent_id": "",
+                "agent_name": "JARVIS",
+                "agent_title": "",
+                "color": "",
+                "domain": "",
+                "passage": "",
+                "word": "",
+                "generated_at": "",
+                "message": str(exc),
+            }
+
+    async def _build_faith_agents_payload() -> dict[str, Any]:
+        try:
+            from .faith_agents import get_agents as _faith_get_agents
+
+            agents = await asyncio.to_thread(_faith_get_agents)
+            if not isinstance(agents, list):
+                agents = []
+            return {"ok": True, "agents": [dict(item) for item in agents if isinstance(item, dict)]}
+        except Exception as exc:
+            return {"ok": False, "agents": [], "message": str(exc)}
+
+    def _build_faith_continuity_payload(
+        *,
+        daily_word: dict[str, Any],
+        chronicle_context: dict[str, Any],
+        chronicle_patterns: dict[str, Any],
+        agents: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        top_themes = [str(theme).strip() for theme in list(chronicle_context.get("top_themes") or []) if str(theme).strip()]
+        recurring = [
+            str(item.get("theme") or "").strip()
+            for item in list(chronicle_patterns.get("recurring_themes") or [])
+            if isinstance(item, dict) and str(item.get("theme") or "").strip()
+        ]
+        theme = top_themes[0] if top_themes else (recurring[0] if recurring else str(daily_word.get("domain") or "").strip())
+        passage = str(daily_word.get("passage") or chronicle_context.get("study", {}).get("passage") or "").strip()
+        focus = ""
+        if chronicle_context.get("active_prayers"):
+            focus = str(chronicle_context["active_prayers"][0].get("text") or "").strip()
+        if not focus:
+            focus = str(daily_word.get("word") or "").strip()
+        if focus:
+            focus = " ".join(focus.split())[:220]
+        guidance_lines: list[str] = []
+        if daily_word.get("word"):
+            guidance_lines.append(" ".join(str(daily_word.get("word") or "").split())[:220])
+        if chronicle_context.get("todays_rhythm", {}).get("description"):
+            guidance_lines.append(str(chronicle_context["todays_rhythm"]["description"]).strip())
+        if theme:
+            guidance_lines.append(f"Keep listening for {theme} instead of forcing resolution too early.")
+        guidance_lines = [line for line in guidance_lines if line]
+        return {
+            "subject_display_name": "Chris",
+            "theme": theme,
+            "focus": focus,
+            "passage": passage,
+            "council_domains": [str(agent.get("domain") or "").strip() for agent in agents if str(agent.get("domain") or "").strip()][:6],
+            "guidance_lines": guidance_lines[:3],
+        }
+
+    async def _build_faith_module_payload() -> dict[str, Any]:
+        daily_word_payload, agents_payload, chronicle_recent = await asyncio.gather(
+            _build_faith_daily_word_payload(),
+            _build_faith_agents_payload(),
+            _build_chronicle_recent_payload(),
+        )
+        chronicle_context = _chronicle_context_from_recent(chronicle_recent)
+        chronicle_patterns = _chronicle_patterns_from_recent(chronicle_recent)
+        try:
+            capabilities = getattr(runtime, "interface_router").system_manifest("chronicle").get("capabilities", {})
+        except Exception:
+            capabilities = {}
+        health_summary = {}
+        availability_notes: list[str] = []
+
+        try:
+            health_summary = runtime.apple_health_daily_summary() or {}
+        except Exception as exc:
+            health_summary = {"available": False, "detail": str(exc)}
+            availability_notes.append(f"Health summary unavailable: {exc}")
+
+        if daily_word_payload.get("available") is False:
+            availability_notes.append(str(daily_word_payload.get("message") or "Daily word unavailable"))
+        if not chronicle_context.get("study"):
+            availability_notes.append("Chronicle has not surfaced a study passage yet.")
+        if not chronicle_recent.get("chronicle_available"):
+            availability_notes.append("Chronicle bridge is not fully available.")
+        if not capabilities:
+            availability_notes.append("Chronicle handoff capabilities are unavailable.")
+
+        agents = list(agents_payload.get("agents") or [])
+        continuity = _build_faith_continuity_payload(
+            daily_word=daily_word_payload,
+            chronicle_context=chronicle_context,
+            chronicle_patterns=chronicle_patterns,
+            agents=agents,
+        )
+        return {
+            "ok": True,
+            "daily_word": daily_word_payload,
+            "agents": agents,
+            "chronicle_context": chronicle_context,
+            "chronicle_patterns": chronicle_patterns,
+            "prayer_items": list(chronicle_recent.get("prayer_items") or []),
+            "recent_entries": list(chronicle_recent.get("entries") or [])[:10],
+            "chronicle_capabilities": capabilities,
+            "formation_prompts": [
+                prompt
+                for prompt in [
+                    continuity.get("passage") and f"Ask the council what {continuity['passage']} is saying about today.",
+                    continuity.get("focus") and f"Pray into this concern: {continuity['focus']}",
+                    continuity.get("theme") and f"Notice where {continuity['theme']} keeps surfacing in the day.",
+                ]
+                if prompt
+            ],
+            "continuity": continuity,
+            "health_summary": health_summary,
+            "availability_notes": availability_notes,
+            "updated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
         }
 
     def _chronicle_bridge_entry_from_legacy_payload(entry_payload: dict[str, Any]) -> Any:

@@ -21432,12 +21432,13 @@ body::after {{
               <div class="faith-sanctuary-grid">
                 <div class="faith-card faith-hero-card">
                   <div class="faith-hero-visual">
-                    <div class="faith-hero-overline">Good evening, Chris. The Lord is near to the brokenhearted.</div>
+                    <div class="faith-hero-overline" id="faith-hero-overline">Good evening, Chris. The Lord is near to the brokenhearted.</div>
                     <div>
-                      <div class="faith-hero-title">Be still, and know that I am God.</div>
-                      <div class="faith-hero-copy">Let today open with presence, Scripture, prayer, and the grace to walk slowly enough to notice what God is doing.</div>
+                      <div class="faith-hero-title" id="faith-hero-title">Be still, and know that I am God.</div>
+                      <div class="faith-hero-copy" id="faith-hero-copy">Let today open with presence, Scripture, prayer, and the grace to walk slowly enough to notice what God is doing.</div>
                     </div>
-                    <div class="faith-hero-button">Read Full Chapter</div>
+                    <div class="faith-hero-copy" id="faith-runtime-note" style="font-size:12px;opacity:.8;">Loading live Faith context…</div>
+                    <div class="faith-hero-button" id="faith-hero-button" onclick="refreshFaithDesktop()">Read Full Chapter</div>
                   </div>
                 </div>
                 <div class="faith-side-stack">
@@ -21466,8 +21467,9 @@ body::after {{
                   <div class="faith-card faith-note-card">
                     <div class="faith-card-heading">
                       <div class="faith-card-label">JARVIS Encouragement<strong>Carry the day gently</strong></div>
+                      <button class="faith-action-btn muted" type="button" onclick="refreshFaithDesktop()">Refresh</button>
                     </div>
-                    <p>You’ve been carrying a lot. Let today be a day of rest, renewed focus, and small acts of obedience that keep your heart soft.</p>
+                    <p id="faith-encouragement-copy">You’ve been carrying a lot. Let today be a day of rest, renewed focus, and small acts of obedience that keep your heart soft.</p>
                   </div>
                 </div>
               </div>
@@ -21476,19 +21478,19 @@ body::after {{
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Today’s Focus<strong>Rest in God’s presence</strong></div>
                   </div>
-                  <p>Take a slower pace, entrust what feels heavy, and let prayer frame the decisions ahead.</p>
+                  <p id="faith-focus-copy">Take a slower pace, entrust what feels heavy, and let prayer frame the decisions ahead.</p>
                 </div>
                 <div class="faith-card faith-focus-card">
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Devotion Prompt<strong>What is God inviting you to release?</strong></div>
                   </div>
-                  <p>Notice where anxiety is tightening your grip, then hand that concern over in prayer before acting.</p>
+                  <p id="faith-devotion-copy">Notice where anxiety is tightening your grip, then hand that concern over in prayer before acting.</p>
                 </div>
                 <div class="faith-card faith-focus-card">
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Spiritual Rhythm<strong>Abide in the Word</strong></div>
                   </div>
-                  <p>Keep a short prayer running through the day and revisit your passage before the evening closes.</p>
+                  <p id="faith-rhythm-copy">Keep a short prayer running through the day and revisit your passage before the evening closes.</p>
                 </div>
               </div>
               <div class="faith-bridge-grid">
@@ -21551,7 +21553,7 @@ body::after {{
                     </div>
                     <div class="faith-card faith-focus-card">
                       <strong>Today’s Action</strong>
-                      <p>Take a 20-minute walk and thank God for three graces you almost missed.</p>
+                      <p id="faith-brief-action">Take a 20-minute walk and thank God for three graces you almost missed.</p>
                     </div>
                   </div>
                   <div class="faith-action-row">
@@ -21563,7 +21565,7 @@ body::after {{
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Overnight Summary<strong>How your heart arrived</strong></div>
                   </div>
-                  <div class="faith-summary-list">
+                  <div class="faith-summary-list" id="faith-overnight-summary">
                     <div class="faith-summary-item"><span>Sleep</span><strong>7h 12m · Good recovery</strong><em>Ready</em></div>
                     <div class="faith-summary-item"><span>Reflection</span><strong>Psalm 46 · Peace in God</strong><em>Centered</em></div>
                     <div class="faith-summary-item"><span>Prayer</span><strong>3 answered · 2 new</strong><em>Held</em></div>
@@ -21600,7 +21602,7 @@ body::after {{
                     <div class="faith-card-heading">
                       <div class="faith-card-label">Reflection Prompts<strong>Carry these into prayer</strong></div>
                     </div>
-                    <ul class="faith-reflection-list">
+                    <ul class="faith-reflection-list" id="faith-reflection-prompts">
                       <li>What are you anxious about right now?</li>
                       <li>How can prayer change your perspective?</li>
                       <li>What would peace from God look like today?</li>
@@ -21616,7 +21618,7 @@ body::after {{
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Prayer Journal<strong>Recent entries</strong></div>
                   </div>
-                  <div class="faith-journal-list">
+                  <div class="faith-journal-list" id="faith-journal-list">
                     <div class="faith-journal-entry">
                       <strong>Peace for Emma’s exams</strong>
                       <span>Today · High</span>
@@ -21636,26 +21638,29 @@ body::after {{
                 </div>
                 <div class="faith-card faith-journal-card">
                   <div class="faith-card-heading">
-                    <div class="faith-card-label">Entry Details<strong>Peace for Emma’s exams</strong></div>
+                    <div class="faith-card-label">Entry Details<strong id="faith-journal-detail-title">Peace for Emma’s exams</strong></div>
                   </div>
-                  <p>Lord, give Emma clarity, calm, and strong focus as she prepares for her exams. Guard her heart from worry and fill her with confidence in You.</p>
-                  <div class="faith-tag-row">
+                  <p id="faith-journal-detail-copy">Lord, give Emma clarity, calm, and strong focus as she prepares for her exams. Guard her heart from worry and fill her with confidence in You.</p>
+                  <div class="faith-tag-row" id="faith-journal-tags">
                     <span class="faith-chip">Family</span>
                     <span class="faith-chip">Exams</span>
                     <span class="faith-chip">Peace</span>
+                  </div>
+                  <div class="faith-action-row" id="faith-journal-actions">
+                    <button class="faith-action-btn muted" type="button">Journal actions unavailable</button>
                   </div>
                   <div class="faith-card" style="margin-top:18px;">
                     <div class="faith-card-heading">
                       <div class="faith-card-label">JARVIS Insight<strong>Patterns worth noticing</strong></div>
                     </div>
-                    <p>You often pray for peace before important moments. Keep trusting God to meet your family in the pressure, not only after it passes.</p>
+                    <p id="faith-journal-insight">You often pray for peace before important moments. Keep trusting God to meet your family in the pressure, not only after it passes.</p>
                   </div>
                 </div>
                 <div class="faith-card faith-journal-card">
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Spiritual Patterns<strong>Last 30 days</strong></div>
                   </div>
-                  <div class="faith-mini-list">
+                  <div class="faith-mini-list" id="faith-journal-patterns">
                     <div class="faith-mini-row"><span>Prayer consistency</span><strong>16-day rhythm</strong></div>
                     <div class="faith-mini-row"><span>Gratitude entries</span><strong>14</strong></div>
                     <div class="faith-mini-row"><span>Answered prayers</span><strong>7</strong></div>
@@ -21673,8 +21678,8 @@ body::after {{
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Family Faith Center<strong>Household guidance</strong></div>
                   </div>
-                  <p>Strengthen the home with shared prayer, gentle reminders, and rhythms that keep Christ at the center of the week.</p>
-                  <div class="faith-mini-list" style="margin-top:14px;">
+                  <p id="faith-family-summary">Strengthen the home with shared prayer, gentle reminders, and rhythms that keep Christ at the center of the week.</p>
+                  <div class="faith-mini-list" style="margin-top:14px;" id="faith-family-meta">
                     <div class="faith-mini-row"><span>Prayer requests</span><strong>2 urgent · 4 steady</strong></div>
                     <div class="faith-mini-row"><span>Family devotion</span><strong>Tonight · 7:00 PM</strong></div>
                     <div class="faith-mini-row"><span>Household reminder</span><strong>Church together · Sunday</strong></div>
@@ -21694,7 +21699,7 @@ body::after {{
                   <div class="faith-card-heading">
                     <div class="faith-card-label">Household Liturgy<strong>What to nurture this week</strong></div>
                   </div>
-                  <p>Create one shared gratitude list, one short family prayer before dinner, and one Scripture moment that turns the evening toward peace.</p>
+                  <p id="faith-household-liturgy">Create one shared gratitude list, one short family prayer before dinner, and one Scripture moment that turns the evening toward peace.</p>
                   <div class="faith-action-row">
                     <button class="faith-action-btn muted" type="button" onclick="openChronicleFromFaith('formation')">Open Chronicle Formation Timeline</button>
                   </div>
@@ -21742,15 +21747,15 @@ body::after {{
                 <div class="faith-side-stack">
                   <div class="faith-side-panel">
                     <strong>Context</strong>
-                    <p>Spiritual readiness: 82%. Recent focus: peace and trust. Prayer streak: 18 days.</p>
+                    <p id="faith-voice-context">Spiritual readiness: 82%. Recent focus: peace and trust. Prayer streak: 18 days.</p>
                   </div>
                   <div class="faith-side-panel">
                     <strong>Today’s Guidance</strong>
-                    <p>Breathe. Pray. Trust. God is with you in the concern, not only after it is resolved.</p>
+                    <p id="faith-voice-guidance">Breathe. Pray. Trust. God is with you in the concern, not only after it is resolved.</p>
                   </div>
                   <div class="faith-side-panel">
                     <strong>Related</strong>
-                    <ul>
+                    <ul id="faith-voice-related">
                       <li>Verses on peace</li>
                       <li>Prayers for anxiety</li>
                       <li>Worship for rest</li>
@@ -33054,6 +33059,8 @@ async function loadBriefing() {{
 let _faithAgents = [];
 let _faithActiveAgent = null;
 let _faithMessages = [];
+let _faithModuleState = null;
+let _faithSelectedPrayerId = '';
 const CHRONICLE_APP_URL = 'https://chronicle.teambinion.org';
 let faithStoryboardPage = 1;
 const FAITH_STORYBOARD_TITLES = {{
@@ -33123,63 +33130,275 @@ function advanceFaithPage(delta) {{
   syncFaithStoryboard();
 }}
 
+function faithText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value == null ? '' : String(value);
+}}
+
+function faithHtml(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = value || '';
+}}
+
+function faithRuntimeNote(message) {{
+  faithText('faith-runtime-note', message || 'Faith is live.');
+}}
+
+function faithSnippet(text, limit = 220) {{
+  const value = String(text || '').replace(/\\s+/g, ' ').trim();
+  if (!value) return '';
+  return value.length > limit ? value.slice(0, limit - 1).trimEnd() + '…' : value;
+}}
+
+function faithEscapeAttr(value) {{
+  return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}}
+
+function faithDateLabel(value) {{
+  if (!value) return 'Open';
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return String(value);
+  return dt.toLocaleDateString(undefined, {{ month: 'short', day: 'numeric' }});
+}}
+
+function faithJournalTone(item) {{
+  if (item?.answered) return 'good';
+  const prayed = Number(item?.timesPrayed || 0);
+  if (prayed >= 3) return 'medium';
+  return 'high';
+}}
+
+function faithDefaultPromptList(moduleState) {{
+  const prompts = Array.isArray(moduleState?.formation_prompts) ? moduleState.formation_prompts.filter(Boolean) : [];
+  if (prompts.length) return prompts.slice(0, 3);
+  const passage = moduleState?.chronicle_context?.study?.passage;
+  const theme = moduleState?.chronicle_context?.top_themes?.[0];
+  return [
+    passage ? `What is God emphasizing in ${{passage}}?` : 'What is God emphasizing today?',
+    theme ? `Where is ${{theme}} surfacing in your day or calling?` : 'Where do you feel resistance or invitation right now?',
+    'What would prayerful faithfulness look like before the next decision?',
+  ];
+}}
+
+function faithRenderJournalDetail() {{
+  const prayers = Array.isArray(_faithModuleState?.prayer_items) ? _faithModuleState.prayer_items : [];
+  let selected = prayers.find(item => String(item.id || '') === String(_faithSelectedPrayerId || ''));
+  if (!selected) {{
+    selected = prayers[0] || null;
+    _faithSelectedPrayerId = selected?.id || '';
+  }}
+
+  if (!selected) {{
+    faithText('faith-journal-detail-title', 'No prayer entry selected');
+    faithText('faith-journal-detail-copy', 'Chronicle has not surfaced a live prayer entry for this panel yet.');
+    faithHtml('faith-journal-tags', '<span class="faith-chip">Unavailable</span>');
+    faithText('faith-journal-insight', 'When Chronicle prayer entries arrive, JARVIS will surface patterns instead of inventing them.');
+    faithHtml('faith-journal-actions', '<button class="faith-action-btn muted" type="button" disabled>No prayer actions available</button>');
+    return;
+  }}
+
+  const tags = [
+    selected.category,
+    selected.answered ? 'Answered' : 'Active',
+    selected.lastPrayedAt ? `Prayed ${{faithDateLabel(selected.lastPrayedAt)}}` : '',
+  ].filter(Boolean);
+
+  faithText('faith-journal-detail-title', selected.text || 'Prayer entry');
+  faithText('faith-journal-detail-copy', selected.answerSummary || selected.text || 'Prayer details unavailable.');
+  faithHtml('faith-journal-tags', tags.map(tag => `<span class="faith-chip">${{escHtml(String(tag))}}</span>`).join('') || '<span class="faith-chip">Prayer</span>');
+
+  const recurring = Array.isArray(_faithModuleState?.chronicle_patterns?.recurring_themes)
+    ? _faithModuleState.chronicle_patterns.recurring_themes
+    : [];
+  const topTheme = recurring[0]?.theme || _faithModuleState?.chronicle_context?.top_themes?.[0] || 'faithfulness';
+  const answeredInsight = topTheme
+    ? `This prayer has already been marked answered. The current recurring theme is ${{topTheme}}.`
+    : 'This prayer has already been marked answered. JARVIS is preserving the arc, not just the moment.';
+  const activeInsight = topTheme
+    ? `This request is still active. JARVIS keeps seeing ${{topTheme}} around your recent reflections and prayers.`
+    : 'This request is still active. JARVIS is watching for the pattern across recent prayers and reflections.';
+  faithText(
+    'faith-journal-insight',
+    selected.answered ? answeredInsight : activeInsight
+  );
+
+  const prayedAction = `<button class="faith-action-btn muted" type="button" onclick="faithMarkPrayerPrayed(${{JSON.stringify(String(selected.id || ''))}}, ${{JSON.stringify(String(selected.text || 'Prayer entry'))}})">Mark Prayed</button>`;
+  const answeredAction = selected.answered
+    ? '<button class="faith-action-btn muted" type="button" disabled>Already Answered</button>'
+    : `<button class="faith-action-btn primary" type="button" onclick="faithMarkPrayerAnswered(${{JSON.stringify(String(selected.id || ''))}}, ${{JSON.stringify(String(selected.text || 'Prayer entry'))}})">Mark Answered</button>`;
+  faithHtml('faith-journal-actions', prayedAction + answeredAction);
+}}
+
+function faithSelectJournalEntry(prayerId) {{
+  _faithSelectedPrayerId = prayerId || '';
+  faithRenderJournalDetail();
+}}
+
+function renderFaithRoster() {{
+  const el = document.getElementById('faith-roster');
+  if (!el) return;
+  if (!_faithAgents.length) {{
+    el.innerHTML = '<div class="empty-state">Faith agents unavailable</div>';
+    return;
+  }}
+  el.innerHTML = _faithAgents.map(a => `
+    <div class="faith-agent-card ${{_faithActiveAgent?.id === a.id ? 'active' : ''}}"
+         style="--agent-color:${{a.color}}"
+         onclick="openFaithChat('${{a.id}}')">
+      <div class="faith-agent-avatar" style="background:${{a.color}}">${{a.initials}}</div>
+      <div class="faith-agent-name">${{a.name}}</div>
+      <div class="faith-agent-title">${{a.title}}</div>
+      <div class="faith-agent-desc">${{a.description}}</div>
+    </div>
+  `).join('');
+}}
+
+function renderFaithDesktop(moduleState) {{
+  _faithModuleState = moduleState || {{}};
+  _faithAgents = Array.isArray(moduleState?.agents) ? moduleState.agents : [];
+  const dailyWord = moduleState?.daily_word || {{}};
+  const chronicleContext = moduleState?.chronicle_context || {{}};
+  const chroniclePatterns = moduleState?.chronicle_patterns || {{}};
+  const capabilities = moduleState?.chronicle_capabilities || {{}};
+  const continuity = moduleState?.continuity || {{}};
+  const prayerItems = Array.isArray(moduleState?.prayer_items) ? moduleState.prayer_items : [];
+  const recentEntries = Array.isArray(moduleState?.recent_entries) ? moduleState.recent_entries : [];
+  const health = dailyBriefNormalizeHealthSummary(moduleState?.health_summary || {{}});
+  const promptList = faithDefaultPromptList(moduleState);
+  const activePrayer = prayerItems.find(item => !item.answered) || prayerItems[0] || null;
+  const topEntry = recentEntries[0] || null;
+  const passage = dailyWord.passage || chronicleContext?.study?.passage || topEntry?.passage || '';
+  const heroCopy = dailyWord.word || topEntry?.body || 'The Faith council is connected, but there is not yet a live daily word to quote here.';
+  const heroOverline = `${{dailyBriefSalute()}}, Chris.${{continuity.theme ? ' ' + continuity.theme.charAt(0).toUpperCase() + continuity.theme.slice(1) + ' is surfacing in view.' : ' The next faithful step is in focus.'}}`;
+
+  faithText('faith-hero-overline', heroOverline);
+  faithText('faith-hero-title', passage || 'Faith is listening for today’s passage.');
+  faithText('faith-hero-copy', faithSnippet(heroCopy, 260));
+  faithText('faith-hero-button', passage ? `Study ${{passage}}` : 'Refresh Faith');
+  faithText('faith-encouragement-copy', continuity.guidance_lines?.[0] || continuity.focus || 'Faith is connected. As richer context arrives, encouragement will become more specific.');
+  faithText('faith-focus-copy', continuity.focus || activePrayer?.text || 'No focused formation cue is available yet.');
+  faithText('faith-devotion-copy', promptList[0] || 'No devotion prompt is connected yet.');
+  faithText('faith-rhythm-copy', chronicleContext?.todays_rhythm?.description || 'No explicit spiritual rhythm is connected yet.');
+
+  faithText('faith-stat-requests', chronicleContext?.active_prayer_count ?? prayerItems.filter(item => !item.answered).length ?? '0');
+  faithText('faith-stat-answered', chronicleContext?.answered_prayer_count ?? prayerItems.filter(item => item.answered).length ?? '0');
+  faithText('faith-stat-streak', chroniclePatterns?.writing_streak_days ?? '0');
+
+  faithText('faith-dw-agent', dailyWord.agent_name ? `${{dailyWord.agent_name}}${{dailyWord.agent_title ? ' · ' + dailyWord.agent_title : ''}}` : 'Daily word unavailable');
+  faithText('faith-dw-tag', dailyWord.available === false ? 'Unavailable' : (dailyWord.domain || 'Daily Word'));
+  faithText('faith-dw-body', dailyWord.word || 'No live daily word is connected right now.');
+  faithText('faith-dw-passage', passage || '');
+  const banner = document.getElementById('faith-daily-word');
+  if (banner) banner.style.borderColor = dailyWord.color || (dailyWord.available === false ? 'rgba(220,120,110,0.34)' : 'var(--hue)');
+
+  faithText('faith-brief-scripture', passage ? `${{passage}}${{dailyWord.word ? '. ' + faithSnippet(dailyWord.word, 110) : ''}}` : 'No current Scripture handoff is connected.');
+  faithText('faith-brief-intention', activePrayer?.text || continuity.focus || 'No active prayer intention is currently connected.');
+  faithText('faith-brief-action', continuity.guidance_lines?.[1] || promptList[1] || 'Wait in God’s presence before the next decision.');
+
+  const sleepSummary = health.available
+    ? `${{health.metrics.sleep_hours ? health.metrics.sleep_hours.toFixed(1) + 'h' : '—'}} · ${{health.readiness.grade || health.readiness.message || 'Estimated'}}`
+    : 'Health source unavailable';
+  const reflectionSummary = passage ? `${{passage}} · ${{faithSnippet(topEntry?.title || dailyWord.domain || 'Reflection in focus', 42)}}` : 'No reflection source connected';
+  const prayerSummary = `${{chronicleContext?.answered_prayer_count ?? 0}} answered · ${{chronicleContext?.active_prayer_count ?? 0}} active`;
+  const heartSummary = chronicleContext?.top_themes?.length ? chronicleContext.top_themes.slice(0, 2).join(' · ') : (continuity.theme || 'No dominant heart theme connected');
+  faithHtml('faith-overnight-summary', [
+    ['Sleep', sleepSummary, health.available ? 'Ready' : 'Unavailable'],
+    ['Reflection', reflectionSummary, passage ? 'Centered' : 'Waiting'],
+    ['Prayer', prayerSummary, activePrayer ? 'Held' : 'Quiet'],
+    ['Heart', heartSummary, continuity.theme ? 'Open' : 'Listening'],
+  ].map(([label, strong, tone]) => `<div class="faith-summary-item"><span>${{escHtml(label)}}</span><strong>${{escHtml(strong)}}</strong><em>${{escHtml(tone)}}</em></div>`).join(''));
+
+  faithText('faith-scripture-title', passage || 'Scripture not connected');
+  faithText('faith-scripture-translation', dailyWord.agent_name || (chronicleContext?.study?.title ? 'Reflection' : 'Unavailable'));
+  faithHtml(
+    'faith-scripture-body',
+    passage || topEntry?.body
+      ? `<span class="verse-number">✦</span>${{escHtml((dailyWord.word || topEntry?.body || '').trim() || 'No Scripture body is connected right now.').replace(/\\n/g, '<br><br>')}}`
+      : '<span class="verse-number">✦</span>No live Scripture reflection is connected right now.'
+  );
+  faithText('faith-insight-copy', continuity.guidance_lines?.[0] || (dailyWord.agent_name ? `${{dailyWord.agent_name}} is calling you toward prayerful attention, not anxious control.` : 'Faith insight is waiting on a connected daily word or recent reflection.'));
+  faithHtml('faith-reflection-prompts', promptList.map(prompt => `<li>${{escHtml(prompt)}}</li>`).join(''));
+
+  faithHtml('faith-journal-list', prayerItems.length ? prayerItems.slice(0, 6).map(item => `
+    <button class="faith-journal-entry" type="button" onclick="faithSelectJournalEntry('${{faithEscapeAttr(String(item.id || ''))}}')" style="text-align:left;cursor:pointer;">
+      <strong>${{escHtml(item.text || 'Prayer request')}}</strong>
+      <span>${{escHtml(`${{faithDateLabel(item.lastPrayedAt || item.dateAnswered || item.dateCreated || '')}} · ${{item.answered ? 'Answered' : 'Active'}}`)}}</span>
+      <p>${{escHtml(item.answerSummary || item.category || 'Prayer request from Chronicle.')}}</p>
+    </button>
+  `).join('') : '<div class="faith-journal-entry"><strong>No prayer journal entries loaded</strong><span>Unavailable</span><p>Chronicle has not surfaced live prayer entries for this view yet.</p></div>');
+  faithHtml('faith-journal-patterns', [
+    `<div class="faith-mini-row"><span>Prayer consistency</span><strong>${{escHtml(String(chroniclePatterns?.writing_streak_days || 0))}}-day rhythm</strong></div>`,
+    `<div class="faith-mini-row"><span>Recent entries</span><strong>${{escHtml(String(chroniclePatterns?.total_recent_entries || 0))}}</strong></div>`,
+    `<div class="faith-mini-row"><span>Answered prayers</span><strong>${{escHtml(String(chroniclePatterns?.prayer_arc?.answered_total || 0))}}</strong></div>`,
+  ].join(''));
+  faithRenderJournalDetail();
+
+  const peopleCount = prayerItems.filter(item => /people|family/i.test(String(item.category || ''))).length;
+  const devotionLine = chronicleContext?.todays_rhythm?.name || 'No shared devotion rhythm connected';
+  const reminderLine = passage ? `Scripture moment: ${{passage}}` : 'No household liturgy reminder connected';
+  faithText('faith-family-summary', continuity.guidance_lines?.[0] || 'Faith is strongest when the household is gently reoriented around shared prayer and a common word.');
+  faithHtml('faith-family-meta', [
+    `<div class="faith-mini-row"><span>Prayer requests</span><strong>${{escHtml(`${{peopleCount}} people-centered · ${{chronicleContext?.active_prayer_count ?? prayerItems.length}} active`)}}</strong></div>`,
+    `<div class="faith-mini-row"><span>Family devotion</span><strong>${{escHtml(devotionLine)}}</strong></div>`,
+    `<div class="faith-mini-row"><span>Household reminder</span><strong>${{escHtml(reminderLine)}}</strong></div>`,
+  ].join(''));
+  faithText('faith-household-liturgy', continuity.guidance_lines?.[1] || promptList[2] || 'No household liturgy suggestion is currently connected.');
+
+  renderFaithRoster();
+
+  const readiness = health.available
+    ? `${{health.readiness.score != null ? health.readiness.score + '%' : '—'}} readiness · ${{health.readiness.grade || 'Estimated'}}`
+    : 'Readiness unavailable';
+  faithText('faith-voice-context', `Spiritual readiness: ${{readiness}}. Recent focus: ${{chronicleContext?.top_themes?.slice(0, 2).join(', ') || continuity.theme || 'not yet connected'}}. Prayer streak: ${{chroniclePatterns?.writing_streak_days || 0}} days.`);
+  faithText('faith-voice-guidance', continuity.guidance_lines?.[0] || continuity.focus || promptList[0] || 'Select a guide and bring the real question you are carrying.');
+  const related = [
+    ...(chronicleContext?.top_themes || []).slice(0, 2).map(theme => `Theme: ${{theme}}`),
+    ...(passage ? [`Study: ${{passage}}`] : []),
+    ...Object.keys(capabilities).slice(0, 1).map(() => 'Chronicle prayer + study handoff ready'),
+  ].slice(0, 3);
+  faithHtml('faith-voice-related', related.length ? related.map(item => `<li>${{escHtml(item)}}</li>`).join('') : '<li>No related faith continuity is connected yet.</li>');
+
+  faithText('faith-chronicle-status', Object.keys(capabilities).length
+    ? 'Faith can launch, delegate, and embed work into the Chronicle app.'
+    : 'Chronicle capability manifest is not available right now.');
+  faithText('faith-chronicle-study', capabilities.study_passage ? 'Passage study and theme tracing can open in Chronicle.' : 'Study handoff unavailable.');
+  faithText('faith-chronicle-prayer', capabilities.prayer_session ? 'Prayer sessions can be launched in Chronicle.' : 'Prayer handoff unavailable.');
+  faithText('faith-chronicle-capture', capabilities.record_spiritual_event ? 'Reflections, gratitude, and faith conversations can be delegated into Chronicle.' : 'Capture handoff unavailable.');
+
+  const notes = Array.isArray(moduleState?.availability_notes) ? moduleState.availability_notes.filter(Boolean) : [];
+  faithRuntimeNote(notes.length ? notes.join(' • ') : 'Faith is live and connected.');
+}}
+
 async function loadFaith() {{
   syncFaithStoryboard();
-  loadFaithChronicleBridge();
-  // Load daily word
+  faithRuntimeNote('Loading Faith…');
   try {{
-    const dw = await fetch('/api/faith/daily-word').then(r => r.json());
-    if (dw && dw.word) {{
-      document.getElementById('faith-dw-agent').textContent = dw.agent_name + ' · ' + dw.agent_title;
-      document.getElementById('faith-dw-body').textContent = dw.word;
-      document.getElementById('faith-dw-passage').textContent = dw.passage || '';
-      const banner = document.getElementById('faith-daily-word');
-      if (banner) banner.style.borderColor = dw.color || 'var(--hue)';
-      const briefScripture = document.getElementById('faith-brief-scripture');
-      if (briefScripture && dw.passage) briefScripture.textContent = dw.passage + '. ' + dw.word;
-      const scriptureTitle = document.getElementById('faith-scripture-title');
-      if (scriptureTitle && dw.passage) scriptureTitle.textContent = dw.passage;
-      const scriptureBody = document.getElementById('faith-scripture-body');
-      if (scriptureBody) scriptureBody.innerHTML = `<span class="verse-number">✦</span>${{escHtml(dw.word)}}`;
-      const insightCopy = document.getElementById('faith-insight-copy');
-      if (insightCopy) insightCopy.textContent = `${{dw.agent_name}} is calling you toward prayerful attention, not anxious control.`;
+    const res = await fetch('/api/faith/module');
+    const payload = await res.json();
+    if (!res.ok || !payload?.ok) {{
+      throw new Error(payload?.detail || payload?.error || `HTTP ${{res.status}}`);
     }}
-  }} catch(e) {{ console.warn('faith daily word', e); }}
-
-  // Load roster
-  try {{
-    const data = await fetch('/api/faith/agents').then(r => r.json());
-    _faithAgents = data.agents || [];
-    renderFaithRoster();
+    renderFaithDesktop(payload);
   }} catch(e) {{
-    document.getElementById('faith-roster').innerHTML = '<div class="empty-state">Faith agents unavailable</div>';
+    console.warn('loadFaith', e);
+    _faithModuleState = {{
+      availability_notes: [`Faith module unavailable: ${{String(e)}}`],
+      agents: [],
+      prayer_items: [],
+      recent_entries: [],
+      chronicle_context: {{}},
+      chronicle_patterns: {{}},
+      continuity: {{}},
+      daily_word: {{ available: false }},
+      health_summary: {{}},
+      chronicle_capabilities: {{}},
+    }};
+    renderFaithDesktop(_faithModuleState);
   }}
 }}
 
-async function loadFaithChronicleBridge() {{
-  try {{
-    const res = await fetch('/api/chronicle/capabilities');
-    const payload = res.ok ? await res.json() : {{}};
-    const capabilities = payload.capabilities || {{}};
-
-    const statusEl = document.getElementById('faith-chronicle-status');
-    if (statusEl) {{
-      statusEl.textContent = Object.keys(capabilities).length
-        ? 'Faith can launch, delegate, and embed work into the Chronicle app.'
-        : 'Chronicle capability manifest is not available right now.';
-    }}
-
-    const studyEl = document.getElementById('faith-chronicle-study');
-    if (studyEl) studyEl.textContent = capabilities.study_passage ? 'Passage study and theme tracing can open in Chronicle.' : 'Study handoff unavailable.';
-
-    const prayerEl = document.getElementById('faith-chronicle-prayer');
-    if (prayerEl) prayerEl.textContent = capabilities.prayer_session ? 'Prayer sessions can be launched in Chronicle.' : 'Prayer handoff unavailable.';
-
-    const captureEl = document.getElementById('faith-chronicle-capture');
-    if (captureEl) captureEl.textContent = capabilities.record_spiritual_event ? 'Reflections, gratitude, and faith conversations can be delegated into Chronicle.' : 'Capture handoff unavailable.';
-  }} catch (e) {{
-    console.warn('faith chronicle bridge', e);
-  }}
+async function refreshFaithDesktop() {{
+  await loadFaith();
 }}
 
 async function sendFaithToChronicle({{ capability, intentFamily, mode = 'launch', context = {{}}, successMessage = 'Sent to Chronicle', openApp = true }}) {{
@@ -33296,25 +33515,6 @@ async function saveFaithConversationToChronicle() {{
   }}
 }}
 
-function renderFaithRoster() {{
-  const el = document.getElementById('faith-roster');
-  if (!el) return;
-  if (!_faithAgents.length) {{
-    el.innerHTML = '<div class="empty-state">No agents found</div>';
-    return;
-  }}
-  el.innerHTML = _faithAgents.map(a => `
-    <div class="faith-agent-card ${{_faithActiveAgent?.id === a.id ? 'active' : ''}}"
-         style="--agent-color:${{a.color}}"
-         onclick="openFaithChat('${{a.id}}')">
-      <div class="faith-agent-avatar" style="background:${{a.color}}">${{a.initials}}</div>
-      <div class="faith-agent-name">${{a.name}}</div>
-      <div class="faith-agent-title">${{a.title}}</div>
-      <div class="faith-agent-desc">${{a.description}}</div>
-    </div>
-  `).join('');
-}}
-
 function openFaithChat(agentId) {{
   const agent = _faithAgents.find(a => a.id === agentId);
   if (!agent) return;
@@ -33375,12 +33575,63 @@ function faithRenderMessages() {{
 
 function faithMarkdownToHtml(md) {{
   return md
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/\\*\\*(.+?)\\*\\*/g, '<strong>$1</strong>')
     .replace(/\\*(.+?)\\*/g, '<em>$1</em>')
     .replace(/^#{{1,3}} (.+)$/gm, '<strong>$1</strong>')
     .replace(/\\n{{2,}}/g, '</p><p>')
     .replace(/\\n/g, '<br>')
     .replace(/^(.+)$/, '<p>$1</p>');
+}}
+
+async function faithMarkPrayerPrayed(prayerId, title) {{
+  if (!prayerId) return;
+  faithRuntimeNote(`Marking "${{title}}" as prayed…`);
+  try {{
+    const existing = Array.isArray(_faithModuleState?.prayer_items) ? _faithModuleState.prayer_items.find(item => String(item.id || '') === String(prayerId)) : null;
+    const response = await fetch('/api/chronicle/update-prayer', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        id: prayerId,
+        title,
+        timesPrayed: Number(existing?.timesPrayed || 0) + 1,
+        lastPrayedAt: new Date().toISOString().slice(0, 10),
+      }}),
+    }});
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok) throw new Error(payload?.detail || `HTTP ${{response.status}}`);
+    faithRuntimeNote(`Prayer updated for "${{title}}".`);
+    await loadFaith();
+  }} catch (error) {{
+    faithRuntimeNote(`Could not update prayer: ${{String(error)}}`);
+  }}
+}}
+
+async function faithMarkPrayerAnswered(prayerId, title) {{
+  if (!prayerId) return;
+  faithRuntimeNote(`Marking "${{title}}" as answered…`);
+  try {{
+    const response = await fetch('/api/chronicle/update-prayer', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        id: prayerId,
+        title,
+        answered: true,
+        dateAnswered: new Date().toISOString().slice(0, 10),
+        answerSummary: `Marked answered from Faith for "${{title}}".`,
+      }}),
+    }});
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok) throw new Error(payload?.detail || `HTTP ${{response.status}}`);
+    faithRuntimeNote(`Marked "${{title}}" answered.`);
+    await loadFaith();
+  }} catch (error) {{
+    faithRuntimeNote(`Could not mark prayer answered: ${{String(error)}}`);
+  }}
 }}
 
 async function faithSend() {{
