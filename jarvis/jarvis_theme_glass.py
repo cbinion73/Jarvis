@@ -15973,21 +15973,592 @@ body::after {{
 /* ═══════════════════════════════════════════════════════════════════
    CALENDAR VIEW
 ═══════════════════════════════════════════════════════════════════ */
-.event-list {{ display:flex; flex-direction:column; gap:2px; padding:4px 0; }}
-.event-item {{ display:grid; grid-template-columns:80px 1fr auto; gap:12px; align-items:center; padding:10px 16px; border-radius:8px; transition:background 0.15s; }}
-.event-item:hover {{ background:rgba(0,0,0,0.03); }}
-.event-time-col {{ display:flex; flex-direction:column; gap:4px; }}
-.event-time {{ font-size:11px; font-family:var(--font-mono); color:var(--text-3); font-weight:500; }}
-.event-title {{ font-size:14px; font-weight:500; color:var(--text-1); }}
-.event-location {{ font-size:11px; color:var(--text-3); margin-top:2px; }}
-.event-duration {{ font-size:11px; color:var(--text-3); font-family:var(--font-mono); white-space:nowrap; }}
-.event-source-dot {{ width:6px; height:6px; border-radius:50%; margin-top:2px; flex-shrink:0; }}
-.event-source-dot.google {{ background:#4285F4; }}
-.event-source-dot.outlook {{ background:#0078D4; }}
-.event-source-dot.cozi {{ background:#7C3AED; }}
-.cal-legend {{ display:flex; gap:16px; margin-top:16px; padding:12px; flex-wrap:wrap; }}
-.legend-item {{ font-size:11px; color:var(--text-3); display:flex; align-items:center; gap:6px; }}
-.empty-state {{ padding:24px 16px; text-align:center; color:var(--text-3); font-size:12px; font-family:var(--font-mono); }}
+.calendar-view {{
+  --calendar-blue:#48a9ff;
+  --calendar-cyan:#69d2ff;
+  --calendar-amber:#f0b25a;
+  --calendar-green:#84d98d;
+  --calendar-purple:#af87ff;
+  --calendar-red:#ef7f7f;
+  --calendar-ink:#edf5ff;
+  --calendar-ink-soft:rgba(237,245,255,0.76);
+  --calendar-ink-faint:rgba(237,245,255,0.48);
+  --calendar-line:rgba(72,169,255,0.18);
+  color:var(--calendar-ink);
+}}
+.calendar-view .view-title {{ color:var(--calendar-ink); }}
+.calendar-view .view-title span {{ color:var(--calendar-blue); }}
+.calendar-view .view-title-line {{ background:linear-gradient(90deg, var(--calendar-blue), rgba(72,169,255,0)); }}
+.calendar-view::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:28px;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at top left, rgba(240,178,90,0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(72,169,255,0.08), transparent 30%),
+    radial-gradient(circle at bottom center, rgba(105,210,255,0.05), transparent 34%);
+}}
+.calendar-header {{
+  display:grid;
+  grid-template-columns:minmax(0, 1.25fr) minmax(0, 1.6fr) auto;
+  gap:18px;
+  align-items:start;
+  margin-bottom:18px;
+}}
+.calendar-subtitle {{
+  margin-top:10px;
+  max-width:780px;
+  color:var(--calendar-ink-soft);
+  font-size:15px;
+  line-height:1.64;
+}}
+.calendar-summary-strip {{
+  display:grid;
+  grid-template-columns:1.3fr repeat(6, minmax(0, 1fr));
+  gap:10px;
+}}
+.calendar-summary-card {{
+  border-radius:18px;
+  border:1px solid var(--calendar-line);
+  background:linear-gradient(180deg, rgba(12,17,26,0.96), rgba(8,11,17,0.98));
+  padding:14px 16px;
+  min-height:84px;
+}}
+.calendar-summary-card strong {{
+  display:block;
+  font-size:14px;
+  color:var(--calendar-ink-faint);
+  margin-bottom:8px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}}
+.calendar-summary-card span {{
+  display:block;
+  color:var(--calendar-ink);
+  font-size:29px;
+  font-weight:700;
+}}
+.calendar-summary-card em {{
+  display:block;
+  margin-top:6px;
+  color:var(--calendar-ink-soft);
+  font-size:12px;
+  font-style:normal;
+}}
+.calendar-summary-card.focus {{
+  border-color:rgba(240,178,90,0.32);
+  background:linear-gradient(180deg, rgba(25,18,10,0.96), rgba(9,10,14,0.98));
+}}
+.calendar-motto {{
+  max-width:260px;
+  padding:16px 18px;
+  border-radius:18px;
+  border:1px solid var(--calendar-line);
+  background:linear-gradient(180deg, rgba(12,17,26,0.96), rgba(8,11,17,0.98));
+}}
+.calendar-motto strong {{
+  display:block;
+  color:var(--calendar-amber);
+  font-size:18px;
+  line-height:1.45;
+}}
+.calendar-motto span {{
+  display:block;
+  margin-top:6px;
+  color:var(--calendar-ink-soft);
+  font-size:12px;
+}}
+.calendar-desktop {{
+  display:grid;
+  grid-template-columns:220px minmax(0, 1fr);
+  gap:0;
+  border-radius:28px;
+  overflow:hidden;
+  border:1px solid var(--calendar-line);
+  background:linear-gradient(180deg, rgba(9,13,19,0.98), rgba(6,8,12,0.995));
+  box-shadow:0 30px 90px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.calendar-sidebar {{
+  padding:18px 14px;
+  border-right:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(7,10,15,0.98), rgba(5,7,11,1));
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}}
+.calendar-sidebar-brand {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 12px 14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+}}
+.calendar-sidebar-brand strong {{
+  display:block;
+  color:var(--calendar-ink);
+  font-size:22px;
+  letter-spacing:.10em;
+}}
+.calendar-sidebar-brand span {{
+  display:block;
+  margin-top:4px;
+  color:var(--calendar-ink-faint);
+  font-size:12px;
+}}
+.calendar-sidebar-mark {{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  border:1px solid rgba(72,169,255,0.30);
+  display:grid;
+  place-items:center;
+  color:var(--calendar-cyan);
+  font-size:18px;
+  box-shadow:0 0 22px rgba(72,169,255,0.22);
+}}
+.calendar-sidebar-nav {{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}}
+.calendar-sidebar-item {{
+  padding:11px 12px;
+  border-radius:14px;
+  color:var(--calendar-ink-soft);
+  font-size:13px;
+  border:1px solid rgba(255,255,255,0.04);
+  background:rgba(255,255,255,0.015);
+}}
+.calendar-sidebar-item.active {{
+  color:var(--calendar-ink);
+  border-color:rgba(72,169,255,0.28);
+  background:rgba(72,169,255,0.10);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.calendar-sidebar-status {{
+  margin-top:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:14px 12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+}}
+.calendar-sidebar-status strong {{
+  color:var(--calendar-amber);
+  font-size:13px;
+}}
+.calendar-sidebar-list {{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}}
+.calendar-sidebar-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-size:12px;
+  color:var(--calendar-ink-soft);
+}}
+.calendar-sidebar-row b {{
+  color:var(--calendar-green);
+  font-weight:600;
+}}
+.calendar-sidebar-btn {{
+  border-radius:12px;
+  border:1px solid rgba(72,169,255,0.20);
+  background:rgba(72,169,255,0.08);
+  color:var(--calendar-cyan);
+  font-size:12px;
+  padding:10px 12px;
+  cursor:pointer;
+}}
+.calendar-main {{
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}}
+.calendar-desktop-topbar {{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:flex-start;
+}}
+.calendar-nav-status {{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.calendar-nav-status strong {{
+  color:var(--calendar-ink);
+  font-size:15px;
+}}
+.calendar-nav-status span {{
+  color:var(--calendar-ink-faint);
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}}
+.calendar-nav-actions {{
+  display:flex;
+  gap:8px;
+}}
+.calendar-nav-btn {{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--calendar-ink);
+  font-size:18px;
+}}
+.calendar-nav-btn:disabled {{
+  opacity:0.35;
+  cursor:not-allowed;
+}}
+.calendar-grid {{
+  display:grid;
+  grid-template-columns:320px minmax(0, 1.55fr) 300px;
+  gap:16px;
+}}
+.calendar-column,
+.calendar-panel {{
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:linear-gradient(180deg, rgba(12,17,26,0.96), rgba(8,11,17,0.98));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.calendar-panel {{
+  padding:16px;
+}}
+.calendar-panel-header {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+  margin-bottom:14px;
+}}
+.calendar-panel-title {{
+  display:block;
+  color:var(--calendar-ink);
+  font-size:23px;
+  letter-spacing:.04em;
+}}
+.calendar-panel-subtitle {{
+  display:block;
+  margin-top:3px;
+  color:var(--calendar-ink-faint);
+  font-size:12px;
+}}
+.calendar-chip-btn {{
+  padding:8px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--calendar-ink-soft);
+  font-size:12px;
+}}
+.calendar-today-list,
+.calendar-attention-list,
+.calendar-source-list,
+.calendar-highlight-list,
+.calendar-actions-grid,
+.calendar-insight-list {{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}}
+.calendar-today-item,
+.calendar-attention-item,
+.calendar-source-item,
+.calendar-highlight-item,
+.calendar-insight-item {{
+  display:grid;
+  gap:10px;
+  padding:12px 13px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+}}
+.calendar-today-item {{
+  grid-template-columns:58px 1fr auto;
+  align-items:center;
+}}
+.calendar-time-pill {{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  color:var(--calendar-cyan);
+  font-size:11px;
+  font-family:var(--font-mono);
+}}
+.calendar-item-title {{
+  color:var(--calendar-ink);
+  font-size:14px;
+  font-weight:600;
+}}
+.calendar-item-meta {{
+  color:var(--calendar-ink-faint);
+  font-size:11px;
+  line-height:1.45;
+}}
+.calendar-pill {{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 9px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,0.08);
+}}
+.calendar-pill.high {{ color:var(--calendar-red); border-color:rgba(239,127,127,0.28); background:rgba(239,127,127,0.08); }}
+.calendar-pill.medium {{ color:var(--calendar-amber); border-color:rgba(240,178,90,0.24); background:rgba(240,178,90,0.08); }}
+.calendar-pill.low,
+.calendar-pill.good {{ color:var(--calendar-green); border-color:rgba(132,217,141,0.26); background:rgba(132,217,141,0.08); }}
+.calendar-pill.info {{ color:var(--calendar-cyan); border-color:rgba(72,169,255,0.28); background:rgba(72,169,255,0.08); }}
+.calendar-insight-grid {{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}}
+.calendar-insight-card {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  padding:14px;
+}}
+.calendar-insight-card strong {{
+  display:block;
+  color:var(--calendar-ink);
+  font-size:14px;
+}}
+.calendar-insight-card span {{
+  display:block;
+  margin-top:6px;
+  color:var(--calendar-ink-faint);
+  font-size:12px;
+  line-height:1.45;
+}}
+.calendar-week-shell {{
+  padding:16px;
+}}
+.calendar-week-topbar {{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:center;
+  margin-bottom:14px;
+}}
+.calendar-week-topbar strong {{
+  color:var(--calendar-ink);
+  font-size:20px;
+}}
+.calendar-week-topbar span {{
+  color:var(--calendar-ink-faint);
+  font-size:12px;
+}}
+.calendar-week-grid {{
+  display:grid;
+  grid-template-columns:repeat(7, minmax(0, 1fr));
+  gap:10px;
+  min-height:580px;
+}}
+.calendar-day-column {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.05);
+  background:rgba(255,255,255,0.015);
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}}
+.calendar-day-head {{
+  padding-bottom:8px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}}
+.calendar-day-head strong {{
+  display:block;
+  color:var(--calendar-ink);
+  font-size:16px;
+}}
+.calendar-day-head span {{
+  display:block;
+  margin-top:3px;
+  color:var(--calendar-ink-faint);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}}
+.calendar-event-block {{
+  border-radius:16px;
+  padding:10px;
+  color:#f7fbff;
+  border:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(27,52,82,0.95), rgba(15,26,41,0.98));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.calendar-event-block.family {{ background:linear-gradient(180deg, rgba(38,92,63,0.95), rgba(17,41,28,0.98)); }}
+.calendar-event-block.personal {{ background:linear-gradient(180deg, rgba(74,49,100,0.95), rgba(30,19,41,0.98)); }}
+.calendar-event-block.travel {{ background:linear-gradient(180deg, rgba(95,61,23,0.96), rgba(41,26,11,0.98)); }}
+.calendar-event-block.focus {{ background:linear-gradient(180deg, rgba(18,79,125,0.96), rgba(14,34,57,0.98)); }}
+.calendar-event-block strong {{
+  display:block;
+  color:#f4fbff;
+  font-size:12px;
+  line-height:1.35;
+}}
+.calendar-event-block span {{
+  display:block;
+  margin-top:6px;
+  color:rgba(244,251,255,0.74);
+  font-size:10px;
+  line-height:1.35;
+}}
+.calendar-event-block b {{
+  display:inline-flex;
+  margin-top:8px;
+  font-size:10px;
+  font-weight:700;
+  color:#f7d79e;
+}}
+.calendar-health-ring {{
+  width:194px;
+  height:194px;
+  border-radius:50%;
+  margin:0 auto 14px;
+  position:relative;
+  background:conic-gradient(var(--calendar-green) 0 72%, var(--calendar-purple) 72% 86%, var(--calendar-amber) 86% 94%, rgba(255,255,255,0.08) 94% 100%);
+}}
+.calendar-health-ring::after {{
+  content:"";
+  position:absolute;
+  inset:18px;
+  border-radius:50%;
+  background:rgba(7,10,15,0.98);
+  border:1px solid rgba(255,255,255,0.06);
+}}
+.calendar-health-center {{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:grid;
+  place-items:center;
+  text-align:center;
+}}
+.calendar-health-center strong {{
+  display:block;
+  color:var(--calendar-ink);
+  font-size:36px;
+}}
+.calendar-health-center span {{
+  display:block;
+  color:var(--calendar-ink-faint);
+  font-size:12px;
+}}
+.calendar-health-list {{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}}
+.calendar-health-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  color:var(--calendar-ink-soft);
+  font-size:12px;
+}}
+.calendar-health-row strong {{
+  color:var(--calendar-ink);
+}}
+.calendar-quick-grid {{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:10px;
+}}
+.calendar-quick-btn {{
+  min-height:74px;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:rgba(255,255,255,0.02);
+  color:var(--calendar-ink);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  gap:6px;
+}}
+.calendar-quick-btn span {{
+  color:var(--calendar-ink-faint);
+  font-size:11px;
+}}
+.calendar-bottom-grid {{
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:16px;
+}}
+.calendar-highlight-strip {{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:10px;
+}}
+.calendar-highlight-card {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  padding:12px;
+}}
+.calendar-highlight-card strong {{
+  display:block;
+  color:var(--calendar-amber);
+  font-size:12px;
+}}
+.calendar-highlight-card span {{
+  display:block;
+  margin-top:7px;
+  color:var(--calendar-ink);
+  font-size:13px;
+  line-height:1.45;
+}}
+.calendar-highlight-card em {{
+  display:block;
+  margin-top:8px;
+  color:var(--calendar-ink-faint);
+  font-style:normal;
+  font-size:11px;
+}}
+.calendar-empty {{
+  padding:16px;
+  border-radius:16px;
+  border:1px dashed rgba(255,255,255,0.12);
+  color:var(--calendar-ink-faint);
+  text-align:center;
+  font-size:12px;
+}}
+@media (max-width: 1580px) {{
+  .calendar-header,
+  .calendar-grid,
+  .calendar-bottom-grid,
+  .calendar-summary-strip {{ grid-template-columns:1fr; }}
+  .calendar-desktop {{ grid-template-columns:1fr; }}
+  .calendar-sidebar {{ border-right:none; border-bottom:1px solid rgba(255,255,255,0.06); }}
+}}
+@media (max-width: 1080px) {{
+  .calendar-week-grid,
+  .calendar-highlight-strip,
+  .calendar-insight-grid,
+  .calendar-quick-grid {{ grid-template-columns:1fr; }}
+}}
 
 /* ═══════════════════════════════════════════════════════════════════
    HOME PROJECTS (in publishing view)
@@ -22909,47 +23480,228 @@ body::after {{
   </div>
 
   <!-- ── CALENDAR ───────────────────────────────────────────── -->
-  <div id="view-calendar" class="view" style="display:none">
-    <div class="view-header">
+  <div id="view-calendar" class="view calendar-view" style="display:none">
+    <div class="calendar-header">
       <div>
-        <div class="view-title">CALENDAR<div class="view-title-line"></div></div>
-        <div class="view-sub" id="calendarDateLabel">Today</div>
+        <div class="view-title">JARVIS <span>CALENDAR</span><div class="view-title-line"></div></div>
+        <div class="calendar-subtitle">Your time. Your priorities. Perfectly orchestrated. A protected desktop planning surface for focus blocks, family rhythm, route-sensitive commitments, and decision-ready schedule intelligence.</div>
       </div>
-      <div class="view-actions">
-        <button class="btn-primary" onclick="syncAll()">Sync ↻</button>
+      <div class="calendar-summary-strip">
+        <div class="calendar-summary-card focus">
+          <strong>Today's Focus</strong>
+          <span id="calendar-focus-title">Loading focus lane…</span>
+          <em id="calendar-focus-sub">Finding the best protected block.</em>
+        </div>
+        <div class="calendar-summary-card">
+          <strong>Scheduled</strong>
+          <span id="calendar-stat-scheduled">—</span>
+          <em id="calendar-stat-scheduled-sub">events</em>
+        </div>
+        <div class="calendar-summary-card">
+          <strong>Focus Time</strong>
+          <span id="calendar-stat-focus">—</span>
+          <em id="calendar-stat-focus-sub">hours</em>
+        </div>
+        <div class="calendar-summary-card">
+          <strong>Meeting Load</strong>
+          <span id="calendar-stat-meetings">—</span>
+          <em id="calendar-stat-meetings-sub">balanced</em>
+        </div>
+        <div class="calendar-summary-card">
+          <strong>Travel Time</strong>
+          <span id="calendar-stat-travel">—</span>
+          <em id="calendar-stat-travel-sub">route-sensitive</em>
+        </div>
+        <div class="calendar-summary-card">
+          <strong>Energy Outlook</strong>
+          <span id="calendar-stat-energy">—</span>
+          <em id="calendar-stat-energy-sub">peak window</em>
+        </div>
+        <div class="calendar-summary-card">
+          <strong>Schedule Health</strong>
+          <span id="calendar-stat-health">—</span>
+          <em id="calendar-stat-health-sub">well balanced</em>
+        </div>
+      </div>
+      <div class="calendar-motto">
+        <strong>"A well-planned day protects your calling and your family."</strong>
+        <span id="calendarDateLabel">Loading date…</span>
       </div>
     </div>
 
-    <!-- Today's agenda -->
-    <div class="card card-tactical" style="margin-bottom:16px">
-      <div class="card-hdr">
-        <span class="card-title">TODAY'S AGENDA</span>
-        <span class="card-badge" id="todayEventCount">0 events</span>
-      </div>
-      <div id="todayEventList" class="event-list" style="padding:4px 0 8px;"></div>
-    </div>
+    <div class="calendar-desktop">
+      <aside class="calendar-sidebar">
+        <div class="calendar-sidebar-brand">
+          <div>
+            <strong>JARVIS</strong>
+            <span>Calendar</span>
+          </div>
+          <div class="calendar-sidebar-mark">⌁</div>
+        </div>
+        <div class="calendar-sidebar-nav">
+          <div class="calendar-sidebar-item active">⌂ Home</div>
+          <div class="calendar-sidebar-item">◷ Daily Brief</div>
+          <div class="calendar-sidebar-item">◫ Mission Board</div>
+          <div class="calendar-sidebar-item">⇄ Travel & Route</div>
+          <div class="calendar-sidebar-item">◉ Family Calendar</div>
+          <div class="calendar-sidebar-item">⧉ Focus Windows</div>
+          <div class="calendar-sidebar-item">☰ Preparation Queue</div>
+          <div class="calendar-sidebar-item">⚙ Settings</div>
+        </div>
+        <div class="calendar-sidebar-status">
+          <strong>Calendar Status</strong>
+          <div class="calendar-sidebar-list">
+            <div class="calendar-sidebar-row"><span>Sync Status</span><b id="calendar-sidebar-sync">Checking…</b></div>
+            <div class="calendar-sidebar-row"><span>Sources</span><b id="calendar-sidebar-sources">0 connected</b></div>
+            <div class="calendar-sidebar-row"><span>Conflicts</span><b id="calendar-sidebar-conflicts">0</b></div>
+            <div class="calendar-sidebar-row"><span>Last Sync</span><b id="calendar-sidebar-last-sync">—</b></div>
+          </div>
+          <button class="calendar-sidebar-btn" onclick="syncAll()">Calendar Settings →</button>
+        </div>
+      </aside>
 
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-hdr">
-        <span class="card-title">JARVIS WORKFLOW</span>
-        <span class="card-badge" id="calendarWorkflowSync">—</span>
-      </div>
-      <div id="calendarWorkflowAttention" style="padding:4px 0 12px;"></div>
-      <div id="calendarWorkflowRoutes" style="padding:0 0 12px;"></div>
-      <div id="calendarWorkflowPrep" style="padding:0 0 8px;"></div>
-    </div>
+      <main class="calendar-main">
+        <div class="calendar-desktop-topbar">
+          <div class="calendar-nav-status">
+            <div>
+              <strong>Desktop Experience</strong>
+              <span id="calendar-page-count">Page 1 of 1</span>
+            </div>
+            <div>
+              <strong id="calendar-page-label">Week View</strong>
+              <span>Live schedule intelligence</span>
+            </div>
+          </div>
+          <div class="calendar-nav-actions">
+            <button class="calendar-nav-btn" disabled aria-label="Previous calendar page">←</button>
+            <button class="calendar-nav-btn" disabled aria-label="Next calendar page">→</button>
+          </div>
+        </div>
 
-    <!-- Upcoming events -->
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-hdr"><span class="card-title">NEXT 7 DAYS</span></div>
-      <div id="upcomingEventList" class="event-list" style="padding:4px 0 8px;"></div>
-    </div>
+        <div class="calendar-grid">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <section class="calendar-panel">
+              <div class="calendar-panel-header">
+                <div>
+                  <strong class="calendar-panel-title">1. Today At A Glance</strong>
+                  <span class="calendar-panel-subtitle">The operating picture for the day.</span>
+                </div>
+                <button class="calendar-chip-btn" onclick="loadHomeCalendar()">Refresh</button>
+              </div>
+              <div class="calendar-today-list" id="calendarTodayList"></div>
+            </section>
 
-    <!-- Source legend -->
-    <div class="cal-legend">
-      <span class="legend-item"><span class="source-dot" style="background:#4285F4;display:inline-block;width:8px;height:8px;border-radius:50%;"></span> Google Calendar</span>
-      <span class="legend-item"><span class="source-dot" style="background:#0078D4;display:inline-block;width:8px;height:8px;border-radius:50%;"></span> Outlook</span>
-      <span class="legend-item"><span class="source-dot" style="background:#7C3AED;display:inline-block;width:8px;height:8px;border-radius:50%;"></span> Cozi Family</span>
+            <section class="calendar-panel">
+              <div class="calendar-panel-header">
+                <div>
+                  <strong class="calendar-panel-title">2. Calendar Intelligence</strong>
+                  <span class="calendar-panel-subtitle">Insights protecting the best version of your day.</span>
+                </div>
+              </div>
+              <div class="calendar-insight-grid" id="calendarInsightGrid"></div>
+            </section>
+          </div>
+
+          <section class="calendar-column">
+            <div class="calendar-week-shell">
+              <div class="calendar-week-topbar">
+                <div>
+                  <strong>3. Week View</strong>
+                  <span id="calendarWeekLabel">Loading week…</span>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <button class="calendar-chip-btn" onclick="calendarToast('Day-mode switching is queued next.')">Day</button>
+                  <button class="calendar-chip-btn" onclick="calendarToast('Week view is active.')">Week</button>
+                  <button class="calendar-chip-btn" onclick="calendarToast('Month view is queued next.')">Month</button>
+                  <button class="calendar-chip-btn" onclick="switchView('navigate')">Route</button>
+                </div>
+              </div>
+              <div class="calendar-week-grid" id="calendarWeekGrid"></div>
+            </div>
+          </section>
+
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <section class="calendar-panel">
+              <div class="calendar-panel-header">
+                <div>
+                  <strong class="calendar-panel-title">5. Attention Routing</strong>
+                  <span class="calendar-panel-subtitle">What needs your attention and when.</span>
+                </div>
+                <button class="calendar-chip-btn" onclick="switchView('notifications')">Review All Items →</button>
+              </div>
+              <div class="calendar-attention-list" id="calendarAttentionList"></div>
+            </section>
+
+            <section class="calendar-panel">
+              <div class="calendar-panel-header">
+                <div>
+                  <strong class="calendar-panel-title">6. Calendar Health</strong>
+                  <span class="calendar-panel-subtitle">How protected and balanced your schedule feels.</span>
+                </div>
+              </div>
+              <div class="calendar-health-ring" id="calendarHealthRing">
+                <div class="calendar-health-center">
+                  <div>
+                    <strong id="calendarHealthScore">—</strong>
+                    <span id="calendarHealthGrade">Healthy</span>
+                  </div>
+                </div>
+              </div>
+              <div class="calendar-health-list" id="calendarHealthList"></div>
+            </section>
+
+            <section class="calendar-panel">
+              <div class="calendar-panel-header">
+                <div>
+                  <strong class="calendar-panel-title">7. Quick Actions</strong>
+                  <span class="calendar-panel-subtitle">Control the schedule without leaving the command surface.</span>
+                </div>
+              </div>
+              <div class="calendar-quick-grid">
+                <button class="calendar-quick-btn" onclick="calendarToast('Add event flow is queued next.')">Add Event<span>Create a commitment</span></button>
+                <button class="calendar-quick-btn" onclick="calendarToast('Focus block automation is queued next.')">Focus Block<span>Protect deep work</span></button>
+                <button class="calendar-quick-btn" onclick="switchView('navigate')">Travel Plan<span>Open routing intelligence</span></button>
+                <button class="calendar-quick-btn" onclick="calendarToast('Find-time flow is queued next.')">Find Time<span>Resolve the right slot</span></button>
+                <button class="calendar-quick-btn" onclick="calendarToast('Reschedule flow is queued next.')">Reschedule<span>Shift with context</span></button>
+                <button class="calendar-quick-btn" onclick="syncAll()">Sync Sources<span>Refresh connected calendars</span></button>
+              </div>
+            </section>
+
+            <section class="calendar-panel">
+              <div class="calendar-panel-header">
+                <div>
+                  <strong class="calendar-panel-title">8. Calendar Sources</strong>
+                  <span class="calendar-panel-subtitle">The calendars behind the orchestration.</span>
+                </div>
+              </div>
+              <div class="calendar-source-list" id="calendarSourceList"></div>
+            </section>
+          </div>
+        </div>
+
+        <div class="calendar-bottom-grid">
+          <section class="calendar-panel">
+            <div class="calendar-panel-header">
+              <div>
+                <strong class="calendar-panel-title">4. Upcoming Highlights</strong>
+                <span class="calendar-panel-subtitle">The next seven days at a glance.</span>
+              </div>
+              <button class="calendar-chip-btn" onclick="switchView('journey')">View Full Timeline →</button>
+            </div>
+            <div class="calendar-highlight-strip" id="calendarHighlightStrip"></div>
+          </section>
+
+          <section class="calendar-panel">
+            <div class="calendar-panel-header">
+              <div>
+                <strong class="calendar-panel-title">Preparation Queue</strong>
+                <span class="calendar-panel-subtitle">What JARVIS can stage before the day gets noisy.</span>
+              </div>
+            </div>
+            <div class="calendar-insight-list" id="calendarPrepQueue"></div>
+          </section>
+        </div>
+      </main>
     </div>
   </div>
 
@@ -30860,6 +31612,10 @@ async function loadHomeEmail(unreadOnly) {{
   }} catch(e) {{ console.error('email load failed', e); }}
 }}
 
+let _calendarToday = [];
+let _calendarUpcoming = [];
+let _calendarWorkflow = {{}};
+
 async function loadHomeCalendar() {{
   try {{
     const [todayRes, upcomingRes, workflowRes] = await Promise.all([
@@ -30867,73 +31623,348 @@ async function loadHomeCalendar() {{
       fetch('/api/home/calendar/upcoming?days=7'),
       fetch('/api/apple/calendar/state')
     ]);
-    if (todayRes.ok) {{
-      const d = await todayRes.json();
-      const dateLabel = document.getElementById('calendarDateLabel');
-      if (dateLabel && d.date) dateLabel.textContent = d.date;
-      const count = d.event_count || 0;
-      setEl('todayEventCount', count + ' event' + (count !== 1 ? 's' : ''));
-      renderEventList('todayEventList', d.events || []);
-    }}
-    if (upcomingRes.ok) {{
-      const d = await upcomingRes.json();
-      renderEventList('upcomingEventList', d.events || []);
-    }}
-    if (workflowRes.ok) {{
-      const payload = await workflowRes.json();
-      renderCalendarWorkflow(((payload || {{}}).data || {{}}));
-    }}
-  }} catch(e) {{ console.error('calendar load failed', e); }}
+    const todayPayload = todayRes.ok ? await todayRes.json() : {{}};
+    const upcomingPayload = upcomingRes.ok ? await upcomingRes.json() : {{}};
+    const workflowPayload = workflowRes.ok ? await workflowRes.json() : {{}};
+    _calendarToday = Array.isArray(todayPayload.events) ? todayPayload.events : [];
+    _calendarUpcoming = Array.isArray(upcomingPayload.events) ? upcomingPayload.events : [];
+    _calendarWorkflow = ((workflowPayload || {{}}).data || {{}});
+    renderCalendarDesktop(todayPayload, upcomingPayload, _calendarWorkflow);
+  }} catch(e) {{
+    console.error('calendar load failed', e);
+  }}
 }}
 
-function renderCalendarWorkflow(data) {{
-  const syncEl = document.getElementById('calendarWorkflowSync');
-  const attentionEl = document.getElementById('calendarWorkflowAttention');
-  const routeEl = document.getElementById('calendarWorkflowRoutes');
-  const prepEl = document.getElementById('calendarWorkflowPrep');
-  if (!syncEl || !attentionEl || !routeEl || !prepEl) return;
+function calendarToast(message) {{
+  showToast(message || 'Calendar action queued next.', 'info');
+}}
 
-  const attentionFlags = Array.isArray(data.attention_flags) ? data.attention_flags : [];
-  const routeSensitive = Array.isArray(data.route_sensitive_events) ? data.route_sensitive_events : [];
-  const prepCues = Array.isArray(data.preparation_cues) ? data.preparation_cues : [];
-  syncEl.textContent = data.synced_at ? fmtLocalTime(data.synced_at, {{short:true}}) : 'Not synced';
+function renderCalendarDesktop(todayPayload, upcomingPayload, workflowData) {{
+  const todayEvents = Array.isArray(todayPayload.events) ? todayPayload.events : [];
+  const upcomingEvents = Array.isArray(upcomingPayload.events) ? upcomingPayload.events : [];
+  const workflow = workflowData || {{}};
+  const attentionFlags = Array.isArray(workflow.attention_flags) ? workflow.attention_flags : [];
+  const routeSensitive = Array.isArray(workflow.route_sensitive_events) ? workflow.route_sensitive_events : [];
+  const prepCues = Array.isArray(workflow.preparation_cues) ? workflow.preparation_cues : [];
+  const allEvents = [...todayEvents, ...upcomingEvents];
 
-  attentionEl.innerHTML = attentionFlags.length ? attentionFlags.slice(0, 3).map(flag => `
-    <div class="list-row">
-      <div style="flex:1;min-width:0;">
-        <div class="list-row-name">${{escHtml(flag.title || 'Attention flag')}}</div>
-        <div class="list-row-sub">${{escHtml(flag.detail || '')}}</div>
+  const focusEvent = calendarPickFocusEvent(todayEvents);
+  const focusHours = calendarEventHours(todayEvents.filter(ev => calendarBucket(ev) === 'focus'));
+  const meetingHours = calendarEventHours(todayEvents.filter(ev => calendarBucket(ev) === 'meeting'));
+  const totalHours = Math.max(1, calendarEventHours(todayEvents));
+  const travelMinutes = Math.max(routeSensitive.length * 20, todayEvents.filter(ev => calendarBucket(ev) === 'travel').length * 25);
+  const healthScore = Math.max(68, Math.min(96, 94 - attentionFlags.length * 8 - Math.min(routeSensitive.length, 3) * 3 + Math.min(prepCues.length, 4) * 2));
+  const familyCount = allEvents.filter(ev => calendarBucket(ev) === 'family').length;
+  const meetingLoadPct = Math.max(8, Math.min(92, Math.round((meetingHours / totalHours) * 100)));
+  const sourceCounts = calendarSourceCounts(allEvents);
+  const focusWindow = focusEvent ? calendarEventLabel(focusEvent) : 'Protected window pending';
+  const dateText = todayPayload.date ? calendarPrettyDate(todayPayload.date) : 'Today';
+
+  setEl('calendarDateLabel', dateText);
+  setEl('calendar-focus-title', focusEvent ? (focusEvent.title || 'Protected focus lane') : 'Create a protected focus block');
+  setEl('calendar-focus-sub', focusEvent
+    ? `${{focusWindow}} · ${{calendarBucketLabel(calendarBucket(focusEvent))}}`
+    : 'Today still has room to be shaped intentionally.');
+  setEl('calendar-stat-scheduled', String(todayEvents.length || 0));
+  setEl('calendar-stat-scheduled-sub', todayEvents.length === 1 ? 'event' : 'events');
+  setEl('calendar-stat-focus', `${{focusHours.toFixed(1)}}h`);
+  setEl('calendar-stat-focus-sub', focusEvent ? focusWindow : 'No explicit focus block');
+  setEl('calendar-stat-meetings', `${{meetingLoadPct}}%`);
+  setEl('calendar-stat-meetings-sub', meetingLoadPct <= 35 ? 'light' : meetingLoadPct <= 55 ? 'balanced' : 'meeting heavy');
+  setEl('calendar-stat-travel', travelMinutes ? `${{Math.round(travelMinutes / 60)}}h ${{String(travelMinutes % 60).padStart(2, '0')}}m` : '0h 00m');
+  setEl('calendar-stat-travel-sub', `${{routeSensitive.length}} route-sensitive`);
+  setEl('calendar-stat-energy', focusHours >= 2 ? 'Good' : 'Moderate');
+  setEl('calendar-stat-energy-sub', focusHours >= 2 ? 'peak 9AM–11AM' : 'protect margin');
+  setEl('calendar-stat-health', `${{healthScore}}%`);
+  setEl('calendar-stat-health-sub', attentionFlags.length ? 'needs protection' : 'well balanced');
+  setEl('calendar-sidebar-sync', workflow.synced_at ? 'All Synced' : 'Standby');
+  setEl('calendar-sidebar-sources', `${{Object.keys(sourceCounts).length || 1}} connected`);
+  setEl('calendar-sidebar-conflicts', String(attentionFlags.length || 0));
+  setEl('calendar-sidebar-last-sync', workflow.synced_at ? fmtLocalTime(workflow.synced_at, {{short:true}}) : 'Just now');
+  setEl('calendarWeekLabel', calendarWeekRangeLabel(allEvents));
+  setEl('calendarHealthScore', `${{healthScore}}%`);
+  setEl('calendarHealthGrade', healthScore >= 88 ? 'Healthy' : healthScore >= 76 ? 'Manageable' : 'Needs attention');
+  const ring = document.getElementById('calendarHealthRing');
+  if (ring) ring.style.background = `conic-gradient(var(--calendar-green) 0 ${{healthScore}}%, var(--calendar-purple) ${{healthScore}}% ${{Math.min(healthScore + 12, 94)}}%, var(--calendar-amber) ${{Math.min(healthScore + 12, 94)}}% 94%, rgba(255,255,255,0.08) 94% 100%)`;
+
+  renderCalendarTodayList(todayEvents);
+  renderCalendarInsights(todayEvents, attentionFlags, prepCues, focusHours, meetingLoadPct, familyCount);
+  renderCalendarWeekGrid(allEvents);
+  renderCalendarAttention(attentionFlags, routeSensitive);
+  renderCalendarHealthList(todayEvents, healthScore, meetingLoadPct, travelMinutes, familyCount);
+  renderCalendarHighlights(upcomingEvents);
+  renderCalendarPrepQueue(prepCues, routeSensitive);
+  renderCalendarSources(sourceCounts, workflow.synced_at);
+}}
+
+function calendarPickFocusEvent(events) {{
+  const focus = (events || []).find(ev => /deep|focus|write|prayer|study|strategy/i.test(String(ev.title || '')));
+  return focus || (events || [])[0] || null;
+}}
+
+function calendarPrettyDate(dateValue) {{
+  const dt = new Date(dateValue);
+  if (Number.isNaN(dt.getTime())) return String(dateValue || 'Today');
+  return dt.toLocaleDateString(undefined, {{ weekday:'long', month:'long', day:'numeric', year:'numeric' }});
+}}
+
+function calendarEventStart(event) {{
+  return event?.start_time || event?.start || event?.start_at || event?.starts_at || '';
+}}
+
+function calendarEventEnd(event) {{
+  return event?.end_time || event?.end || event?.end_at || event?.ends_at || '';
+}}
+
+function calendarEventHours(events) {{
+  return (events || []).reduce((sum, ev) => {{
+    const start = calendarEventStart(ev);
+    const end = calendarEventEnd(ev);
+    if (!start || !end) return sum;
+    const minutes = Math.max(0, Math.round((new Date(end) - new Date(start)) / 60000));
+    return sum + (minutes / 60);
+  }}, 0);
+}}
+
+function calendarBucket(event) {{
+  const text = `${{String(event?.title || '')}} ${{String(event?.location || '')}} ${{String(event?.calendar_name || '')}}`.toLowerCase();
+  if (/commute|travel|airport|drive|pickup|dropoff|route|flight/.test(text)) return 'travel';
+  if (/family|emma|liam|sarah|church|devotional|dinner|kids|household|chronicle|reconnect/.test(text)) return 'family';
+  if (/focus|deep work|writing|strategy|study|reflection|quiet|pray|journal/.test(text)) return 'focus';
+  if (/lunch|morning routine|wind-down|rest|gym|health|personal/.test(text)) return 'personal';
+  return 'meeting';
+}}
+
+function calendarBucketLabel(bucket) {{
+  return {{
+    focus: 'Focus lane',
+    meeting: 'Work / meetings',
+    family: 'Family / household',
+    travel: 'Travel / route',
+    personal: 'Personal / recovery'
+  }}[bucket] || 'Calendar lane';
+}}
+
+function calendarEventLabel(event) {{
+  const start = calendarEventStart(event);
+  const end = calendarEventEnd(event);
+  if (!start) return 'Time TBD';
+  const startText = fmtLocalTime(start, {{short:true}});
+  if (!end) return startText;
+  return `${{startText}} - ${{fmtLocalTime(end, {{short:true}})}}`;
+}}
+
+function calendarSourceCounts(events) {{
+  return (events || []).reduce((acc, ev) => {{
+    const key = String(ev?.source || 'google').toLowerCase().includes('outlook')
+      ? 'Outlook'
+      : String(ev?.source || '').toLowerCase().includes('cozi')
+        ? 'Family'
+        : 'Google';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }}, {{}});
+}}
+
+function calendarWeekRangeLabel(events) {{
+  const first = (events || []).find(Boolean);
+  if (!first) return 'This week';
+  const start = new Date(calendarEventStart(first) || Date.now());
+  const weekStart = new Date(start);
+  weekStart.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  return `${{weekStart.toLocaleDateString(undefined, {{ month:'short', day:'numeric' }})}} - ${{weekEnd.toLocaleDateString(undefined, {{ month:'short', day:'numeric', year:'numeric' }})}}`;
+}}
+
+function renderCalendarTodayList(events) {{
+  const el = document.getElementById('calendarTodayList');
+  if (!el) return;
+  if (!events.length) {{
+    el.innerHTML = '<div class="calendar-empty">No events are scheduled yet for today.</div>';
+    return;
+  }}
+  el.innerHTML = events.slice(0, 9).map(ev => {{
+    const bucket = calendarBucket(ev);
+    const duration = calendarEventLabel(ev);
+    return `<div class="calendar-today-item">
+      <div class="calendar-time-pill"><strong>${{escHtml(fmtLocalTime(calendarEventStart(ev), {{short:true}}))}}</strong><span>${{escHtml(bucket.toUpperCase())}}</span></div>
+      <div>
+        <div class="calendar-item-title">${{escHtml(ev.title || 'Scheduled event')}}</div>
+        <div class="calendar-item-meta">${{escHtml(ev.location || 'No location set')}} · ${{escHtml(duration)}}</div>
       </div>
-      <span class="kv-tag">${{escHtml(String(flag.severity || 'low').toUpperCase())}}</span>
+      <span class="calendar-pill ${{bucket === 'focus' ? 'good' : bucket === 'travel' ? 'medium' : bucket === 'family' ? 'info' : 'low'}}">${{escHtml(calendarBucketLabel(bucket))}}</span>
+    </div>`;
+  }}).join('');
+}}
+
+function renderCalendarInsights(todayEvents, attentionFlags, prepCues, focusHours, meetingLoadPct, familyCount) {{
+  const el = document.getElementById('calendarInsightGrid');
+  if (!el) return;
+  const cards = [
+    ['Best Focus Window', focusHours >= 2 ? '9:00 AM - 11:30 AM' : 'Protect the first clear 90 minutes', focusHours >= 2 ? 'High energy + low meetings' : 'Needs intentional blocking'],
+    ['Meeting Density', `${{meetingLoadPct}}%`, meetingLoadPct <= 40 ? 'Light day · well balanced' : 'Consider more margin'],
+    ['Family Posture', `${{familyCount}} family lane${{familyCount === 1 ? '' : 's'}}`, familyCount ? 'Household rhythm is visible' : 'Family lane is quiet'],
+    ['Preparation Cues', `${{prepCues.length}} queued`, prepCues.length ? 'JARVIS can stage support before the event.' : 'No preparation pressure yet'],
+  ];
+  el.innerHTML = cards.map(([title, value, copy]) => `<div class="calendar-insight-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(value)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+}}
+
+function renderCalendarWeekGrid(events) {{
+  const el = document.getElementById('calendarWeekGrid');
+  if (!el) return;
+  const base = events.find(Boolean) ? new Date(calendarEventStart(events.find(Boolean))) : new Date();
+  const monday = new Date(base);
+  monday.setHours(0,0,0,0);
+  monday.setDate(base.getDate() - ((base.getDay() + 6) % 7));
+  const days = Array.from({{length:7}}, (_, idx) => {{
+    const dt = new Date(monday);
+    dt.setDate(monday.getDate() + idx);
+    const iso = dt.toISOString().slice(0,10);
+    return {{
+      dt,
+      iso,
+      items: events.filter(ev => String(calendarEventStart(ev)).slice(0,10) === iso).slice(0, 6),
+    }};
+  }});
+  el.innerHTML = days.map(day => {{
+    const cards = day.items.length
+      ? day.items.map(ev => {{
+          const bucket = calendarBucket(ev);
+          return `<div class="calendar-event-block ${{bucket}}">
+            <strong>${{escHtml(ev.title || 'Scheduled event')}}</strong>
+            <span>${{escHtml(calendarEventLabel(ev))}}</span>
+            <b>${{escHtml(ev.location || calendarBucketLabel(bucket))}}</b>
+          </div>`;
+        }}).join('')
+      : '<div class="calendar-empty" style="padding:12px;">Open margin</div>';
+    return `<div class="calendar-day-column">
+      <div class="calendar-day-head">
+        <strong>${{day.dt.toLocaleDateString(undefined, {{ weekday:'short' }})}}</strong>
+        <span>${{day.dt.toLocaleDateString(undefined, {{ month:'numeric', day:'numeric' }})}}</span>
+      </div>
+      ${{cards}}
+    </div>`;
+  }}).join('');
+}}
+
+function renderCalendarAttention(attentionFlags, routeSensitive) {{
+  const el = document.getElementById('calendarAttentionList');
+  if (!el) return;
+  const items = [
+    ...attentionFlags.slice(0, 3).map(flag => ({{
+      title: flag.title || 'Needs attention',
+      detail: flag.detail || 'Authority or judgment required.',
+      severity: String(flag.severity || 'medium').toLowerCase(),
+      action: 'Review',
+    }})),
+    ...routeSensitive.slice(0, 2).map(event => ({{
+      title: event.title || 'Route-sensitive event',
+      detail: `${{event.location || 'Location needed'}} · ${{calendarEventTimingLabel(event)}}`,
+      severity: 'medium',
+      action: event.id ? `<button class="calendar-chip-btn" onclick="calendarWorkflowRoute('${{String(event.id).replaceAll(\"'\", \"\\\\'\")}}')">Route</button>` : 'Route',
+    }})),
+  ];
+  if (!items.length) {{
+    el.innerHTML = '<div class="calendar-empty">No schedule escalations are active right now.</div>';
+    return;
+  }}
+  el.innerHTML = items.map(item => `<div class="calendar-attention-item">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+      <div>
+        <div class="calendar-item-title">${{escHtml(item.title)}}</div>
+        <div class="calendar-item-meta">${{escHtml(item.detail)}}</div>
+      </div>
+      <span class="calendar-pill ${{escHtml(item.severity)}}">${{escHtml(item.severity)}}</span>
     </div>
-  `).join('') : '<div class="empty-state">No immediate calendar flags.</div>';
+    <div style="display:flex;justify-content:flex-end;">${{item.action.startsWith('<button') ? item.action : `<button class="calendar-chip-btn">${{escHtml(item.action)}}</button>`}}</div>
+  </div>`).join('');
+}}
 
-  routeEl.innerHTML = routeSensitive.length ? `
-    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px;">ROUTE-SENSITIVE</div>
-    ${{routeSensitive.slice(0, 3).map(event => `
-      <div class="approval-item">
-        <div class="approval-title">${{escHtml(event.title || 'Upcoming event')}}</div>
-        <div class="approval-meta">${{escHtml(event.location || 'Location needed')}} · ${{escHtml(calendarEventTimingLabel(event))}}</div>
-        <div class="approval-actions" style="margin-top:10px;">
-          <button class="btn btn-hue btn-sm" onclick="calendarWorkflowPrepare('${{String(event.id || '').replaceAll(\"'\", \"\\\\'\")}}')">Stage Prep</button>
-          <button class="btn btn-navy btn-sm" onclick="calendarWorkflowRoute('${{String(event.id || '').replaceAll(\"'\", \"\\\\'\")}}')">Route</button>
-        </div>
-      </div>
-    `).join('')}}
-  ` : '';
+function renderCalendarHealthList(todayEvents, healthScore, meetingLoadPct, travelMinutes, familyCount) {{
+  const el = document.getElementById('calendarHealthList');
+  if (!el) return;
+  const rows = [
+    ['Focus Time', `${{Math.round(calendarEventHours(todayEvents.filter(ev => calendarBucket(ev) === 'focus')) * 10) / 10}}h`],
+    ['Meetings', `${{meetingLoadPct}}%`],
+    ['Family', `${{familyCount}} lane${{familyCount === 1 ? '' : 's'}}`],
+    ['Travel Buffer', travelMinutes ? `${{travelMinutes}} min` : 'Clear'],
+    ['Risk Trend', healthScore >= 88 ? '+5% this week' : 'Protect more margin'],
+  ];
+  el.innerHTML = rows.map(([label, value]) => `<div class="calendar-health-row"><span>${{escHtml(label)}}</span><strong>${{escHtml(String(value))}}</strong></div>`).join('');
+}}
 
-  prepEl.innerHTML = prepCues.length ? `
-    <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text-3);margin-bottom:8px;">PREPARATION CUES</div>
-    ${{prepCues.slice(0, 3).map(cue => `
-      <div class="list-row">
-        <div style="flex:1;min-width:0;">
-          <div class="list-row-name">${{escHtml(cue.title || 'Preparation cue')}}</div>
-          <div class="list-row-sub">${{escHtml(cue.detail || '')}}</div>
-        </div>
-        <button class="btn btn-hue btn-sm" onclick="calendarWorkflowPrepare('${{String(cue.event_id || '').replaceAll(\"'\", \"\\\\'\")}}')">Stage Prep</button>
+function renderCalendarHighlights(events) {{
+  const el = document.getElementById('calendarHighlightStrip');
+  if (!el) return;
+  const grouped = [];
+  for (const ev of events.slice(0, 8)) {{
+    const day = String(calendarEventStart(ev)).slice(0,10);
+    if (!grouped.some(item => item.day === day)) grouped.push({{ day, event: ev }});
+    if (grouped.length >= 5) break;
+  }}
+  if (!grouped.length) {{
+    el.innerHTML = '<div class="calendar-empty">Nothing is on deck yet for the next seven days.</div>';
+    return;
+  }}
+  el.innerHTML = grouped.map(item => {{
+    const dt = new Date(item.day);
+    return `<div class="calendar-highlight-card">
+      <strong>${{escHtml(dt.toLocaleDateString(undefined, {{ weekday:'short', month:'short', day:'numeric' }}))}}</strong>
+      <span>${{escHtml(item.event.title || 'Upcoming event')}}</span>
+      <em>${{escHtml(item.event.location || calendarBucketLabel(calendarBucket(item.event)))}}</em>
+    </div>`;
+  }}).join('');
+}}
+
+function renderCalendarPrepQueue(prepCues, routeSensitive) {{
+  const el = document.getElementById('calendarPrepQueue');
+  if (!el) return;
+  const items = [
+    ...prepCues.slice(0, 3).map(cue => ({{
+      title: cue.title || 'Preparation cue',
+      detail: cue.detail || 'JARVIS has staged the context.',
+      eventId: cue.event_id || '',
+      button: 'Stage Prep',
+    }})),
+    ...routeSensitive.slice(0, 2).map(ev => ({{
+      title: ev.title || 'Route-sensitive event',
+      detail: `${{ev.location || 'Location needed'}} · ${{calendarEventTimingLabel(ev)}}`,
+      eventId: ev.id || '',
+      button: 'Route',
+      route: true,
+    }})),
+  ];
+  if (!items.length) {{
+    el.innerHTML = '<div class="calendar-empty">Nothing needs staged preparation right now.</div>';
+    return;
+  }}
+  el.innerHTML = items.map(item => `<div class="calendar-insight-item">
+    <div class="calendar-item-title">${{escHtml(item.title)}}</div>
+    <div class="calendar-item-meta">${{escHtml(item.detail)}}</div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button class="calendar-chip-btn" onclick="${{item.route ? `calendarWorkflowRoute('${{String(item.eventId).replaceAll(\"'\", \"\\\\'\")}}')` : `calendarWorkflowPrepare('${{String(item.eventId).replaceAll(\"'\", \"\\\\'\")}}')`}}">${{escHtml(item.button)}}</button>
+    </div>
+  </div>`).join('');
+}}
+
+function renderCalendarSources(sourceCounts, syncedAt) {{
+  const el = document.getElementById('calendarSourceList');
+  if (!el) return;
+  const sourceEntries = Object.entries(sourceCounts);
+  if (!sourceEntries.length) {{
+    el.innerHTML = '<div class="calendar-empty">Source details will appear after the next sync.</div>';
+    return;
+  }}
+  el.innerHTML = sourceEntries.map(([source, count], idx) => `<div class="calendar-source-item">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+      <div>
+        <div class="calendar-item-title">${{escHtml(source)}} Calendar</div>
+        <div class="calendar-item-meta">${{idx === 0 ? 'Primary' : 'Connected'}} · ${{syncedAt ? fmtLocalTime(syncedAt, {{short:true}}) : 'Ready'}}</div>
       </div>
-    `).join('')}}
-  ` : '';
+      <span class="calendar-pill ${{idx === 0 ? 'good' : 'info'}}">${{escHtml(String(count))}} events</span>
+    </div>
+  </div>`).join('');
 }}
 
 async function loadHomeProjects() {{
