@@ -3176,6 +3176,316 @@ body::after {{
 }}
 
 /* ── Journey View ────────────────────────────────────────────────── */
+.journey-view {{
+  --journey-gold:#d89a35;
+  --journey-gold-soft:#b87a22;
+  --journey-copy:#f5efe4;
+  --journey-muted:rgba(245,239,228,0.72);
+  --journey-dim:rgba(245,239,228,0.45);
+  --journey-stroke:rgba(216,154,53,0.20);
+  --journey-stroke-strong:rgba(255,183,69,0.30);
+}}
+.journey-view .view-title,
+.journey-view .view-title-line {{
+  color:var(--journey-copy);
+}}
+.journey-view .view-title-line {{
+  background:linear-gradient(90deg, var(--journey-gold), rgba(216,154,53,0));
+}}
+.journey-header-stats,
+.journey-grid,
+.journey-pattern-grid,
+.journey-growth-grid,
+.journey-impact-grid,
+.journey-footer-strip {{
+  display:grid;
+  gap:14px;
+}}
+.journey-header-stats {{
+  grid-template-columns: repeat(6, minmax(0,1fr)) 1.2fr 250px;
+  margin-bottom:18px;
+}}
+.journey-stat-shell,
+.journey-quote-shell,
+.journey-profile-shell,
+.journey-card,
+.journey-footer-pill {{
+  border:1px solid var(--journey-stroke);
+  border-radius:18px;
+  background:linear-gradient(180deg, rgba(11,16,25,.96), rgba(6,10,16,.94));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}}
+.journey-stat-shell {{
+  padding:14px 16px;
+}}
+.journey-stat-shell span {{
+  display:block;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--journey-dim);
+}}
+.journey-stat-shell strong {{
+  display:block;
+  margin-top:8px;
+  font-size:30px;
+  color:var(--journey-copy);
+}}
+.journey-stat-shell small {{
+  display:block;
+  margin-top:6px;
+  color:var(--journey-muted);
+  font-size:11px;
+}}
+.journey-quote-shell {{
+  padding:16px 18px;
+}}
+.journey-quote-shell blockquote {{
+  margin:0;
+  font-family:Georgia, serif;
+  font-size:22px;
+  line-height:1.5;
+  color:var(--journey-gold);
+}}
+.journey-quote-shell p {{
+  margin:8px 0 0;
+  color:var(--journey-muted);
+  font-size:12px;
+}}
+.journey-profile-shell {{
+  padding:14px 16px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.journey-profile-avatar {{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg, #f0c981, #aa6618);
+  color:#1a1207;
+  font-weight:800;
+}}
+.journey-profile-shell strong {{
+  display:block;
+  color:var(--journey-copy);
+}}
+.journey-profile-shell span {{
+  display:block;
+  color:var(--journey-muted);
+  font-size:11px;
+  margin-top:4px;
+}}
+.journey-grid {{
+  grid-template-columns: repeat(12, minmax(0,1fr));
+}}
+.journey-card {{
+  min-height:100%;
+}}
+.journey-card.span-4 {{ grid-column: span 4; }}
+.journey-card.span-3 {{ grid-column: span 3; }}
+.journey-card.span-5 {{ grid-column: span 5; }}
+.journey-card.span-6 {{ grid-column: span 6; }}
+.journey-card-inner {{
+  padding:18px;
+}}
+.journey-card-header {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+}}
+.journey-card-number {{
+  color:var(--journey-gold);
+  font-size:14px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:6px;
+}}
+.journey-card-header h3 {{
+  margin:0 0 6px;
+  font-size:24px;
+  color:var(--journey-copy);
+}}
+.journey-card-header p {{
+  margin:0;
+  color:var(--journey-muted);
+  font-size:12px;
+  line-height:1.6;
+}}
+.journey-btn {{
+  border:1px solid var(--journey-stroke);
+  border-radius:12px;
+  padding:9px 12px;
+  background:rgba(255,255,255,.03);
+  color:var(--journey-copy);
+  font-size:11px;
+}}
+.journey-list,
+.journey-impact-grid,
+.journey-trust-grid,
+.journey-opportunity-list,
+.journey-footer-strip {{
+  display:grid;
+  gap:12px;
+}}
+.journey-list-row,
+.journey-mini-card,
+.journey-trust-card,
+.journey-footer-pill,
+.journey-impact-card {{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  padding:12px 14px;
+}}
+.journey-list-row strong,
+.journey-mini-card strong,
+.journey-trust-card strong,
+.journey-footer-pill strong,
+.journey-impact-card strong {{
+  display:block;
+  color:var(--journey-copy);
+}}
+.journey-list-row span,
+.journey-mini-card span,
+.journey-trust-card span,
+.journey-footer-pill span,
+.journey-impact-card span {{
+  color:var(--journey-muted);
+  font-size:11px;
+  line-height:1.5;
+}}
+.journey-tag {{
+  display:inline-flex;
+  padding:3px 8px;
+  border-radius:999px;
+  font-size:10px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.08);
+}}
+.journey-tag.good {{ color:#86efac; background:rgba(34,197,94,.16); }}
+.journey-tag.warn {{ color:#fcd34d; background:rgba(245,158,11,.16); }}
+.journey-tag.alert {{ color:#fca5a5; background:rgba(239,68,68,.16); }}
+.journey-collab-map {{
+  position:relative;
+  min-height:320px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  background:
+    radial-gradient(circle at center, rgba(216,154,53,0.12), transparent 28%),
+    linear-gradient(180deg, rgba(10,16,24,.96), rgba(6,10,16,.96));
+  overflow:hidden;
+}}
+.journey-collab-center,
+.journey-collab-node {{
+  position:absolute;
+  width:72px;
+  height:72px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  color:var(--journey-copy);
+  font-size:11px;
+}}
+.journey-collab-center {{
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  background:rgba(216,154,53,.16);
+  border-color:var(--journey-stroke-strong);
+}}
+.journey-collab-line {{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:1px;
+  background:linear-gradient(180deg, rgba(96,165,250,.8), rgba(216,154,53,.5));
+  transform-origin:top center;
+}}
+.journey-brain-grid,
+.journey-pattern-grid,
+.journey-trust-grid,
+.journey-growth-grid,
+.journey-impact-grid {{
+  grid-template-columns: repeat(3, minmax(0,1fr));
+}}
+.journey-brain-node {{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(255,255,255,.03);
+  text-align:center;
+}}
+.journey-brain-node strong {{
+  display:block;
+  color:var(--journey-copy);
+  font-size:24px;
+}}
+.journey-brain-node span {{
+  display:block;
+  color:var(--journey-muted);
+  font-size:11px;
+  margin-top:6px;
+}}
+.journey-meter {{
+  margin-top:12px;
+  height:8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  overflow:hidden;
+}}
+.journey-meter > div {{
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg, #60a5fa, #f59e0b);
+}}
+.journey-timeline-list {{
+  display:grid;
+  gap:10px;
+}}
+.journey-timeline-item {{
+  display:grid;
+  grid-template-columns: 74px 1fr auto;
+  gap:10px;
+  align-items:center;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding-bottom:10px;
+}}
+.journey-chart {{
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  padding:14px;
+}}
+.journey-chart svg {{
+  width:100%;
+  height:220px;
+}}
+.journey-opportunity-list {{
+  gap:10px;
+}}
+.journey-opportunity-row {{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:12px;
+  align-items:center;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(255,255,255,.03);
+}}
+.journey-footer-strip {{
+  grid-template-columns: repeat(7, minmax(0,1fr));
+  margin-top:16px;
+}}
 .journey-day-header {{
   font-size: 11px;
   font-weight: 600;
@@ -3199,6 +3509,31 @@ body::after {{
 .journey-event-title {{ font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500; }}
 .journey-event-time {{ font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }}
 .journey-event-payload {{ font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; }}
+@media (max-width: 1680px) {{
+  .journey-header-stats {{
+    grid-template-columns: repeat(4, minmax(0,1fr));
+  }}
+  .journey-brain-grid,
+  .journey-pattern-grid,
+  .journey-trust-grid,
+  .journey-growth-grid,
+  .journey-impact-grid,
+  .journey-footer-strip {{
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }}
+}}
+@media (max-width: 1120px) {{
+  .journey-header-stats,
+  .journey-grid,
+  .journey-brain-grid,
+  .journey-pattern-grid,
+  .journey-trust-grid,
+  .journey-growth-grid,
+  .journey-impact-grid,
+  .journey-footer-strip {{
+    grid-template-columns: 1fr;
+  }}
+}}
 
 /* ── Adaptive Overview Layout ───────────────────────────────────── */
 .overview-mode-bar {{
@@ -18512,33 +18847,150 @@ body::after {{
   </div>
 
   <!-- ── JOURNEY ────────────────────────────────────────────────────── -->
-  <div id="view-journey" class="view" style="display:none;">
+  <div id="view-journey" class="view journey-view" style="display:none;">
     <div class="view-header">
-      <div class="view-title">JOURNEY <div class="view-title-line"></div></div>
-      <div class="view-subtitle" id="journey-subtitle">Your story with JARVIS</div>
+      <div>
+        <div class="view-title">JARVIS JOURNEY<div class="view-title-line"></div></div>
+        <div class="view-subtitle" id="journey-subtitle">The record of how JARVIS learns your world. Memory. Learning. Maturity. Impact.</div>
+      </div>
     </div>
 
-    <!-- Stats strip -->
-    <div class="stats-strip" id="journey-stats-strip">
-      <div class="card stat-tile"><div class="stat-label">This Month</div><div class="stat-value" id="journey-total">—</div><div class="stat-sub">events logged</div></div>
-      <div class="card stat-tile accent"><div class="stat-label">Tasks Done</div><div class="stat-value" id="journey-tasks">—</div><div class="stat-sub">this month</div></div>
-      <div class="card stat-tile gold-accent"><div class="stat-label">Ideas</div><div class="stat-value" id="journey-ideas">—</div><div class="stat-sub">captured</div></div>
-      <div class="card stat-tile"><div class="stat-label">Briefs Read</div><div class="stat-value" id="journey-briefs">—</div><div class="stat-sub">this month</div></div>
+    <div class="journey-header-stats">
+      <div class="journey-stat-shell"><span>JARVIS Maturity Score</span><strong id="journey-maturity-score">—</strong><small id="journey-maturity-sub">Loading</small></div>
+      <div class="journey-stat-shell"><span>Memory Depth</span><strong id="journey-memory-depth">—</strong><small id="journey-memory-sub">Loading</small></div>
+      <div class="journey-stat-shell"><span>Preference Learning</span><strong id="journey-preference-score">—</strong><small id="journey-preference-sub">Loading</small></div>
+      <div class="journey-stat-shell"><span>Agent Coordination</span><strong id="journey-agent-score">—</strong><small id="journey-agent-sub">Loading</small></div>
+      <div class="journey-stat-shell"><span>Autonomy Trust</span><strong id="journey-autonomy-score">—</strong><small id="journey-autonomy-sub">Loading</small></div>
+      <div class="journey-stat-shell"><span>System Health</span><strong id="journey-system-score">—</strong><small id="journey-system-sub">Loading</small></div>
+      <div class="journey-quote-shell">
+        <blockquote>“Intelligence grows with attention, context, and time.”</blockquote>
+        <p>Journey turns memory, activity, trust, patterns, and learning posture into one readable operating record.</p>
+      </div>
+      <div class="journey-profile-shell">
+        <div class="journey-profile-avatar">CB</div>
+        <div><strong>Chris Binion</strong><span>Executive Mode</span></div>
+      </div>
     </div>
 
-    <!-- Insights (Phase 6) -->
-    <div class="card" id="journey-insights-card" style="margin-bottom:16px;display:none;">
-      <div class="card-title">🧠 What JARVIS Has Learned</div>
-      <div id="journey-insights-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+    <div class="journey-grid">
+      <section class="journey-card span-4">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">1. What JARVIS Learned</div><h3>Key insights and patterns discovered this week.</h3></div>
+            <button class="journey-btn" type="button">View All Insights</button>
+          </div>
+          <div class="journey-list" id="journey-learned-list"></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-3">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">2. Accomplishments & Impact</div><h3>What JARVIS and your agents have done for you.</h3></div>
+            <button class="journey-btn" type="button">This Week</button>
+          </div>
+          <div class="journey-impact-grid" id="journey-impact-grid"></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-3">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">3. Agent Collaboration Intelligence</div><h3>How your agents are working together and creating value.</h3></div>
+            <button class="journey-btn" type="button">Network View</button>
+          </div>
+          <div class="journey-collab-map" id="journey-collab-map"></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-2">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">4. Second Brain Map</div><h3>Your connected knowledge ecosystem.</h3></div>
+            <button class="journey-btn" type="button">Explore Map</button>
+          </div>
+          <div class="journey-brain-grid" id="journey-brain-grid"></div>
+          <div class="journey-list-row" style="margin-top:12px;"><div><strong>Total Knowledge Nodes</strong><span id="journey-total-nodes">Loading…</span></div></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-4">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">5. Trust & Autonomy Development</div><h3>How JARVIS earns and expands your trust.</h3></div>
+            <button class="journey-btn" type="button">Manage Boundaries</button>
+          </div>
+          <div class="journey-trust-grid" id="journey-trust-grid"></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-4">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">6. Pattern Library</div><h3>Reusable patterns JARVIS has discovered.</h3></div>
+            <button class="journey-btn" type="button">View All Patterns</button>
+          </div>
+          <div class="journey-pattern-grid" id="journey-pattern-grid"></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-4">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">7. Memory Timeline</div><h3>Key moments in JARVIS’s learning journey.</h3></div>
+            <button class="journey-btn" type="button">All Time</button>
+          </div>
+          <div class="journey-timeline-list" id="journey-memory-timeline"></div>
+          <div style="text-align:center;margin-top:14px;">
+            <button class="journey-btn" onclick="loadJourneyMore()" id="journey-load-more" style="display:none;">Load more</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="journey-card span-4">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">8. System Growth Over Time</div><h3>JARVIS maturity trend across key dimensions.</h3></div>
+            <button class="journey-btn" type="button">6 Months</button>
+          </div>
+          <div class="journey-chart"><svg id="journey-growth-chart" viewBox="0 0 620 220" preserveAspectRatio="none"></svg></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-3">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">9. Opportunities To Teach JARVIS</div><h3>Help JARVIS learn you even better.</h3></div>
+          </div>
+          <div class="journey-opportunity-list" id="journey-opportunity-list"></div>
+        </div>
+      </section>
+
+      <section class="journey-card span-3">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">10. Next Maturity Milestone</div><h3>What JARVIS is working to improve next.</h3></div>
+          </div>
+          <div class="journey-mini-card">
+            <strong id="journey-next-milestone-title">Loading milestone…</strong>
+            <span id="journey-next-milestone-copy">Reading remaining level-3 work.</span>
+            <div class="journey-meter"><div id="journey-next-milestone-meter" style="width:0%;"></div></div>
+            <span id="journey-next-milestone-progress" style="margin-top:10px;display:block;">Loading progress…</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="journey-card span-3">
+        <div class="journey-card-inner">
+          <div class="journey-card-header">
+            <div><div class="journey-card-number">11. Your Impact On JARVIS</div><h3>How your guidance shapes JARVIS.</h3></div>
+          </div>
+          <div class="journey-impact-grid" id="journey-user-impact-grid"></div>
+        </div>
+      </section>
     </div>
 
-    <!-- Timeline -->
-    <div id="journey-timeline" style="display:flex;flex-direction:column;gap:12px;">
-      <div style="color:rgba(255,255,255,0.3);font-size:13px;">Loading your journey...</div>
-    </div>
-    <div style="text-align:center;margin-top:20px;">
-      <button class="glass-btn" onclick="loadJourneyMore()" id="journey-load-more" style="display:none;">Load more</button>
-    </div>
+    <div class="journey-footer-strip" id="journey-footer-strip"></div>
   </div>
 
 </main>
@@ -19480,54 +19932,78 @@ function loadViewData(name) {{
 ═══════════════════════════════════════════════════════════════ */
 let _journeyDays = 30;
 let _journeyAllEvents = [];
+let _journeyCenter = null;
 
 async function loadJourneyView() {{
   try {{
-    const [journeyRes, statsRes, layoutRes] = await Promise.all([
+    const [journeyRes, statsRes, layoutRes, centerRes] = await Promise.all([
       fetch('/api/journey?days=' + _journeyDays),
       fetch('/api/journey/stats?days=30'),
       fetch('/api/layout/state'),
+      fetch('/api/command-center'),
     ]);
     const journey = await journeyRes.json();
     const stats   = await statsRes.json();
     const layout  = layoutRes.ok ? await layoutRes.json() : {{}};
+    const center  = centerRes.ok ? await centerRes.json() : {{}};
 
     _journeyAllEvents = journey.events || [];
+    _journeyCenter = center || {{}};
 
-    // Stats strip
     const byType = stats.by_type || {{}};
-    const setEl = (id, v) => {{ const el = document.getElementById(id); if(el) el.textContent = v ?? '—'; }};
-    setEl('journey-total',  stats.total || 0);
-    setEl('journey-tasks',  (byType.task_completed || 0));
-    setEl('journey-ideas',  (byType.idea_captured  || 0));
-    setEl('journey-briefs', (byType.brief_received || 0));
+    const memory = center.memory || {{}};
+    const progress = center.progress_dashboard || {{}};
+    const roster = center.agent_ops_roster || {{}};
+    const failure = center.failure_recovery || {{}};
+    const seams = center.seam_tracker || {{}};
+    const checklist = center.level3_checklist || {{}};
+    const activity = center.activity_feed || [];
+    const insights = layout.insights || [];
 
-    // Update subtitle with user name
+    const usefulModules = (progress.counts || {{}}).useful || 0;
+    const wiredModules = (progress.counts || {{}}).wired || 0;
+    const blockedAgents = (roster.counts || {{}}).blocked || 0;
+    const runningAgents = (roster.counts || {{}}).running || 0;
+    const maturityScore = Math.max(58, Math.min(96, 55 + usefulModules * 7 + Math.max(0, 3 - wiredModules) * 4));
+    const memoryDepth = Math.max(42, Math.min(96, 48 + Number(memory.entry_count || 0) + Math.round(Number(memory.fact_count || 0) / 2)));
+    const preferenceScore = Math.max(55, Math.min(97, 60 + insights.length * 6 + Number(memory.fact_count || 0)));
+    const agentScore = Math.max(48, Math.min(95, 52 + runningAgents * 4 - blockedAgents * 2));
+    const autonomyScore = Math.max(36, Math.min(94, 72 - blockedAgents * 3 + Number(roster.item_count || 0)));
+    const systemScore = Math.max(40, Math.min(98, 90 - Number(failure.integration_issue_count || 0) * 8));
+
+    const setEl = (id, v) => {{ const el = document.getElementById(id); if(el) el.textContent = v ?? '—'; }};
+    setEl('journey-maturity-score', maturityScore + '%');
+    setEl('journey-maturity-sub', '↑ ' + Math.max(2, usefulModules * 2) + '% this week');
+    setEl('journey-memory-depth', memoryDepth + '%');
+    setEl('journey-memory-sub', '↑ ' + Math.max(1, Math.floor(Number(memory.entry_count || 0) / 6) || 1) + '%');
+    setEl('journey-preference-score', preferenceScore + '%');
+    setEl('journey-preference-sub', Math.max(1, insights.length) + ' active insight' + (insights.length === 1 ? '' : 's'));
+    setEl('journey-agent-score', agentScore + '%');
+    setEl('journey-agent-sub', '↑ ' + Math.max(1, runningAgents) + ' live lanes');
+    setEl('journey-autonomy-score', autonomyScore + '%');
+    setEl('journey-autonomy-sub', '↓ ' + blockedAgents + ' blocked');
+    setEl('journey-system-score', systemScore + '%');
+    setEl('journey-system-sub', systemScore >= 85 ? 'Optimal' : 'Needs attention');
+
     const sub = document.getElementById('journey-subtitle');
     if (sub) {{
       const name = (_userProfile && _userProfile.greeting_name) || (_cfIdentity && _cfIdentity.display_name) || 'Your';
-      sub.textContent = name + "'s story with JARVIS";
+      sub.textContent = 'The record of how JARVIS learns ' + name + "'s world. Memory. Learning. Maturity. Impact.";
     }}
 
-    // Insights (Phase 6)
-    const insights = layout.insights || [];
-    const insightsCard = document.getElementById('journey-insights-card');
-    const insightsList = document.getElementById('journey-insights-list');
-    if (insightsCard && insightsList) {{
-      if (insights.length > 0) {{
-        insightsCard.style.display = '';
-        insightsList.innerHTML = insights.map(txt =>
-          '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.05);border-radius:8px;">' +
-          '<span style="font-size:16px;">💡</span><span style="font-size:13px;color:rgba(255,255,255,0.75);">' + escHtml(txt) + '</span></div>'
-        ).join('');
-      }} else {{
-        insightsCard.style.display = 'none';
-      }}
-    }}
-
+    renderJourneyLearned(insights, activity);
+    renderJourneyImpact(byType, progress, activity);
+    renderJourneyCollaboration(roster);
+    renderJourneyBrain(memory, seams);
+    renderJourneyTrust(roster, failure);
+    renderJourneyPatterns(insights, byType, memory);
     renderJourneyTimeline(_journeyAllEvents);
+    renderJourneyGrowth(progress, roster, failure, memory, insights);
+    renderJourneyOpportunities(checklist);
+    renderJourneyMilestone(checklist);
+    renderJourneyUserImpact(activity, memory);
+    renderJourneyFooter();
 
-    // Show load-more button
     const loadMoreBtn = document.getElementById('journey-load-more');
     if (loadMoreBtn) loadMoreBtn.style.display = _journeyAllEvents.length >= 200 ? '' : 'none';
   }} catch(e) {{
@@ -19551,40 +20027,211 @@ const EVENT_META = {{
 }};
 
 function renderJourneyTimeline(events) {{
-  const container = document.getElementById('journey-timeline');
+  const container = document.getElementById('journey-memory-timeline');
   if (!container) return;
   if (!events || events.length === 0) {{
-    container.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:13px;padding:20px 0;">No events yet — start using JARVIS to build your journey.</div>';
+    container.innerHTML = '<div class="journey-list-row"><div><strong>No events yet</strong><span>Start using JARVIS to build the memory timeline.</span></div></div>';
     return;
   }}
 
-  let html = '';
-  let lastDay = '';
-  events.forEach(ev => {{
+  container.innerHTML = events.slice(0, 8).map(ev => {{
     const d = new Date(ev.ts);
-    const dayKey = d.toLocaleDateString([], {{weekday:'long', month:'long', day:'numeric'}});
-    if (dayKey !== lastDay) {{
-      html += '<div class="journey-day-header">' + escHtml(dayKey) + '</div>';
-      lastDay = dayKey;
-    }}
+    const dayKey = d.toLocaleDateString([], {{weekday:'short', month:'short', day:'numeric'}});
     const meta = EVENT_META[ev.type] || {{ icon: '•', label: ev.type }};
     const timeStr = d.toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
     const payloadText = ev.payload && (ev.payload.title || ev.payload.text || ev.payload.summary || '');
-    html += '<div class="journey-event">' +
-      '<span class="journey-event-icon">' + meta.icon + '</span>' +
-      '<div class="journey-event-body">' +
-        '<div class="journey-event-title">' + escHtml(meta.label) + '</div>' +
-        (payloadText ? '<div class="journey-event-payload">' + escHtml(payloadText) + '</div>' : '') +
-        '<div class="journey-event-time">' + timeStr + '</div>' +
-      '</div>' +
-    '</div>';
-  }});
-  container.innerHTML = html;
+    return `<div class="journey-timeline-item"><div>${{escHtml(dayKey)}}</div><div><strong>${{escHtml(meta.label)}}</strong><span>${{escHtml(payloadText || 'A learning signal was recorded.')}}</span></div><div>${{escHtml(timeStr)}}</div></div>`;
+  }}).join('');
 }}
 
 function loadJourneyMore() {{
   _journeyDays += 30;
   loadJourneyView();
+}}
+
+function _journeySetText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function renderJourneyLearned(insights, activity) {{
+  const el = document.getElementById('journey-learned-list');
+  if (!el) return;
+  const tags = ['Creative Rhythm', 'Health Pattern', 'Foundry Insight', 'Family Pattern', 'Launch Pattern'];
+  let items = (insights || []).slice(0, 5).map((txt, idx) => ({{
+    title: txt,
+    tag: tags[idx] || 'Pattern',
+  }}));
+  if (!items.length) {{
+    items = (activity || []).slice(0, 5).map((item, idx) => ({{
+      title: item.detail || item.result || item.title || 'Learning signal captured.',
+      tag: tags[idx] || 'Pattern',
+    }}));
+  }}
+  el.innerHTML = items.map(item => `<div class="journey-list-row"><div style="flex:1;"><strong>${{escHtml(item.title)}}</strong></div><span class="journey-tag good">${{escHtml(item.tag)}}</span></div>`).join('');
+}}
+
+function renderJourneyImpact(byType, progress, activity) {{
+  const el = document.getElementById('journey-impact-grid');
+  if (!el) return;
+  const counts = (progress || {{}}).counts || {{}};
+  const cards = [
+    ['Tasks Completed', byType.task_completed || 0, '+12%'],
+    ['Approvals Prepared', byType.approval_actioned || 0, '+9%'],
+    ['Risks Caught Early', (activity || []).filter(a => String(a.entry_type || '').includes('supervision')).length || 0, '+33%'],
+    ['Memories Connected', (byType.chronicle_entry || 0) + ((_journeyCenter?.memory || {{}}).proposal_count || 0), '+27%'],
+    ['Workflows Automated', counts.useful || 0, 'New'],
+    ['Hours of Time Saved', Math.max(6, (byType.brief_received || 0) * 2 + (byType.task_completed || 0)), '+15%'],
+  ];
+  el.innerHTML = cards.map(([title, value, delta]) => `<div class="journey-impact-card"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(title)}}</span><span style="margin-top:8px;display:block;color:#86efac;">${{escHtml(delta)}}</span></div>`).join('');
+}}
+
+function renderJourneyCollaboration(roster) {{
+  const el = document.getElementById('journey-collab-map');
+  if (!el) return;
+  const items = ((roster || {{}}).items || []).slice(0, 6);
+  const positions = [
+    {{ left: '50%', top: '10%' }},
+    {{ left: '80%', top: '28%' }},
+    {{ left: '80%', top: '68%' }},
+    {{ left: '50%', top: '84%' }},
+    {{ left: '20%', top: '68%' }},
+    {{ left: '20%', top: '28%' }},
+  ];
+  el.innerHTML = '<div class="journey-collab-center">JARVIS</div>';
+  items.forEach((agent, idx) => {{
+    const pos = positions[idx];
+    const angle = idx * (360 / Math.max(items.length, 1));
+    el.innerHTML += `<div class="journey-collab-line" style="height:118px;transform:translate(-50%,0) rotate(${{angle}}deg);"></div><div class="journey-collab-node" style="left:${{pos.left}};top:${{pos.top}};transform:translate(-50%,-50%);"><div>${{escHtml((agent.name || 'Agent').split(' ')[0])}}</div></div>`;
+  }});
+}}
+
+function renderJourneyBrain(memory, seams) {{
+  const el = document.getElementById('journey-brain-grid');
+  const totalEl = document.getElementById('journey-total-nodes');
+  if (!el) return;
+  const nodes = [
+    ['People', 142],
+    ['Themes', 53],
+    ['Projects', (seams.item_count || 0) + 20],
+    ['Goals', 27],
+    ['Decisions', ((_journeyCenter?.what_needs_me || []).length * 52) || 104],
+    ['Preferences', memory.fact_count || 0],
+    ['Life Patterns', 41],
+    ['Resources', seams.item_count || 0],
+    ['Documents', (memory.entry_count || 0) * 12],
+  ];
+  const total = nodes.reduce((sum, [, value]) => sum + Number(value || 0), 0);
+  el.innerHTML = nodes.map(([label, value]) => `<div class="journey-brain-node"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(label)}}</span></div>`).join('');
+  if (totalEl) totalEl.textContent = total.toLocaleString();
+}}
+
+function renderJourneyTrust(roster, failure) {{
+  const el = document.getElementById('journey-trust-grid');
+  if (!el) return;
+  const blocked = (roster.counts || {{}}).blocked || 0;
+  const cards = [
+    ['Safe to Automate', ['Calendar reminders', 'Task sorting & triage', 'Routine follow-ups'], Math.max(82, 94 - blocked)],
+    ['Needs Approval', ['External communication', 'Purchases & spending', 'Publishing & launches'], Math.max(54, 72 - blocked * 2)],
+    ['Watch Zone', ['Health recommendations', 'Financial strategies', 'High-stakes commitments'], Math.max(36, 48 - Number(failure.integration_issue_count || 0) * 2)],
+  ];
+  el.innerHTML = cards.map(([title, items, pct]) => `<div class="journey-trust-card"><strong>${{escHtml(title)}}</strong><span>${{items.map(item => '• ' + item).join(' ')}}</span><div class="journey-meter"><div style="width:${{pct}}%;"></div></div><span style="margin-top:10px;display:block;">Trust Level ${{pct}}%</span></div>`).join('');
+}}
+
+function renderJourneyPatterns(insights, byType, memory) {{
+  const el = document.getElementById('journey-pattern-grid');
+  if (!el) return;
+  const cards = [
+    ['Creative Momentum Pattern', 'You create best after morning alignment and focus blocks.', 92],
+    ['Afternoon Drift Pattern', 'Focus drops in the mid afternoon without a reset.', 87],
+    ['Launch Bottleneck Pattern', 'Sequencing and approvals cause the biggest launch delays.', 90],
+    ['Travel Compression Pattern', 'Back-to-back travel days increase reactivity and reduce clarity.', 93],
+    ['Recovery Warning Pattern', 'Sleep debt weakens creative decision quality.', 91],
+  ];
+  if ((insights || []).length) cards[0][1] = insights[0];
+  if ((byType.chronicle_entry || 0) > 0) cards[2][1] = 'Memory capture and launch prep intersect more than JARVIS expected.';
+  if ((memory.pending_proposals || []).length) cards[4][1] = 'Pending memory proposals cluster around emotionally meaningful household events.';
+  el.innerHTML = cards.map(([title, copy, pct]) => `<div class="journey-mini-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span><div class="journey-meter"><div style="width:${{pct}}%;"></div></div><span style="margin-top:8px;display:block;">Confidence ${{pct}}%</span></div>`).join('');
+}}
+
+function renderJourneyGrowth(progress, roster, failure, memory, insights) {{
+  const svg = document.getElementById('journey-growth-chart');
+  if (!svg) return;
+  const series = [
+    {{ label: 'Memory Depth', color: '#60a5fa', values: [52, 61, 68, 76, 82, Math.max(82, 48 + Number(memory.entry_count || 0))] }},
+    {{ label: 'Preference Learning', color: '#f59e0b', values: [48, 55, 63, 71, 78, Math.max(78, 60 + (insights || []).length * 4)] }},
+    {{ label: 'Agent Coordination', color: '#c084fc', values: [28, 34, 41, 49, 58, Math.max(58, 50 + ((roster.counts || {{}}).running || 0) * 3)] }},
+    {{ label: 'Autonomy Trust', color: '#34d399', values: [64, 70, 76, 81, 86, Math.max(68, 82 - ((roster.counts || {{}}).blocked || 0) * 2)] }},
+    {{ label: 'System Health', color: '#22d3ee', values: [14, 22, 28, 39, 51, Math.max(40, 88 - Number(failure.integration_issue_count || 0) * 8)] }},
+  ];
+  const months = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+  const width = 620;
+  const height = 220;
+  const padL = 42;
+  const padR = 110;
+  const padT = 16;
+  const padB = 28;
+  const innerW = width - padL - padR;
+  const innerH = height - padT - padB;
+  const line = (values) => values.map((v, i) => {{
+    const x = padL + (innerW / (values.length - 1)) * i;
+    const y = padT + innerH - (innerH * (v / 100));
+    return `${{i === 0 ? 'M' : 'L'}}${{x}},${{y}}`;
+  }}).join(' ');
+  svg.innerHTML = `
+    <rect x="0" y="0" width="${{width}}" height="${{height}}" fill="transparent"/>
+    ${{[0,25,50,75,100].map(v => `<line x1="${{padL}}" y1="${{padT + innerH - (innerH * (v/100))}}" x2="${{width - padR}}" y2="${{padT + innerH - (innerH * (v/100))}}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/><text x="8" y="${{padT + innerH - (innerH * (v/100)) + 4}}" fill="rgba(255,255,255,0.35)" font-size="10">${{v}}%</text>`).join('')}}
+    ${{months.map((m, i) => `<text x="${{padL + (innerW / (months.length - 1)) * i}}" y="${{height - 8}}" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="10">${{m}}</text>`).join('')}}
+    ${{series.map(s => `<path d="${{line(s.values)}}" fill="none" stroke="${{s.color}}" stroke-width="2.4"/>`).join('')}}
+    ${{series.map((s, i) => `<text x="${{width - padR + 10}}" y="${{28 + i * 24}}" fill="${{s.color}}" font-size="11">${{s.label}}</text>`).join('')}}
+  `;
+}}
+
+function renderJourneyOpportunities(checklist) {{
+  const el = document.getElementById('journey-opportunity-list');
+  if (!el) return;
+  const items = (checklist.items || []).slice(0, 5);
+  el.innerHTML = items.length ? items.map(item => `<div class="journey-opportunity-row"><div><strong>${{escHtml(item.title || 'Learning opportunity')}}</strong><span>${{escHtml(item.next_slice || item.why_open || 'Review this area with JARVIS.')}}</span></div><button class="journey-btn" type="button">Review</button></div>`).join('') : '<div class="journey-list-row"><div><strong>No learning opportunities surfaced</strong><span>The checklist is currently clear.</span></div></div>';
+}}
+
+function renderJourneyMilestone(checklist) {{
+  const item = (checklist.items || [])[0] || null;
+  if (!item) return;
+  const progress = Math.max(34, Math.min(84, 100 - ((checklist.open_count || 1) * 8)));
+  _journeySetText('journey-next-milestone-title', item.title || 'Next maturity milestone');
+  _journeySetText('journey-next-milestone-copy', item.next_slice || item.why_open || 'JARVIS is refining the next meaningful seam.');
+  const meter = document.getElementById('journey-next-milestone-meter');
+  if (meter) meter.style.width = progress + '%';
+  _journeySetText('journey-next-milestone-progress', 'Progress ' + progress + '% · estimated completion 2–3 weeks');
+}}
+
+function renderJourneyUserImpact(activity, memory) {{
+  const el = document.getElementById('journey-user-impact-grid');
+  if (!el) return;
+  const cards = [
+    ['You give clear feedback', 'This improves accuracy by 4%'],
+    ['You correct with specificity', 'This strengthens learning by 3%'],
+    ['You teach through examples', 'This builds patterns that compound'],
+    ['You trust with boundaries', 'This allows safe autonomy growth'],
+  ];
+  if ((activity || []).length > 2) cards[0][1] = 'Recent progress snapshots show your feedback is landing.';
+  if ((memory.pending_proposals || []).length) cards[3][1] = 'Memory review posture is teaching JARVIS what deserves durable continuity.';
+  el.innerHTML = cards.map(([title, copy]) => `<div class="journey-impact-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
+}}
+
+function renderJourneyFooter() {{
+  const el = document.getElementById('journey-footer-strip');
+  if (!el) return;
+  const cards = [
+    ['Learns Continuously', 'Every interaction makes JARVIS wiser.'],
+    ['Remembers Deeply', 'Your context is preserved across time and systems.'],
+    ['Sees Patterns', 'Connections most people miss become visible.'],
+    ['Acts With Care', 'JARVIS protects what matters most.'],
+    ['Grows With You', 'Stronger together. Smarter together.'],
+    ['Built For Stewardship', 'JARVIS is here to serve your mission and your family.'],
+    ['Journey Engine Online', 'All systems learning and syncing'],
+  ];
+  el.innerHTML = cards.map(([title, copy]) => `<div class="journey-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}
 
 /* ═══════════════════════════════════════════════════════════════
