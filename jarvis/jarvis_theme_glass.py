@@ -1043,6 +1043,575 @@ body::after {{
   border-radius: 2px;
   overflow: hidden;
 }}
+.health-view {{
+  --health-mint: #9de4b7;
+  --health-teal: #7fd7e0;
+  --health-teal-soft: #4cb8c4;
+  --health-gold: #d8b07a;
+  --health-gold-soft: #a68154;
+  --health-copy: #eff8f4;
+  --health-copy-muted: rgba(239, 248, 244, 0.74);
+  --health-copy-faint: rgba(239, 248, 244, 0.46);
+  --health-stroke: rgba(127, 215, 224, 0.24);
+  --health-stroke-strong: rgba(157, 228, 183, 0.34);
+  position: relative;
+  color: var(--health-copy);
+}}
+.health-view::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top left, rgba(157,228,183,0.10), transparent 30%),
+    radial-gradient(circle at top right, rgba(127,215,224,0.09), transparent 28%),
+    radial-gradient(circle at bottom center, rgba(216,176,122,0.06), transparent 30%);
+  pointer-events: none;
+}}
+.health-view .view-title {{
+  color: var(--health-copy);
+}}
+.health-view .view-title-line {{
+  background: linear-gradient(90deg, var(--health-teal), rgba(127,215,224,0));
+}}
+.health-header {{
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}}
+.health-kicker {{
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--health-gold-soft);
+  margin-bottom: 10px;
+}}
+.health-subtitle {{
+  max-width: 780px;
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--health-copy-muted);
+}}
+.health-motto {{
+  max-width: 320px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--health-stroke);
+  background: linear-gradient(180deg, rgba(17,22,30,0.94), rgba(8,12,18,0.99));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.health-motto-mark {{
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--health-stroke-strong);
+  color: var(--health-teal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 10px;
+  background: radial-gradient(circle, rgba(127,215,224,0.16), rgba(127,215,224,0.04) 62%, transparent 74%);
+}}
+.health-motto strong {{
+  display: block;
+  color: var(--health-gold);
+  font-size: 15px;
+  line-height: 1.45;
+}}
+.health-motto span {{
+  display: block;
+  margin-top: 6px;
+  color: var(--health-copy-faint);
+  font-size: 12px;
+}}
+.health-desktop-stage {{
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--health-stroke);
+  background:
+    radial-gradient(circle at top right, rgba(127,215,224,0.09), transparent 24%),
+    linear-gradient(180deg, rgba(10,15,20,0.99), rgba(5,8,12,0.995));
+  box-shadow: 0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.health-desktop-stage::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.03), transparent 28%),
+    repeating-linear-gradient(90deg, transparent 0 26px, rgba(255,255,255,0.012) 26px 27px);
+  pointer-events: none;
+}}
+.health-desktop-shell {{
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 238px minmax(0, 1fr);
+  min-height: 900px;
+}}
+.health-sidebar {{
+  padding: 18px 14px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(8,12,18,0.98), rgba(5,8,13,0.99));
+  display: flex;
+  flex-direction: column;
+}}
+.health-sidebar-top {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}}
+.health-sidebar-brand strong {{
+  display: block;
+  color: var(--health-copy);
+  font-size: 28px;
+  letter-spacing: 0.03em;
+}}
+.health-sidebar-brand span {{
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--health-teal-soft);
+}}
+.health-sidebar-mark {{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--health-stroke);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--health-teal);
+}}
+.health-sidebar-nav {{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}}
+.health-sidebar-item {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--health-copy-faint);
+  font-size: 13px;
+}}
+.health-sidebar-item.active {{
+  background: rgba(127,215,224,0.10);
+  border-color: rgba(127,215,224,0.20);
+  color: var(--health-copy);
+}}
+.health-sidebar-foot {{
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}}
+.health-sidebar-user {{
+  font-size: 12px;
+  color: var(--health-copy-muted);
+}}
+.health-sidebar-user strong {{
+  display: block;
+  color: var(--health-copy);
+  margin-bottom: 4px;
+}}
+.health-main {{
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}}
+.health-topbar {{
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}}
+.health-topbar-kicker {{
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--health-gold-soft);
+  margin-bottom: 4px;
+}}
+.health-topbar-title {{
+  font-size: 30px;
+  color: var(--health-copy);
+}}
+.health-topbar-subtitle {{
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--health-copy-muted);
+  max-width: 720px;
+}}
+.health-nav {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}}
+.health-nav-btn {{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--health-stroke);
+  background: rgba(255,255,255,0.03);
+  color: var(--health-copy);
+  cursor: pointer;
+}}
+.health-nav-btn:disabled {{
+  opacity: 0.4;
+  cursor: default;
+}}
+.health-nav-status {{
+  min-width: 110px;
+  text-align: center;
+}}
+.health-nav-page {{
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--health-copy-faint);
+}}
+.health-nav-title {{
+  margin-top: 3px;
+  font-size: 14px;
+  color: var(--health-copy);
+}}
+.health-page-deck {{
+  position: relative;
+  min-height: 0;
+}}
+.health-page {{
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}}
+.health-page.active {{
+  display: flex;
+}}
+.health-card,
+.health-panel,
+.health-mini-card {{
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.024);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  padding: 14px;
+}}
+.health-card-heading {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}}
+.health-card-label {{
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--health-copy-faint);
+}}
+.health-card-label strong {{
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--health-copy);
+}}
+.health-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(127,215,224,0.18);
+  color: var(--health-copy-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  background: rgba(255,255,255,0.03);
+}}
+.health-chip.live {{ color: var(--health-mint); }}
+.health-chip.warn {{ color: var(--health-gold); }}
+.health-grid-hero {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 14px;
+}}
+.health-hero-card {{
+  min-height: 290px;
+  overflow: hidden;
+}}
+.health-hero-visual {{
+  min-height: 260px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    linear-gradient(180deg, rgba(5,9,14,0.24), rgba(5,8,12,0.82)),
+    radial-gradient(circle at center, rgba(157,228,183,0.14), transparent 28%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='520' viewBox='0 0 900 520'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23121f2c'/%3E%3Cstop offset='0.45' stop-color='%23283f4d'/%3E%3Cstop offset='1' stop-color='%230b1117'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='900' height='520' fill='url(%23g)'/%3E%3Ccircle cx='465' cy='192' r='82' fill='rgba(127,215,224,0.17)'/%3E%3Cpath d='M0 412 L120 300 L244 332 L370 226 L512 282 L650 210 L900 420 V520 H0 Z' fill='rgba(7,11,16,0.72)'/%3E%3C/svg%3E") center/cover no-repeat;
+}}
+.health-hero-overline {{
+  font-size: 13px;
+  color: rgba(255,255,255,0.80);
+}}
+.health-hero-title {{
+  font-size: 38px;
+  line-height: 1.02;
+  color: #f8fffb;
+}}
+.health-hero-copy {{
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.80);
+}}
+.health-stat-row {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}}
+.health-metric {{
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+}}
+.health-metric span {{
+  display: block;
+  margin-bottom: 8px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--health-copy-faint);
+}}
+.health-metric strong {{
+  display: block;
+  font-size: 28px;
+  color: var(--health-copy);
+}}
+.health-metric em {{
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--health-copy-muted);
+}}
+.health-metric strong.good {{ color: var(--health-mint); }}
+.health-metric strong.accent {{ color: var(--health-teal); }}
+.health-metric strong.warn {{ color: var(--health-gold); }}
+.health-side-stack {{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}}
+.health-ring-shell {{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}}
+.health-grid-two,
+.health-grid-three,
+.health-vitals-grid,
+.health-care-grid,
+.health-voice-grid {{
+  display: grid;
+  gap: 14px;
+}}
+.health-grid-two {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.health-grid-three {{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}}
+.health-vitals-grid {{
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+}}
+.health-care-grid {{
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1fr) 300px;
+}}
+.health-voice-grid {{
+  grid-template-columns: minmax(0, 1fr) 290px;
+  align-items: start;
+}}
+.health-audio-halo {{
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px auto 18px;
+  color: var(--health-teal);
+  font-size: 34px;
+  border: 1px solid rgba(127,215,224,0.24);
+  background:
+    radial-gradient(circle at center, rgba(127,215,224,0.18), rgba(127,215,224,0.04) 48%, transparent 72%),
+    rgba(255,255,255,0.02);
+  box-shadow: inset 0 0 30px rgba(127,215,224,0.08), 0 0 40px rgba(0,0,0,.18);
+}}
+.health-action-row {{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}}
+.health-mini-list {{
+  display: grid;
+  gap: 10px;
+}}
+.health-mini-row {{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+}}
+.health-mini-row span {{
+  color: var(--health-copy-muted);
+  font-size: 12px;
+}}
+.health-mini-row strong {{
+  color: var(--health-copy);
+  font-size: 12px;
+}}
+.health-physician-grid {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}}
+.health-physician-card {{
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: border-color .18s, transform .15s, box-shadow .18s;
+}}
+.health-physician-card:hover {{
+  border-color: rgba(127,215,224,0.34);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(0,0,0,.26);
+}}
+.health-physician-card.active {{
+  border-color: rgba(127,215,224,0.44);
+  box-shadow: 0 0 0 1px rgba(127,215,224,0.28), 0 16px 28px rgba(0,0,0,.28);
+}}
+.health-physician-top {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}}
+.health-physician-avatar {{
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  background: rgba(127,215,224,0.10);
+  color: var(--health-teal);
+  flex-shrink: 0;
+}}
+.health-physician-name {{
+  color: var(--health-copy);
+  font-size: 14px;
+  font-weight: 700;
+}}
+.health-physician-title {{
+  color: var(--health-copy-faint);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-top: 4px;
+}}
+.health-physician-desc {{
+  color: var(--health-copy-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}}
+.health-consult-card {{
+  padding: 0;
+  overflow: hidden;
+}}
+.health-values-row {{
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}}
+.health-values-row .health-mini-card strong {{
+  display: block;
+  color: var(--health-copy);
+  font-size: 14px;
+  margin-bottom: 8px;
+}}
+.health-values-row .health-mini-card p,
+.health-panel p,
+.health-mini-card p {{
+  margin: 0;
+  color: var(--health-copy-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}}
+@media (max-width: 1280px) {{
+  .health-care-grid,
+  .health-values-row {{
+    grid-template-columns: 1fr;
+  }}
+  .health-stat-row,
+  .health-grid-three {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+}}
+@media (max-width: 1180px) {{
+  .health-desktop-shell,
+  .health-grid-hero,
+  .health-vitals-grid,
+  .health-grid-two,
+  .health-voice-grid {{
+    grid-template-columns: 1fr;
+  }}
+  .health-sidebar {{
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }}
+  .health-header,
+  .health-topbar {{
+    flex-direction: column;
+    align-items: flex-start;
+  }}
+  .health-physician-grid {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+}}
+@media (max-width: 760px) {{
+  .health-main {{
+    padding: 16px;
+  }}
+  .health-hero-title {{
+    font-size: 30px;
+  }}
+  .health-stat-row,
+  .health-grid-three,
+  .health-physician-grid {{
+    grid-template-columns: 1fr;
+  }}
+}}
 .score-domain-fill {{
   height: 100%;
   border-radius: 2px;
@@ -10057,537 +10626,560 @@ body::after {{
   </div>
 
   <!-- ═══════════════════════════════════════════════════════ HEALTH VIEW ═══ -->
-  <div id="view-health" class="view" style="display:none;">
-    <div class="view-header">
-      <div class="view-title">HEALTH INTELLIGENCE</div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="font-size:11px;color:var(--text-3);" id="health-last-sync">—</div>
-        <button class="btn-ghost" onclick="openHealthDesktopExperience()" style="font-size:10px;">Open Desktop Experience</button>
-        <button class="vitals-log-btn" onclick="openVitalsEntry()" title="Log missed vitals">＋ Log vitals</button>
-        <button class="btn btn-hue btn-sm" onclick="helenRefresh()" id="helen-refresh-btn" style="font-size:10px;">↻ Refresh Analysis</button>
+  <div id="view-health" class="view health-view">
+    <div class="health-header">
+      <div>
+        <div class="health-kicker">Desktop Experience</div>
+        <div class="view-title">HEALTH INTELLIGENCE<div class="view-title-line"></div></div>
+        <div class="health-subtitle">A real desktop health workspace for readiness, vitals, care coordination, coaching, medication adherence, and physician-agent consultation. One screen is active at a time, with arrows and a page count guiding the flow.</div>
+      </div>
+      <div class="health-motto">
+        <div class="health-motto-mark">∿</div>
+        <div>
+          <strong>Personalized. Proactive. Private.</strong>
+          <span>JARVIS looks after the details so you can live your life.</span>
+        </div>
       </div>
     </div>
-    <div class="view-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
 
-      <!-- ── DAILY HEALTH SCORE ──────────────────────────────────────────── -->
-      <div class="health-score-panel" id="daily-score-panel">
-        <!-- Score ring -->
-        <div class="health-score-ring">
-          <svg viewBox="0 0 72 72" style="width:72px;height:72px;transform:rotate(-90deg);">
-            <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
-            <circle id="dhs-ring" cx="36" cy="36" r="30" fill="none" stroke="#f59e0b" stroke-width="6"
-              stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="188.5"
-              style="transition:stroke-dashoffset 1s ease,stroke 0.5s ease;"/>
-          </svg>
-          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <div id="dhs-score" style="font-size:20px;font-weight:800;font-family:var(--font-mono);color:var(--amber);line-height:1;">—</div>
-            <div id="dhs-grade" style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-top:1px;">—</div>
-          </div>
-        </div>
-        <!-- Breakdown + sparkline -->
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);">Daily Health Score</div>
-            <div id="dhs-date" style="font-size:10px;color:var(--text-3);">Today</div>
-          </div>
-          <!-- Domain bars -->
-          <div id="dhs-breakdown" style="margin-bottom:10px;"></div>
-          <!-- Sparkline -->
-          <div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:4px;">30-Day Trend</div>
-            <svg id="dhs-sparkline" class="sparkline-svg" viewBox="0 0 280 44" preserveAspectRatio="none">
-              <text x="140" y="24" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="10">Loading…</text>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── HELEN CHO ASSESSMENT HEADER ─────────────────────────────────── -->
-      <div class="card card-tactical" id="helen-assessment-card" style="border-left:3px solid var(--hue);">
-        <div class="card-inner" style="padding:16px;">
-          <!-- Top row: score + headline -->
-          <div style="display:flex;align-items:flex-start;gap:20px;margin-bottom:12px;">
-            <!-- Score circle -->
-            <div style="text-align:center;flex-shrink:0;">
-              <div id="helen-score" style="font-size:52px;font-weight:800;color:var(--amber);font-family:var(--font-mono);line-height:1;">—</div>
-              <div id="helen-grade" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-2);margin-top:2px;">Analysing…</div>
-              <div id="helen-risk-badge" style="margin-top:6px;display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--surface-2);color:var(--text-3);">—</div>
+    <div class="health-desktop-stage">
+      <div class="health-desktop-shell">
+        <aside class="health-sidebar">
+          <div class="health-sidebar-top">
+            <div class="health-sidebar-brand">
+              <strong>JARVIS</strong>
+              <span>Health</span>
             </div>
-            <!-- Headline + narrative -->
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--hue);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
-              <div id="helen-headline" style="font-size:14px;font-weight:600;color:var(--text-1);margin-bottom:8px;line-height:1.4;">Loading health analysis…</div>
-              <div id="helen-narrative" style="font-size:11px;color:var(--text-2);line-height:1.7;max-height:120px;overflow:hidden;position:relative;">
-                <div id="helen-narrative-text"></div>
-                <div id="helen-narrative-fade" style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--surface-1));display:none;"></div>
+            <div class="health-sidebar-mark">✦</div>
+          </div>
+          <div class="health-sidebar-nav">
+            <div class="health-sidebar-item active">⌂ Command Center</div>
+            <div class="health-sidebar-item">◔ Vitals</div>
+            <div class="health-sidebar-item">⌁ Trends</div>
+            <div class="health-sidebar-item">✦ Coach</div>
+            <div class="health-sidebar-item">◉ Medications</div>
+            <div class="health-sidebar-item">♡ Care</div>
+            <div class="health-sidebar-item">◫ Nutrition</div>
+            <div class="health-sidebar-item">◌ Fitness</div>
+            <div class="health-sidebar-item">◍ Mind Health</div>
+            <div class="health-sidebar-item">☷ Labs</div>
+            <div class="health-sidebar-item">☰ Reports</div>
+            <div class="health-sidebar-item">⚙ Settings</div>
+          </div>
+          <div class="health-sidebar-foot">
+            <div class="health-sidebar-user">
+              <strong>Chris</strong>
+              Personal profile
+            </div>
+          </div>
+        </aside>
+
+        <main class="health-main">
+          <div class="health-topbar">
+            <div class="health-topbar-copy">
+              <div class="health-topbar-kicker">Desktop Sequence</div>
+              <div class="health-topbar-title" id="health-nav-title">1. Health Command Center</div>
+              <div class="health-topbar-subtitle" id="health-nav-subtitle">Open the health command center: readiness, sleep, blood pressure, Helen Cho guidance, and the next medically useful step.</div>
+            </div>
+            <div class="health-nav">
+              <button class="health-nav-btn" id="health-nav-prev" onclick="advanceHealthPage(-1)" aria-label="Previous Health page">←</button>
+              <div class="health-nav-status">
+                <div class="health-nav-page" id="health-page-count">Page 1 of 6</div>
+                <div class="health-nav-title" id="health-page-label">Command Center</div>
               </div>
-              <button id="helen-expand-btn" onclick="helenToggleNarrative()" style="display:none;font-size:10px;color:var(--hue);background:none;border:none;cursor:pointer;padding:4px 0;margin-top:2px;">Show more ▾</button>
-            </div>
-          </div>
-          <!-- Positive findings strip -->
-          <div id="helen-positives" style="display:none;padding:8px 10px;background:rgba(16,185,129,0.08);border-radius:6px;border:1px solid rgba(16,185,129,0.2);font-size:10px;color:var(--green);margin-top:4px;"></div>
-        </div>
-      </div>
-
-      <!-- ── KEY METRICS STRIP ──────────────────────────────────────────────── -->
-      <div id="health-metrics-strip" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
-        <!-- A1c -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">A1c</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-a1c" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">7.3</span>
-            <span style="font-size:10px;color:var(--text-3);">%</span>
-            <span style="font-size:14px;color:var(--amber);margin-left:auto;">↑</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;7.0 · Apr 2026</div>
-          <div id="spark-a1c" class="hm-sparkline"></div>
-        </div>
-        <!-- LDL -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">LDL</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-ldl" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--red,#ef4444);">156</span>
-            <span style="font-size:10px;color:var(--text-3);">mg/dL</span>
-            <span style="font-size:14px;color:var(--red,#ef4444);margin-left:auto;">↑</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;100 · Apr 2026</div>
-          <div id="spark-ldl" class="hm-sparkline"></div>
-        </div>
-        <!-- BP (live) -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Blood Pressure</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-bp" style="font-size:22px;font-weight:700;font-family:var(--font-mono);color:var(--green);">—/—</span>
-            <span style="font-size:10px;color:var(--text-3);">mmHg</span>
-            <span id="hm-bp-arrow" style="font-size:14px;margin-left:auto;">→</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target &lt;130/80</div>
-          <div id="spark-bp" class="hm-sparkline"></div>
-        </div>
-        <!-- eGFR -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">eGFR</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-egfr" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">87</span>
-            <span style="font-size:10px;color:var(--text-3);">mL/min</span>
-            <span style="font-size:14px;color:var(--amber);margin-left:auto;">↓</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Stage 2 CKD · Apr 2026</div>
-          <div id="spark-egfr" class="hm-sparkline"></div>
-        </div>
-        <!-- HRV (live) -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">HRV</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-hrv" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
-            <span style="font-size:10px;color:var(--text-3);">ms</span>
-            <span style="font-size:14px;color:var(--text-3);margin-left:auto;">→</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Apple Watch · 7-day avg</div>
-          <div id="spark-hrv" class="hm-sparkline"></div>
-        </div>
-        <!-- Steps (live) -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Steps</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-steps" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
-            <span style="font-size:10px;color:var(--text-3);">today</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target 8,000 · Apple Watch</div>
-          <div id="spark-steps" class="hm-sparkline"></div>
-        </div>
-        <!-- Sleep (live) -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Sleep</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-sleep" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
-            <span style="font-size:10px;color:var(--text-3);">hrs</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Target 8.0 · Apple Watch</div>
-          <div id="spark-sleep" class="hm-sparkline"></div>
-        </div>
-        <!-- Weight (live) -->
-        <div style="background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:14px 16px;">
-          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);margin-bottom:6px;">Weight</div>
-          <div style="display:flex;align-items:baseline;gap:6px;">
-            <span id="hm-weight" style="font-size:28px;font-weight:700;font-family:var(--font-mono);color:var(--blue);">—</span>
-            <span style="font-size:10px;color:var(--text-3);">lbs</span>
-            <span style="font-size:14px;color:var(--green);margin-left:auto;">↓</span>
-          </div>
-          <div style="font-size:9px;color:var(--text-3);margin-top:4px;">Goal: &lt;200 · Scale</div>
-          <div id="spark-weight" class="hm-sparkline"></div>
-        </div>
-      </div>
-
-      <!-- ── PRIORITY ACTION BOARD ─────────────────────────────────────────── -->
-      <div>
-        <div class="section-label" style="margin-bottom:8px;">Priority Actions <span id="helen-action-count" style="color:var(--text-3);font-weight:400;"></span></div>
-        <div id="helen-actions" style="display:flex;flex-direction:column;gap:6px;">
-          <div style="font-size:11px;color:var(--text-3);padding:8px 0;">Generating action plan…</div>
-        </div>
-      </div>
-
-      <!-- ── DATA GRID (3 columns) ─────────────────────────────────────────── -->
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-
-        <!-- Column 1: Conditions + Goals + Medications -->
-        <div>
-          <div class="section-label" style="margin-bottom:8px;">Conditions</div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="helen-conditions" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+              <button class="health-nav-btn" id="health-nav-next" onclick="advanceHealthPage(1)" aria-label="Next Health page">→</button>
             </div>
           </div>
 
-          <div class="section-label" style="margin-bottom:8px;">Treatment Goals</div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="helen-goals" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-
-          <div class="section-label" style="margin-bottom:8px;">Cardiovascular Risk</div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="helen-cv-risk" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-
-          <div class="section-label" style="margin-bottom:8px;">5-Year Trajectory</div>
-          <div class="card">
-            <div class="card-inner" id="helen-trajectory" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Column 2: Vitals + ECG + BP -->
-        <div>
-          <div class="section-label" style="margin-bottom:8px;">Today's Vitals <span class="card-badge" id="health-apple-badge">—</span></div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="health-metrics-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;">
-              <div style="font-size:11px;color:var(--text-3);">No data yet</div>
-            </div>
-          </div>
-
-          <div class="section-label" style="margin-bottom:8px;">Blood Pressure <span class="card-badge" id="health-omron-badge">Omron</span></div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" style="padding:10px 0;">
-              <div style="display:flex;align-items:baseline;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:8px;">
-                <span style="font-size:28px;font-weight:700;font-family:var(--font-mono);" id="health-bp-value">—/—</span>
-                <span style="font-size:10px;color:var(--text-3);">mmHg</span>
-                <span style="font-size:12px;color:var(--text-2);" id="health-bp-pulse"></span>
-                <span style="font-size:9px;color:var(--text-3);margin-left:auto;" id="health-bp-date"></span>
-              </div>
-              <div id="health-bp-history" style="font-size:10px;color:var(--text-3);">No readings yet</div>
-              <div id="health-omron-connect-section" style="margin-top:8px;">
-                <button class="btn-ghost" onclick="omronConnect()" id="health-omron-btn" style="font-size:10px;">Connect Omron</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-label" style="margin-bottom:8px;">ECG <span class="card-badge" id="health-ecg-badge">KardiaMobile</span></div>
-          <div class="card">
-            <div class="card-inner" id="health-ecg-list" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Column 3: Labs + Medication Insights -->
-        <div>
-          <div class="section-label" style="margin-bottom:8px;">Lab Alerts</div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="helen-lab-alerts" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-
-          <div class="section-label" style="margin-bottom:8px;">Medication Insights</div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="helen-med-insights" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-
-          <div class="section-label" style="margin-bottom:8px;">Diabetes Risk Profile</div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="helen-diabetes-risk" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-
-          <div class="section-label" style="margin-bottom:8px;">Post-Bariatric Status</div>
-          <div class="card">
-            <div class="card-inner" id="helen-post-bariatric" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- end 3-col grid -->
-
-      <!-- ── LAB SPARKLINES ─────────────────────────────────────────────────── -->
-      <div style="margin-bottom:4px;">
-        <div class="section-label" style="margin-bottom:8px;">Lab Trends <span style="color:var(--text-3);font-weight:400;font-size:9px;">sparkline — full history</span></div>
-        <div class="card">
-          <div class="card-inner" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:12px 0;">
-            <!-- A1c mini sparkline -->
-            <div style="border-right:1px solid var(--border);padding-right:12px;">
-              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
-                <span style="font-size:10px;font-weight:700;color:var(--text-2);">A1c</span>
-                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">7.3<span style="font-size:9px;color:var(--text-3);font-weight:400;">%</span></span>
-              </div>
-              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">Target &lt;7.0</div>
-              <div id="spark-lab-a1c" style="height:36px;"></div>
-            </div>
-            <!-- LDL mini sparkline -->
-            <div style="border-right:1px solid var(--border);padding-right:12px;">
-              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
-                <span style="font-size:10px;font-weight:700;color:var(--text-2);">LDL</span>
-                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--red,#ef4444);">156<span style="font-size:9px;color:var(--text-3);font-weight:400;"> mg</span></span>
-              </div>
-              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">Target &lt;100</div>
-              <div id="spark-lab-ldl" style="height:36px;"></div>
-            </div>
-            <!-- eGFR mini sparkline -->
-            <div style="border-right:1px solid var(--border);padding-right:12px;">
-              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
-                <span style="font-size:10px;font-weight:700;color:var(--text-2);">eGFR</span>
-                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--amber);">87<span style="font-size:9px;color:var(--text-3);font-weight:400;"> mL</span></span>
-              </div>
-              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">Stage 2 CKD watch</div>
-              <div id="spark-lab-egfr" style="height:36px;"></div>
-            </div>
-            <!-- K+ mini sparkline -->
-            <div>
-              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
-                <span style="font-size:10px;font-weight:700;color:var(--text-2);">K⁺</span>
-                <span style="font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--green);">4.5<span style="font-size:9px;color:var(--text-3);font-weight:400;"> mEq</span></span>
-              </div>
-              <div style="font-size:8px;color:var(--text-3);margin-bottom:4px;">ARB + spiro monitor</div>
-              <div id="spark-lab-kplus" style="height:36px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── KEY TRENDS ──────────────────────────────────────────────────── -->
-      <div style="margin-bottom:16px;">
-        <div class="section-label" style="margin-bottom:8px;">Key Lab Trends <span style="color:var(--text-3);font-weight:400;font-size:9px;">↑↘↔ trajectory over all recorded history</span></div>
-        <div class="card">
-          <div class="card-inner" id="helen-key-trends" style="padding:8px 0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0 20px;">
-            <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── SAM WILSON CHECK-IN BANNER ───────────────────────────────────────── -->
-      <div id="sam-checkin-banner-wrap" style="margin-bottom:0;">
-        <div class="section-label" style="margin-bottom:8px;">🦅 Sam Wilson
-          <span style="color:var(--text-3);font-weight:400;font-size:9px;">Health &amp; Fitness Coach</span>
-        </div>
-        <div class="sam-checkin-banner" id="sam-checkin-banner">
-          <div style="font-size:11px;color:var(--text-3);">Loading check-in…</div>
-        </div>
-      </div>
-
-      <!-- ── SAM WILSON DAILY PROTOCOL ────────────────────────────────────────── -->
-      <div style="margin-bottom:16px;" id="sam-protocol-section">
-        <div class="section-label" style="margin-bottom:8px;">Full Daily Protocol
-          <span id="sam-streak-badge" class="card-badge" style="margin-left:8px;display:none;">🔥 0 day streak</span>
-        </div>
-        <div class="card">
-          <div class="card-inner" id="sam-protocol-content" style="padding:12px 0;">
-            <div style="font-size:11px;color:var(--text-3);">Loading protocol…</div>
-          </div>
-        </div>
-        <!-- Food Diary Strip -->
-        <div id="sam-food-strip" style="margin-top:12px;display:none;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-            <span style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">Today's Food Log</span>
-            <span id="sam-food-protein-label" style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);">—g protein</span>
-          </div>
-          <!-- Protein progress bar -->
-          <div style="height:4px;background:var(--surface-3);border-radius:2px;margin-bottom:8px;overflow:hidden;">
-            <div id="sam-food-protein-bar" style="height:100%;width:0%;background:var(--blue);border-radius:2px;transition:width .4s ease;"></div>
-          </div>
-          <!-- Meal list -->
-          <div id="sam-food-meals" style="font-size:11px;color:var(--text-2);display:flex;flex-wrap:wrap;gap:4px;"></div>
-        </div>
-        <!-- Sam Chat -->
-        <div style="margin-top:10px;">
-          <!-- Mode indicator -->
-          <div id="sam-chat-mode-bar" style="display:none;margin-bottom:6px;padding:5px 10px;background:var(--surface-3);border-radius:6px;font-size:11px;color:var(--blue);display:flex;align-items:center;justify-content:space-between;">
-            <span id="sam-chat-mode-label">🎤 Interview mode</span>
-            <button onclick="samCancelMode()" style="background:none;border:none;color:var(--text-3);font-size:10px;cursor:pointer;padding:0;">✕ Cancel</button>
-          </div>
-          <div id="sam-chat-messages" style="display:none;max-height:240px;overflow-y:auto;padding:8px;background:var(--surface-2);border-radius:8px;margin-bottom:8px;font-size:12px;"></div>
-          <div style="display:flex;gap:6px;align-items:center;">
-            <input id="sam-chat-input" type="text" placeholder="Talk to Sam… or log food (e.g. 'I had eggs and toast')"
-              style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text-1);outline:none;"
-              onkeydown="if(event.key==='Enter'){{samChat();}}"/>
-            <button class="btn-ghost" style="font-size:11px;padding:6px 12px;" onclick="samChat()">Send</button>
-          </div>
-          <div style="display:flex;gap:6px;margin-top:6px;">
-            <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samStartInterview()">📋 Diet Interview</button>
-            <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samSwitchMode('food')">🍽 Log Food</button>
-            <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="openSamJournal()">📓 Daily Journal</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── LONGEVITY PROJECTION ──────────────────────────────────────────── -->
-      <div style="margin-bottom:16px;">
-        <div class="section-label" style="margin-bottom:8px;">Longevity Projection <span style="color:var(--text-3);font-weight:400;font-size:9px;">actuarial + risk-adjusted</span></div>
-        <div class="card">
-          <div class="card-inner" id="health-longevity-content" style="padding:12px 0;">
-            <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── DIGITAL TWIN ───────────────────────────────────────────────────── -->
-      <div style="margin-bottom:4px;">
-        <div class="section-label" style="margin-bottom:8px;">Digital Twin — 12-Month Projections <span style="color:var(--text-3);font-weight:400;font-size:9px;">model-based forecast</span></div>
-        <div class="card">
-          <div class="card-inner" id="health-twin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;padding:12px 0;">
-            <div style="font-size:11px;color:var(--text-3);">Loading projections…</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── DOCTOR APPOINTMENT PREP ───────────────────────────────────────── -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div>
-          <div class="section-label" style="margin-bottom:8px;">Questions for Dr. Wenk <span id="helen-appt-date" style="color:var(--text-3);font-size:9px;font-weight:400;"></span></div>
-          <div class="card">
-            <div class="card-inner" id="helen-doctor-questions" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-        </div>
-        <div>
-          <div class="section-label" style="margin-bottom:8px;">Missing Data / Gaps</div>
-          <div class="card" style="margin-bottom:12px;">
-            <div class="card-inner" id="helen-missing-data" style="padding:8px 0;">
-              <div style="font-size:11px;color:var(--text-3);">Loading…</div>
-            </div>
-          </div>
-          <!-- Readiness -->
-          <div class="section-label" style="margin-bottom:8px;">Today's Readiness</div>
-          <div class="card">
-            <div class="card-inner" style="padding:12px 0;text-align:center;">
-              <div id="health-readiness-score" style="font-size:40px;font-weight:700;color:var(--amber);font-family:var(--font-mono);">—</div>
-              <div id="health-readiness-grade" style="font-size:11px;color:var(--text-2);margin-bottom:6px;">—</div>
-              <div id="health-readiness-message" style="font-size:10px;color:var(--text-3);padding:0 8px;"></div>
-              <div id="health-readiness-factors" style="padding:8px 0 0;text-align:left;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── DATA CONNECTIONS (compact) ───────────────────────────────────── -->
-      <div>
-        <div class="section-label" style="margin-bottom:8px;">Data Connections</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
-          <!-- Apple Health -->
-          <div class="card">
-            <div class="card-inner" style="padding:10px 0;">
-              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Apple Health Auto Export</div>
-              <div style="font-family:var(--font-mono);font-size:9px;background:var(--surface-2);padding:4px 8px;border-radius:4px;color:var(--amber);word-break:break-all;margin-bottom:6px;">http://192.168.5.47:8787/api/health/ingest</div>
-              <div style="font-size:9px;color:var(--text-3);">REST API export · POST · JSON · Daily 7 AM</div>
-              <button class="btn-ghost" style="font-size:9px;margin-top:6px;" onclick="healthTestIngest()">Test Ingest</button>
-            </div>
-          </div>
-          <!-- MyChart -->
-          <div class="card">
-            <div class="card-inner" style="padding:10px 0;">
-              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:6px;">MyChart Sync <span id="mychart-sync-badge" style="font-size:9px;color:var(--text-3);"></span></div>
-              <div id="mychart-sync-status" style="font-size:9px;color:var(--text-3);margin-bottom:6px;"></div>
-              <div id="mychart-progress-wrap" style="display:none;margin-bottom:6px;">
-                <div style="background:var(--surface-2);border-radius:4px;height:4px;overflow:hidden;">
-                  <div id="mychart-progress-bar" style="height:100%;background:var(--hue);width:0%;transition:width 0.4s;"></div>
+          <div class="health-page-deck">
+            <section class="health-page active" data-health-page="1">
+              <div class="health-grid-hero">
+                <div class="health-card">
+                  <div class="health-card-heading">
+                    <div class="health-card-label">Health Command Center<strong>Good morning, Chris.</strong></div>
+                    <span id="health-last-sync">—</span>
+                  </div>
+                  <div class="health-stat-row">
+                    <div class="health-panel">
+                      <div class="health-card-label">Daily Readiness<strong>Today’s command signal</strong></div>
+                      <div class="health-score-panel" id="daily-score-panel">
+                        <div class="health-score-ring">
+                          <svg viewBox="0 0 72 72" style="width:72px;height:72px;transform:rotate(-90deg);">
+                            <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+                            <circle id="dhs-ring" cx="36" cy="36" r="30" fill="none" stroke="#f59e0b" stroke-width="6"
+                              stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="188.5"
+                              style="transition:stroke-dashoffset 1s ease,stroke 0.5s ease;"/>
+                          </svg>
+                          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <div id="dhs-score" style="font-size:20px;font-weight:800;font-family:var(--font-mono);color:var(--amber);line-height:1;">—</div>
+                            <div id="dhs-grade" style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--text-3);margin-top:1px;">—</div>
+                          </div>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;">
+                            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-2);">Daily Health Score</div>
+                            <div id="dhs-date" style="font-size:10px;color:var(--text-3);">Today</div>
+                          </div>
+                          <div id="dhs-breakdown" style="margin-bottom:10px;"></div>
+                          <div>
+                            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);margin-bottom:4px;">30-Day Trend</div>
+                            <svg id="dhs-sparkline" class="sparkline-svg" viewBox="0 0 280 44" preserveAspectRatio="none">
+                              <text x="140" y="24" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="10">Loading…</text>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="health-panel">
+                      <div class="health-card-label">Helen Cho<strong>Medical intelligence summary</strong></div>
+                      <div id="helen-assessment-card" style="border-left:3px solid var(--health-teal);padding-left:14px;">
+                        <div style="display:flex;align-items:flex-start;gap:18px;">
+                          <div style="text-align:center;flex-shrink:0;">
+                            <div id="helen-score" style="font-size:52px;font-weight:800;color:var(--amber);font-family:var(--font-mono);line-height:1;">—</div>
+                            <div id="helen-grade" style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-2);margin-top:2px;">Analysing…</div>
+                            <div id="helen-risk-badge" style="margin-top:6px;display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;background:var(--surface-2);color:var(--text-3);">—</div>
+                          </div>
+                          <div style="flex:1;min-width:0;">
+                            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--health-teal);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
+                            <div id="helen-headline" style="font-size:14px;font-weight:600;color:var(--text-1);margin-bottom:8px;line-height:1.4;">Loading health analysis…</div>
+                            <div id="helen-narrative" style="font-size:11px;color:var(--text-2);line-height:1.7;max-height:120px;overflow:hidden;position:relative;">
+                              <div id="helen-narrative-text"></div>
+                              <div id="helen-narrative-fade" style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(transparent,var(--surface-1));display:none;"></div>
+                            </div>
+                            <button id="helen-expand-btn" onclick="helenToggleNarrative()" style="display:none;font-size:10px;color:var(--health-teal);background:none;border:none;cursor:pointer;padding:4px 0;margin-top:2px;">Show more ▾</button>
+                          </div>
+                        </div>
+                        <div id="helen-positives" style="display:none;padding:8px 10px;background:rgba(16,185,129,0.08);border-radius:6px;border:1px solid rgba(16,185,129,0.2);font-size:10px;color:var(--green);margin-top:12px;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div id="health-metrics-strip" class="health-grid-three">
+                    <div class="health-mini-card">
+                      <strong>A1c</strong>
+                      <p><span id="hm-a1c">7.3</span>% · target &lt; 7.0</p>
+                      <div id="spark-a1c" class="hm-sparkline"></div>
+                    </div>
+                    <div class="health-mini-card">
+                      <strong>Blood Pressure</strong>
+                      <p><span id="hm-bp">—/—</span> mmHg <span id="hm-bp-arrow">→</span></p>
+                      <div id="spark-bp" class="hm-sparkline"></div>
+                    </div>
+                    <div class="health-mini-card">
+                      <strong>Sleep Recovery</strong>
+                      <p><span id="hm-sleep">—</span> hrs · <span id="hm-hrv">—</span> ms HRV</p>
+                      <div id="spark-sleep" class="hm-sparkline"></div>
+                    </div>
+                    <div class="health-mini-card">
+                      <strong>Resting Heart Rate</strong>
+                      <p><span id="hm-egfr">87</span> eGFR watch · <span id="hm-weight">—</span> lbs</p>
+                      <div id="spark-egfr" class="hm-sparkline"></div>
+                    </div>
+                    <div class="health-mini-card">
+                      <strong>Movement</strong>
+                      <p><span id="hm-steps">—</span> steps today</p>
+                      <div id="spark-steps" class="hm-sparkline"></div>
+                    </div>
+                    <div class="health-mini-card">
+                      <strong>Lipid Watch</strong>
+                      <p><span id="hm-ldl">156</span> mg/dL LDL</p>
+                      <div id="spark-ldl" class="hm-sparkline"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="health-side-stack">
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Physician Agents<strong>Your care intelligence circle</strong></div>
+                    </div>
+                    <div class="health-physician-grid" id="health-physician-roster">
+                      <div class="skel" style="height:128px;border-radius:16px;"></div>
+                      <div class="skel" style="height:128px;border-radius:16px;"></div>
+                      <div class="skel" style="height:128px;border-radius:16px;"></div>
+                    </div>
+                  </div>
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Priority Actions<strong>What JARVIS wants you to address</strong></div>
+                      <button class="btn btn-hue btn-sm" onclick="helenRefresh()" id="helen-refresh-btn" style="font-size:10px;">↻ Refresh Analysis</button>
+                    </div>
+                    <div id="helen-actions" style="display:flex;flex-direction:column;gap:6px;">
+                      <div style="font-size:11px;color:var(--text-3);padding:8px 0;">Generating action plan…</div>
+                    </div>
+                    <div id="helen-action-count" style="display:none;"></div>
+                  </div>
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Quick Controls<strong>Move directly to what matters</strong></div>
+                    </div>
+                    <div class="health-action-row">
+                      <button class="faith-action-btn primary" type="button" onclick="advanceHealthPage(5)">Open Consultation</button>
+                      <button class="faith-action-btn muted" type="button" onclick="openVitalsEntry()">Log vitals</button>
+                      <button class="faith-action-btn muted" type="button" onclick="openHealthDesktopExperience()">Open full desktop page</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div style="display:flex;gap:6px;">
-                <button class="btn-ghost" style="font-size:9px;" onclick="mychartStartSync()" id="mychart-sync-btn">⟳ Sync</button>
-                <button class="btn-ghost" style="font-size:9px;" onclick="mychartViewRecords()">Records</button>
-              </div>
-            </div>
-          </div>
-          <!-- Omron -->
-          <div class="card">
-            <div class="card-inner" style="padding:10px 0;">
-              <div style="font-size:10px;font-weight:600;color:var(--text-2);margin-bottom:6px;">Omron Connect <span style="font-size:9px;font-weight:400;color:var(--text-3);">Blood Pressure</span></div>
-              <div id="helen-omron-status-text" style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Not configured</div>
-              <div style="font-size:9px;color:var(--text-3);margin-bottom:6px;">Add OMRON_CLIENT_ID + OMRON_CLIENT_SECRET to .env</div>
-              <button class="btn-ghost" style="font-size:9px;" onclick="omronConnect()">Connect</button>
-            </div>
-          </div>
-        </div>
-      </div>
+            </section>
 
-      <!-- ── HEALTH CHAT CONSOLE ───────────────────────────────────────────── -->
-      <div style="margin-bottom:4px;">
-        <div class="section-label" style="margin-bottom:8px;">
-          Ask Your Medical Team
-          <span style="color:var(--text-3);font-weight:400;font-size:9px;">Helen Cho · Longevity Council · Direct consultation</span>
-        </div>
-        <div class="card" style="border:1px solid var(--hue);border-radius:12px;overflow:hidden;padding:0;">
-          <div class="hchat-wrap">
-
-            <!-- ── Doctor selector bar ── -->
-            <div class="hchat-selector-bar">
-              <span class="hchat-selector-label">CONSULT WITH</span>
-              <!-- Active doctor pill / dropdown trigger -->
-              <div class="hchat-active-pill" id="hchat-active-pill" onclick="hchatToggleDropdown(event)">
-                <span class="hchat-active-pill-icon" id="hchat-active-icon">🧬</span>
-                <span class="hchat-active-pill-name" id="hchat-active-name">Helen Cho</span>
-                <span class="hchat-active-pill-arrow">▾</span>
-              </div>
-              <span class="hchat-active-pill-subtitle" id="hchat-active-title">Chief Medical Intelligence Officer</span>
-
-              <!-- Floating dropdown -->
-              <div class="hchat-dropdown" id="hchat-dropdown">
-                <div class="hchat-dropdown-label">Your Medical Team</div>
-                <div class="hchat-dropdown-grid" id="hchat-dropdown-grid">
-                  <!-- Injected by JS -->
+            <section class="health-page" data-health-page="2">
+              <div class="health-grid-two">
+                <div class="health-card">
+                  <div class="health-card-heading">
+                    <div class="health-card-label">Morning Health Brief<strong>JARVIS Morning Brief</strong></div>
+                    <span class="faith-chip">Live</span>
+                  </div>
+                  <div class="health-audio-halo">∿</div>
+                  <div class="health-panel">
+                    <div class="health-card-label">Today’s Readiness<strong>How you woke up</strong></div>
+                    <div class="health-values-row">
+                      <div class="health-mini-card">
+                        <strong id="health-readiness-score">—</strong>
+                        <p id="health-readiness-grade">—</p>
+                      </div>
+                      <div class="health-mini-card">
+                        <strong>7h 12m</strong>
+                        <p>Hours slept</p>
+                      </div>
+                      <div class="health-mini-card">
+                        <strong>62 ms</strong>
+                        <p>HRV balanced</p>
+                      </div>
+                      <div class="health-mini-card">
+                        <strong id="health-bp-value">—/—</strong>
+                        <p>Blood pressure</p>
+                      </div>
+                      <div class="health-mini-card">
+                        <strong id="health-bp-pulse">—</strong>
+                        <p>Pulse</p>
+                      </div>
+                      <div class="health-mini-card">
+                        <strong>164 lbs</strong>
+                        <p>Weight</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="health-panel">
+                    <div class="health-card-label">Helen’s Morning Narrative<strong>What to watch first</strong></div>
+                    <p id="health-readiness-message">Loading today’s guidance…</p>
+                    <div id="health-readiness-factors"></div>
+                  </div>
+                </div>
+                <div class="health-side-stack">
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Overnight Summary<strong>Context before you move</strong></div>
+                    </div>
+                    <div class="health-mini-list">
+                      <div class="health-mini-row"><span>Sleep window</span><strong id="health-bp-date">—</strong></div>
+                      <div class="health-mini-row"><span>Omron status</span><strong id="helen-omron-status-text">Not configured</strong></div>
+                      <div class="health-mini-row"><span>Apple Health</span><strong id="health-apple-badge">—</strong></div>
+                      <div class="health-mini-row"><span>Sync</span><strong id="mychart-sync-status">Waiting</strong></div>
+                    </div>
+                  </div>
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Today’s Recommendation<strong>Move more, stress less</strong></div>
+                    </div>
+                    <p>Use the coach, care, and physician pages below to decide whether today is a recovery day, a planning day, or a push day.</p>
+                    <div class="health-action-row">
+                      <button class="faith-action-btn primary" type="button" onclick="advanceHealthPage(3)">Open Coaching Studio</button>
+                      <button class="faith-action-btn muted" type="button" onclick="advanceHealthPage(2)">Open Trends</button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <!-- ── Messages ── -->
-            <div id="hchat-messages" style="flex:1;min-height:320px;max-height:420px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;">
-              <div style="text-align:center;color:var(--text-3);font-size:11px;padding:30px 20px;">
-                <div style="font-size:24px;margin-bottom:8px;">🧬</div>
-                <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
-                <div>Ask me anything about your health, medications, labs, or longevity strategy.</div>
+            <section class="health-page" data-health-page="3">
+              <div class="health-vitals-grid">
+                <div class="health-card">
+                  <div class="health-card-heading">
+                    <div class="health-card-label">Vitals &amp; Trends Analysis<strong>Today’s vitals</strong></div>
+                    <span class="card-badge" id="health-omron-badge">Omron</span>
+                  </div>
+                  <div class="health-panel" id="health-metrics-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div style="font-size:11px;color:var(--text-3);">No data yet</div>
+                  </div>
+                  <div class="health-grid-three" style="margin-top:18px;">
+                    <div class="health-mini-card">
+                      <strong>Blood Pressure</strong>
+                      <p id="health-bp-history">No readings yet</p>
+                      <div id="health-omron-connect-section" style="margin-top:8px;">
+                        <button class="btn-ghost" onclick="omronConnect()" id="health-omron-btn" style="font-size:10px;">Connect Omron</button>
+                      </div>
+                    </div>
+                    <div class="health-mini-card">
+                      <strong>ECG</strong>
+                      <div id="health-ecg-list" style="padding-top:6px;">
+                        <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                      </div>
+                    </div>
+                    <div class="health-mini-card">
+                      <strong>Key Trends</strong>
+                      <div id="helen-key-trends" style="padding-top:6px;display:grid;gap:8px;">
+                        <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="health-side-stack">
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Lab Trends<strong>High-level movement</strong></div>
+                    </div>
+                    <div class="health-grid-three">
+                      <div class="health-mini-card"><strong>A1c</strong><div id="spark-lab-a1c" style="height:36px;"></div></div>
+                      <div class="health-mini-card"><strong>LDL</strong><div id="spark-lab-ldl" style="height:36px;"></div></div>
+                      <div class="health-mini-card"><strong>eGFR</strong><div id="spark-lab-egfr" style="height:36px;"></div></div>
+                      <div class="health-mini-card"><strong>K+</strong><div id="spark-lab-kplus" style="height:36px;"></div></div>
+                    </div>
+                  </div>
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Lab Alerts<strong>Signals that need attention</strong></div>
+                    </div>
+                    <div id="helen-lab-alerts">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            </section>
 
-            <!-- ── Input bar ── -->
-            <div style="display:flex;gap:10px;padding:10px 14px;background:var(--surface-2);border-top:1px solid var(--border);">
-              <input id="hchat-input" type="text" placeholder="Ask Helen Cho…"
-                style="flex:1;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-1);outline:none;font-family:var(--font-sans);"
-                onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();hchatSend();}}" />
-              <button onclick="hchatSend()" id="hchat-send-btn"
-                style="background:var(--hue);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .2s;">
-                Send ↑
-              </button>
-            </div>
+            <section class="health-page" data-health-page="4">
+              <div class="health-grid-two">
+                <div class="health-card">
+                  <div class="health-card-heading">
+                    <div class="health-card-label">Recovery &amp; Coaching Studio<strong>Sam Wilson daily check-in</strong></div>
+                    <span id="sam-streak-badge" class="card-badge" style="display:none;">🔥 0 day streak</span>
+                  </div>
+                  <div id="sam-checkin-banner-wrap">
+                    <div class="sam-checkin-banner" id="sam-checkin-banner">
+                      <div style="font-size:11px;color:var(--text-3);">Loading check-in…</div>
+                    </div>
+                  </div>
+                  <div class="health-panel" style="margin-top:18px;">
+                    <div class="health-card-label">Recommended Protocol<strong>Today’s plan</strong></div>
+                    <div id="sam-protocol-content" style="padding-top:8px;">
+                      <div style="font-size:11px;color:var(--text-3);">Loading protocol…</div>
+                    </div>
+                  </div>
+                  <div id="sam-food-strip" style="margin-top:12px;display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                      <span style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-3);">Today’s Food Log</span>
+                      <span id="sam-food-protein-label" style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);">—g protein</span>
+                    </div>
+                    <div style="height:4px;background:var(--surface-3);border-radius:2px;margin-bottom:8px;overflow:hidden;">
+                      <div id="sam-food-protein-bar" style="height:100%;width:0%;background:var(--blue);border-radius:2px;transition:width .4s ease;"></div>
+                    </div>
+                    <div id="sam-food-meals" style="font-size:11px;color:var(--text-2);display:flex;flex-wrap:wrap;gap:4px;"></div>
+                  </div>
+                  <div style="margin-top:10px;">
+                    <div id="sam-chat-mode-bar" style="display:none;margin-bottom:6px;padding:5px 10px;background:var(--surface-3);border-radius:6px;font-size:11px;color:var(--blue);align-items:center;justify-content:space-between;">
+                      <span id="sam-chat-mode-label">🎤 Interview mode</span>
+                      <button onclick="samCancelMode()" style="background:none;border:none;color:var(--text-3);font-size:10px;cursor:pointer;padding:0;">✕ Cancel</button>
+                    </div>
+                    <div id="sam-chat-messages" style="display:none;max-height:240px;overflow-y:auto;padding:8px;background:var(--surface-2);border-radius:8px;margin-bottom:8px;font-size:12px;"></div>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                      <input id="sam-chat-input" type="text" placeholder="Talk to Sam… or log food (e.g. 'I had eggs and toast')"
+                        style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--text-1);outline:none;"
+                        onkeydown="if(event.key==='Enter'){{samChat();}}"/>
+                      <button class="btn-ghost" style="font-size:11px;padding:6px 12px;" onclick="samChat()">Send</button>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+                      <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samStartInterview()">📋 Diet Interview</button>
+                      <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="samSwitchMode('food')">🍽 Log Food</button>
+                      <button class="btn-ghost" style="font-size:10px;padding:4px 10px;" onclick="openSamJournal()">📓 Daily Journal</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="health-side-stack">
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Longevity Projection<strong>Actuarial + risk adjusted</strong></div>
+                    </div>
+                    <div id="health-longevity-content">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Digital Twin<strong>12-month projections</strong></div>
+                    </div>
+                    <div id="health-twin-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+                      <div style="font-size:11px;color:var(--text-3);">Loading projections…</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
 
+            <section class="health-page" data-health-page="5">
+              <div class="health-care-grid">
+                <div class="health-card">
+                  <div class="health-card-heading">
+                    <div class="health-card-label">Medication, Care &amp; Adherence Command<strong>Conditions and goals</strong></div>
+                  </div>
+                  <div class="health-panel">
+                    <div class="health-card-label">Conditions<strong>Active conditions and watch items</strong></div>
+                    <div id="helen-conditions">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                  <div class="health-panel" style="margin-top:16px;">
+                    <div class="health-card-label">Treatment Goals<strong>What the plan is trying to move</strong></div>
+                    <div id="helen-goals">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="health-card">
+                  <div class="health-card-heading">
+                    <div class="health-card-label">Risk &amp; Adherence<strong>What matters over time</strong></div>
+                  </div>
+                  <div class="health-panel">
+                    <div class="health-card-label">Cardiovascular Risk<strong>Current read</strong></div>
+                    <div id="helen-cv-risk">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                  <div class="health-panel" style="margin-top:16px;">
+                    <div class="health-card-label">5-Year Trajectory<strong>Where this direction leads</strong></div>
+                    <div id="helen-trajectory">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                  <div class="health-panel" style="margin-top:16px;">
+                    <div class="health-card-label">Medication Insights<strong>Optimization opportunities</strong></div>
+                    <div id="helen-med-insights">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="health-side-stack">
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Specialty Profiles<strong>Deeper review surfaces</strong></div>
+                    </div>
+                    <div id="helen-diabetes-risk">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                    <div id="helen-post-bariatric" style="margin-top:14px;">
+                      <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                    </div>
+                  </div>
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Appointment Prep<strong>Questions and missing data</strong></div>
+                    </div>
+                    <div class="health-panel">
+                      <div class="health-card-label">Questions for Dr. Wenk<strong id="helen-appt-date">Next visit</strong></div>
+                      <div id="helen-doctor-questions">
+                        <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                      </div>
+                    </div>
+                    <div class="health-panel" style="margin-top:16px;">
+                      <div class="health-card-label">Missing Data / Gaps<strong>Close these loops</strong></div>
+                      <div id="helen-missing-data">
+                        <div style="font-size:11px;color:var(--text-3);">Loading…</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="health-page" data-health-page="6">
+              <div class="health-voice-grid">
+                <div class="health-card health-consult-card">
+                  <div class="health-card-heading" style="padding:18px 18px 0;">
+                    <div class="health-card-label">Voice &amp; Consultation<strong>Ask your medical team</strong></div>
+                    <div class="health-action-row">
+                      <button class="faith-action-btn muted" type="button" onclick="openVitalsEntry()">Log vitals</button>
+                    </div>
+                  </div>
+                  <div class="hchat-wrap">
+                    <div class="hchat-selector-bar">
+                      <span class="hchat-selector-label">CONSULT WITH</span>
+                      <div class="hchat-active-pill" id="hchat-active-pill" onclick="hchatToggleDropdown(event)">
+                        <span class="hchat-active-pill-icon" id="hchat-active-icon">🧬</span>
+                        <span class="hchat-active-pill-name" id="hchat-active-name">Helen Cho</span>
+                        <span class="hchat-active-pill-arrow">▾</span>
+                      </div>
+                      <span class="hchat-active-pill-subtitle" id="hchat-active-title">Chief Medical Intelligence Officer</span>
+                      <div class="hchat-dropdown" id="hchat-dropdown">
+                        <div class="hchat-dropdown-label">Your Medical Team</div>
+                        <div class="hchat-dropdown-grid" id="hchat-dropdown-grid"></div>
+                      </div>
+                    </div>
+                    <div id="hchat-messages" style="flex:1;min-height:320px;max-height:420px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth;">
+                      <div style="text-align:center;color:var(--text-3);font-size:11px;padding:30px 20px;">
+                        <div style="font-size:24px;margin-bottom:8px;">🧬</div>
+                        <div style="font-weight:600;color:var(--text-2);margin-bottom:4px;">Helen Cho · Medical Intelligence</div>
+                        <div>Ask me anything about your health, medications, labs, or longevity strategy.</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:10px;padding:10px 14px;background:var(--surface-2);border-top:1px solid var(--border);">
+                      <input id="hchat-input" type="text" placeholder="Ask Helen Cho…"
+                        style="flex:1;background:var(--surface-1);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-1);outline:none;font-family:var(--font-sans);"
+                        onkeydown="if(event.key==='Enter'&&!event.shiftKey){{event.preventDefault();hchatSend();}}" />
+                      <button onclick="hchatSend()" id="hchat-send-btn"
+                        style="background:var(--hue);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:opacity .2s;">
+                        Send ↑
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="health-side-stack">
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Physician Agents<strong>Direct access to Sam, Helen, and the rest</strong></div>
+                    </div>
+                    <div class="health-physician-grid" id="health-physician-roster-secondary">
+                      <div class="skel" style="height:128px;border-radius:16px;"></div>
+                      <div class="skel" style="height:128px;border-radius:16px;"></div>
+                      <div class="skel" style="height:128px;border-radius:16px;"></div>
+                    </div>
+                  </div>
+                  <div class="health-card">
+                    <div class="health-card-heading">
+                      <div class="health-card-label">Data Connections<strong>What the system can see</strong></div>
+                    </div>
+                    <div class="health-mini-list">
+                      <div class="health-mini-row">
+                        <span>Apple Health Auto Export</span>
+                        <strong>Daily 7 AM</strong>
+                      </div>
+                      <div style="font-family:var(--font-mono);font-size:9px;background:var(--surface-2);padding:8px;border-radius:8px;color:var(--amber);word-break:break-all;">http://192.168.5.47:8787/api/health/ingest</div>
+                      <div class="health-mini-row">
+                        <span>MyChart Sync</span>
+                        <strong id="mychart-sync-badge">Waiting</strong>
+                      </div>
+                      <div id="mychart-progress-wrap" style="display:none;margin-bottom:6px;">
+                        <div style="background:var(--surface-2);border-radius:4px;height:4px;overflow:hidden;">
+                          <div id="mychart-progress-bar" style="height:100%;background:var(--hue);width:0%;transition:width 0.4s;"></div>
+                        </div>
+                      </div>
+                      <div class="health-action-row">
+                        <button class="faith-action-btn muted" type="button" onclick="healthTestIngest()">Test ingest</button>
+                        <button class="faith-action-btn muted" type="button" onclick="mychartStartSync()" id="mychart-sync-btn">Sync records</button>
+                        <button class="faith-action-btn muted" type="button" onclick="mychartViewRecords()">View records</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
-        </div>
-      </div>
 
-      <!-- Hidden: medical records dump (populated by mychartViewRecords) -->
-      <div id="health-medical-records-section" style="display:none;">
-        <div class="section-label" style="margin-bottom:8px;">Full Medical Records</div>
-        <div class="card"><div class="card-inner" id="health-medical-records" style="padding:8px 0;"></div></div>
+          <div style="display:none;">
+            <div id="health-medical-records-section">
+              <div id="health-medical-records"></div>
+            </div>
+            <div id="health-alerts"></div>
+          </div>
+        </main>
       </div>
-      <div id="health-alerts" style="display:none;"></div>
-
     </div>
   </div><!-- end view-health -->
 
@@ -20965,8 +21557,76 @@ function fmtLocalTime(utcStr, {{dateOnly=false, short=false}}={{}}) {{
 // ── Health Intelligence (Helen Cho) ─────────────────────────────────────────
 
 let _helenNarrativeExpanded = false;
+let healthStoryboardPage = 1;
+const HEALTH_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Health Command Center',
+    label: 'Command Center',
+    subtitle: 'Open the health command center: readiness, sleep, blood pressure, Helen Cho guidance, and the next medically useful step.',
+  }},
+  2: {{
+    title: '2. Morning Health Brief',
+    label: 'Morning Brief',
+    subtitle: 'Hear the morning brief with readiness context, overnight signals, and the first coaching decision for the day.',
+  }},
+  3: {{
+    title: '3. Vitals & Trends Analysis',
+    label: 'Vitals & Trends',
+    subtitle: 'Read the trend lines: vitals, ECG, blood pressure, and the lab movements that deserve closer attention.',
+  }},
+  4: {{
+    title: '4. Recovery & Coaching Studio',
+    label: 'Coaching Studio',
+    subtitle: 'Let Sam Wilson guide recovery, food logging, resilience, and the sustainable version of forward motion.',
+  }},
+  5: {{
+    title: '5. Medication, Care & Adherence Command',
+    label: 'Care Command',
+    subtitle: 'Keep medications, conditions, specialty concerns, and appointment prep coordinated in one place.',
+  }},
+  6: {{
+    title: '6. Voice & Consultation',
+    label: 'Consultation',
+    subtitle: 'Move into direct consultation with Helen Cho, Sam Wilson, and the rest of your physician-agent circle.',
+  }},
+}};
+
+function syncHealthStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-health .health-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  healthStoryboardPage = Math.max(1, Math.min(healthStoryboardPage, pageCount));
+
+  panels.forEach((panel, idx) => {{
+    panel.classList.toggle('active', idx + 1 === healthStoryboardPage);
+  }});
+
+  const pageMeta = HEALTH_STORYBOARD_TITLES[healthStoryboardPage];
+  const title = document.getElementById('health-nav-title');
+  if (title) title.textContent = pageMeta?.title || `Page ${{healthStoryboardPage}}`;
+
+  const subtitle = document.getElementById('health-nav-subtitle');
+  if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
+
+  const count = document.getElementById('health-page-count');
+  if (count) count.textContent = `Page ${{healthStoryboardPage}} of ${{pageCount}}`;
+
+  const label = document.getElementById('health-page-label');
+  if (label) label.textContent = pageMeta?.label || `Page ${{healthStoryboardPage}}`;
+
+  const prev = document.getElementById('health-nav-prev');
+  const next = document.getElementById('health-nav-next');
+  if (prev) prev.disabled = healthStoryboardPage === 1;
+  if (next) next.disabled = healthStoryboardPage === pageCount;
+}}
+
+function advanceHealthPage(delta) {{
+  healthStoryboardPage += delta;
+  syncHealthStoryboard();
+}}
 
 async function loadHealth() {{
+  syncHealthStoryboard();
   // Fire all data loads in parallel
   const [sumRes, ecgRes, bpRes, omronRes, helenRes, dbRes] = await Promise.all([
     fetch('/api/health/summary').catch(() => null),
@@ -21985,6 +22645,7 @@ async function hchatInit() {{
       const d = await res.json();
       _hchatDoctors = d.doctors || [];
       _hchatRenderDoctorBar();
+      renderHealthPhysicianRoster();
     }}
   }} catch(e) {{}}
 }}
@@ -22004,6 +22665,59 @@ function _hchatRenderDoctorBar() {{
       </span>
     </button>`;
   }}).join('');
+}}
+
+function renderHealthPhysicianRoster() {{
+  const containers = [
+    document.getElementById('health-physician-roster'),
+    document.getElementById('health-physician-roster-secondary'),
+  ].filter(Boolean);
+  if (!containers.length) return;
+
+  const doctors = _hchatDoctors.length ? _hchatDoctors : [
+    {{
+      agent_id: 'helen-cho',
+      name: 'Helen Cho',
+      title: 'Chief Medical Intelligence Officer',
+      specialty: 'Medical Intelligence',
+      icon: '🧬',
+      description: 'Clinical synthesis, risk review, labs, medications, and long-range health strategy.',
+    }},
+    {{
+      agent_id: 'sam-wilson',
+      name: 'Sam Wilson',
+      title: 'Health and Fitness Coach',
+      specialty: 'Recovery and performance',
+      icon: '🦅',
+      description: 'Training readiness, recovery pacing, food accountability, and sustainable momentum.',
+    }},
+  ];
+
+  const html = doctors.map(d => {{
+    const active = d.agent_id === _hchatDoctor ? ' active' : '';
+    const title = d.title || d.specialty || 'Physician Agent';
+    const desc = d.description || d.summary || 'Direct consultation for your health plan, trends, and care coordination.';
+    return `<button class="health-physician-card${{active}}" type="button" onclick="healthOpenPhysicianConsult('${{d.agent_id}}')">
+      <div class="health-physician-top">
+        <div class="health-physician-avatar">${{d.icon || '⚕️'}}</div>
+        <div>
+          <div class="health-physician-name">${{escHtml(d.name || 'Physician Agent')}}</div>
+          <div class="health-physician-title">${{escHtml(title)}}</div>
+        </div>
+      </div>
+      <div class="health-physician-desc">${{escHtml(desc)}}</div>
+    </button>`;
+  }}).join('');
+
+  containers.forEach(container => {{
+    container.innerHTML = html;
+  }});
+}}
+
+function healthOpenPhysicianConsult(doctorId) {{
+  healthStoryboardPage = 6;
+  syncHealthStoryboard();
+  hchatSelectDoctor(doctorId);
 }}
 
 function hchatToggleDropdown(e) {{
@@ -22041,6 +22755,7 @@ function hchatSelectDoctor(doctorId) {{
   if (nameEl)  nameEl.textContent  = name;
   if (iconEl)  iconEl.textContent  = icon;
   if (titleEl) titleEl.textContent = title;
+  renderHealthPhysicianRoster();
   // Update placeholder
   const inp = document.getElementById('hchat-input');
   if (inp) inp.placeholder = `Ask ${{name}}…`;
