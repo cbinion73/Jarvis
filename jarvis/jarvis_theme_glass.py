@@ -1612,6 +1612,509 @@ body::after {{
     grid-template-columns: 1fr;
   }}
 }}
+.huddle-view {{
+  position: relative;
+  padding: 0 6px 22px;
+  --huddle-copy: #f2f7ff;
+  --huddle-copy-soft: rgba(222,233,255,0.78);
+  --huddle-copy-faint: rgba(170,188,224,0.62);
+  --huddle-blue: #74d7ff;
+  --huddle-blue-soft: rgba(116,215,255,0.16);
+  --huddle-gold: #d8b57b;
+  --huddle-gold-soft: rgba(216,181,123,0.68);
+  --huddle-stroke: rgba(116,215,255,0.16);
+  --huddle-stroke-strong: rgba(116,215,255,0.34);
+}}
+.huddle-view::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(116,215,255,0.09), transparent 22%),
+    radial-gradient(circle at 84% 16%, rgba(216,181,123,0.08), transparent 24%),
+    linear-gradient(180deg, rgba(4,8,14,0.95), rgba(3,6,10,0.98));
+  border-radius: 28px;
+  z-index: 0;
+}}
+.huddle-view > * {{
+  position: relative;
+  z-index: 1;
+}}
+.huddle-view .view-title {{ color: var(--huddle-copy); }}
+.huddle-view .view-title-line {{
+  background: linear-gradient(90deg, var(--huddle-blue), rgba(116,215,255,0));
+}}
+.huddle-header {{
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}}
+.huddle-kicker {{
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--huddle-gold-soft);
+  margin-bottom: 10px;
+}}
+.huddle-subtitle {{
+  max-width: 760px;
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--huddle-copy-soft);
+}}
+.huddle-motto {{
+  max-width: 330px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--huddle-stroke);
+  background: linear-gradient(180deg, rgba(14,20,30,0.94), rgba(7,11,18,0.99));
+}}
+.huddle-motto strong {{
+  display: block;
+  color: var(--huddle-gold);
+  font-size: 14px;
+}}
+.huddle-motto span {{
+  display: block;
+  margin-top: 6px;
+  color: var(--huddle-copy-faint);
+  font-size: 12px;
+  line-height: 1.55;
+}}
+.huddle-desktop-stage {{
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--huddle-stroke);
+  background:
+    radial-gradient(circle at center, rgba(116,215,255,0.06), transparent 28%),
+    linear-gradient(180deg, rgba(7,11,17,0.985), rgba(4,7,11,0.995));
+  box-shadow: 0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.huddle-desktop-shell {{
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  min-height: 860px;
+}}
+.huddle-rail {{
+  padding: 18px 12px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(8,11,18,0.98), rgba(4,7,12,0.99));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}}
+.huddle-rail-brand {{
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--huddle-stroke);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--huddle-blue);
+  background: rgba(255,255,255,0.03);
+}}
+.huddle-rail-stack {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  align-items: center;
+}}
+.huddle-rail-icon {{
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.03);
+  color: var(--huddle-copy-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}}
+.huddle-rail-icon.active {{
+  color: var(--huddle-copy);
+  border-color: var(--huddle-stroke-strong);
+  background: rgba(116,215,255,0.10);
+}}
+.huddle-main {{
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}}
+.huddle-topbar {{
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}}
+.huddle-topbar-kicker {{
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--huddle-gold-soft);
+  margin-bottom: 4px;
+}}
+.huddle-topbar-title {{
+  font-size: 30px;
+  color: var(--huddle-copy);
+}}
+.huddle-topbar-subtitle {{
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--huddle-copy-soft);
+  max-width: 720px;
+}}
+.huddle-nav {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}}
+.huddle-nav-btn {{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--huddle-stroke);
+  background: rgba(255,255,255,0.03);
+  color: var(--huddle-copy);
+  cursor: pointer;
+}}
+.huddle-nav-btn:disabled {{
+  opacity: 0.4;
+  cursor: default;
+}}
+.huddle-nav-status {{
+  min-width: 110px;
+  text-align: center;
+}}
+.huddle-nav-page {{
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--huddle-copy-faint);
+}}
+.huddle-nav-title {{
+  margin-top: 3px;
+  font-size: 14px;
+  color: var(--huddle-copy);
+}}
+.huddle-page-deck {{
+  position: relative;
+}}
+.huddle-page {{
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}}
+.huddle-page.active {{
+  display: flex;
+}}
+.huddle-card-shell,
+.huddle-panel-shell,
+.huddle-mini-shell {{
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.024);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}}
+.huddle-card-heading {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}}
+.huddle-card-label {{
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--huddle-copy-faint);
+}}
+.huddle-card-label strong {{
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--huddle-copy);
+}}
+.huddle-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(116,215,255,0.18);
+  color: var(--huddle-copy-soft);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  background: rgba(255,255,255,0.03);
+}}
+.huddle-chip.warn {{
+  border-color: rgba(216,181,123,0.24);
+  color: var(--huddle-gold);
+}}
+.huddle-chip.live {{
+  color: #7ee787;
+}}
+.huddle-grid-two,
+.huddle-grid-three,
+.huddle-grid-hero,
+.huddle-party-grid,
+.huddle-resolution-grid {{
+  display: grid;
+  gap: 14px;
+}}
+.huddle-grid-two {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.huddle-grid-three {{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}}
+.huddle-grid-hero {{
+  grid-template-columns: 320px minmax(0, 1fr);
+}}
+.huddle-party-grid {{
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr) 260px;
+}}
+.huddle-resolution-grid {{
+  grid-template-columns: minmax(0, 1fr) 330px;
+}}
+.huddle-council-roster,
+.huddle-delegate-list,
+.huddle-party-risk-list,
+.huddle-mini-list {{
+  display: grid;
+  gap: 10px;
+}}
+.huddle-council-agent,
+.huddle-mini-row,
+.huddle-delegate-row,
+.huddle-mission-tile {{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+}}
+.huddle-council-agent strong,
+.huddle-mini-row strong,
+.huddle-delegate-row strong {{
+  color: var(--huddle-copy);
+}}
+.huddle-council-agent span,
+.huddle-mini-row span,
+.huddle-delegate-row span {{
+  color: var(--huddle-copy-faint);
+  font-size: 12px;
+}}
+.huddle-council-core {{
+  min-height: 460px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(180deg, rgba(5,9,14,0.24), rgba(5,8,12,0.82)),
+    radial-gradient(circle at center, rgba(116,215,255,0.13), transparent 24%),
+    radial-gradient(circle at center, rgba(216,181,123,0.10), transparent 38%),
+    url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='620' viewBox='0 0 900 620'%3E%3Crect width='900' height='620' fill='%2309121a'/%3E%3Ccircle cx='450' cy='310' r='190' fill='none' stroke='rgba(116,215,255,0.18)' stroke-width='6'/%3E%3Ccircle cx='450' cy='310' r='128' fill='none' stroke='rgba(216,181,123,0.12)' stroke-width='3'/%3E%3Ccircle cx='450' cy='310' r='78' fill='rgba(116,215,255,0.10)'/%3E%3C/svg%3E\") center/cover no-repeat;
+}}
+.huddle-council-ring {{
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  border: 1px solid rgba(116,215,255,0.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--huddle-copy);
+  background: radial-gradient(circle, rgba(9,18,30,0.92), rgba(6,10,16,0.68));
+  box-shadow: 0 0 60px rgba(116,215,255,0.16), inset 0 0 36px rgba(116,215,255,0.10);
+}}
+.huddle-council-ring strong {{
+  font-size: 44px;
+  letter-spacing: 0.04em;
+}}
+.huddle-council-ring span {{
+  margin-top: 10px;
+  color: var(--huddle-copy-faint);
+  font-size: 12px;
+}}
+.huddle-council-wave {{
+  margin-top: 14px;
+  width: 140px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(116,215,255,0.18), rgba(116,215,255,0.62), rgba(116,215,255,0.18));
+  filter: blur(.2px);
+}}
+.huddle-council-perimeter {{
+  position: absolute;
+  inset: 20px;
+  pointer-events: none;
+}}
+.huddle-perimeter-node {{
+  position: absolute;
+  width: 150px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(6,11,18,0.78);
+  backdrop-filter: blur(8px);
+}}
+.huddle-perimeter-node strong {{
+  display: block;
+  color: var(--huddle-copy);
+  font-size: 13px;
+}}
+.huddle-perimeter-node span {{
+  display: block;
+  margin-top: 4px;
+  color: var(--huddle-copy-faint);
+  font-size: 11px;
+}}
+.huddle-call-row {{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(116,215,255,0.18);
+  background: linear-gradient(180deg, rgba(9,13,20,0.98), rgba(6,10,15,0.98));
+}}
+.huddle-call-row strong {{
+  color: var(--huddle-copy);
+  font-size: 20px;
+}}
+.huddle-call-row span {{
+  color: var(--huddle-copy-faint);
+  font-size: 12px;
+}}
+.huddle-problem-core {{
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}}
+.huddle-problem-core .huddle-council-ring {{
+  width: 240px;
+  height: 240px;
+}}
+.huddle-mission-columns {{
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}}
+.huddle-mission-col {{
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.024);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}}
+.huddle-mission-col h4 {{
+  margin: 0;
+  color: var(--huddle-copy);
+  font-size: 13px;
+}}
+.huddle-mission-col span {{
+  color: var(--huddle-copy-faint);
+  font-size: 11px;
+}}
+.huddle-mission-tile {{
+  flex-direction: column;
+  align-items: flex-start;
+}}
+.huddle-mission-tile em {{
+  font-style: normal;
+  color: var(--huddle-copy-faint);
+  font-size: 11px;
+}}
+.huddle-quick-status {{
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 10px;
+}}
+.huddle-quick-pill {{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  text-align: center;
+}}
+.huddle-quick-pill strong {{
+  display: block;
+  color: var(--huddle-copy);
+  font-size: 12px;
+}}
+.huddle-quick-pill span {{
+  display: block;
+  margin-top: 4px;
+  color: var(--huddle-copy-faint);
+  font-size: 11px;
+}}
+.huddle-cta {{
+  width: 100%;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(216,181,123,0.28);
+  background: linear-gradient(180deg, rgba(181,130,46,0.22), rgba(115,78,18,0.22));
+  color: #fff5e6;
+  text-align: left;
+}}
+.huddle-cta strong {{
+  display: block;
+  font-size: 28px;
+}}
+.huddle-cta span {{
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgba(255,245,230,0.78);
+}}
+@media (max-width: 1380px) {{
+  .huddle-party-grid,
+  .huddle-resolution-grid,
+  .huddle-grid-hero,
+  .huddle-mission-columns,
+  .huddle-quick-status {{
+    grid-template-columns: 1fr 1fr;
+  }}
+}}
+@media (max-width: 1180px) {{
+  .huddle-desktop-shell,
+  .huddle-grid-two,
+  .huddle-grid-three,
+  .huddle-party-grid,
+  .huddle-resolution-grid,
+  .huddle-grid-hero,
+  .huddle-mission-columns,
+  .huddle-quick-status {{
+    grid-template-columns: 1fr;
+  }}
+  .huddle-topbar,
+  .huddle-header {{
+    flex-direction: column;
+    align-items: flex-start;
+  }}
+}}
 .score-domain-fill {{
   height: 100%;
   border-radius: 2px;
@@ -10292,111 +10795,255 @@ body::after {{
   </div>
 
   <!-- ── HUDDLE ─────────────────────────────────────────────── -->
-  <div id="view-huddle" class="view">
-    <div class="view-header">
-      <div class="view-title">MORNING HUDDLE · DOSSIER REVIEW<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Daily Standup · What Every Agent Did, Needs, and Plans</div>
-    </div>
-    <div id="huddle-meta" class="huddle-meta">
-      <span class="huddle-stat" id="huddle-active-work">— active items</span>
-      <span class="huddle-stat" id="huddle-blockers-count">— blockers</span>
-      <span class="huddle-stat" id="huddle-approvals-count">— awaiting approval</span>
-      <button class="huddle-refresh-btn" onclick="loadHuddle()">↺ Refresh</button>
-    </div>
-
-    <!-- Party Mode Status -->
-    <div id="party-mode-bar" class="party-bar" style="display:none">
-      <span class="party-bar-indicator"></span>
-      <span id="party-bar-text">Agents working...</span>
-      <button class="party-bar-btn" onclick="startPartyMode()">⚡ Wake the Agents</button>
-    </div>
-
-    <!-- ── Idea Inbox ──────────────────────────────────────────── -->
-    <div class="huddle-section" id="idea-inbox-section">
-      <div class="huddle-section-label" style="display:flex;align-items:center;gap:12px;">
-        💡 IDEA INBOX
-        <span id="idea-inbox-counts" style="font-size:10px;font-weight:400;color:var(--text-3);font-family:var(--font-mono);"></span>
-        <button class="party-bar-btn" style="margin-left:auto;" onclick="showIdeaAddModal()">+ New Idea</button>
+  <div id="view-huddle" class="view huddle-view">
+    <div class="huddle-header">
+      <div>
+        <div class="huddle-kicker">Desktop Experience</div>
+        <div class="view-title">HUDDLE INTELLIGENCE<div class="view-title-line"></div></div>
+        <div class="huddle-subtitle">A real desktop Huddle workspace for council formation, party-mode problem solving, mission board review, and coordinated delegate-back execution. One screen is active at a time, with arrows and a page count carrying the sequence.</div>
       </div>
-
-      <!-- Quick-capture bar -->
-      <div style="display:flex;gap:8px;margin-bottom:8px;">
-        <input type="text" id="huddle-idea-input"
-          placeholder="Describe an idea — JARVIS will research it and return a full dossier..."
-          style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:13px;color:var(--text-1);outline:none;"
-          onkeydown="if(event.key==='Enter')huddleAddIdea()"
-          onfocus="this.style.borderColor='var(--hue)'"
-          onblur="this.style.borderColor='var(--border)'">
-        <button class="btn-primary" onclick="huddleAddIdea()">Capture</button>
-      </div>
-
-      <!-- Bulk import row -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-        <input type="file" id="huddle-bulk-import-input" accept=".docx,.txt,.md,.json,.csv"
-          style="display:none;" onchange="huddleBulkImport(this)">
-        <button class="party-bar-btn" style="font-size:11px;padding:4px 12px;"
-          onclick="document.getElementById('huddle-bulk-import-input').click()">
-          📄 Import from File
-        </button>
-        <select id="huddle-bulk-domain"
-          style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
-          <option value="passive-income">Passive Income</option>
-          <option value="publishing">Publishing / Books</option>
-          <option value="software">Software</option>
-          <option value="creative">Creative</option>
-          <option value="personal">Personal</option>
-          <option value="general">General</option>
-        </select>
-        <span style="font-size:10px;color:var(--text-3);">.docx · .txt · .md · .json</span>
-        <div id="huddle-bulk-status" style="font-size:11px;color:var(--text-3);display:none;margin-left:4px;"></div>
-      </div>
-
-      <!-- Status filter pills -->
-      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="idea-filter-pills">
-        <button class="idea-filter-pill active" data-status="" onclick="setIdeaFilter(this,'')">All</button>
-        <button class="idea-filter-pill" data-status="captured" onclick="setIdeaFilter(this,'captured')">Captured</button>
-        <button class="idea-filter-pill" data-status="queued" onclick="setIdeaFilter(this,'queued')">Queued</button>
-        <button class="idea-filter-pill" data-status="researching" onclick="setIdeaFilter(this,'researching')">Researching</button>
-        <button class="idea-filter-pill" data-status="done" onclick="setIdeaFilter(this,'done')">Done ✓</button>
-        <button class="idea-filter-pill" data-status="passed" onclick="setIdeaFilter(this,'passed')">Passed</button>
-      </div>
-
-      <!-- Idea list -->
-      <div id="idea-inbox-list" style="display:flex;flex-direction:column;gap:8px;">
-        <div style="color:var(--text-3);font-size:12px;padding:12px 0;">Loading ideas...</div>
+      <div class="huddle-motto">
+        <strong>Bring the council together.</strong>
+        <span>Surface the problem, orchestrate the agents, pressure-test the plan, and send the coordinated work back out.</span>
       </div>
     </div>
 
-    <!-- Overnight Dossiers -->
-    <div class="huddle-section" id="dossier-section">
-      <div class="huddle-section-label">🗂 OVERNIGHT DOSSIERS — Ready for Review</div>
-      <div id="huddle-dossier-grid" class="dossier-grid">
-        <div class="skeleton-block" style="height:120px;border-radius:8px;"></div>
-      </div>
-    </div>
+    <div class="huddle-desktop-stage">
+      <div class="huddle-desktop-shell">
+        <aside class="huddle-rail">
+          <div class="huddle-rail-brand">✦</div>
+          <div class="huddle-rail-stack">
+            <div class="huddle-rail-icon active">⌂</div>
+            <div class="huddle-rail-icon">☰</div>
+            <div class="huddle-rail-icon">⚡</div>
+            <div class="huddle-rail-icon">◎</div>
+            <div class="huddle-rail-icon">✎</div>
+            <div class="huddle-rail-icon">⬡</div>
+            <div class="huddle-rail-icon">⚙</div>
+          </div>
+        </aside>
 
-    <!-- Blockers / Approvals Needed row -->
-    <div id="huddle-approvals" class="huddle-section" style="display:none">
-      <div class="huddle-section-label">⚡ NEEDS YOUR ATTENTION</div>
-      <div id="huddle-approvals-list" class="huddle-approval-list"></div>
-    </div>
+        <main class="huddle-main">
+          <div class="huddle-topbar">
+            <div class="huddle-topbar-copy">
+              <div class="huddle-topbar-kicker">Desktop Sequence</div>
+              <div class="huddle-topbar-title" id="huddle-nav-title">1. Agent Council Chamber</div>
+              <div class="huddle-topbar-subtitle" id="huddle-nav-subtitle">Survey the council roster, see who is online, and convene the room before the problem-solving session begins.</div>
+            </div>
+            <div class="huddle-nav">
+              <button class="huddle-nav-btn" id="huddle-nav-prev" onclick="advanceHuddlePage(-1)" aria-label="Previous Huddle page">←</button>
+              <div class="huddle-nav-status">
+                <div class="huddle-nav-page" id="huddle-page-count">Page 1 of 4</div>
+                <div class="huddle-nav-title" id="huddle-page-label">Council Chamber</div>
+              </div>
+              <button class="huddle-nav-btn" id="huddle-nav-next" onclick="advanceHuddlePage(1)" aria-label="Next Huddle page">→</button>
+            </div>
+          </div>
 
-    <!-- Passive Income Pipeline -->
-    <div class="huddle-section">
-      <div class="huddle-section-label">💡 PASSIVE INCOME PIPELINE</div>
-      <div id="huddle-pi-pipeline" class="pi-pipeline-grid">
-        <div class="skeleton-block" style="height:80px;border-radius:8px;"></div>
-      </div>
-    </div>
+          <div class="huddle-page-deck">
+            <section class="huddle-page active" data-huddle-page="1">
+              <div class="huddle-grid-hero">
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Council Roster<strong>Who is in the room</strong></div>
+                    <button class="huddle-refresh-btn" onclick="loadHuddle()">↺ Refresh</button>
+                  </div>
+                  <div class="huddle-council-roster" id="huddle-council-roster">
+                    <div class="skel" style="height:58px;border-radius:14px;"></div>
+                    <div class="skel" style="height:58px;border-radius:14px;"></div>
+                    <div class="skel" style="height:58px;border-radius:14px;"></div>
+                  </div>
+                </div>
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Agent Council Chamber<strong>Convene the room</strong></div>
+                    <span class="huddle-chip live" id="huddle-active-work">— active items</span>
+                  </div>
+                  <div class="huddle-council-core">
+                    <div class="huddle-council-perimeter" id="huddle-council-perimeter"></div>
+                    <div class="huddle-council-ring">
+                      <strong>JARVIS</strong>
+                      <span id="huddle-council-status">Council online</span>
+                      <div class="huddle-council-wave"></div>
+                    </div>
+                  </div>
+                  <div class="huddle-call-row">
+                    <div style="font-size:24px;">◔</div>
+                    <div style="flex:1;">
+                      <strong>Call a Huddle</strong>
+                      <span>Press to convene the council, begin party mode, and move the agents into coordinated reasoning.</span>
+                    </div>
+                    <button class="party-bar-btn" onclick="startPartyMode()">⚡ Wake the Agents</button>
+                  </div>
+                </div>
+              </div>
+            </section>
 
-    <!-- Agent standups grid -->
-    <div class="huddle-section">
-      <div class="huddle-section-label">📋 AGENT STANDUPS</div>
-      <div id="huddle-reports-grid" class="huddle-grid">
-        <!-- populated by loadHuddle() -->
-        <div class="skeleton-block" style="height:140px;border-radius:8px;"></div>
-        <div class="skeleton-block" style="height:140px;border-radius:8px;"></div>
-        <div class="skeleton-block" style="height:140px;border-radius:8px;"></div>
+            <section class="huddle-page" data-huddle-page="2">
+              <div class="huddle-party-grid">
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Party Mode: Problem Solve<strong id="huddle-party-problem-title">Active problem</strong></div>
+                    <span class="huddle-chip warn" id="huddle-blockers-count">— blockers</span>
+                  </div>
+                  <div class="huddle-mini-shell" id="party-mode-bar" style="display:none">
+                    <span class="party-bar-indicator"></span>
+                    <span id="party-bar-text">Agents working...</span>
+                    <button class="party-bar-btn" onclick="startPartyMode()">⚡ Wake the Agents</button>
+                  </div>
+                  <div class="huddle-panel-shell" id="huddle-party-problem-copy" style="margin-top:12px;">
+                    Party mode is standing by. Pick an active approval, blocker, or dossier to give the council a central problem to solve.
+                  </div>
+                  <div class="huddle-problem-core">
+                    <div class="huddle-council-ring">
+                      <strong id="huddle-party-progress">73%</strong>
+                      <span id="huddle-party-progress-copy">Converging solutions</span>
+                      <div class="huddle-council-wave"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Live Debate &amp; Dossiers<strong>Proposals under review</strong></div>
+                    <span class="huddle-chip" id="huddle-approvals-count">— awaiting approval</span>
+                  </div>
+                  <div id="dossier-section">
+                    <div id="huddle-dossier-grid" class="dossier-grid">
+                      <div class="skeleton-block" style="height:120px;border-radius:8px;"></div>
+                    </div>
+                  </div>
+                  <div id="huddle-approvals" style="margin-top:14px;display:none;">
+                    <div id="huddle-approvals-list" class="huddle-approval-list"></div>
+                  </div>
+                </div>
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Synthesis Risks<strong>What could break the plan</strong></div>
+                  </div>
+                  <div class="huddle-party-risk-list" id="huddle-party-risk-list">
+                    <div class="huddle-mini-row"><span>Waiting on party mode</span><strong>Standby</strong></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="huddle-page" data-huddle-page="3">
+              <div class="huddle-card-shell">
+                <div class="huddle-card-heading">
+                  <div class="huddle-card-label">Agent Report-In + Mission Board<strong>Standups, pipeline, and captured ideas</strong></div>
+                  <span class="huddle-chip" id="idea-inbox-counts">—</span>
+                </div>
+                <div class="huddle-mission-columns" id="huddle-mission-columns">
+                  <div class="huddle-mission-col"><h4>Completed</h4><span>Loading…</span></div>
+                  <div class="huddle-mission-col"><h4>Watching</h4><span>Loading…</span></div>
+                  <div class="huddle-mission-col"><h4>Needs You</h4><span>Loading…</span></div>
+                  <div class="huddle-mission-col"><h4>Escalated</h4><span>Loading…</span></div>
+                  <div class="huddle-mission-col"><h4>Ready to Deploy</h4><span>Loading…</span></div>
+                </div>
+              </div>
+
+              <div class="huddle-grid-two">
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Passive Income Pipeline<strong>Workstreams moving in the background</strong></div>
+                  </div>
+                  <div id="huddle-pi-pipeline" class="pi-pipeline-grid">
+                    <div class="skeleton-block" style="height:80px;border-radius:8px;"></div>
+                  </div>
+                </div>
+                <div class="huddle-card-shell" id="idea-inbox-section">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Idea Inbox<strong>Capture or import a mission seed</strong></div>
+                    <button class="party-bar-btn" onclick="showIdeaAddModal()">+ New Idea</button>
+                  </div>
+                  <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <input type="text" id="huddle-idea-input"
+                      placeholder="Describe an idea — JARVIS will research it and return a full dossier..."
+                      style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:13px;color:var(--text-1);outline:none;"
+                      onkeydown="if(event.key==='Enter')huddleAddIdea()">
+                    <button class="btn-primary" onclick="huddleAddIdea()">Capture</button>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                    <input type="file" id="huddle-bulk-import-input" accept=".docx,.txt,.md,.json,.csv"
+                      style="display:none;" onchange="huddleBulkImport(this)">
+                    <button class="party-bar-btn" style="font-size:11px;padding:4px 12px;"
+                      onclick="document.getElementById('huddle-bulk-import-input').click()">📄 Import from File</button>
+                    <select id="huddle-bulk-domain"
+                      style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
+                      <option value="passive-income">Passive Income</option>
+                      <option value="publishing">Publishing / Books</option>
+                      <option value="software">Software</option>
+                      <option value="creative">Creative</option>
+                      <option value="personal">Personal</option>
+                      <option value="general">General</option>
+                    </select>
+                    <div id="huddle-bulk-status" style="font-size:11px;color:var(--text-3);display:none;margin-left:4px;"></div>
+                  </div>
+                  <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;" id="idea-filter-pills">
+                    <button class="idea-filter-pill active" data-status="" onclick="setIdeaFilter(this,'')">All</button>
+                    <button class="idea-filter-pill" data-status="captured" onclick="setIdeaFilter(this,'captured')">Captured</button>
+                    <button class="idea-filter-pill" data-status="queued" onclick="setIdeaFilter(this,'queued')">Queued</button>
+                    <button class="idea-filter-pill" data-status="researching" onclick="setIdeaFilter(this,'researching')">Researching</button>
+                    <button class="idea-filter-pill" data-status="done" onclick="setIdeaFilter(this,'done')">Done ✓</button>
+                    <button class="idea-filter-pill" data-status="passed" onclick="setIdeaFilter(this,'passed')">Passed</button>
+                  </div>
+                  <div id="idea-inbox-list" style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="color:var(--text-3);font-size:12px;padding:12px 0;">Loading ideas...</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="huddle-card-shell">
+                <div class="huddle-card-heading">
+                  <div class="huddle-card-label">Agent Standups<strong>What every agent said they did, need, and plan next</strong></div>
+                </div>
+                <div id="huddle-reports-grid" class="huddle-grid">
+                  <div class="skeleton-block" style="height:140px;border-radius:8px;"></div>
+                  <div class="skeleton-block" style="height:140px;border-radius:8px;"></div>
+                  <div class="skeleton-block" style="height:140px;border-radius:8px;"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="huddle-page" data-huddle-page="4">
+              <div class="huddle-resolution-grid">
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Resolution &amp; Delegate Back Out<strong>Coordinated plan</strong></div>
+                    <span class="huddle-chip live" id="huddle-plan-confidence">Plan forming</span>
+                  </div>
+                  <div class="huddle-panel-shell" id="huddle-resolution-summary">
+                    Coordinated summary will appear here as dossiers, approvals, and the active problem come into focus.
+                  </div>
+                  <div class="huddle-grid-three" style="margin-top:14px;">
+                    <div class="huddle-mini-shell"><strong>Confidence</strong><p id="huddle-resolution-confidence">—</p></div>
+                    <div class="huddle-mini-shell"><strong>Success Probability</strong><p id="huddle-resolution-success">—</p></div>
+                    <div class="huddle-mini-shell"><strong>Collateral Risk</strong><p id="huddle-resolution-risk">—</p></div>
+                  </div>
+                  <div class="huddle-mini-list" id="huddle-plan-pillars" style="margin-top:14px;">
+                    <div class="huddle-mini-row"><span>Waiting</span><strong>Bring the council together</strong></div>
+                  </div>
+                </div>
+                <div class="huddle-card-shell">
+                  <div class="huddle-card-heading">
+                    <div class="huddle-card-label">Delegate Back to Agents<strong>Who owns the next move</strong></div>
+                  </div>
+                  <div class="huddle-delegate-list" id="huddle-delegate-list">
+                    <div class="huddle-delegate-row"><span>Waiting for live roster</span><strong>Standby</strong></div>
+                  </div>
+                  <button class="huddle-cta" type="button" onclick="startPartyMode()">
+                    <strong>Launch Coordinated Plan</strong>
+                    <span>All systems synchronized. Wake the agents, generate the next dossier set, and move execution back into the field.</span>
+                  </button>
+                </div>
+              </div>
+              <div class="huddle-quick-status" id="huddle-quick-status">
+                <div class="huddle-quick-pill"><strong>Loading…</strong><span>—</span></div>
+              </div>
+            </section>
+          </div>
+
+        </main>
       </div>
     </div>
   </div>
@@ -15870,6 +16517,7 @@ async function loadIdeaInbox() {{
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const ideas = data.ideas || [];
+    _huddleIdeas = ideas;
     const s = (data.stats && data.stats.by_status) || {{}};
 
     // Update badges
@@ -15894,9 +16542,11 @@ async function loadIdeaInbox() {{
     if (!listEl) return;
     if (!ideas.length) {{
       listEl.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:16px 0;text-align:center;">No ideas yet. Capture your first one above.</div>';
+      renderHuddleDesktopFromState();
       return;
     }}
     listEl.innerHTML = ideas.map(renderIdeaRow).join('');
+    renderHuddleDesktopFromState();
   }} catch(e) {{
     if (listEl) listEl.innerHTML = '<div style="color:#ef4444;font-size:11px;">Error: ' + e + '</div>';
   }}
@@ -16098,7 +16748,231 @@ async function ideaDelete(ideaId) {{
 // HUDDLE
 // ═══════════════════════════════════════════════════════════════
 
+let huddleStoryboardPage = 1;
+const HUDDLE_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Agent Council Chamber',
+    label: 'Council Chamber',
+    subtitle: 'Survey the council roster, see who is online, and convene the room before the problem-solving session begins.',
+  }},
+  2: {{
+    title: '2. Party Mode: Problem Solve',
+    label: 'Party Mode',
+    subtitle: 'Move the active problem into the center, let dossiers and approvals converge, and track what could break the synthesis.',
+  }},
+  3: {{
+    title: '3. Agent Report-In + Mission Board',
+    label: 'Mission Board',
+    subtitle: 'Read the standups, mission lanes, passive-income work, and idea inbox as one coordinated operating surface.',
+  }},
+  4: {{
+    title: '4. Resolution & Delegate Back Out',
+    label: 'Delegate Back Out',
+    subtitle: 'Translate the huddle into a coordinated plan, assign owners, and push the work back to the right agents.',
+  }},
+}};
+let _huddleSnapshot = null;
+let _huddlePipelineItems = [];
+let _huddleDossiers = [];
+let _huddlePartySnapshot = null;
+let _huddleIdeas = [];
+
+function syncHuddleStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-huddle .huddle-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  huddleStoryboardPage = Math.max(1, Math.min(huddleStoryboardPage, pageCount));
+  panels.forEach((panel, idx) => {{
+    panel.classList.toggle('active', idx + 1 === huddleStoryboardPage);
+  }});
+  const pageMeta = HUDDLE_STORYBOARD_TITLES[huddleStoryboardPage];
+  const title = document.getElementById('huddle-nav-title');
+  if (title) title.textContent = pageMeta?.title || `Page ${{huddleStoryboardPage}}`;
+  const subtitle = document.getElementById('huddle-nav-subtitle');
+  if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
+  const count = document.getElementById('huddle-page-count');
+  if (count) count.textContent = `Page ${{huddleStoryboardPage}} of ${{pageCount}}`;
+  const label = document.getElementById('huddle-page-label');
+  if (label) label.textContent = pageMeta?.label || `Page ${{huddleStoryboardPage}}`;
+  const prev = document.getElementById('huddle-nav-prev');
+  const next = document.getElementById('huddle-nav-next');
+  if (prev) prev.disabled = huddleStoryboardPage === 1;
+  if (next) next.disabled = huddleStoryboardPage === pageCount;
+}}
+
+function advanceHuddlePage(delta) {{
+  huddleStoryboardPage += delta;
+  syncHuddleStoryboard();
+}}
+
+function renderHuddleCouncil(reports) {{
+  const roster = document.getElementById('huddle-council-roster');
+  const perimeter = document.getElementById('huddle-council-perimeter');
+  const status = document.getElementById('huddle-council-status');
+  if (status) status.textContent = `${{reports.length}} agents contributing`;
+  if (roster) {{
+    roster.innerHTML = reports.slice(0, 8).map((r, idx) => {{
+      const online = idx < Math.max(1, Math.ceil(reports.length * 0.7));
+      return `<div class="huddle-council-agent">
+        <div>
+          <strong>${{escHtml(r.agent_name || r.agent_id || 'Agent')}}</strong>
+          <span>${{escHtml(r.domain || 'Council domain')}}</span>
+        </div>
+        <div style="text-align:right;">
+          <strong style="color:${{online ? '#7ee787' : 'var(--huddle-gold)'}};">${{online ? 'Online' : 'Away'}}</strong>
+          <span>${{escHtml((r.highlights || [r.source || 'ready'])[0] || 'ready')}}</span>
+        </div>
+      </div>`;
+    }}).join('') || '<div class="huddle-mini-row"><span>No council roster yet</span><strong>Standby</strong></div>';
+  }}
+  if (perimeter) {{
+    const nodes = reports.slice(0, 10).map((r, idx) => {{
+      const positions = [
+        'top:12px;left:24px;', 'top:18px;right:24px;', 'top:112px;left:10px;', 'top:126px;right:10px;',
+        'bottom:132px;left:24px;', 'bottom:118px;right:24px;', 'bottom:18px;left:48px;', 'bottom:18px;right:48px;',
+        'top:246px;left:6px;', 'top:252px;right:6px;'
+      ];
+      return `<div class="huddle-perimeter-node" style="${{positions[idx] || 'top:20px;left:20px;'}}">
+        <strong>${{escHtml(r.agent_name || r.agent_id || 'Agent')}}</strong>
+        <span>${{escHtml((r.today || r.yesterday || 'Monitoring').slice(0, 62))}}</span>
+      </div>`;
+    }}).join('');
+    perimeter.innerHTML = nodes;
+  }}
+}}
+
+function renderHuddleMissionBoard() {{
+  const reports = ((_huddleSnapshot || {{}}).agent_reports || []);
+  const approvals = ((_huddleSnapshot || {{}}).approvals_needed || []);
+  const blockers = ((_huddleSnapshot || {{}}).blockers || []);
+  const dossiers = _huddleDossiers || [];
+  const ideas = _huddleIdeas || [];
+  const pipeline = _huddlePipelineItems || [];
+  const columnsEl = document.getElementById('huddle-mission-columns');
+  if (!columnsEl) return;
+
+  const completed = reports.slice(0, 4).map(r => ({{
+    title: r.agent_name || r.agent_id || 'Agent',
+    body: r.yesterday || 'Completed review',
+    meta: r.domain || 'Ops',
+  }}));
+  const watching = pipeline.slice(0, 4).map(i => ({{
+    title: i.title || 'Pipeline item',
+    body: i.idea || i.proposal || i.research || 'Monitoring',
+    meta: i.status || 'watching',
+  }}));
+  const needs = approvals.slice(0, 4).map(a => ({{
+    title: a.title || 'Approval needed',
+    body: a.proposal || a.idea || 'Decision required',
+    meta: a.agent || a.agent_id || 'Council',
+  }}));
+  const escalated = blockers.slice(0, 4).map((b, idx) => ({{
+    title: `Blocker ${{idx + 1}}`,
+    body: typeof b === 'string' ? b : (b.title || b.detail || 'Escalated issue'),
+    meta: 'Escalated',
+  }}));
+  const ready = dossiers.slice(0, 4).map(d => ({{
+    title: d.title || 'Dossier ready',
+    body: d.executive_summary || d.market_opportunity || 'Ready to deploy',
+    meta: d.status || 'ready',
+  }}));
+  const cols = [
+    ['Completed', completed],
+    ['Watching', watching],
+    ['Needs You', needs],
+    ['Escalated', escalated],
+    ['Ready to Deploy', ready],
+  ];
+  columnsEl.innerHTML = cols.map(([label, items]) => `
+    <div class="huddle-mission-col">
+      <h4>${{label}}</h4>
+      <span>${{items.length}} active</span>
+      ${{
+        items.length
+          ? items.map(item => `<div class="huddle-mission-tile"><strong>${{escHtml(item.title)}}</strong><em>${{escHtml((item.body || '').slice(0, 78))}}</em><span>${{escHtml(item.meta)}}</span></div>`).join('')
+          : `<div class="huddle-mission-tile"><strong>Quiet lane</strong><em>No live items right now.</em><span>Standby</span></div>`
+      }}
+    </div>`).join('');
+
+  const quick = document.getElementById('huddle-quick-status');
+  if (quick) {{
+    quick.innerHTML = reports.slice(0, 8).map((r, idx) => `<div class="huddle-quick-pill"><strong>${{escHtml(r.agent_name || r.agent_id || 'Agent')}}</strong><span>${{idx < 6 ? 'Online' : 'Away'}}</span></div>`).join('') || '<div class="huddle-quick-pill"><strong>No agents yet</strong><span>Standby</span></div>';
+  }}
+}}
+
+function renderHuddleResolution() {{
+  const reports = ((_huddleSnapshot || {{}}).agent_reports || []);
+  const approvals = ((_huddleSnapshot || {{}}).approvals_needed || []);
+  const blockers = ((_huddleSnapshot || {{}}).blockers || []);
+  const leadDossier = (_huddleDossiers || [])[0] || null;
+  const summary = document.getElementById('huddle-resolution-summary');
+  const confidence = document.getElementById('huddle-resolution-confidence');
+  const success = document.getElementById('huddle-resolution-success');
+  const risk = document.getElementById('huddle-resolution-risk');
+  const planBadge = document.getElementById('huddle-plan-confidence');
+  const pillars = document.getElementById('huddle-plan-pillars');
+  const delegates = document.getElementById('huddle-delegate-list');
+  if (summary) {{
+    const copy = leadDossier
+      ? (leadDossier.executive_summary || leadDossier.market_opportunity || 'Dossier ready for coordinated action.')
+      : (approvals[0]?.proposal || approvals[0]?.idea || 'Coordinated summary will appear here as the huddle sharpens the recommendation.');
+    summary.textContent = copy;
+  }}
+  const confScore = leadDossier ? Math.round(((leadDossier.confidence_score || 0) / 10) * 100) : Math.min(92, 55 + approvals.length * 7 + reports.length);
+  if (confidence) confidence.textContent = confScore + '%';
+  if (success) success.textContent = Math.max(62, confScore - 9) + '%';
+  if (risk) risk.textContent = blockers.length ? 'Managed but present' : 'Within acceptable limits';
+  if (planBadge) planBadge.textContent = confScore >= 80 ? 'High confidence' : 'Plan forming';
+  if (pillars) {{
+    const list = [
+      leadDossier?.first_action || 'Define the first decisive action.',
+      approvals[0]?.title || 'Resolve the highest-friction approval.',
+      reports[0]?.today || 'Delegate the next execution lane.',
+    ].filter(Boolean);
+    pillars.innerHTML = list.map((item, idx) => `<div class="huddle-mini-row"><span>Pillar ${{idx + 1}}</span><strong>${{escHtml(String(item).slice(0, 96))}}</strong></div>`).join('');
+  }}
+  if (delegates) {{
+    delegates.innerHTML = reports.slice(0, 7).map((r, idx) => `<div class="huddle-delegate-row"><div><strong>${{escHtml(r.agent_name || r.agent_id || 'Agent')}}</strong><span>${{escHtml(r.domain || 'Council domain')}}</span></div><div style="text-align:right;"><strong>P${{idx < 3 ? 0 : 1}}</strong><span>${{escHtml((r.today || 'Delegate next move').slice(0, 44))}}</span></div></div>`).join('') || '<div class="huddle-delegate-row"><span>No delegate list yet</span><strong>Standby</strong></div>';
+  }}
+}}
+
+function renderHuddlePartyInsights() {{
+  const approvals = ((_huddleSnapshot || {{}}).approvals_needed || []);
+  const blockers = ((_huddleSnapshot || {{}}).blockers || []);
+  const dossiers = _huddleDossiers || [];
+  const ideas = _huddleIdeas || [];
+  const problemTitle = document.getElementById('huddle-party-problem-title');
+  const problemCopy = document.getElementById('huddle-party-problem-copy');
+  const progress = document.getElementById('huddle-party-progress');
+  const progressCopy = document.getElementById('huddle-party-progress-copy');
+  const risks = document.getElementById('huddle-party-risk-list');
+  const lead = approvals[0] || dossiers[0] || ideas[0] || null;
+  if (problemTitle) problemTitle.textContent = lead ? (lead.title || 'Active problem') : 'Active problem';
+  if (problemCopy) problemCopy.textContent = lead ? (lead.proposal || lead.idea || lead.executive_summary || lead.text || 'Working problem') : 'Party mode is standing by. Pick an active approval, blocker, or dossier to give the council a central problem to solve.';
+  const pct = _huddlePartySnapshot && _huddlePartySnapshot.status === 'running'
+    ? Math.min(96, 32 + ((_huddlePartySnapshot.dossiers_built || []).length * 11))
+    : Math.min(88, 48 + approvals.length * 9 + dossiers.length * 7);
+  if (progress) progress.textContent = pct + '%';
+  if (progressCopy) progressCopy.textContent = pct > 75 ? 'Converging solutions' : 'Interrogating options';
+  if (risks) {{
+    const rows = [];
+    if (blockers.length) rows.push(...blockers.slice(0, 3).map((b, idx) => ['Blocker ' + (idx + 1), typeof b === 'string' ? b : (b.title || b.detail || 'Escalated issue')]));
+    if (approvals.length) rows.push(...approvals.slice(0, 2).map(a => ['Approval', a.title || a.idea || 'Decision required']));
+    if (!rows.length) rows.push(['Status', 'No acute risks. Council standing by.']);
+    risks.innerHTML = rows.map(([label, value]) => `<div class="huddle-mini-row"><span>${{escHtml(label)}}</span><strong>${{escHtml(String(value).slice(0, 68))}}</strong></div>`).join('');
+  }}
+}}
+
+function renderHuddleDesktopFromState() {{
+  const reports = ((_huddleSnapshot || {{}}).agent_reports || []);
+  renderHuddleCouncil(reports);
+  renderHuddleMissionBoard();
+  renderHuddleResolution();
+  renderHuddlePartyInsights();
+}}
+
 async function loadHuddle() {{
+  syncHuddleStoryboard();
   const grid = document.getElementById('huddle-reports-grid');
   const approvalsSection = document.getElementById('huddle-approvals');
   const approvalsList = document.getElementById('huddle-approvals-list');
@@ -16109,6 +16983,7 @@ async function loadHuddle() {{
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
 
+    _huddleSnapshot = d;
     // Update meta bar
     const awEl = document.getElementById('huddle-active-work');
     if (awEl) awEl.textContent = (d.total_active_work || 0) + ' active items';
@@ -16151,10 +17026,12 @@ async function loadHuddle() {{
     if (grid) {{
       if (reports.length === 0) {{
         grid.innerHTML = '<div class="pi-empty">No standups generated yet — agents will report after their first run.</div>';
+        renderHuddleDesktopFromState();
         return;
       }}
       grid.innerHTML = reports.map(r => renderHuddleCard(r)).join('');
     }}
+    renderHuddleDesktopFromState();
   }} catch (e) {{
     if (grid) grid.innerHTML = '<div class="pi-empty">Huddle unavailable: ' + escHtml(e.message) + '</div>';
   }}
@@ -16230,8 +17107,10 @@ async function loadPassiveIncomePipeline() {{
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     const items = (d.items || []).slice(0, 12);
+    _huddlePipelineItems = items;
     if (items.length === 0) {{
       grid.innerHTML = '<div class="pi-empty">No passive income ideas yet — Mantis will dream some up on her next run.</div>';
+      renderHuddleDesktopFromState();
       return;
     }}
     grid.innerHTML = items.map(item => {{
@@ -16249,6 +17128,7 @@ async function loadPassiveIncomePipeline() {{
         ideaHtml +
       '</div>';
     }}).join('');
+    renderHuddleDesktopFromState();
   }} catch (e) {{
     grid.innerHTML = '<div class="pi-empty">Pipeline unavailable: ' + escHtml(e.message) + '</div>';
   }}
@@ -16261,6 +17141,7 @@ async function loadPartyStatus() {{
     const res = await fetch('/api/party-mode/status');
     if (!res.ok) return;
     const d = await res.json();
+    _huddlePartySnapshot = d;
     const bar = document.getElementById('party-mode-bar');
     const txt = document.getElementById('party-bar-text');
     if (!bar || !txt) return;
@@ -16278,6 +17159,7 @@ async function loadPartyStatus() {{
     }} else {{
       bar.style.display = 'none';
     }}
+    renderHuddleDesktopFromState();
   }} catch (e) {{}}
 }}
 
@@ -16300,12 +17182,15 @@ async function loadDossiers() {{
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     const dossiers = (d.dossiers || []).filter(x => x.status !== 'presented');
+    _huddleDossiers = dossiers;
     if (dossiers.length === 0) {{
       section.style.display = 'none';
+      renderHuddleDesktopFromState();
       return;
     }}
     section.style.display = 'block';
     grid.innerHTML = dossiers.map(renderDossierCard).join('');
+    renderHuddleDesktopFromState();
   }} catch (e) {{
     grid.innerHTML = '<div class="pi-empty">Dossiers unavailable.</div>';
   }}
