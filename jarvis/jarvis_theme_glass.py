@@ -2166,6 +2166,33 @@ body::after {{
   font-size: 12px;
   margin-top: 6px;
 }}
+.faith-action-row {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}}
+.faith-action-btn {{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(221,179,122,.22);
+  background: rgba(255,255,255,.04);
+  color: var(--faith-text);
+  font-size: 12px;
+  cursor: pointer;
+}}
+.faith-action-btn.primary {{
+  background: linear-gradient(180deg, rgba(125,91,53,.9), rgba(92,64,34,.92));
+  border-color: rgba(221,179,122,.42);
+  color: #fff5e4;
+}}
+.faith-action-btn.muted {{
+  color: var(--faith-muted);
+}}
 .faith-scripture-grid {{
   grid-template-columns: minmax(0, 1.1fr) 330px;
 }}
@@ -2508,6 +2535,17 @@ body::after {{
   display: grid;
   gap: 8px;
 }}
+.faith-bridge-grid {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}}
+@media (max-width: 1180px) {{
+  .faith-bridge-grid {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+}}
 @keyframes faithDotPulse {{
   0%,80%,100% {{ opacity:.25; transform:scale(.8); }}
   40% {{ opacity:1; transform:scale(1); }}
@@ -2541,6 +2579,9 @@ body::after {{
   }}
   .faith-hero-title {{
     font-size: 30px;
+  }}
+  .faith-bridge-grid {{
+    grid-template-columns: 1fr;
   }}
   .faith-roster {{
     grid-template-columns: 1fr;
@@ -8509,6 +8550,24 @@ body::after {{
                   <p>Keep a short prayer running through the day and revisit your passage before the evening closes.</p>
                 </div>
               </div>
+              <div class="faith-bridge-grid">
+                <div class="faith-card faith-focus-card">
+                  <strong>Legacy Bridge</strong>
+                  <p id="faith-legacy-status">Loading Legacy spiritual continuity…</p>
+                </div>
+                <div class="faith-card faith-focus-card">
+                  <strong>Active Prayers</strong>
+                  <p id="faith-legacy-prayers">—</p>
+                </div>
+                <div class="faith-card faith-focus-card">
+                  <strong>Recent Reflections</strong>
+                  <p id="faith-legacy-reflections">—</p>
+                </div>
+                <div class="faith-card faith-focus-card">
+                  <strong>Formation Insights</strong>
+                  <p id="faith-legacy-insights">—</p>
+                </div>
+              </div>
             </section>
 
             <section class="faith-page" data-faith-page="2">
@@ -8554,6 +8613,10 @@ body::after {{
                       <p>Take a 20-minute walk and thank God for three graces you almost missed.</p>
                     </div>
                   </div>
+                  <div class="faith-action-row">
+                    <button class="faith-action-btn primary" type="button" onclick="captureFaithPrayer()">Send Prayer to Legacy</button>
+                    <button class="faith-action-btn muted" type="button" onclick="openLegacyFromFaith('prayer')">Open Legacy Prayer Lane</button>
+                  </div>
                 </div>
                 <div class="faith-card">
                   <div class="faith-card-heading">
@@ -8579,6 +8642,10 @@ body::after {{
                   <div class="faith-scripture-body" id="faith-scripture-body">
                     <span class="verse-number">6</span>Do not be anxious about anything, but in everything by prayer and supplication with thanksgiving let your requests be made known to God.<br><br>
                     <span class="verse-number">7</span>And the peace of God, which surpasses all understanding, will guard your hearts and your minds in Christ Jesus.
+                  </div>
+                  <div class="faith-action-row">
+                    <button class="faith-action-btn primary" type="button" onclick="queueFaithReflection()">Queue Reflection in Legacy</button>
+                    <button class="faith-action-btn muted" type="button" onclick="openLegacyFromFaith('study')">Open Legacy Study Flow</button>
                   </div>
                 </div>
                 <div class="faith-side-stack">
@@ -8652,6 +8719,9 @@ body::after {{
                     <div class="faith-mini-row"><span>Gratitude entries</span><strong>14</strong></div>
                     <div class="faith-mini-row"><span>Answered prayers</span><strong>7</strong></div>
                   </div>
+                  <div class="faith-action-row">
+                    <button class="faith-action-btn muted" type="button" onclick="captureFaithGratitude()">Capture Gratitude in Legacy</button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -8684,6 +8754,9 @@ body::after {{
                     <div class="faith-card-label">Household Liturgy<strong>What to nurture this week</strong></div>
                   </div>
                   <p>Create one shared gratitude list, one short family prayer before dinner, and one Scripture moment that turns the evening toward peace.</p>
+                  <div class="faith-action-row">
+                    <button class="faith-action-btn muted" type="button" onclick="openLegacyFromFaith('family')">Open Legacy Family Archive</button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -8697,7 +8770,8 @@ body::after {{
                       <div class="faith-chat-name" id="faith-chat-name">—</div>
                       <div class="faith-chat-domain" id="faith-chat-domain">—</div>
                     </div>
-                    <button class="btn btn-sm" style="margin-left:auto;" onclick="closeFaithChat()">Close</button>
+                    <button class="faith-action-btn muted" type="button" style="margin-left:auto;" onclick="saveFaithConversationToLegacy()">Save to Legacy</button>
+                    <button class="btn btn-sm" type="button" onclick="closeFaithChat()">Close</button>
                   </div>
                   <div class="faith-chat-passage-row">
                     <input class="faith-chat-passage-input" id="faith-chat-passage" type="text" placeholder="Passage (optional — e.g. John 1:14)…">
@@ -13609,6 +13683,8 @@ async function loadBriefing() {{
 let _faithAgents = [];
 let _faithActiveAgent = null;
 let _faithMessages = [];
+let _faithChronicleContext = null;
+let _faithChronicleInsights = [];
 let faithStoryboardPage = 1;
 const FAITH_STORYBOARD_TITLES = {{
   1: {{
@@ -13679,6 +13755,7 @@ function advanceFaithPage(delta) {{
 
 async function loadFaith() {{
   syncFaithStoryboard();
+  loadFaithChronicleBridge();
   // Load daily word
   try {{
     const dw = await fetch('/api/faith/daily-word').then(r => r.json());
@@ -13706,6 +13783,142 @@ async function loadFaith() {{
     renderFaithRoster();
   }} catch(e) {{
     document.getElementById('faith-roster').innerHTML = '<div class="empty-state">Faith agents unavailable</div>';
+  }}
+}}
+
+async function loadFaithChronicleBridge() {{
+  try {{
+    const [ctxRes, insightsRes, statusRes] = await Promise.all([
+      fetch('/api/chronicle/morning-context'),
+      fetch('/api/chronicle/insights'),
+      fetch('/api/chronicle/status'),
+    ]);
+
+    const ctx = ctxRes.ok ? await ctxRes.json() : {{}};
+    const insightsPayload = insightsRes.ok ? await insightsRes.json() : {{}};
+    const status = statusRes.ok ? await statusRes.json() : {{}};
+
+    _faithChronicleContext = ctx || {{}};
+    _faithChronicleInsights = Array.isArray(insightsPayload.insights) ? insightsPayload.insights : [];
+
+    const legacyStatus = document.getElementById('faith-legacy-status');
+    if (legacyStatus) {{
+      const bridgeReady = status && Object.keys(status).length > 0;
+      legacyStatus.textContent = bridgeReady
+        ? 'Faith is connected to Legacy capture, prayer, reflection, and formation memory.'
+        : 'Legacy bridge is live, but continuity status has not fully hydrated yet.';
+    }}
+
+    const prayersEl = document.getElementById('faith-legacy-prayers');
+    if (prayersEl) {{
+      const prayerCount = Number(ctx.active_prayer_count || ctx.prayer_count || 0);
+      prayersEl.textContent = prayerCount ? `${{prayerCount}} active prayer threads are already flowing into Legacy.` : 'No active prayer threads were returned yet.';
+    }}
+
+    const reflectionsEl = document.getElementById('faith-legacy-reflections');
+    if (reflectionsEl) {{
+      const reflections = Array.isArray(ctx.recent_reflections) ? ctx.recent_reflections.filter(Boolean) : [];
+      reflectionsEl.textContent = reflections.length ? reflections.slice(0, 2).join(' | ') : 'No recent Legacy reflections yet.';
+    }}
+
+    const insightsEl = document.getElementById('faith-legacy-insights');
+    if (insightsEl) {{
+      insightsEl.textContent = _faithChronicleInsights.length
+        ? `${{_faithChronicleInsights.length}} formation insights are available in Legacy.`
+        : 'No formation insights are available yet.';
+    }}
+  }} catch (e) {{
+    console.warn('faith chronicle bridge', e);
+  }}
+}}
+
+function openLegacyFromFaith(mode) {{
+  if (mode === 'prayer') {{
+    showToast('Opening Legacy prayer lane…', 'success');
+  }} else if (mode === 'study') {{
+    showToast('Opening Legacy study flow…', 'success');
+  }} else if (mode === 'family') {{
+    showToast('Opening Legacy family archive…', 'success');
+  }}
+  switchView('chronicle');
+}}
+
+async function captureFaithPrayer() {{
+  const concern = document.getElementById('faith-brief-intention')?.textContent?.trim() || 'Prayer intention from Faith';
+  try {{
+    const res = await fetch('/api/chronicle/capture/prayer', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ actor_id: 'chris', concern }})
+    }});
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.detail || 'Prayer capture failed');
+    showToast('Prayer sent to Legacy', 'success');
+    loadFaithChronicleBridge();
+  }} catch (e) {{
+    showToast('Could not send prayer to Legacy', 'warning');
+  }}
+}}
+
+async function captureFaithGratitude() {{
+  const text = document.getElementById('faith-dw-body')?.textContent?.trim() || 'Grateful for the quiet mercies of today.';
+  try {{
+    const res = await fetch('/api/chronicle/capture/gratitude', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ text }})
+    }});
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.detail || 'Gratitude capture failed');
+    showToast(payload.captured ? 'Gratitude captured in Legacy' : 'No gratitude pattern was detected', payload.captured ? 'success' : 'warning');
+    loadFaithChronicleBridge();
+  }} catch (e) {{
+    showToast('Could not capture gratitude in Legacy', 'warning');
+  }}
+}}
+
+async function queueFaithReflection() {{
+  const context = {{
+    passage: document.getElementById('faith-scripture-title')?.textContent?.trim() || '',
+    insight: document.getElementById('faith-insight-copy')?.textContent?.trim() || '',
+    prompt: 'Carry the current Faith reflection into Legacy for continuity.'
+  }};
+  try {{
+    const res = await fetch('/api/chronicle/daily-reflection', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ actor_id: 'chris', context }})
+    }});
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.detail || 'Reflection queue failed');
+    showToast('Reflection queued in Legacy', 'success');
+    loadFaithChronicleBridge();
+  }} catch (e) {{
+    showToast('Could not queue reflection in Legacy', 'warning');
+  }}
+}}
+
+async function saveFaithConversationToLegacy() {{
+  if (!_faithActiveAgent || !_faithMessages.length) {{
+    showToast('Start a faith conversation first', 'warning');
+    return;
+  }}
+  const note = _faithMessages.map(m => `${{m.role === 'user' ? 'You' : _faithActiveAgent.name}}: ${{m.content}}`).join('\n\n');
+  try {{
+    const res = await fetch('/api/chronicle-capture', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        theme: `Faith conversation: ${{_faithActiveAgent.title}}`,
+        note
+      }})
+    }});
+    const payload = await res.json();
+    if (!res.ok) throw new Error(payload.detail || 'Conversation capture failed');
+    showToast('Conversation saved to Legacy', 'success');
+  }} catch (e) {{
+    showToast('Could not save conversation to Legacy', 'warning');
   }}
 }}
 
