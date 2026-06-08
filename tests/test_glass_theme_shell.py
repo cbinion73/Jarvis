@@ -68,12 +68,14 @@ class GlassThemeShellTests(unittest.TestCase):
         html = render_glass_shell(self.runtime)
 
         self.assertIn("function initDesktopCardSequences()", html)
-        self.assertIn("function ensureDesktopCardFocusOverlay()", html)
+        self.assertIn("function desktopSequenceBoardNodes(", html)
         self.assertIn("function openDesktopCardSequenceModal(", html)
+        self.assertIn("desktop-sequence-inplace-active .desktop-sequence-card", html)
+        self.assertIn("desktop-sequence-board.desktop-sequence-board-hidden", html)
         self.assertIn("data-sequence-view", html)
-        self.assertIn("Each numbered Daily Brief card opens as its own focused page", html)
-        self.assertIn("Each numbered Social Media card opens as a focused page", html)
-        self.assertIn("Each numbered Calendar card opens as a focused page", html)
+        self.assertIn("Each numbered Daily Brief card is now its own in-experience page", html)
+        self.assertIn("Each numbered Social Media card is now its own in-experience page", html)
+        self.assertIn("Each numbered Calendar card is now its own in-experience page", html)
         self.assertIn("if (name === 'command') name = 'chat';", html)
 
 
