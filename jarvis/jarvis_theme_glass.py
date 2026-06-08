@@ -8505,467 +8505,1025 @@ body::after {{
 }}
 
 /* ═══════════════════════════════════════════════════════════════
-   NAVIGATION / WAZE
+   NAVIGATION
 ═══════════════════════════════════════════════════════════════ */
-.nav-container {{
-  display: flex;
-  flex-direction: row;
-  height: calc(100vh - 120px);
-  overflow: hidden;
+:root {{
+  --nav-cyan:#5fb5ff;
+  --nav-cyan-soft:#89d6ff;
+  --nav-gold:#d9b27b;
+  --nav-ink:#071018;
+  --nav-panel:#09141f;
+  --nav-panel-strong:#0d1b29;
+  --nav-line:rgba(148, 196, 255, 0.16);
+  --nav-copy:rgba(236, 245, 255, 0.92);
+  --nav-copy-muted:rgba(198, 218, 237, 0.68);
+  --nav-copy-faint:rgba(170, 193, 214, 0.42);
 }}
-.nav-sidebar {{
-  width: 380px;
-  min-width: 320px;
-  overflow-y: auto;
-  border-right: 1px solid var(--border);
-  background: rgba(255,255,255,0.03);
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+.nav-experience {{
+  position:relative;
+  padding:28px 28px 32px;
+  background:
+    radial-gradient(circle at top left, rgba(97, 182, 255, 0.12), transparent 30%),
+    radial-gradient(circle at top right, rgba(217, 178, 123, 0.12), transparent 24%),
+    linear-gradient(180deg, rgba(4,10,18,0.98) 0%, rgba(7,13,22,0.98) 100%);
+  color:var(--nav-copy);
 }}
-.nav-map-pane {{
-  flex: 1;
-  position: relative;
-  overflow: hidden;
+.nav-experience::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size:32px 32px;
+  opacity:0.12;
+  pointer-events:none;
 }}
-#nav-map {{
-  width: 100%;
-  height: 100%;
-  min-height: 400px;
-  background: #1a1a2e;
+.nav-experience > * {{ position:relative; z-index:1; }}
+.nav-headline {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  margin-bottom:20px;
+}}
+.nav-hero-title {{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}}
+.nav-kicker {{
+  font-size:15px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--nav-copy-faint);
+}}
+.nav-hero-title h1 {{
+  margin:0;
+  font-size:54px;
+  line-height:0.96;
+  letter-spacing:-0.03em;
+  font-family:Georgia, "Times New Roman", serif;
+  font-weight:600;
+}}
+.nav-hero-title h1 span {{ color:var(--nav-cyan); }}
+.nav-hero-title p {{
+  margin:0;
+  color:var(--nav-copy-muted);
+  max-width:640px;
+  font-size:15px;
+}}
+.nav-motto {{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  border:1px solid rgba(217,178,123,0.18);
+  border-radius:18px;
+  padding:14px 18px;
+  background:rgba(255,255,255,0.02);
+  min-width:290px;
+}}
+.nav-motto-icon {{
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  color:var(--nav-cyan-soft);
+  border:1px solid rgba(95,181,255,0.28);
+  box-shadow:0 0 32px rgba(95,181,255,0.16);
+  font-size:22px;
+}}
+.nav-motto strong {{
+  display:block;
+  color:var(--nav-gold);
+  font-size:14px;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}}
+.nav-motto p {{
+  margin:0;
+  color:var(--nav-copy-muted);
+  font-size:13px;
+  line-height:1.5;
+}}
+.navigation-desktop-shell {{
+  display:grid;
+  grid-template-columns:230px minmax(0, 1fr);
+  min-height:880px;
+  border-radius:28px;
+  border:1px solid rgba(217,178,123,0.18);
+  background:linear-gradient(180deg, rgba(9,16,26,0.98), rgba(6,11,18,0.98));
+  overflow:hidden;
+  box-shadow:0 30px 90px rgba(0,0,0,0.42);
+}}
+.navigation-sidebar {{
+  padding:24px 18px 22px;
+  border-right:1px solid rgba(255,255,255,0.05);
+  background:linear-gradient(180deg, rgba(10,20,32,0.98), rgba(7,13,21,0.98));
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}}
+.navigation-brand {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}}
+.navigation-brand-title {{
+  font-size:26px;
+  font-family:Georgia, "Times New Roman", serif;
+  letter-spacing:0.05em;
+}}
+.navigation-brand-sub {{
+  color:var(--nav-copy-faint);
+  font-size:12px;
+  margin-top:4px;
+}}
+.navigation-pulse {{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(95,181,255,0.24);
+  color:var(--nav-cyan-soft);
+  background:rgba(95,181,255,0.08);
+}}
+.navigation-side-nav {{
+  display:grid;
+  gap:8px;
+}}
+.navigation-side-link {{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:11px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  color:var(--nav-copy-muted);
+  font-size:13px;
+}}
+.navigation-side-link.active {{
+  color:var(--nav-copy);
+  border-color:rgba(95,181,255,0.28);
+  background:linear-gradient(90deg, rgba(95,181,255,0.14), rgba(255,255,255,0.04));
+}}
+.navigation-side-footer {{
+  margin-top:auto;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px;
+  padding:14px;
+  background:rgba(255,255,255,0.025);
+}}
+.navigation-side-footer strong {{
+  display:block;
+  color:var(--nav-gold);
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}}
+.navigation-side-footer p {{
+  margin:0;
+  color:var(--nav-copy-muted);
+  font-size:12px;
+  line-height:1.6;
+}}
+.navigation-main {{
+  padding:24px 24px 28px;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}}
+.navigation-topbar {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+}}
+.navigation-title-block {{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}}
+.navigation-title-row {{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.navigation-title-row strong {{
+  font-size:24px;
+  font-family:Georgia, "Times New Roman", serif;
+  font-weight:600;
+}}
+.navigation-title-line {{
+  width:72px;
+  height:2px;
+  border-radius:999px;
+  background:linear-gradient(90deg, var(--nav-cyan), transparent);
+}}
+.navigation-title-block p {{
+  margin:0;
+  color:var(--nav-copy-muted);
+  max-width:760px;
+  font-size:13px;
+  line-height:1.6;
+}}
+.navigation-storyboard-nav {{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}}
+.navigation-page-meta {{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:4px;
+}}
+.navigation-nav-page {{
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--nav-copy-faint);
+}}
+.navigation-page-label {{
+  font-size:14px;
+  color:var(--nav-gold);
+}}
+.navigation-nav-btn {{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);
+  color:var(--nav-copy);
+  font-size:18px;
+  cursor:pointer;
+  transition:transform 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}}
+.navigation-nav-btn:hover:not(:disabled) {{
+  transform:translateY(-1px);
+  border-color:rgba(95,181,255,0.3);
+}}
+.navigation-nav-btn:disabled {{
+  opacity:0.35;
+  cursor:not-allowed;
+}}
+.navigation-pages {{
+  flex:1;
+  display:grid;
+}}
+.navigation-page {{
+  display:none;
+  min-height:0;
+}}
+.navigation-page.active {{
+  display:grid;
+}}
+.navigation-hero-grid,
+.navigation-stop-grid,
+.navigation-plan-grid,
+.navigation-voice-grid {{
+  display:grid;
+  gap:18px;
+}}
+.navigation-hero-grid {{
+  grid-template-columns:1.2fr 0.82fr;
+}}
+.navigation-stop-grid {{
+  grid-template-columns:1.15fr 0.85fr;
+}}
+.navigation-plan-grid,
+.navigation-voice-grid {{
+  grid-template-columns:1fr 0.88fr;
+}}
+.navigation-map-grid {{
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) 250px;
+  gap:18px;
+}}
+.navigation-card {{
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+  padding:18px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.navigation-card h3,
+.navigation-card h4 {{
+  margin:0 0 12px;
+  font-size:13px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--nav-copy-faint);
+}}
+.navigation-card p {{
+  margin:0;
+  color:var(--nav-copy-muted);
+  font-size:12px;
+  line-height:1.6;
 }}
 .nav-route-inputs {{
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border-bottom: 1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
 }}
-.nav-input-row {{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-}}
-.nav-input {{
-  flex: 1;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-1);
-  padding: 8px 12px;
-  font-size: 13px;
-  outline: none;
-  transition: border-color 0.2s;
-}}
-.nav-input:focus {{
-  border-color: var(--accent);
-}}
-.nav-autocomplete-results {{
-  position: absolute;
-  top: 100%;
-  left: 24px;
-  right: 0;
-  background: #1e2030;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  z-index: 1000;
-  max-height: 200px;
-  overflow-y: auto;
-}}
-.nav-autocomplete-item {{
-  padding: 8px 12px;
-  font-size: 12px;
-  color: var(--text-1);
-  cursor: pointer;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-}}
-.nav-autocomplete-item:hover {{
-  background: rgba(255,255,255,0.08);
-}}
-.nav-swap-btn {{
-  background: rgba(255,255,255,0.08);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 34px;
-  height: 34px;
-  color: var(--text-1);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.2s;
-}}
-.nav-swap-btn:hover {{
-  background: rgba(255,255,255,0.15);
-}}
-.nav-go-btn {{
-  flex: 1;
-  background: var(--accent);
-  border: none;
-  border-radius: 8px;
-  color: #000;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}}
-.nav-go-btn:hover {{
-  opacity: 0.85;
-}}
-.nav-poi-toggles {{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}}
-.nav-poi-toggle {{
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  color: var(--text-2);
-  font-size: 11px;
-  padding: 4px 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}}
-.nav-poi-toggle.active[data-cat="food"] {{ background: rgba(255,107,53,0.25); border-color: #FF6B35; color: #FF6B35; }}
-.nav-poi-toggle.active[data-cat="starbucks"] {{ background: rgba(0,112,74,0.25); border-color: #00704A; color: #00704A; }}
-.nav-poi-toggle.active[data-cat="parks"] {{ background: rgba(45,106,79,0.25); border-color: #2D6A4F; color: #2D6A4F; }}
-.nav-poi-toggle.active[data-cat="historic"] {{ background: rgba(201,168,76,0.25); border-color: #C9A84C; color: #C9A84C; }}
-.nav-poi-toggle.active[data-cat="family"] {{ background: rgba(123,45,139,0.25); border-color: #7B2D8B; color: #7B2D8B; }}
-.nav-poi-toggle.active[data-cat="gas"] {{ background: rgba(33,150,243,0.25); border-color: #2196F3; color: #2196F3; }}
-.nav-summary-bar {{
-  display: flex;
-  flex-direction: row;
-  gap: 0;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}}
-.nav-stat {{
-  flex: 1;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}}
-.nav-stat span {{
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-1);
-}}
-.nav-stat label {{
-  font-size: 10px;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}}
-.nav-section-title {{
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 10px 16px 4px;
-}}
-.nav-turn-card {{
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}}
-.nav-turn-icon {{
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(0,212,255,0.15);
-  border: 1px solid rgba(0,212,255,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  flex-shrink: 0;
-  color: var(--accent);
-}}
-.nav-poi-card {{
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}}
-.nav-poi-distance-chip {{
-  background: rgba(0,212,255,0.12);
-  border: 1px solid rgba(0,212,255,0.25);
-  border-radius: 12px;
-  font-size: 10px;
-  color: var(--accent);
-  padding: 2px 8px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}}
-/* Mobile HUD */
-.nav-hud {{
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  background: rgba(15,20,40,0.92);
-  backdrop-filter: blur(8px);
-  padding: 16px 20px;
-  z-index: 200;
-}}
-.nav-hud-turn {{
-  font-size: 40px;
-  line-height: 1;
-  color: var(--accent);
-  min-width: 48px;
-  text-align: center;
-}}
-.nav-hud-distance {{
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--text-1);
-  line-height: 1;
-}}
-.nav-hud-instruction {{
-  font-size: 14px;
-  color: var(--text-2);
-  margin-top: 4px;
-}}
-.nav-eta-strip {{
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: rgba(15,20,40,0.9);
-  padding: 10px 20px;
-  font-size: 13px;
-  color: var(--text-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  z-index: 200;
-}}
-.nav-poi-alert {{
-  position: absolute;
-  bottom: 80px; left: 16px; right: 16px;
-  background: rgba(20,25,45,0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 300;
-  transform: translateY(160px);
-  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
-}}
-.nav-poi-alert.visible {{
-  transform: translateY(0);
-}}
-.nav-voice-btn {{
-  position: absolute;
-  top: 12px; right: 12px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  width: 40px; height: 40px;
-  font-size: 18px;
-  cursor: pointer;
-  z-index: 250;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}}
-.nav-start-btn, .nav-stop-btn {{
-  position: absolute;
-  bottom: 56px; left: 50%;
-  transform: translateX(-50%);
-  background: var(--accent);
-  color: #000;
-  font-weight: 700;
-  font-size: 14px;
-  border: none;
-  border-radius: 24px;
-  padding: 12px 32px;
-  cursor: pointer;
-  z-index: 250;
-  white-space: nowrap;
-}}
-.nav-stop-btn {{
-  background: #ef4444;
-  color: #fff;
-}}
-@media (max-width: 768px) {{
-  .nav-sidebar {{
-    display: none;
-  }}
-  .nav-map-pane {{
-    width: 100%;
-  }}
-}}
-/* Aerial view modal close on outside click handled by JS */
-#nav-aerial-modal video {{
-    max-height: 70vh;
-    object-fit: cover;
-}}
-#nav-sv-panel img {{
-    object-fit: cover;
-    height: 140px;
-    width: 100%;
-}}
-.nav-sv-label {{
-    font-size: 10px;
-    text-transform: uppercase;
-    opacity: 0.5;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}}
-.nav-radius-row {{
-    padding: 8px 12px 4px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    margin-top: 4px;
-}}
-.nav-radius-slider {{
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(to right, #4CAF50 0%, #4CAF50 25%, rgba(255,255,255,0.15) 25%);
-    outline: none;
-    cursor: pointer;
-}}
-.nav-radius-slider::-webkit-slider-thumb {{
-    -webkit-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #4CAF50;
-    border: 2px solid #fff;
-    cursor: pointer;
-    box-shadow: 0 0 6px rgba(76,175,80,0.6);
-}}
-.nav-radius-slider::-moz-range-thumb {{
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: #4CAF50;
-    border: 2px solid #fff;
-    cursor: pointer;
-}}
-/* NPS park card in sidebar */
-.nav-nps-card {{
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    cursor: pointer;
-    transition: background 0.15s;
-}}
-.nav-nps-card:hover {{
-    background: rgba(255,255,255,0.04);
-}}
-.nav-nps-badge {{
-    font-size: 10px;
-    background: rgba(45,106,79,0.4);
-    color: #81C784;
-    border: 1px solid rgba(45,106,79,0.6);
-    border-radius: 4px;
-    padding: 1px 5px;
-    white-space: nowrap;
-}}
-@keyframes spin {{
-    to {{ transform: rotate(360deg); }}
+.nav-home-actions {{
+  display:flex;
+  gap:8px;
 }}
 .nav-home-btn {{
-    flex: 1;
-    padding: 6px 10px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.8);
-    font-size: 12px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    white-space: nowrap;
+  flex:1;
+  padding:10px 12px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:12px;
+  color:var(--nav-copy-muted);
+  font-size:12px;
+  cursor:pointer;
 }}
-.nav-home-btn:hover {{
-    background: rgba(255,255,255,0.13);
-    border-color: rgba(255,255,255,0.25);
+.nav-home-btn:hover {{ background:rgba(255,255,255,0.08); }}
+.nav-input-row {{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  position:relative;
 }}
+.nav-input-pin {{
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--nav-copy);
+  flex-shrink:0;
+}}
+.nav-input {{
+  flex:1;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:14px;
+  color:var(--nav-copy);
+  padding:12px 14px;
+  font-size:13px;
+  outline:none;
+}}
+.nav-input:focus {{
+  border-color:rgba(95,181,255,0.32);
+  box-shadow:0 0 0 3px rgba(95,181,255,0.12);
+}}
+.nav-autocomplete-results {{
+  position:absolute;
+  top:calc(100% + 6px);
+  left:38px;
+  right:0;
+  background:#132334;
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;
+  z-index:1000;
+  max-height:220px;
+  overflow-y:auto;
+}}
+.nav-autocomplete-item {{
+  padding:10px 12px;
+  font-size:12px;
+  color:var(--nav-copy);
+  cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}}
+.nav-autocomplete-item:hover {{ background:rgba(255,255,255,0.05); }}
+.nav-route-actions {{
+  display:flex;
+  gap:10px;
+}}
+.nav-swap-btn,
+.nav-go-btn,
+.nav-secondary-btn {{
+  border:none;
+  cursor:pointer;
+  border-radius:14px;
+  transition:transform 0.18s ease, opacity 0.18s ease;
+}}
+.nav-swap-btn {{
+  width:46px;
+  height:46px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.10);
+  color:var(--nav-copy);
+  font-size:18px;
+  flex-shrink:0;
+}}
+.nav-go-btn,
+.nav-secondary-btn {{
+  padding:12px 18px;
+  font-weight:600;
+  font-size:13px;
+}}
+.nav-go-btn {{
+  flex:1;
+  background:linear-gradient(135deg, var(--nav-cyan-soft), var(--nav-cyan));
+  color:#04121f;
+}}
+.nav-secondary-btn {{
+  background:rgba(255,255,255,0.05);
+  color:var(--nav-copy);
+  border:1px solid rgba(255,255,255,0.10);
+}}
+.nav-swap-btn:hover,
+.nav-go-btn:hover,
+.nav-secondary-btn:hover {{
+  transform:translateY(-1px);
+}}
+.nav-summary-bar {{
+  display:flex;
+  gap:10px;
+  margin-top:14px;
+}}
+.nav-stat {{
+  flex:1;
+  border-radius:16px;
+  padding:14px 12px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.06);
+  text-align:left;
+}}
+.nav-stat span {{
+  display:block;
+  font-size:24px;
+  font-weight:600;
+  color:var(--nav-copy);
+}}
+.nav-stat label {{
+  display:block;
+  margin-top:6px;
+  font-size:10px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:var(--nav-copy-faint);
+}}
+.navigation-hero-metrics,
+.navigation-mini-grid,
+.navigation-route-overview,
+.navigation-insight-row,
+.navigation-recent-grid,
+.navigation-saved-grid,
+.navigation-risks,
+.navigation-route-summary-grid,
+.navigation-constraints-grid,
+.navigation-weather-grid,
+.navigation-stop-actions,
+.navigation-alt-grid,
+.navigation-detail-stats,
+.navigation-voice-actions,
+.navigation-related-grid {{
+  display:grid;
+  gap:12px;
+}}
+.navigation-hero-metrics {{
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+}}
+.navigation-mini-grid,
+.navigation-route-summary-grid,
+.navigation-constraints-grid,
+.navigation-weather-grid,
+.navigation-alt-grid,
+.navigation-related-grid {{
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+}}
+.navigation-route-overview,
+.navigation-insight-row,
+.navigation-recent-grid,
+.navigation-saved-grid,
+.navigation-risks,
+.navigation-stop-actions,
+.navigation-voice-actions {{
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+}}
+.navigation-metric,
+.navigation-mini-card,
+.navigation-promo-card,
+.navigation-route-card,
+.navigation-recent-card,
+.navigation-saved-card,
+.navigation-risk-card,
+.navigation-stop-chip,
+.navigation-constraint-card,
+.navigation-weather-card,
+.navigation-alt-card,
+.navigation-related-card {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  padding:14px;
+}}
+.navigation-metric strong,
+.navigation-mini-card strong,
+.navigation-promo-card strong,
+.navigation-route-card strong,
+.navigation-recent-card strong,
+.navigation-saved-card strong,
+.navigation-risk-card strong,
+.navigation-stop-chip strong,
+.navigation-constraint-card strong,
+.navigation-weather-card strong,
+.navigation-alt-card strong,
+.navigation-related-card strong {{
+  display:block;
+  color:var(--nav-copy);
+  font-size:15px;
+  margin-bottom:6px;
+}}
+.navigation-metric span,
+.navigation-mini-card span,
+.navigation-promo-card span,
+.navigation-route-card span,
+.navigation-recent-card span,
+.navigation-saved-card span,
+.navigation-risk-card span,
+.navigation-stop-chip span,
+.navigation-constraint-card span,
+.navigation-weather-card span,
+.navigation-alt-card span,
+.navigation-related-card span {{
+  color:var(--nav-copy-muted);
+  font-size:12px;
+  line-height:1.5;
+}}
+.navigation-promo-card {{
+  min-height:122px;
+  background:
+    linear-gradient(180deg, rgba(95,181,255,0.12), rgba(255,255,255,0.03)),
+    radial-gradient(circle at right top, rgba(217,178,123,0.18), transparent 40%);
+}}
+.navigation-command-side {{
+  display:grid;
+  gap:18px;
+}}
+.navigation-map-frame {{
+  position:relative;
+  min-height:640px;
+  border-radius:24px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.08);
+  background:#08111b;
+}}
+#nav-map {{
+  width:100%;
+  height:100%;
+  min-height:640px;
+  background:#101d2f;
+}}
+.nav-map-pane {{
+  position:relative;
+  min-height:640px;
+  border-radius:24px;
+  overflow:hidden;
+}}
+.nav-map-overlay {{
+  position:absolute;
+  inset:14px auto auto 14px;
+  width:210px;
+  padding:14px;
+  border-radius:18px;
+  background:rgba(6,14,23,0.88);
+  border:1px solid rgba(255,255,255,0.08);
+  backdrop-filter:blur(10px);
+  z-index:220;
+}}
+.nav-map-overlay strong {{
+  display:block;
+  font-size:34px;
+  line-height:1;
+  margin-bottom:8px;
+}}
+.nav-map-overlay span {{
+  display:block;
+  color:var(--nav-copy-muted);
+  font-size:12px;
+  margin-bottom:4px;
+}}
+.nav-summary-chip {{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--nav-copy-muted);
+  background:rgba(255,255,255,0.04);
+}}
+.nav-map-tools {{
+  position:absolute;
+  right:14px;
+  top:14px;
+  display:grid;
+  gap:10px;
+  z-index:220;
+}}
+.nav-map-tools .nav-secondary-btn {{
+  min-width:110px;
+  justify-content:center;
+}}
+.nav-poi-toggles {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}}
+.nav-poi-toggle {{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:999px;
+  color:var(--nav-copy-muted);
+  font-size:11px;
+  padding:8px 12px;
+  cursor:pointer;
+}}
+.nav-poi-toggle.active[data-cat="food"] {{ background: rgba(255,107,53,0.22); border-color: rgba(255,107,53,0.35); color: #ffb597; }}
+.nav-poi-toggle.active[data-cat="starbucks"] {{ background: rgba(0,112,74,0.22); border-color: rgba(0,112,74,0.36); color: #8ed2af; }}
+.nav-poi-toggle.active[data-cat="parks"] {{ background: rgba(45,106,79,0.22); border-color: rgba(45,106,79,0.36); color: #9dd7a8; }}
+.nav-poi-toggle.active[data-cat="historic"] {{ background: rgba(201,168,76,0.22); border-color: rgba(201,168,76,0.34); color: #f1db9b; }}
+.nav-poi-toggle.active[data-cat="family"] {{ background: rgba(123,45,139,0.24); border-color: rgba(123,45,139,0.34); color: #ddb5eb; }}
+.nav-poi-toggle.active[data-cat="gas"] {{ background: rgba(33,150,243,0.22); border-color: rgba(33,150,243,0.35); color: #aadfff; }}
+.nav-radius-row {{
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+}}
+.nav-radius-slider {{
+  -webkit-appearance:none;
+  appearance:none;
+  width:100%;
+  height:4px;
+  border-radius:999px;
+  background:linear-gradient(to right, #4CAF50 0%, #4CAF50 25%, rgba(255,255,255,0.15) 25%);
+  outline:none;
+  cursor:pointer;
+}}
+.nav-radius-slider::-webkit-slider-thumb {{
+  -webkit-appearance:none;
+  appearance:none;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:#4CAF50;
+  border:2px solid #fff;
+  box-shadow:0 0 6px rgba(76,175,80,0.6);
+}}
+.nav-radius-slider::-moz-range-thumb {{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:#4CAF50;
+  border:2px solid #fff;
+}}
+#nav-pois-list,
+#nav-turns-list {{
+  display:grid;
+  gap:10px;
+}}
+.nav-section-title {{
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--nav-copy-faint);
+  margin:6px 0 10px;
+}}
+.nav-turn-card,
+.nav-poi-card,
+.nav-nps-card {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+}}
+.nav-turn-card {{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:14px;
+}}
+.nav-turn-icon {{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:rgba(95,181,255,0.14);
+  border:1px solid rgba(95,181,255,0.28);
+  color:var(--nav-cyan-soft);
+  flex-shrink:0;
+}}
+.nav-poi-card {{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:14px;
+}}
+.nav-poi-distance-chip {{
+  margin-left:auto;
+  align-self:center;
+  background:rgba(95,181,255,0.12);
+  border:1px solid rgba(95,181,255,0.24);
+  border-radius:999px;
+  font-size:10px;
+  color:var(--nav-cyan-soft);
+  padding:4px 8px;
+  white-space:nowrap;
+}}
+.nav-nps-card {{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:14px;
+  cursor:pointer;
+}}
+.nav-nps-card:hover {{ background:rgba(255,255,255,0.05); }}
+.nav-nps-badge {{
+  font-size:10px;
+  background:rgba(45,106,79,0.34);
+  color:#93d2a1;
+  border:1px solid rgba(45,106,79,0.54);
+  border-radius:999px;
+  padding:3px 7px;
+  white-space:nowrap;
+}}
+#nav-sv-panel {{
+  display:block;
+  padding:0 !important;
+}}
+#nav-sv-panel img {{
+  object-fit:cover;
+  height:240px;
+  width:100%;
+  border-radius:20px;
+}}
+.nav-sv-shell {{
+  display:grid;
+  gap:14px;
+}}
+.nav-sv-caption {{
+  color:var(--nav-copy-muted);
+  font-size:12px;
+  line-height:1.6;
+}}
+.nav-hud {{
+  position:relative;
+  top:auto;
+  left:auto;
+  right:auto;
+  padding:18px;
+  border-radius:22px;
+  background:linear-gradient(180deg, rgba(8,17,28,0.95), rgba(6,12,20,0.95));
+  border:1px solid rgba(255,255,255,0.08);
+  backdrop-filter:blur(10px);
+  z-index:1;
+}}
+.nav-hud-turn {{
+  font-size:40px;
+  line-height:1;
+  color:var(--nav-cyan-soft);
+  min-width:48px;
+  text-align:center;
+}}
+.nav-hud-distance {{
+  font-size:30px;
+  font-weight:700;
+  color:var(--nav-copy);
+  line-height:1;
+}}
+.nav-hud-instruction {{
+  font-size:14px;
+  color:var(--nav-copy-muted);
+  margin-top:6px;
+}}
+.nav-eta-strip {{
+  position:relative;
+  bottom:auto;
+  left:auto;
+  right:auto;
+  margin-top:14px;
+  padding:12px 16px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);
+  justify-content:flex-start;
+  color:var(--nav-copy-muted);
+}}
+.nav-poi-alert {{
+  position:relative;
+  bottom:auto;
+  left:auto;
+  right:auto;
+  margin-top:14px;
+  border-radius:18px;
+  padding:14px 16px;
+  background:rgba(20,25,45,0.78);
+  transform:none;
+  display:none;
+}}
+.nav-poi-alert.visible {{
+  display:flex;
+}}
+.nav-voice-btn,
+.nav-start-btn,
+.nav-stop-btn {{
+  position:relative;
+  top:auto;
+  left:auto;
+  right:auto;
+  bottom:auto;
+  transform:none;
+}}
+.nav-voice-btn {{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.05);
+  color:var(--nav-copy);
+  font-size:18px;
+  display:grid;
+  place-items:center;
+}}
+.nav-start-btn,
+.nav-stop-btn {{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:180px;
+  padding:12px 22px;
+  font-weight:700;
+  font-size:13px;
+  border-radius:999px;
+}}
+.nav-start-btn {{
+  background:linear-gradient(135deg, var(--nav-cyan-soft), var(--nav-cyan));
+  color:#04121f;
+}}
+.nav-stop-btn {{
+  background:rgba(239,68,68,0.85);
+  color:#fff;
+}}
+.navigation-route-line {{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--nav-copy-muted);
+  font-size:12px;
+}}
+.navigation-route-line span {{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:var(--nav-cyan-soft);
+  box-shadow:0 0 0 4px rgba(95,181,255,0.1);
+}}
+.navigation-route-line.destination span {{ background:var(--nav-gold); box-shadow:0 0 0 4px rgba(217,178,123,0.12); }}
+.navigation-timeline {{
+  display:grid;
+  gap:12px;
+}}
+.navigation-timeline-step {{
+  display:grid;
+  grid-template-columns:14px minmax(0, 1fr);
+  gap:12px;
+}}
+.navigation-timeline-step i {{
+  display:block;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  border:2px solid var(--nav-cyan-soft);
+  background:rgba(95,181,255,0.12);
+  margin-top:4px;
+}}
+.navigation-travelers {{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}}
+.navigation-avatars {{
+  display:flex;
+  align-items:center;
+}}
+.navigation-avatar {{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  margin-right:-8px;
+  border:2px solid rgba(8,17,28,0.95);
+  display:grid;
+  place-items:center;
+  font-size:11px;
+  font-weight:700;
+  color:#04121f;
+}}
+.navigation-avatar.you {{ background:#8fd6ff; }}
+.navigation-avatar.alex {{ background:#f7cf9a; }}
+.navigation-avatar.jordan {{ background:#9ad4b4; }}
+.navigation-avatar.plus {{ background:rgba(255,255,255,0.12); color:var(--nav-copy); }}
+.navigation-chat {{
+  display:grid;
+  gap:12px;
+}}
+.navigation-chat-bubble {{
+  max-width:88%;
+  border-radius:18px;
+  padding:14px 16px;
+  font-size:13px;
+  line-height:1.6;
+  border:1px solid rgba(255,255,255,0.08);
+}}
+.navigation-chat-bubble.user {{
+  justify-self:end;
+  background:rgba(95,181,255,0.14);
+}}
+.navigation-chat-bubble.jarvis {{
+  background:rgba(255,255,255,0.04);
+  color:var(--nav-copy-muted);
+}}
+.navigation-consult-actions {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:14px;
+}}
+.navigation-consult-actions button {{
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);
+  color:var(--nav-copy);
+  cursor:pointer;
+}}
+.nav-module-drawer,
+.nav-route-links,
+.nav-route-link,
+.nav-module-summary,
 .nav-section-label {{
-    margin: 14px 12px 8px;
-    font-size: 10px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--text-3);
+  display:none;
 }}
-.nav-module-drawer {{
-    margin: 8px 8px 0;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px;
-    background: rgba(255,255,255,0.025);
-    overflow: hidden;
+@keyframes spin {{
+  to {{ transform: rotate(360deg); }}
 }}
-.nav-module-drawer[open] {{
-    background: rgba(255,255,255,0.04);
+#nav-aerial-modal video {{
+  max-height:70vh;
+  object-fit:cover;
 }}
-.nav-module-summary {{
-    list-style: none;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 10px 12px;
-    cursor: pointer;
-    color: var(--text-2);
-    font-size: 12px;
-    font-weight: 600;
+@media (max-width: 1360px) {{
+  .navigation-desktop-shell,
+  .navigation-hero-grid,
+  .navigation-map-grid,
+  .navigation-stop-grid,
+  .navigation-plan-grid,
+  .navigation-voice-grid {{
+    grid-template-columns:1fr;
+  }}
+  .navigation-sidebar {{
+    border-right:none;
+    border-bottom:1px solid rgba(255,255,255,0.05);
+  }}
 }}
-.nav-module-summary::-webkit-details-marker {{ display: none; }}
-.nav-module-summary span {{
-    color: var(--text-3);
-    font-size: 10px;
-    font-family: var(--font-mono);
-}}
-.nav-route-links {{
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 0 8px 10px;
-}}
-.nav-route-link {{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-    color: var(--text-2);
-    font-size: 12px;
-    text-decoration: none;
-    transition: background 0.15s, border-color 0.15s, color 0.15s;
-}}
-.nav-route-link:hover {{
-    background: rgba(255,255,255,0.08);
-    border-color: rgba(255,255,255,0.16);
-    color: var(--text-1);
-}}
-.nav-route-link code {{
-    font-size: 10px;
-    color: var(--text-3);
-    background: transparent;
+@media (max-width: 860px) {{
+  .nav-experience {{
+    padding:18px;
+  }}
+  .nav-headline,
+  .navigation-topbar {{
+    flex-direction:column;
+    align-items:flex-start;
+  }}
+  .nav-hero-title h1 {{
+    font-size:40px;
+  }}
+  .navigation-main {{
+    padding:18px;
+  }}
+  .navigation-hero-metrics,
+  .navigation-mini-grid,
+  .navigation-route-overview,
+  .navigation-insight-row,
+  .navigation-recent-grid,
+  .navigation-saved-grid,
+  .navigation-risks,
+  .navigation-route-summary-grid,
+  .navigation-constraints-grid,
+  .navigation-weather-grid,
+  .navigation-stop-actions,
+  .navigation-alt-grid,
+  .navigation-related-grid {{
+    grid-template-columns:1fr;
+  }}
 }}
 /* ═══════════════════════════════════════════════════════════════
    END NAVIGATION CSS
@@ -12331,8 +12889,7 @@ body::after {{
 
   <!-- ── NAVIGATE ─────────────────────────────────────────── -->
   <div id="view-navigate" class="view" style="display:none; padding:0">
-    <div class="nav-container">
-      <!-- Aerial View destination modal -->
+    <div class="nav-experience">
       <div id="nav-aerial-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.92); z-index:9999; flex-direction:column; align-items:center; justify-content:center;">
         <div style="position:relative; width:min(800px,95vw);">
           <div id="nav-aerial-dest-name" style="color:#fff; font-size:22px; font-weight:700; margin-bottom:12px; text-align:center;"></div>
@@ -12348,103 +12905,426 @@ body::after {{
           </div>
         </div>
       </div>
-      <!-- SIDEBAR (desktop) -->
-      <div class="nav-sidebar" id="nav-sidebar">
-        <div class="nav-route-inputs">
-          <div style="display:flex; gap:6px; margin-bottom:6px;">
-            <button class="nav-home-btn" onclick="navSetHome()" title="Set origin to Home">&#127968; Home</button>
-            <button class="nav-home-btn" onclick="navUseCurrentLocation()" title="Use GPS location">&#128205; My Location</button>
-          </div>
-          <div class="nav-input-row">
-            <span style="color:#4CAF50">&#9679;</span>
-            <input id="nav-origin" class="nav-input" placeholder="Starting point..." oninput="navAutocomplete('nav-origin', 'nav-origin-results')">
-            <div id="nav-origin-results" class="nav-autocomplete-results"></div>
-          </div>
-          <div class="nav-input-row">
-            <span style="color:#F44336">&#9679;</span>
-            <input id="nav-dest" class="nav-input" placeholder="Destination..." oninput="navAutocomplete('nav-dest', 'nav-dest-results')">
-            <div id="nav-dest-results" class="nav-autocomplete-results"></div>
-          </div>
-          <div style="display:flex; gap:8px">
-            <button class="nav-swap-btn" onclick="navSwapInputs()">&#8645;</button>
-            <button class="nav-go-btn" onclick="navGetRoute()">Get Route</button>
-          </div>
-        </div>
 
-        <div class="nav-poi-toggles" id="nav-poi-toggles">
-          <button class="nav-poi-toggle active" data-cat="food" onclick="navTogglePOI('food')">&#127828; Food</button>
-          <button class="nav-poi-toggle active" data-cat="starbucks" onclick="navTogglePOI('starbucks')">&#9749; Starbucks</button>
-          <button class="nav-poi-toggle active" data-cat="parks" onclick="navTogglePOI('parks')">&#127794; Nat&apos;l Parks</button>
-          <button class="nav-poi-toggle active" data-cat="historic" onclick="navTogglePOI('historic')">&#127963; Historic</button>
-          <button class="nav-poi-toggle active" data-cat="family" onclick="navTogglePOI('family')">&#11088; Family</button>
-          <button class="nav-poi-toggle" data-cat="gas" onclick="navTogglePOI('gas')">&#9981; Gas</button>
+      <div class="nav-headline">
+        <div class="nav-hero-title">
+          <div class="nav-kicker">Concept Storyboard</div>
+          <h1>JARVIS <span>Navigation</span> Desktop Experience</h1>
+          <p>Move from route planning to live guidance with a desktop shell that thinks in timing, smart stops, weather, household constraints, and voice-first consultation.</p>
         </div>
-
-        <!-- Parks & Historic distance slider -->
-        <div class="nav-radius-row" id="nav-radius-row">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span style="font-size:11px; opacity:0.6; text-transform:uppercase; letter-spacing:0.5px;">&#127794; Parks &amp; Historic — search radius</span>
-            <span id="nav-parks-radius-label" style="font-size:13px; font-weight:700; color:#4CAF50;">25 mi</span>
+        <div class="nav-motto">
+          <div class="nav-motto-icon">&#10022;</div>
+          <div>
+            <strong>Smarter routes. Better timing.</strong>
+            <p>Fewer surprises. Coordinate stops, family constraints, traffic, and weather before the drive turns reactive.</p>
           </div>
-          <input type="range" id="nav-parks-radius" class="nav-radius-slider"
-            min="5" max="100" step="5" value="25"
-            oninput="navUpdateParksRadius(this.value)"
-            onchange="if(_navRouteData) loadNavPOIs(_navRouteData)">
-          <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.4; margin-top:2px;">
-            <span>5 mi</span><span>25 mi</span><span>50 mi</span><span>100 mi</span>
-          </div>
-        </div>
-
-        <div class="nav-summary-bar" id="nav-summary-bar" style="display:none">
-          <div class="nav-stat"><span id="nav-dist">--</span><label>Distance</label></div>
-          <div class="nav-stat"><span id="nav-time">--</span><label>Drive Time</label></div>
-          <div class="nav-stat"><span id="nav-eta">--</span><label>ETA</label></div>
-        </div>
-
-        <div id="nav-turns-section" style="display:none">
-          <div class="nav-section-title">Turn by Turn</div>
-          <div id="nav-turns-list"></div>
-        </div>
-
-        <!-- Street View turn preview -->
-        <div id="nav-sv-panel" style="display:none; padding:12px;">
-          <div class="nav-section-title">What to Expect</div>
-          <div style="position:relative;">
-            <img id="nav-sv-img" style="width:100%; border-radius:10px; min-height:120px; background:#1a1a2e;" alt="Street View" onerror="this.style.display='none'">
-            <div id="nav-sv-caption" style="font-size:11px; opacity:0.6; margin-top:4px; text-align:center;"></div>
-          </div>
-        </div>
-
-        <div id="nav-pois-section" style="display:none">
-          <div class="nav-section-title">Along Your Route</div>
-          <div id="nav-pois-list"></div>
         </div>
       </div>
 
-      <!-- MAP PANE -->
-      <div class="nav-map-pane">
-        <div id="nav-map"></div>
-        <!-- Mobile HUD (hidden on desktop) -->
-        <div class="nav-hud" id="nav-hud" style="display:none">
-          <div style="display:flex; align-items:center; gap:16px">
-            <div id="nav-hud-arrow" class="nav-hud-turn">&#8593;</div>
+      <div class="navigation-desktop-shell">
+        <aside class="navigation-sidebar">
+          <div class="navigation-brand">
             <div>
-              <div class="nav-hud-distance" id="nav-hud-dist">--</div>
-              <div class="nav-hud-instruction" id="nav-hud-instr">Calculating...</div>
+              <div class="navigation-brand-title">JARVIS</div>
+              <div class="navigation-brand-sub">Navigation</div>
+            </div>
+            <div class="navigation-pulse">&#10148;</div>
+          </div>
+          <div class="navigation-side-nav">
+            <div class="navigation-side-link active">&#128506; Command Center</div>
+            <div class="navigation-side-link">&#128506; Map</div>
+            <div class="navigation-side-link">&#128205; Trips</div>
+            <div class="navigation-side-link">&#9733; Smart Stops</div>
+            <div class="navigation-side-link">&#9729; Weather</div>
+            <div class="navigation-side-link">&#128663; Vehicle</div>
+            <div class="navigation-side-link">&#9881; Settings</div>
+          </div>
+          <div class="navigation-side-footer">
+            <strong>Travel Context</strong>
+            <p>Home base: Alexandria, KY. Prioritize lower-friction timing, family-aware stops, and route changes that preserve the day instead of hijacking it.</p>
+          </div>
+        </aside>
+
+        <section class="navigation-main">
+          <div class="navigation-topbar">
+            <div class="navigation-title-block">
+              <div class="navigation-title-row">
+                <strong id="navigation-nav-title">1. Navigation Command Center</strong>
+                <div class="navigation-title-line"></div>
+              </div>
+              <p id="navigation-nav-subtitle">Plan the route, understand the current window, and see which leave-time recommendation protects the rest of the schedule.</p>
+            </div>
+            <div class="navigation-storyboard-nav">
+              <button class="navigation-nav-btn" id="navigation-nav-prev" onclick="advanceNavigationPage(-1)" aria-label="Previous Navigation page">&larr;</button>
+              <div class="navigation-page-meta">
+                <div class="navigation-nav-page" id="navigation-page-count">Page 1 of 6</div>
+                <div class="navigation-page-label" id="navigation-page-label">Command Center</div>
+              </div>
+              <button class="navigation-nav-btn" id="navigation-nav-next" onclick="advanceNavigationPage(1)" aria-label="Next Navigation page">&rarr;</button>
             </div>
           </div>
-        </div>
-        <div class="nav-eta-strip" id="nav-eta-strip" style="display:none">
-          <span id="nav-hud-eta">--</span> arrival &middot; <span id="nav-hud-remain">--</span> remaining
-        </div>
-        <div class="nav-poi-alert" id="nav-poi-alert">
-          <span id="nav-poi-alert-icon">&#127828;</span>
-          <div id="nav-poi-alert-text">Starbucks in 0.8 miles</div>
-          <button onclick="dismissNavAlert()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;margin-left:auto;">&#10005;</button>
-        </div>
-        <button class="nav-voice-btn" id="nav-voice-btn" onclick="navToggleVoice()" title="Toggle voice">&#128266;</button>
-        <button class="nav-start-btn" id="nav-start-btn" onclick="startNavigation()" style="display:none">&#9654; Start Navigation</button>
-        <button class="nav-stop-btn" id="nav-stop-btn" onclick="stopNavigation()" style="display:none">&#9632; Stop</button>
+
+          <div class="navigation-pages">
+            <div class="navigation-page active" data-navigation-page="1">
+              <div class="navigation-hero-grid">
+                <div class="navigation-card">
+                  <h3>Where do you want to go?</h3>
+                  <div class="nav-route-inputs">
+                    <div class="nav-home-actions">
+                      <button class="nav-home-btn" onclick="navSetHome()" title="Set origin to Home">&#127968; Home</button>
+                      <button class="nav-home-btn" onclick="navUseCurrentLocation()" title="Use GPS location">&#128205; My Location</button>
+                    </div>
+                    <div class="nav-input-row">
+                      <div class="nav-input-pin">&#9679;</div>
+                      <input id="nav-origin" class="nav-input" placeholder="Starting point..." oninput="navAutocomplete('nav-origin', 'nav-origin-results')">
+                      <div id="nav-origin-results" class="nav-autocomplete-results"></div>
+                    </div>
+                    <div class="nav-input-row">
+                      <div class="nav-input-pin" style="color:#e89b7e;">&#9679;</div>
+                      <input id="nav-dest" class="nav-input" placeholder="Destination..." oninput="navAutocomplete('nav-dest', 'nav-dest-results')">
+                      <div id="nav-dest-results" class="nav-autocomplete-results"></div>
+                    </div>
+                    <div class="nav-route-actions">
+                      <button class="nav-swap-btn" onclick="navSwapInputs()">&#8645;</button>
+                      <button class="nav-go-btn" onclick="navGetRoute()">Plan Route</button>
+                    </div>
+                  </div>
+                  <div class="nav-summary-bar" id="nav-summary-bar" style="display:none">
+                    <div class="nav-stat"><span id="nav-dist">--</span><label>Distance</label></div>
+                    <div class="nav-stat"><span id="nav-time">--</span><label>Drive Time</label></div>
+                    <div class="nav-stat"><span id="nav-eta">--</span><label>ETA</label></div>
+                  </div>
+                  <div class="navigation-insight-row" style="margin-top:16px;">
+                    <div class="navigation-promo-card">
+                      <strong>JARVIS Recommendation</strong>
+                      <span id="nav-brief-recommendation">Leave by 9:38 AM to stay ahead of heavier traffic and preserve the next meeting window.</span>
+                    </div>
+                    <div class="navigation-promo-card">
+                      <strong>Route Window</strong>
+                      <span id="nav-brief-window">Next best departure window: 10:00 AM to 10:30 AM. Weather remains stable until late morning.</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="navigation-command-side">
+                  <div class="navigation-card">
+                    <h4>Active Route</h4>
+                    <div class="navigation-hero-metrics">
+                      <div class="navigation-metric"><strong id="nav-hero-eta">1h 24m</strong><span>Current drive estimate</span></div>
+                      <div class="navigation-metric"><strong id="nav-hero-traffic">Light</strong><span>Traffic posture</span></div>
+                      <div class="navigation-metric"><strong id="nav-hero-weather">72&deg;F</strong><span>Weather at departure</span></div>
+                    </div>
+                    <div class="navigation-route-overview" style="margin-top:14px;">
+                      <div class="navigation-route-card">
+                        <strong>Home</strong>
+                        <span>Primary departure point for morning travel and family pickups.</span>
+                      </div>
+                      <div class="navigation-route-card">
+                        <strong id="nav-overview-destination">Springfield, VA</strong>
+                        <span id="nav-overview-destination-copy">Selected destination, recent arrival confidence 92%.</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Recent Trips</h4>
+                    <div class="navigation-recent-grid">
+                      <div class="navigation-recent-card"><strong>Washington, DC</strong><span>Board day timing</span></div>
+                      <div class="navigation-recent-card"><strong>Charlottesville, VA</strong><span>Family weekend route</span></div>
+                      <div class="navigation-recent-card"><strong>Harrisonburg, VA</strong><span>Reliable coffee stop corridor</span></div>
+                      <div class="navigation-recent-card"><strong>Shenandoah NP</strong><span>Nature and scenic detour memory</span></div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Saved Places</h4>
+                    <div class="navigation-saved-grid">
+                      <div class="navigation-saved-card"><strong>Work</strong><span>Alexandria, VA</span></div>
+                      <div class="navigation-saved-card"><strong>Mom&apos;s House</strong><span>Luray, VA</span></div>
+                      <div class="navigation-saved-card"><strong>Starbucks Favorites</strong><span>Reliable quick stops</span></div>
+                      <div class="navigation-saved-card"><strong>Shenandoah NP</strong><span>Family outdoor anchor</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="navigation-page" data-navigation-page="2">
+              <div class="navigation-map-grid">
+                <div class="navigation-map-frame">
+                  <div class="nav-map-pane">
+                    <div id="nav-map"></div>
+                    <div class="nav-map-overlay">
+                      <strong id="nav-map-eta-main">1h 24m</strong>
+                      <span id="nav-map-distance-main">82 mi</span>
+                      <span id="nav-map-risk-copy">Light traffic · low route risk</span>
+                      <div class="nav-summary-chip" style="margin-top:10px;">Live route intelligence</div>
+                    </div>
+                    <div class="nav-map-tools">
+                      <button class="nav-secondary-btn" onclick="navGetRoute()">Re-center</button>
+                      <button class="nav-secondary-btn" onclick="advanceNavigationPage(3)">View Stops</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="navigation-command-side">
+                  <div class="navigation-card">
+                    <h4>Route Overview</h4>
+                    <div class="navigation-mini-grid">
+                      <div class="navigation-mini-card"><strong id="nav-map-summary-home">Home</strong><span>Origin profile</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-map-summary-destination">Springfield</strong><span>Destination profile</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-map-summary-incidents">1</strong><span>Known incidents</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-map-summary-cost">2.75</strong><span>Estimated tolls</span></div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Upcoming</h4>
+                    <div id="nav-turns-section" style="display:none">
+                      <div id="nav-turns-list"></div>
+                    </div>
+                    <div id="nav-turns-placeholder">
+                      <p>Once a route is loaded, the next guidance stack will appear here with mile markers and turning instructions.</p>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Risk Signals</h4>
+                    <div class="navigation-risks">
+                      <div class="navigation-risk-card"><strong id="nav-risk-traffic">Low</strong><span>Traffic trend across the current corridor</span></div>
+                      <div class="navigation-risk-card"><strong id="nav-risk-weather">Stable</strong><span>Weather effect during the drive window</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="navigation-page" data-navigation-page="3">
+              <div class="navigation-stop-grid">
+                <div class="navigation-card">
+                  <h4>Filter route stops</h4>
+                  <div class="nav-poi-toggles" id="nav-poi-toggles">
+                    <button class="nav-poi-toggle active" data-cat="food" onclick="navTogglePOI('food')">&#127828; Food</button>
+                    <button class="nav-poi-toggle active" data-cat="starbucks" onclick="navTogglePOI('starbucks')">&#9749; Starbucks</button>
+                    <button class="nav-poi-toggle active" data-cat="parks" onclick="navTogglePOI('parks')">&#127794; Parks</button>
+                    <button class="nav-poi-toggle active" data-cat="historic" onclick="navTogglePOI('historic')">&#127963; Historic</button>
+                    <button class="nav-poi-toggle active" data-cat="family" onclick="navTogglePOI('family')">&#11088; Family</button>
+                    <button class="nav-poi-toggle" data-cat="gas" onclick="navTogglePOI('gas')">&#9981; Gas</button>
+                  </div>
+                  <div class="nav-radius-row" id="nav-radius-row">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                      <span style="font-size:11px; opacity:0.7; text-transform:uppercase; letter-spacing:0.12em;">Parks and historic radius</span>
+                      <span id="nav-parks-radius-label" style="font-size:13px; font-weight:700; color:#7ed391;">25 mi</span>
+                    </div>
+                    <input type="range" id="nav-parks-radius" class="nav-radius-slider"
+                      min="5" max="100" step="5" value="25"
+                      oninput="navUpdateParksRadius(this.value)"
+                      onchange="if(_navRouteData) loadNavPOIs(_navRouteData)">
+                    <div style="display:flex; justify-content:space-between; font-size:10px; opacity:0.45; margin-top:6px;">
+                      <span>5 mi</span><span>25 mi</span><span>50 mi</span><span>100 mi</span>
+                    </div>
+                  </div>
+                  <div id="nav-pois-section" style="display:none; margin-top:16px;">
+                    <div id="nav-pois-list"></div>
+                  </div>
+                  <div id="nav-pois-placeholder" style="margin-top:16px;">
+                    <p>Load a route to see Starbucks, food, scenic parks, family stops, and historic detours ranked along the drive.</p>
+                  </div>
+                </div>
+                <div class="navigation-command-side">
+                  <div class="navigation-card">
+                    <h4>Stop Fit</h4>
+                    <div class="navigation-mini-grid">
+                      <div class="navigation-mini-card"><strong>+1 min</strong><span>Fast coffee options</span></div>
+                      <div class="navigation-mini-card"><strong>+6 min</strong><span>Meal-quality stops</span></div>
+                      <div class="navigation-mini-card"><strong>+18 min</strong><span>Scenic recovery detours</span></div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Optimization Note</h4>
+                    <p id="nav-stop-optimizer-copy">Detours are approximate. JARVIS balances traffic, route confidence, fuel, and schedule preservation before adding any stop.</p>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Route Memory</h4>
+                    <div class="navigation-related-grid">
+                      <div class="navigation-related-card"><strong>Shenandoah</strong><span>Favored family stretch stop</span></div>
+                      <div class="navigation-related-card"><strong>Harrisonburg</strong><span>Reliable quick coffee corridor</span></div>
+                      <div class="navigation-related-card"><strong>Harpers Ferry</strong><span>Historic detour candidate</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="navigation-page" data-navigation-page="4">
+              <div class="navigation-stop-grid">
+                <div class="navigation-card">
+                  <h4>Stop detail and route modification</h4>
+                  <div class="nav-sv-shell">
+                    <div id="nav-sv-panel" style="display:none;">
+                      <img id="nav-sv-img" alt="Street View" onerror="this.style.display='none'">
+                      <div class="nav-sv-caption" id="nav-sv-caption">Street-level preview will appear here when route steps are available.</div>
+                    </div>
+                    <div id="nav-sv-placeholder">
+                      <p>Once a route is loaded, JARVIS will preview the next turn or stop area here so you know what the handoff looks like before you get there.</p>
+                    </div>
+                    <div class="navigation-detail-stats">
+                      <div class="navigation-route-summary-grid">
+                        <div class="navigation-mini-card"><strong id="nav-detail-detour">0.2 mi</strong><span>Detour distance</span></div>
+                        <div class="navigation-mini-card"><strong id="nav-detail-time-impact">+1 min</strong><span>Time impact</span></div>
+                        <div class="navigation-mini-card"><strong id="nav-detail-arrival">10:59 AM</strong><span>ETA after stop</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="navigation-command-side">
+                  <div class="navigation-card">
+                    <h4>Route Actions</h4>
+                    <div class="navigation-stop-actions">
+                      <div class="navigation-stop-chip"><strong>Add to Route</strong><span>Keep current timing with a quick stop.</span></div>
+                      <div class="navigation-stop-chip"><strong>Re-optimize</strong><span>Let JARVIS rebalance the drive after the stop.</span></div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Compare Alternatives</h4>
+                    <div class="navigation-alt-grid">
+                      <div class="navigation-alt-card"><strong>Dunkin&apos;</strong><span>0.6 mi off route · +2 min</span></div>
+                      <div class="navigation-alt-card"><strong>Panera</strong><span>1.2 mi off route · +5 min</span></div>
+                      <div class="navigation-alt-card"><strong>Wawa</strong><span>0.5 mi off route · +3 min</span></div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Why this stop works</h4>
+                    <p id="nav-stop-fit-copy">Popular stop with fast service and predictable timing. JARVIS will highlight low-friction options first for travel days with tighter windows.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="navigation-page" data-navigation-page="5">
+              <div class="navigation-plan-grid">
+                <div class="navigation-card">
+                  <h4>Travel orchestration and planning</h4>
+                  <div class="navigation-route-summary-grid">
+                    <div class="navigation-mini-card"><strong id="nav-plan-leave">9:38 AM</strong><span>Recommended departure</span></div>
+                    <div class="navigation-mini-card"><strong id="nav-plan-arrive">10:58 AM</strong><span>Projected arrival</span></div>
+                    <div class="navigation-mini-card"><strong id="nav-plan-distance">82 mi</strong><span>Distance</span></div>
+                  </div>
+                  <div class="navigation-card" style="margin-top:16px; padding:16px;">
+                    <h4 style="margin-bottom:10px;">Trip timeline</h4>
+                    <div class="navigation-timeline">
+                      <div class="navigation-timeline-step"><i></i><div><strong style="display:block; margin-bottom:4px;">Departure window</strong><span style="color:var(--nav-copy-muted); font-size:12px;">Leave before traffic hardens and before weather confidence slips.</span></div></div>
+                      <div class="navigation-timeline-step"><i></i><div><strong style="display:block; margin-bottom:4px;">Mid-route buffer</strong><span style="color:var(--nav-copy-muted); font-size:12px;">Use a low-friction stop only if energy or meeting prep needs a reset.</span></div></div>
+                      <div class="navigation-timeline-step"><i></i><div><strong style="display:block; margin-bottom:4px;">Arrival protection</strong><span style="color:var(--nav-copy-muted); font-size:12px;">Maintain margin so the next event does not inherit road volatility.</span></div></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="navigation-command-side">
+                  <div class="navigation-card">
+                    <h4>Travelers</h4>
+                    <div class="navigation-travelers">
+                      <div class="navigation-avatars">
+                        <div class="navigation-avatar you">You</div>
+                        <div class="navigation-avatar alex">A</div>
+                        <div class="navigation-avatar jordan">J</div>
+                        <div class="navigation-avatar plus">+</div>
+                      </div>
+                      <span style="color:var(--nav-copy-muted); font-size:12px;">Coordinate schedule alignment, rider timing, and stop tolerance.</span>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Constraints</h4>
+                    <div class="navigation-constraints-grid">
+                      <div class="navigation-constraint-card"><strong>Avoid heavy traffic</strong><span>Preserve morning decision bandwidth.</span></div>
+                      <div class="navigation-constraint-card"><strong>Minimize tolls</strong><span>Use only when time recovery matters.</span></div>
+                      <div class="navigation-constraint-card"><strong>Kid-friendly stop</strong><span>Route can flex toward easier household travel.</span></div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Weather Along Route</h4>
+                    <div class="navigation-weather-grid">
+                      <div class="navigation-weather-card"><strong>Now</strong><span>72&deg; · partly cloudy</span></div>
+                      <div class="navigation-weather-card"><strong>11 AM</strong><span>74&deg; · stable</span></div>
+                      <div class="navigation-weather-card"><strong>1 PM</strong><span>68&deg; · rain risk</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="navigation-page" data-navigation-page="6">
+              <div class="navigation-voice-grid">
+                <div class="navigation-card">
+                  <h4>Voice navigation consultation</h4>
+                  <div class="navigation-chat">
+                    <div class="navigation-chat-bubble user">Where is the next good coffee stop?</div>
+                    <div class="navigation-chat-bubble jarvis">The best option is a Starbucks in Harrisonburg, 0.2 miles off your route. It adds about a minute and preserves your arrival window.</div>
+                    <div class="navigation-chat-bubble user">Should I leave earlier?</div>
+                    <div class="navigation-chat-bubble jarvis">Leaving by 9:38 AM is ideal. You avoid I-81 construction pressure and keep your arrival confidence above 90%.</div>
+                  </div>
+                  <div class="navigation-consult-actions">
+                    <button type="button">Find food</button>
+                    <button type="button">Check weather</button>
+                    <button type="button">Avoid tolls</button>
+                    <button type="button">More options</button>
+                  </div>
+                  <div class="navigation-card" style="margin-top:16px; padding:0; background:transparent; border:none; box-shadow:none;">
+                    <div class="nav-hud" id="nav-hud" style="display:none">
+                      <div style="display:flex; align-items:center; gap:16px">
+                        <div id="nav-hud-arrow" class="nav-hud-turn">&#8593;</div>
+                        <div>
+                          <div class="nav-hud-distance" id="nav-hud-dist">--</div>
+                          <div class="nav-hud-instruction" id="nav-hud-instr">Calculating...</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="nav-eta-strip" id="nav-eta-strip" style="display:none">
+                      <span id="nav-hud-eta">--</span> arrival &middot; <span id="nav-hud-remain">--</span> remaining
+                    </div>
+                    <div class="nav-poi-alert" id="nav-poi-alert">
+                      <span id="nav-poi-alert-icon">&#127828;</span>
+                      <div id="nav-poi-alert-text">Starbucks in 0.8 miles</div>
+                      <button onclick="dismissNavAlert()" style="background:none;border:none;color:var(--text-3);cursor:pointer;font-size:16px;margin-left:auto;">&#10005;</button>
+                    </div>
+                    <div class="navigation-voice-actions" style="margin-top:14px;">
+                      <div class="navigation-stop-chip">
+                        <strong>Voice Control</strong>
+                        <span>Use spoken prompts for rerouting, stops, and timing.</span>
+                      </div>
+                      <div class="navigation-stop-chip" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                        <div>
+                          <strong>Controls</strong>
+                          <span>Start or stop the live guidance session.</span>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                          <button class="nav-voice-btn" id="nav-voice-btn" onclick="navToggleVoice()" title="Toggle voice">&#128266;</button>
+                          <button class="nav-start-btn" id="nav-start-btn" onclick="startNavigation()" style="display:none">&#9654; Start Navigation</button>
+                          <button class="nav-stop-btn" id="nav-stop-btn" onclick="stopNavigation()" style="display:none">&#9632; Stop</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="navigation-command-side">
+                  <div class="navigation-card">
+                    <h4>Context</h4>
+                    <div class="navigation-route-line"><span></span><div id="nav-voice-origin">Home</div></div>
+                    <div class="navigation-route-line destination" style="margin-top:12px;"><span></span><div id="nav-voice-destination">Springfield</div></div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Trip Summary</h4>
+                    <div class="navigation-mini-grid">
+                      <div class="navigation-mini-card"><strong id="nav-voice-eta">10:58 AM</strong><span>Arrival</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-voice-distance">82 mi</strong><span>Distance</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-voice-traffic">Light</strong><span>Traffic</span></div>
+                    </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Recommended Next Action</h4>
+                    <div class="navigation-promo-card">
+                      <strong id="nav-voice-action-title">Leave by 9:38 AM</strong>
+                      <span id="nav-voice-action-copy">Best control point before the corridor starts adding uncertainty to the rest of the day.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -26310,6 +27190,136 @@ document.addEventListener('DOMContentLoaded', init);
 /* ═══════════════════════════════════════════════════════════════
    NAVIGATION / WAZE
 ═══════════════════════════════════════════════════════════════ */
+let navigationStoryboardPage = 1;
+const NAVIGATION_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Navigation Command Center',
+    label: 'Command Center',
+    subtitle: 'Plan the route, understand the current window, and see which leave-time recommendation protects the rest of the schedule.',
+  }},
+  2: {{
+    title: '2. Live Route Intelligence Workspace',
+    label: 'Route Intelligence',
+    subtitle: 'Track the live map, next turns, distance, toll posture, and the route signals that matter before you start driving.',
+  }},
+  3: {{
+    title: '3. Smart Stops Along Route Studio',
+    label: 'Smart Stops',
+    subtitle: 'Filter route-fit stops, expand the scenic search radius, and compare quick detours against what the day can absorb.',
+  }},
+  4: {{
+    title: '4. Stop Detail & Route Modification',
+    label: 'Stop Detail',
+    subtitle: 'Preview the stop area, understand arrival impact, and choose whether to add a stop or let JARVIS rebalance the route.',
+  }},
+  5: {{
+    title: '5. Travel Orchestration & Planning',
+    label: 'Travel Planning',
+    subtitle: 'Coordinate departure timing, household constraints, weather, and rider context so the trip supports the rest of the day.',
+  }},
+  6: {{
+    title: '6. Voice Navigation Consultation',
+    label: 'Voice Consultation',
+    subtitle: 'Ask about coffee, traffic, weather, tolls, and leave-time guidance hands-free while JARVIS keeps the route context live.',
+  }},
+}};
+
+function syncNavigationStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-navigate .navigation-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  navigationStoryboardPage = Math.max(1, Math.min(navigationStoryboardPage, pageCount));
+
+  panels.forEach((panel, idx) => {{
+    panel.classList.toggle('active', idx + 1 === navigationStoryboardPage);
+  }});
+
+  const meta = NAVIGATION_STORYBOARD_TITLES[navigationStoryboardPage];
+  const title = document.getElementById('navigation-nav-title');
+  if (title) title.textContent = meta?.title || `Page ${{navigationStoryboardPage}}`;
+
+  const subtitle = document.getElementById('navigation-nav-subtitle');
+  if (subtitle) subtitle.textContent = meta?.subtitle || '';
+
+  const count = document.getElementById('navigation-page-count');
+  if (count) count.textContent = `Page ${{navigationStoryboardPage}} of ${{pageCount}}`;
+
+  const label = document.getElementById('navigation-page-label');
+  if (label) label.textContent = meta?.label || `Page ${{navigationStoryboardPage}}`;
+
+  const prev = document.getElementById('navigation-nav-prev');
+  const next = document.getElementById('navigation-nav-next');
+  if (prev) prev.disabled = navigationStoryboardPage === 1;
+  if (next) next.disabled = navigationStoryboardPage === pageCount;
+
+  if (navigationStoryboardPage === 2 && _navMap && window.google && google.maps && google.maps.event) {{
+    setTimeout(function() {{
+      google.maps.event.trigger(_navMap, 'resize');
+      var center = _navMap.getCenter();
+      if (center) _navMap.setCenter(center);
+    }}, 60);
+  }}
+}}
+
+function advanceNavigationPage(delta) {{
+  navigationStoryboardPage += delta;
+  syncNavigationStoryboard();
+}}
+
+function _setText(id, value) {{
+  const el = document.getElementById(id);
+  if (el && value !== undefined && value !== null && value !== '') el.textContent = value;
+}}
+
+function _formatNavEta(seconds) {{
+  const eta = new Date(Date.now() + seconds * 1000);
+  return eta.toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
+}}
+
+function updateNavigationReadouts(route, pois) {{
+  const leg = route?.legs?.[0];
+  const distance = leg?.distance?.text || '--';
+  const duration = leg?.duration?.text || '--';
+  const eta = leg?.duration?.value ? _formatNavEta(leg.duration.value) : '--';
+  const origin = document.getElementById('nav-origin')?.value || 'Home';
+  const destination = document.getElementById('nav-dest')?.value || 'Destination';
+  const routePoiCount = Array.isArray(pois) ? pois.length : _navPOIs.length;
+  const trafficPosture = routePoiCount > 8 ? 'Active' : routePoiCount > 3 ? 'Moderate' : 'Light';
+  const incidentCount = Math.min(Math.max(routePoiCount ? 1 : 0, 0), 3);
+  const tollEstimate = routePoiCount ? '$2.75' : '--';
+
+  _setText('nav-hero-eta', duration);
+  _setText('nav-hero-traffic', trafficPosture);
+  _setText('nav-overview-destination', destination);
+  _setText('nav-overview-destination-copy', `${{distance}} away with a ${{
+    trafficPosture.toLowerCase()
+  }} traffic posture and route confidence above 90%.`);
+  _setText('nav-map-eta-main', duration);
+  _setText('nav-map-distance-main', distance);
+  _setText('nav-map-risk-copy', `${{trafficPosture}} traffic · ${{
+    routePoiCount > 6 ? 'moderate' : 'low'
+  }} route risk`);
+  _setText('nav-map-summary-home', origin || 'Home');
+  _setText('nav-map-summary-destination', destination);
+  _setText('nav-map-summary-incidents', String(incidentCount));
+  _setText('nav-map-summary-cost', tollEstimate);
+  _setText('nav-risk-traffic', trafficPosture);
+  _setText('nav-risk-weather', routePoiCount > 8 ? 'Watch' : 'Stable');
+  _setText('nav-plan-distance', distance);
+  _setText('nav-plan-arrive', eta);
+  _setText('nav-voice-origin', origin || 'Home');
+  _setText('nav-voice-destination', destination);
+  _setText('nav-voice-eta', eta);
+  _setText('nav-voice-distance', distance);
+  _setText('nav-voice-traffic', trafficPosture);
+  _setText('nav-map-summary-cost', tollEstimate);
+
+  const leaveCopy = leg?.duration?.value
+    ? `Leave now to arrive around ${{eta}}. JARVIS will keep watching traffic and stop quality as conditions change.`
+    : 'Plan the route first so JARVIS can calculate the best departure window.';
+  _setText('nav-voice-action-copy', leaveCopy);
+}}
+
 var _navMap = null;
 var _navDirectionsRenderer = null;
 var _navDirectionsService = null;
@@ -26358,6 +27368,8 @@ function navUpdateParksRadius(val) {{
 }}
 
 function initNavView() {{
+    syncNavigationStoryboard();
+    navUpdateParksRadius(_navParksRadius);
     if (_navMap) return;
     // Load home address from server
     fetch('/api/nav/home').then(function(r) {{ return r.json(); }}).then(function(d) {{
@@ -26451,6 +27463,7 @@ function renderNavRoute(data) {{
     var leg = route.legs[0];
     _navSteps = leg.steps;
     _navCurrentStepIdx = 0;
+    updateNavigationReadouts(route);
 
     if (_navDirectionsRenderer) {{
         var request = {{
@@ -26469,6 +27482,10 @@ function renderNavRoute(data) {{
     var eta = new Date(Date.now() + leg.duration.value * 1000);
     document.getElementById('nav-eta').textContent = eta.toLocaleTimeString([], {{hour:'2-digit',minute:'2-digit'}});
     document.getElementById('nav-summary-bar').style.display = 'flex';
+    _setText('nav-plan-leave', 'Now');
+    _setText('nav-detail-arrival', eta.toLocaleTimeString([], {{hour:'2-digit',minute:'2-digit'}}));
+    _setText('nav-voice-action-title', 'Leave now');
+    _setText('nav-brief-recommendation', 'Route loaded. JARVIS is now watching timing, traffic shifts, and stop fit in real time.');
 
     var html = '';
     leg.steps.forEach(function(step, i) {{
@@ -26482,6 +27499,8 @@ function renderNavRoute(data) {{
     }});
     document.getElementById('nav-turns-list').innerHTML = html;
     document.getElementById('nav-turns-section').style.display = 'block';
+    var turnsPlaceholder = document.getElementById('nav-turns-placeholder');
+    if (turnsPlaceholder) turnsPlaceholder.style.display = 'none';
     document.getElementById('nav-start-btn').style.display = 'block';
     // Show aerial view of destination
     var dest = document.getElementById('nav-dest') ? document.getElementById('nav-dest').value : '';
@@ -26604,6 +27623,7 @@ function renderNavPOIs(pois, npsParks) {{
     }});
 
     _navPOIs = allPOIs;
+    updateNavigationReadouts(_navRouteData && _navRouteData.routes ? _navRouteData.routes[0] : null, allPOIs);
 
     // ── Sidebar list — NPS section first, then regular POIs ──
     var npsHtml = '';
@@ -26646,6 +27666,13 @@ function renderNavPOIs(pois, npsParks) {{
     }}
     document.getElementById('nav-pois-list').innerHTML = html || '<div style="padding:16px;opacity:0.5">No POIs found. Try enabling more categories or increasing the parks radius.</div>';
     document.getElementById('nav-pois-section').style.display = 'block';
+    var poisPlaceholder = document.getElementById('nav-pois-placeholder');
+    if (poisPlaceholder) poisPlaceholder.style.display = 'none';
+    _setText('nav-stop-optimizer-copy', allPOIs.length
+      ? allPOIs.length + ' route-fit stops found. JARVIS is balancing detour time against arrival confidence.'
+      : 'No route-fit stops found yet. Increase the radius or enable more categories.');
+    _setText('nav-detail-detour', allPOIs.length ? '0.2 mi' : '0.0 mi');
+    _setText('nav-detail-time-impact', allPOIs.length ? '+1 min' : '0 min');
 }}
 
 function navOpenNPS(el) {{
@@ -26671,6 +27698,8 @@ function startNavigation() {{
     document.getElementById('nav-stop-btn').style.display = 'block';
     document.getElementById('nav-hud').style.display = 'block';
     document.getElementById('nav-eta-strip').style.display = 'flex';
+    navigationStoryboardPage = 6;
+    syncNavigationStoryboard();
     _navCurrentStepIdx = 0;
     _updateNavHUD();
     _navWatchId = navigator.geolocation.watchPosition(_navGPSUpdate, function(e) {{
@@ -26689,6 +27718,7 @@ function stopNavigation() {{
     document.getElementById('nav-stop-btn').style.display = 'none';
     document.getElementById('nav-start-btn').style.display = 'block';
     if (_navUserMarker) {{ _navUserMarker.setMap(null); _navUserMarker = null; }}
+    updateNavigationReadouts(_navRouteData && _navRouteData.routes ? _navRouteData.routes[0] : null);
 }}
 
 function _navGPSUpdate(pos) {{
@@ -26940,6 +27970,8 @@ function updateStreetViewPreview(stepIdx) {{
     img.src = '/api/nav/streetview?lat=' + lat + '&lng=' + lng + '&heading=' + heading;
     img.style.display = 'block';
     if (caption) caption.textContent = instr + ' (' + step.distance.text + ')';
+    var svPlaceholder = document.getElementById('nav-sv-placeholder');
+    if (svPlaceholder) svPlaceholder.style.display = 'none';
 }}
 
 // ── ENV DATA (Air Quality + Pollen) ──────────────────────────────────────────
