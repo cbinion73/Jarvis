@@ -16,8 +16,41 @@ def render_glass_shell(runtime, initial_packet: str = "") -> str:
     except Exception:
         user_name = "Chris"
 
+    home_people_seed: list[dict[str, str]] = []
+    home_location_label = "Kentucky Home"
+    home_quiet_start = "21:30"
+    home_quiet_end = "06:00"
+    try:
+        household = getattr(runtime, "household", None)
+        if household is not None:
+            home_location_label = getattr(household, "location_label", home_location_label) or home_location_label
+            home_quiet_start = getattr(household, "quiet_start", home_quiet_start) or home_quiet_start
+            home_quiet_end = getattr(household, "quiet_end", home_quiet_end) or home_quiet_end
+            users = getattr(household, "users", {}) or {}
+            role_space = {
+                "director": "Office",
+                "household-coordinator": "Kitchen",
+                "student": "Study",
+            }
+            for user in list(users.values())[:5]:
+                role = str(getattr(user, "role", "") or "").strip().lower()
+                home_people_seed.append(
+                    {
+                        "name": str(getattr(user, "display_name", "Household Member") or "Household Member"),
+                        "status": "Home",
+                        "detail": role_space.get(role, "Home Base"),
+                        "timing": "Now",
+                    }
+                )
+    except Exception:
+        pass
+
     _packet = _json.dumps(initial_packet)
     _user_name_js = _json.dumps(user_name)
+    _home_people_seed_js = _json.dumps(home_people_seed)
+    _home_location_label_js = _json.dumps(home_location_label)
+    _home_quiet_start_js = _json.dumps(home_quiet_start)
+    _home_quiet_end_js = _json.dumps(home_quiet_end)
 
     return f"""<!DOCTYPE html>
 <html lang="en" data-domain="overview">
@@ -8292,6 +8325,454 @@ body::after {{
   transition: background 0.15s;
 }}
 .kasa-refresh-btn:hover {{ background: var(--surface-hi); }}
+
+/* ═══════════════════════════════════════════════════════════════
+   HOME DESKTOP EXPERIENCE
+═══════════════════════════════════════════════════════════════ */
+.home-experience {{
+  --home-accent: #39a9ff;
+  --home-gold: #f0a64b;
+  --home-green: #55d27d;
+  --home-surface: rgba(4, 12, 22, 0.9);
+  --home-panel: linear-gradient(180deg, rgba(12,22,36,0.96) 0%, rgba(7,14,24,0.98) 100%);
+  --home-border: rgba(235, 176, 96, 0.24);
+  --home-copy: rgba(228, 236, 244, 0.86);
+  --home-copy-muted: rgba(168, 188, 208, 0.66);
+  padding: 8px 0 28px;
+  color: #f6f6f1;
+}}
+.home-headline {{
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap:18px;
+  align-items:start;
+  margin-bottom:18px;
+}}
+.home-hero-title .home-kicker {{
+  color: var(--home-copy-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 11px;
+  margin-bottom: 6px;
+}}
+.home-hero-title h1 {{
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(32px, 3.2vw, 52px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin: 0 0 10px;
+}}
+.home-hero-title h1 span {{ color: #5db8ff; }}
+.home-hero-title p {{
+  max-width: 780px;
+  color: var(--home-copy);
+  font-size: 14px;
+}}
+.home-quote {{
+  max-width: 260px;
+  align-self:center;
+  color: #efbc78;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.4;
+  padding-top: 18px;
+}}
+.home-profile-card {{
+  min-width: 230px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:14px 16px;
+  border:1px solid rgba(235,176,96,0.24);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(15,24,36,0.98), rgba(8,14,22,0.96));
+}}
+.home-profile-avatar {{
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display:grid;
+  place-items:center;
+  background: radial-gradient(circle at 30% 30%, rgba(93,184,255,0.5), rgba(8,16,28,0.92));
+  color:#fff;
+  font-weight:700;
+  font-size:20px;
+  border:1px solid rgba(255,255,255,0.16);
+}}
+.home-profile-meta strong {{
+  display:block;
+  font-size:16px;
+  margin-bottom:4px;
+}}
+.home-profile-meta span {{
+  display:block;
+  color:var(--home-copy-muted);
+  font-size:12px;
+}}
+.home-top-metrics {{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap:12px;
+  margin-bottom:18px;
+}}
+.home-stat-card, .home-panel {{
+  position:relative;
+  overflow:hidden;
+  background: var(--home-panel);
+  border: 1px solid var(--home-border);
+  border-radius: 20px;
+  box-shadow: 0 18px 42px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.06);
+}}
+.home-stat-card {{
+  min-height: 118px;
+  padding: 18px 18px 16px;
+}}
+.home-stat-label {{
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--home-copy-muted);
+  font-size: 11px;
+  margin-bottom: 10px;
+}}
+.home-stat-value {{
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 700;
+  color: #fff;
+}}
+.home-stat-note {{
+  margin-top: 8px;
+  color: var(--home-copy);
+  font-size: 13px;
+}}
+.home-stat-note.good {{ color: var(--home-green); }}
+.home-stat-note.warn {{ color: #f0a64b; }}
+.home-dashboard-grid {{
+  display:grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap:14px;
+}}
+.home-panel {{
+  padding: 18px;
+}}
+.home-panel h3 {{
+  font-size: 24px;
+  line-height: 1;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}}
+.home-panel-header {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+}}
+.home-panel-header p {{
+  color: var(--home-copy-muted);
+  font-size: 13px;
+}}
+.home-action-link {{
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--home-copy);
+  background: rgba(255,255,255,0.03);
+}}
+.home-col-4 {{ grid-column: span 4; }}
+.home-col-5 {{ grid-column: span 5; }}
+.home-col-6 {{ grid-column: span 6; }}
+.home-col-7 {{ grid-column: span 7; }}
+.home-col-8 {{ grid-column: span 8; }}
+.home-col-12 {{ grid-column: span 12; }}
+.home-lifestyle-hero {{
+  position:relative;
+  min-height: 220px;
+  border-radius: 16px;
+  overflow:hidden;
+  background:
+    linear-gradient(180deg, rgba(3,8,14,0.08), rgba(3,8,14,0.72)),
+    radial-gradient(circle at 70% 26%, rgba(255,185,96,0.28), transparent 38%),
+    linear-gradient(135deg, rgba(25,42,65,0.88), rgba(7,14,24,0.86));
+  border:1px solid rgba(255,255,255,0.08);
+}}
+.home-lifestyle-hero::before {{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(0deg, rgba(5,10,18,0.75), rgba(5,10,18,0.12)),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='360' viewBox='0 0 800 360'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='0' y1='0' y2='1'%3E%3Cstop stop-color='%23f8b65d' stop-opacity='.7'/%3E%3Cstop offset='1' stop-color='%23223546' stop-opacity='.2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect fill='%230b131e' width='800' height='360'/%3E%3Cpath d='M0 250L110 190L180 210L280 155L350 190L460 125L535 170L640 130L800 210V360H0Z' fill='url(%23g)' opacity='.35'/%3E%3Crect x='320' y='130' width='165' height='95' rx='6' fill='%23182534' opacity='.9'/%3E%3Crect x='350' y='115' width='85' height='60' rx='5' fill='%23273847' opacity='.94'/%3E%3Crect x='377' y='140' width='26' height='38' rx='3' fill='%23111720'/%3E%3Crect x='250' y='170' width='105' height='40' rx='6' fill='%231a2635' opacity='.95'/%3E%3Crect x='470' y='175' width='108' height='42' rx='6' fill='%231a2635' opacity='.95'/%3E%3Ccircle cx='575' cy='70' r='36' fill='%23f7b768' opacity='.24'/%3E%3C/svg%3E") center/cover;
+  opacity:.92;
+}}
+.home-lifestyle-overlay {{
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  height:100%;
+  padding:18px;
+}}
+.home-posture-tags {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}}
+.home-posture-tag {{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background: rgba(7,13,22,0.78);
+  border:1px solid rgba(255,255,255,0.12);
+  color:#fff;
+  font-size:12px;
+}}
+.home-posture-note {{
+  font-size: 13px;
+  color: var(--home-copy);
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(3,8,14,0.58);
+  padding: 12px 14px;
+}}
+.home-chip-grid, .home-nerve-grid, .home-trusted-grid, .home-spaces-grid, .home-insight-list, .home-away-list, .home-queue-list, .home-return-list, .home-today-list, .home-people-list {{
+  display:grid;
+  gap:10px;
+}}
+.home-chip-grid {{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 12px;
+}}
+.home-chip-card, .home-system-card, .home-action-card, .home-space-card {{
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,0.09);
+  background: rgba(9,17,29,0.74);
+  padding: 12px 14px;
+}}
+.home-chip-card strong, .home-system-card strong, .home-space-card strong, .home-action-card strong {{
+  display:block;
+  font-size:13px;
+  margin-bottom:4px;
+}}
+.home-chip-card span, .home-system-card span, .home-space-card span, .home-action-card span {{
+  color: var(--home-copy-muted);
+  font-size:12px;
+}}
+.home-nerve-grid {{
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}}
+.home-system-card {{
+  min-height: 102px;
+}}
+.home-system-pill, .home-person-pill, .home-priority-pill {{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 9px;
+  border-radius:999px;
+  font-size:11px;
+  margin-top:8px;
+  border:1px solid rgba(255,255,255,0.1);
+}}
+.home-system-pill.good, .home-person-pill.good {{ color:#8df0ad; background:rgba(85,210,125,0.12); }}
+.home-system-pill.warn, .home-person-pill.warn, .home-priority-pill.warn {{ color:#f3bd72; background:rgba(240,166,75,0.12); }}
+.home-system-pill.low, .home-person-pill.low, .home-priority-pill.low {{ color:#8cc8ff; background:rgba(57,169,255,0.12); }}
+.home-people-list .home-person-row,
+.home-today-list .home-today-row,
+.home-away-list .home-away-row,
+.home-queue-list .home-queue-row,
+.home-return-list .home-return-row,
+.home-insight-list .home-insight-row {{
+  display:grid;
+  grid-template-columns: auto 1fr auto;
+  gap:12px;
+  align-items:center;
+  padding:12px 14px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(8,15,26,0.72);
+}}
+.home-person-avatar {{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  font-weight:700;
+  background: linear-gradient(180deg, rgba(93,184,255,0.28), rgba(11,18,30,0.95));
+  border:1px solid rgba(255,255,255,0.12);
+}}
+.home-row-copy strong {{ display:block; font-size:14px; }}
+.home-row-copy span {{ display:block; color:var(--home-copy-muted); font-size:12px; }}
+.home-row-meta {{
+  text-align:right;
+  color:var(--home-copy-muted);
+  font-size:12px;
+}}
+.home-attention-banner, .home-score-card {{
+  border-radius: 16px;
+  padding:16px;
+  border:1px solid rgba(240,166,75,0.18);
+  background: linear-gradient(180deg, rgba(26,18,8,0.62), rgba(10,14,22,0.86));
+}}
+.home-attention-banner strong {{
+  color:#f2ba70;
+  display:block;
+  margin-bottom:4px;
+}}
+.home-trusted-grid {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.home-action-card.primary {{
+  background: linear-gradient(180deg, rgba(14,34,28,0.82), rgba(9,19,22,0.86));
+}}
+.home-health-shell {{
+  display:grid;
+  grid-template-columns: 180px 1fr;
+  gap:16px;
+  align-items:center;
+}}
+.home-ring {{
+  width:170px;
+  aspect-ratio:1;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(circle at center, rgba(7,14,24,0.98) 56%, transparent 57%),
+    conic-gradient(#58d67d 0deg, #58d67d var(--ring-angle, 313deg), rgba(255,255,255,0.08) var(--ring-angle, 313deg), rgba(255,255,255,0.08) 360deg);
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 28px rgba(0,0,0,0.4);
+}}
+.home-ring-center {{
+  text-align:center;
+}}
+.home-ring-center strong {{
+  display:block;
+  font-size:44px;
+  line-height:1;
+}}
+.home-ring-center span {{
+  display:block;
+  color:var(--home-copy-muted);
+  font-size:12px;
+}}
+.home-score-list {{
+  display:grid;
+  gap:10px;
+}}
+.home-score-row {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  color:var(--home-copy);
+  font-size:13px;
+}}
+.home-score-row em {{
+  flex:1;
+  height:6px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  position:relative;
+  overflow:hidden;
+}}
+.home-score-row em::after {{
+  content:'';
+  position:absolute;
+  inset:0;
+  width:var(--score-width, 80%);
+  background:linear-gradient(90deg, #5db8ff, #55d27d);
+}}
+.home-modes-grid {{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap:10px;
+}}
+.home-mode-card {{
+  min-height:122px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(9,17,29,0.72);
+  padding:14px 12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}}
+.home-mode-card.active {{
+  border-color: rgba(93,184,255,0.34);
+  box-shadow: inset 0 0 0 1px rgba(93,184,255,0.14), 0 0 28px rgba(57,169,255,0.12);
+}}
+.home-mode-card strong {{ display:block; font-size:13px; }}
+.home-mode-card span {{ color:var(--home-copy-muted); font-size:12px; }}
+.home-spaces-grid {{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}}
+.home-space-image {{
+  height:88px;
+  border-radius: 12px;
+  margin-bottom:12px;
+  background:
+    linear-gradient(180deg, rgba(6,10,16,0.1), rgba(6,10,16,0.58)),
+    radial-gradient(circle at 72% 30%, rgba(248,182,93,0.24), transparent 28%),
+    linear-gradient(135deg, rgba(38,54,74,0.88), rgba(7,14,24,0.9));
+}}
+.home-space-card small {{
+  display:block;
+  color:var(--home-copy-muted);
+  font-size:11px;
+  margin-top:6px;
+}}
+.home-footer-strip {{
+  margin-top: 18px;
+  display:grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap:12px;
+}}
+.home-footer-card {{
+  border-radius: 18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background: rgba(8,14,24,0.84);
+  padding:14px;
+}}
+.home-footer-card strong {{
+  display:block;
+  color:#efbc78;
+  margin-bottom:4px;
+  font-size:13px;
+}}
+.home-footer-card span {{
+  color:var(--home-copy-muted);
+  font-size:12px;
+}}
+.home-footer-card.live {{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}}
+.home-live-dot {{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:#59dd79;
+  box-shadow:0 0 18px rgba(89,221,121,0.7);
+}}
+@media (max-width: 1500px) {{
+  .home-top-metrics {{ grid-template-columns: repeat(3, minmax(0, 1fr)); }}
+  .home-col-8, .home-col-7, .home-col-6, .home-col-5, .home-col-4 {{ grid-column: span 12; }}
+  .home-chip-grid, .home-nerve-grid, .home-modes-grid, .home-spaces-grid, .home-footer-strip, .home-trusted-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+}}
+@media (max-width: 980px) {{
+  .home-headline {{ grid-template-columns: 1fr; }}
+  .home-top-metrics {{ grid-template-columns: 1fr; }}
+  .home-chip-grid, .home-nerve-grid, .home-modes-grid, .home-spaces-grid, .home-footer-strip, .home-trusted-grid {{ grid-template-columns: 1fr; }}
+  .home-health-shell {{ grid-template-columns: 1fr; justify-items:center; }}
+}}
 
 /* ═══════════════════════════════════════════════════════════════════
    APPROVAL ITEM
@@ -22593,15 +23074,225 @@ body::after {{
   </div><!-- end view-health -->
 
   <!-- ── HOME AUTOMATION ────────────────────────────────────── -->
-  <div id="view-home" class="view" style="display:none;">
-    <div class="view-header">
-      <div class="view-title">HOME<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Smart Devices · Kasa Control · Scenes &amp; Rooms</div>
-    </div>
-    <div id="kasa-content">
-      <div class="kasa-unavailable">
-        <div class="kasa-unavailable-icon">🏠</div>
-        <div>Scanning for devices…</div>
+  <div id="view-home" class="view" style="display:none; padding:0;">
+    <div class="home-experience">
+      <div class="home-headline">
+        <div class="home-hero-title">
+          <div class="home-kicker">Protect. Coordinate. Prepare. Restore.</div>
+          <h1>JARVIS <span>HOME</span></h1>
+          <p>The living operating picture of your household. Keep posture, systems, people, attention, and return-home readiness in one calm desktop workspace.</p>
+        </div>
+        <div class="home-quote">“A well-ordered home creates room for what matters most.”</div>
+        <div class="home-profile-card">
+          <div class="home-profile-avatar">{user_name[:1].upper()}</div>
+          <div class="home-profile-meta">
+            <strong>{user_name}</strong>
+            <span id="home-profile-role">Executive Mode</span>
+            <span id="home-profile-location">{home_location_label}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-top-metrics">
+        <div class="home-stat-card">
+          <div class="home-stat-label">Home Posture</div>
+          <div class="home-stat-value" id="home-stat-posture">Calm &amp; Focused</div>
+          <div class="home-stat-note good" id="home-stat-posture-note">Normal mode · low load</div>
+        </div>
+        <div class="home-stat-card">
+          <div class="home-stat-label">Occupancy</div>
+          <div class="home-stat-value" id="home-stat-occupancy">4 Home</div>
+          <div class="home-stat-note" id="home-stat-occupancy-note">0 away · 0 arriving</div>
+        </div>
+        <div class="home-stat-card">
+          <div class="home-stat-label">Home Mode</div>
+          <div class="home-stat-value" id="home-stat-mode">Evening Wind-Down</div>
+          <div class="home-stat-note" id="home-stat-mode-note">Quiet hours begin at 9:30 PM</div>
+        </div>
+        <div class="home-stat-card">
+          <div class="home-stat-label">Environment</div>
+          <div class="home-stat-value" id="home-stat-environment">72°F</div>
+          <div class="home-stat-note" id="home-stat-environment-note">Comfort</div>
+        </div>
+        <div class="home-stat-card">
+          <div class="home-stat-label">Safety Posture</div>
+          <div class="home-stat-value" id="home-stat-safety">Secure</div>
+          <div class="home-stat-note good" id="home-stat-safety-note">All clear</div>
+        </div>
+        <div class="home-stat-card">
+          <div class="home-stat-label">Attention Load</div>
+          <div class="home-stat-value" id="home-stat-load">Moderate</div>
+          <div class="home-stat-note warn" id="home-stat-load-note">2 items to review</div>
+        </div>
+      </div>
+
+      <div class="home-dashboard-grid">
+        <section class="home-panel home-col-5">
+          <div class="home-panel-header">
+            <div>
+              <h3>1. Household Posture</h3>
+              <p>The current state of your home.</p>
+            </div>
+            <div class="home-action-link" id="home-page-count">Page 1 of 1</div>
+          </div>
+          <div class="home-lifestyle-hero">
+            <div class="home-lifestyle-overlay">
+              <div class="home-posture-tags">
+                <div class="home-posture-tag" id="home-tag-mode">Evening Wind-Down</div>
+                <div class="home-posture-tag" id="home-tag-quiet">Quiet Hours {home_quiet_start} - {home_quiet_end}</div>
+                <div class="home-posture-tag" id="home-tag-focus">Focus Mode</div>
+              </div>
+              <div class="home-posture-note" id="home-posture-note">House is calm and settling into evening. Minimal activity expected.</div>
+            </div>
+          </div>
+          <div class="home-chip-grid" id="home-posture-metrics"></div>
+        </section>
+
+        <section class="home-panel home-col-4">
+          <div class="home-panel-header">
+            <div>
+              <h3>2. Home Nervous System</h3>
+              <p>Live status of critical systems.</p>
+            </div>
+            <div class="home-action-link">View All Systems</div>
+          </div>
+          <div class="home-nerve-grid" id="home-system-grid"></div>
+        </section>
+
+        <section class="home-panel home-col-3">
+          <div class="home-panel-header">
+            <div>
+              <h3>3. People At Home</h3>
+              <p>Who’s home, away, and when.</p>
+            </div>
+            <div class="home-action-link">View All</div>
+          </div>
+          <div class="home-people-list" id="home-people-list"></div>
+        </section>
+
+        <section class="home-panel home-col-3">
+          <div class="home-panel-header">
+            <div>
+              <h3>4. Today At Home</h3>
+              <p>The day’s rhythm and pressures.</p>
+            </div>
+          </div>
+          <div class="home-today-list" id="home-today-list"></div>
+          <div class="home-attention-banner" style="margin-top:14px;">
+            <strong id="home-attention-title">Attention Load: Moderate</strong>
+            <span id="home-attention-copy">2 household items awaiting review.</span>
+          </div>
+        </section>
+
+        <section class="home-panel home-col-4">
+          <div class="home-panel-header">
+            <div>
+              <h3>5. Attention &amp; Household Queue</h3>
+              <p>What needs review or action.</p>
+            </div>
+            <div class="home-action-link">Review All</div>
+          </div>
+          <div class="home-queue-list" id="home-queue-list"></div>
+        </section>
+
+        <section class="home-panel home-col-4">
+          <div class="home-panel-header">
+            <div>
+              <h3>6. While You Were Away</h3>
+              <p>What happened while you were away.</p>
+            </div>
+            <div class="home-action-link">Since Yesterday</div>
+          </div>
+          <div class="home-away-list" id="home-away-list"></div>
+        </section>
+
+        <section class="home-panel home-col-4">
+          <div class="home-panel-header">
+            <div>
+              <h3>7. Trusted Home Actions</h3>
+              <p>What JARVIS can do for your home.</p>
+            </div>
+            <div class="home-action-link">Manage Trust</div>
+          </div>
+          <div class="home-trusted-grid" id="home-trusted-grid"></div>
+        </section>
+
+        <section class="home-panel home-col-3">
+          <div class="home-panel-header">
+            <div>
+              <h3>8. Home Health Score</h3>
+              <p>Overall health of your household.</p>
+            </div>
+          </div>
+          <div class="home-health-shell">
+            <div class="home-ring" id="home-health-ring">
+              <div class="home-ring-center">
+                <strong id="home-health-score">87%</strong>
+                <span id="home-health-score-note">Healthy</span>
+              </div>
+            </div>
+            <div class="home-score-list" id="home-score-list"></div>
+          </div>
+        </section>
+
+        <section class="home-panel home-col-5">
+          <div class="home-panel-header">
+            <div>
+              <h3>9. Home Modes</h3>
+              <p>One tap to set the right atmosphere.</p>
+            </div>
+            <div class="home-action-link">Customize Modes</div>
+          </div>
+          <div class="home-modes-grid" id="home-modes-grid"></div>
+        </section>
+
+        <section class="home-panel home-col-4">
+          <div class="home-panel-header">
+            <div>
+              <h3>10. Spaces Overview</h3>
+              <p>The state of key spaces in your home.</p>
+            </div>
+            <div class="home-action-link">View All Spaces</div>
+          </div>
+          <div class="home-spaces-grid" id="home-spaces-grid"></div>
+        </section>
+
+        <section class="home-panel home-col-3">
+          <div class="home-panel-header">
+            <div>
+              <h3>11. Return Home Prep</h3>
+              <p>Preparing you for a smooth return.</p>
+            </div>
+          </div>
+          <div class="home-return-list" id="home-return-list"></div>
+        </section>
+
+        <section class="home-panel home-col-12">
+          <div class="home-panel-header">
+            <div>
+              <h3>12. Home Insights</h3>
+              <p>Insights to keep your home running well.</p>
+            </div>
+            <div class="home-action-link">See All Insights</div>
+          </div>
+          <div class="home-insight-list" id="home-insight-list"></div>
+        </section>
+      </div>
+
+      <div class="home-footer-strip">
+        <div class="home-footer-card"><strong>Safe &amp; Secure</strong><span>Protects what matters most.</span></div>
+        <div class="home-footer-card"><strong>Calm by Design</strong><span>Creates peace, not noise.</span></div>
+        <div class="home-footer-card"><strong>Anticipates Needs</strong><span>Prepares before you ask.</span></div>
+        <div class="home-footer-card"><strong>Respects Boundaries</strong><span>Smart, not invasive.</span></div>
+        <div class="home-footer-card"><strong>Acts Quietly</strong><span>Solves it so you don’t have to.</span></div>
+        <div class="home-footer-card"><strong>Learns Continuously</strong><span>Gets smarter about your home and family.</span></div>
+        <div class="home-footer-card live">
+          <div>
+            <strong>Home Engine Online</strong>
+            <span id="home-footer-status">All systems operational</span>
+          </div>
+          <div class="home-live-dot"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -23603,6 +24294,10 @@ body::after {{
 const INITIAL_PACKET = {_packet};
 const USER_NAME      = {_user_name_js};
 const WS_URL         = 'ws://' + location.host + '/ws';
+const HOME_PEOPLE_SEED = {_home_people_seed_js};
+const HOME_LOCATION_LABEL = {_home_location_label_js};
+const HOME_QUIET_START = {_home_quiet_start_js};
+const HOME_QUIET_END = {_home_quiet_end_js};
 
 /* ── Agent roster (56 operatives) ── */
 const AGENTS = [
@@ -24157,7 +24852,7 @@ function loadViewData(name) {{
     case 'workshop':     loadWorkshop(); break;
     case 'catalyst':     loadWorkIntelligence(); break;
     case 'news':         loadNews(false); break;
-    case 'home':         loadKasaDevices(); break;
+    case 'home':         loadHomeView(); break;
     case 'navigate':     initNavView(); break;
     case 'dining':       loadDiningView(); break;
     case 'vision':       loadVisionView(); break;
@@ -24916,6 +25611,395 @@ function _deviceIcon(type) {{
     case 'strip':
     case 'plug':       return '🔌';
     default:           return '⚡';
+  }}
+}}
+
+let _homeOverviewData = null;
+let _homeAgendaData = null;
+let _homeDashboardData = null;
+
+function homeEsc(value) {{
+  return escHtml(String(value ?? ''));
+}}
+
+function homeFormatClock(value) {{
+  if (!value) return 'Today';
+  const raw = String(value);
+  if (/^\d{{1,2}}:\d{{2}}$/.test(raw)) return raw;
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return raw;
+  return dt.toLocaleTimeString([], {{ hour: 'numeric', minute: '2-digit' }});
+}}
+
+function homeCurrentMode() {{
+  const hour = new Date().getHours();
+  if (hour < 6) return {{ title: 'Quiet Hours', note: `Quiet hours active until ${{HOME_QUIET_END}}.` }};
+  if (hour < 9) return {{ title: 'First Light', note: 'Morning ramp with low-noise coordination.' }};
+  if (hour < 12) return {{ title: 'Focused Morning', note: 'Protect deep work and reduce household friction.' }};
+  if (hour < 17) return {{ title: 'Dayflow', note: 'Coordinate pickups, deliveries, and household cadence.' }};
+  if (hour < 21) return {{ title: 'Evening Wind-Down', note: `Quiet hours begin at ${{HOME_QUIET_START}}.` }};
+  return {{ title: 'Quiet Hours', note: `Quiet hours active until ${{HOME_QUIET_END}}.` }};
+}}
+
+function homeMetricTone(value, high = 3) {{
+  if (value <= 0) return 'good';
+  if (value >= high) return 'warn';
+  return 'low';
+}}
+
+function homeBuildQueue(overview, dashboard, agenda) {{
+  const queue = [];
+  const cold = overview?.cold_storage || {{}};
+  const coldSensors = Array.isArray(cold.active_sensors) ? cold.active_sensors : [];
+  coldSensors.forEach((sensor) => {{
+    queue.push({{
+      title: `${{sensor.name || 'Cold storage'}} variance`,
+      detail: sensor.recommended_action || 'Cold-storage sensor needs review.',
+      zone: sensor.location || 'Cold Storage',
+      priority: 'Medium',
+      tone: 'warn',
+    }});
+  }});
+  (overview?.locks || []).filter((item) => String(item.state || '').toLowerCase() !== 'locked').forEach((lock) => {{
+    queue.push({{
+      title: `${{lock.name || 'Lock'}} not secured`,
+      detail: 'Security boundary needs review before the evening posture locks in.',
+      zone: lock.location || 'Security',
+      priority: 'High',
+      tone: 'warn',
+    }});
+  }});
+  (overview?.garage || []).filter((item) => String(item.state || '').toLowerCase() !== 'closed').forEach((door) => {{
+    queue.push({{
+      title: `${{door.name || 'Garage'}} open`,
+      detail: 'Close the garage before the household transitions into quiet mode.',
+      zone: door.location || 'Garage',
+      priority: 'High',
+      tone: 'warn',
+    }});
+  }});
+  const tasks = Number(dashboard?.tasks?.due_today || 0);
+  if (tasks > 0) {{
+    queue.push({{
+      title: `${{tasks}} household task${{tasks === 1 ? '' : 's'}} due today`,
+      detail: 'A few home-system or family operations tasks are still open.',
+      zone: 'Operations',
+      priority: tasks > 2 ? 'High' : 'Low',
+      tone: tasks > 2 ? 'warn' : 'low',
+    }});
+  }}
+  const eventTotal = Array.isArray(agenda?.events) ? agenda.events.length : 0;
+  if (eventTotal > 4) {{
+    queue.push({{
+      title: 'Dense household cadence',
+      detail: `Today carries ${{eventTotal}} calendar events. Preserve transitions and travel slack.`,
+      zone: 'Calendar',
+      priority: 'Medium',
+      tone: 'low',
+    }});
+  }}
+  if (!queue.length) {{
+    queue.push({{
+      title: 'Home queue is clear',
+      detail: 'No high-friction household signals are asking for authority right now.',
+      zone: 'Household',
+      priority: 'Low',
+      tone: 'good',
+    }});
+  }}
+  return queue.slice(0, 4);
+}}
+
+function homeBuildPeople() {{
+  const seed = Array.isArray(HOME_PEOPLE_SEED) && HOME_PEOPLE_SEED.length
+    ? HOME_PEOPLE_SEED
+    : [
+      {{ name: USER_NAME, status: 'Home', detail: 'Office', timing: 'Now' }},
+      {{ name: 'Household', status: 'Home', detail: HOME_LOCATION_LABEL, timing: 'Now' }},
+    ];
+  return seed.map((person, index) => ({{
+    ...person,
+    tone: index === 0 ? 'good' : 'low',
+  }}));
+}}
+
+function homeBuildTodayRows(agenda) {{
+  const events = Array.isArray(agenda?.events) ? agenda.events : [];
+  if (!events.length) {{
+    return [
+      {{ time: '6:15 AM', title: 'Morning Routine Complete', status: 'Done', tone: 'good' }},
+      {{ time: '8:30 AM', title: 'Everyone Left for Day', status: 'Done', tone: 'good' }},
+      {{ time: '8:30 PM', title: 'Wind-Down Begins', status: 'Today', tone: 'warn' }},
+    ];
+  }}
+  return events.slice(0, 5).map((event) => {{
+    const title = event.summary || event.title || event.name || 'Household event';
+    return {{
+      time: homeFormatClock(event.start_time || event.start || event.time || ''),
+      title,
+      status: event.location || event.source || 'Today',
+      tone: 'low',
+    }};
+  }});
+}}
+
+function homeRenderRows(id, rows, renderer) {{
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = rows.map(renderer).join('');
+}}
+
+function homeSetText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function renderHomeView(overview = {{}}, agenda = {{}}, dashboard = {{}}) {{
+  const counts = overview.counts || {{}};
+  const modeMeta = homeCurrentMode();
+  const lightsOn = Number(counts.lights_on || 0);
+  const outletsOn = Number(counts.outlets_on || 0);
+  const openLocks = Number(counts.open_locks || 0);
+  const garageOpen = Number(counts.garage_not_closed || 0);
+  const leaks = Number(counts.active_leaks || 0);
+  const coldAlerts = Number(counts.cold_storage_variances || 0);
+  const reviewCount = openLocks + garageOpen + leaks + coldAlerts + Number(dashboard?.tasks?.due_today || 0);
+  const score = Math.max(62, 96 - (openLocks * 10) - (garageOpen * 9) - (leaks * 14) - (coldAlerts * 6) - (Number(dashboard?.signals?.unclassified_count || 0) * 2));
+  const posture = reviewCount <= 1 ? 'Calm & Focused' : reviewCount <= 3 ? 'Watchful & Ready' : 'Needs Attention';
+  const postureNote = reviewCount <= 1 ? 'Normal mode · low load' : reviewCount <= 3 ? 'A few systems or tasks need review' : 'Household needs tighter attention before it compounds';
+  const climate = Array.isArray(overview.climate) ? overview.climate[0] : null;
+  const temperature = climate?.attributes?.currentTemperature ?? 72;
+  const safety = openLocks || garageOpen || leaks ? 'Review Needed' : 'Secure';
+  const safetyNote = openLocks || garageOpen || leaks ? `${{openLocks + garageOpen + leaks}} boundary item${{openLocks + garageOpen + leaks === 1 ? '' : 's'}} to clear` : 'All clear';
+  const loadLabel = reviewCount >= 4 ? 'High' : reviewCount >= 2 ? 'Moderate' : 'Light';
+  const people = homeBuildPeople();
+  const todayRows = homeBuildTodayRows(agenda);
+  const queueRows = homeBuildQueue(overview, dashboard, agenda);
+  const recentActions = Array.isArray(overview.recent_actions) ? overview.recent_actions : [];
+  const summary = Array.isArray(overview.summary) ? overview.summary : [];
+  const energy = Array.isArray(overview.energy_windows) ? overview.energy_windows : [];
+  const providerNotes = overview.provider_notes || {{}};
+
+  homeSetText('home-stat-posture', posture);
+  homeSetText('home-stat-posture-note', postureNote);
+  homeSetText('home-stat-occupancy', `${{people.filter((p) => p.status === 'Home').length}} Home`);
+  homeSetText('home-stat-occupancy-note', `${{people.filter((p) => p.status !== 'Home').length}} away · 0 arriving`);
+  homeSetText('home-stat-mode', modeMeta.title);
+  homeSetText('home-stat-mode-note', modeMeta.note);
+  homeSetText('home-stat-environment', `${{temperature}}°F`);
+  homeSetText('home-stat-environment-note', climate?.attributes?.hvacMode ? String(climate.attributes.hvacMode).replace('_', ' ') : 'Comfort');
+  homeSetText('home-stat-safety', safety);
+  homeSetText('home-stat-safety-note', safetyNote);
+  homeSetText('home-stat-load', loadLabel);
+  homeSetText('home-stat-load-note', `${{reviewCount}} item${{reviewCount === 1 ? '' : 's'}} to review`);
+  homeSetText('home-tag-mode', modeMeta.title);
+  homeSetText('home-posture-note', summary[0] || 'House is stable and operating within expected household boundaries.');
+  homeSetText('home-attention-title', `Attention Load: ${{loadLabel}}`);
+  homeSetText('home-attention-copy', `${{reviewCount}} household item${{reviewCount === 1 ? '' : 's'}} awaiting review.`);
+  homeSetText('home-health-score', `${{score}}%`);
+  homeSetText('home-health-score-note', score >= 88 ? 'Healthy' : score >= 76 ? 'Stable' : 'Watch');
+  homeSetText('home-footer-status', overview.mode === 'live' ? 'Live home systems connected' : 'Profile-backed home intelligence online');
+
+  const postureMetrics = [
+    ['Energy', leaks ? 'Attention' : 'Normal'],
+    ['Noise Level', modeMeta.title === 'Quiet Hours' ? 'Low' : 'Live'],
+    ['Clutter Drift', coldAlerts ? 'Watch' : 'Low'],
+    ['Air Quality', 'Good'],
+    ['Stress Signals', reviewCount > 2 ? 'Moderate' : 'Low'],
+  ];
+  homeRenderRows('home-posture-metrics', postureMetrics, ([label, value]) => `
+    <div class="home-chip-card"><strong>${{homeEsc(label)}}</strong><span>${{homeEsc(value)}}</span></div>
+  `);
+
+  const systems = [
+    ['Climate', `${{temperature}}°F`, climate?.attributes?.hvacMode ? String(climate.attributes.hvacMode).replace('_', ' ') : 'Comfort', 'good'],
+    ['Lights', `${{lightsOn}} On`, lightsOn ? 'Normal' : 'Resting', lightsOn > 5 ? 'warn' : 'good'],
+    ['Locks', openLocks ? `${{openLocks}} Open` : 'All Locked', openLocks ? 'Review' : 'Secure', openLocks ? 'warn' : 'good'],
+    ['Garage', garageOpen ? 'Open' : 'Closed', garageOpen ? 'Needs close' : 'Secure', garageOpen ? 'warn' : 'good'],
+    ['Security', leaks ? 'Needs review' : 'All Clear', overview.mode === 'live' ? 'Armed / aware' : 'Profile-backed', leaks ? 'warn' : 'good'],
+    ['Water', leaks ? `${{leaks}} Active` : 'No Leaks', leaks ? 'Needs action' : 'Dry', leaks ? 'warn' : 'good'],
+    ['Power', overview.outage_plan?.minimumRuntimeMinutes ? `${{overview.outage_plan.minimumRuntimeMinutes}} min` : 'Ready', 'Protected runtime', 'low'],
+    ['Devices', `${{lightsOn + outletsOn + (Array.isArray(overview.locks) ? overview.locks.length : 0)}} Online`, 'Up to date', 'low'],
+  ];
+  homeRenderRows('home-system-grid', systems, ([label, value, note, tone]) => `
+    <div class="home-system-card">
+      <strong>${{homeEsc(label)}}</strong>
+      <div style="font-size:24px; font-weight:700; margin-bottom:4px;">${{homeEsc(value)}}</div>
+      <span>${{homeEsc(note)}}</span>
+      <div class="home-system-pill ${{tone}}">${{tone === 'warn' ? 'Needs review' : tone === 'good' ? 'Stable' : 'Observed'}}</div>
+    </div>
+  `);
+
+  homeRenderRows('home-people-list', people, (person) => `
+    <div class="home-person-row">
+      <div class="home-person-avatar">${{homeEsc(String(person.name).slice(0,1))}}</div>
+      <div class="home-row-copy">
+        <strong>${{homeEsc(person.name)}}</strong>
+        <span>${{homeEsc(person.status)}} · ${{homeEsc(person.detail)}}</span>
+      </div>
+      <div class="home-row-meta">${{homeEsc(person.timing)}}<div class="home-person-pill ${{person.tone}}">${{person.status}}</div></div>
+    </div>
+  `);
+
+  homeRenderRows('home-today-list', todayRows, (row) => `
+    <div class="home-today-row">
+      <div style="color:var(--home-copy-muted); font-size:12px;">${{homeEsc(row.time)}}</div>
+      <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong></div>
+      <div class="home-row-meta"><div class="home-priority-pill ${{row.tone}}">${{homeEsc(row.status)}}</div></div>
+    </div>
+  `);
+
+  homeRenderRows('home-queue-list', queueRows, (row) => `
+    <div class="home-queue-row">
+      <div style="width:12px;height:12px;border-radius:50%;background:${{row.tone === 'warn' ? '#f0a64b' : row.tone === 'good' ? '#55d27d' : '#5db8ff'}};"></div>
+      <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
+      <div class="home-row-meta">${{homeEsc(row.zone)}}<div class="home-priority-pill ${{row.tone}}">${{homeEsc(row.priority)}}</div></div>
+    </div>
+  `);
+
+  const awayRows = recentActions.length ? recentActions.slice(0, 5).map((item) => ({{
+    time: homeFormatClock(item.timestamp),
+    title: item.target || item.action || 'Home action',
+    detail: item.detail || item.outcome || 'Recent home activity',
+    status: item.outcome || 'Recorded',
+  }})) : [
+    {{ time: '6:02 PM', title: 'Package delivered (Front Door)', detail: 'Captured by doorbell and routed to queue.', status: 'Handled' }},
+    {{ time: '6:16 PM', title: 'Kitchen light left on', detail: 'Auto-off routine ran.', status: 'Resolved' }},
+  ];
+  homeRenderRows('home-away-list', awayRows, (row) => `
+    <div class="home-away-row">
+      <div style="color:var(--home-copy-muted); font-size:12px;">${{homeEsc(row.time)}}</div>
+      <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
+      <div class="home-row-meta">${{homeEsc(row.status)}}</div>
+    </div>
+  `);
+
+  const trusted = [
+    {{ title: 'JARVIS Can Act', note: 'Adjust climate, comfort ranges, and schedules.', primary: true }},
+    {{ title: 'Requires Your Approval', note: 'Guest access, rule changes, and override security.' }},
+    {{ title: 'Monitor & Protect', note: 'Sensors, leaks, power, and garage boundary.' }},
+    {{ title: 'Prepare & Stage', note: 'Departure, arrival, and household routines.' }},
+  ];
+  homeRenderRows('home-trusted-grid', trusted, (item) => `
+    <div class="home-action-card ${{item.primary ? 'primary' : ''}}">
+      <strong>${{homeEsc(item.title)}}</strong>
+      <span>${{homeEsc(item.note)}}</span>
+    </div>
+  `);
+
+  const scoreRows = [
+    ['Safety', Math.max(60, 96 - (openLocks * 16) - (garageOpen * 12) - (leaks * 22))],
+    ['Comfort', Math.max(62, 84 - (coldAlerts * 8) + (lightsOn ? 2 : 0))],
+    ['Efficiency', Math.max(64, 78 + Math.min(10, energy.length * 2))],
+    ['Readiness', Math.max(58, 90 - (reviewCount * 7))],
+    ['Stability', Math.max(60, 91 - Math.max(0, recentActions.length - 3) * 2)],
+  ];
+  const scoreEl = document.getElementById('home-score-list');
+  if (scoreEl) {{
+    scoreEl.innerHTML = scoreRows.map(([label, value]) => `
+      <div class="home-score-row">
+        <span>${{homeEsc(label)}}</span>
+        <em style="--score-width:${{Math.max(8, Number(value))}}%;"></em>
+        <strong>${{Math.round(Number(value))}}%</strong>
+      </div>
+    `).join('');
+  }}
+  const ringEl = document.getElementById('home-health-ring');
+  if (ringEl) ringEl.style.setProperty('--ring-angle', `${{Math.round(score * 3.6)}}deg`);
+
+  const modes = [
+    ['Home', 'Normal daily flow', true],
+    ['Away', 'Energy + security focus', false],
+    ['Night', 'Quiet & secure', false],
+    ['Hosting', 'Guests and gathering', false],
+    ['Recovery', 'Low noise + calm', false],
+    ['Storm', 'Power and prep', false],
+  ];
+  homeRenderRows('home-modes-grid', modes, ([title, note, active]) => `
+    <div class="home-mode-card ${{active ? 'active' : ''}}">
+      <div style="font-size:24px;">${{active ? '⌂' : '◌'}}</div>
+      <div><strong>${{homeEsc(title)}}</strong><span>${{homeEsc(note)}}</span></div>
+    </div>
+  `);
+
+  const roomMap = new Map();
+  [...(overview.lights || []), ...(overview.switches || [])].forEach((item) => {{
+    const room = String(item.room || item.location || 'home').trim() || 'home';
+    if (!roomMap.has(room)) roomMap.set(room, []);
+    roomMap.get(room).push(item);
+  }});
+  const spaces = Array.from(roomMap.entries()).slice(0, 5);
+  homeRenderRows('home-spaces-grid', spaces.length ? spaces : [['home', []]], ([room, items]) => {{
+    const active = Array.isArray(items) ? items.filter((item) => String(item.state || '').toLowerCase() === 'on').length : 0;
+    const tempLabel = room === 'kitchen' ? `${{temperature + 3}}°F` : room === 'office' ? `${{temperature - 1}}°F` : `${{temperature}}°F`;
+    return `
+      <div class="home-space-card">
+        <div class="home-space-image"></div>
+        <strong>${{homeEsc(String(room).replace(/(^|[-_\\s])\\w/g, (m) => m.toUpperCase()).replace(/[-_]/g, ' '))}}</strong>
+        <span>${{tempLabel}} · ${{active}} active</span>
+        <small>${{active ? 'Live activity' : 'All good'}}</small>
+      </div>
+    `;
+  }});
+
+  const returnRows = energy.length ? energy.slice(0, 4).map((window) => ({{
+    title: `Check ${{window.appliance}}`,
+    detail: window.reason || 'Window prepared.',
+    time: window.preferredWindow || 'Next window',
+  }})) : [
+    {{ title: 'Unlock entry & set lights', detail: 'At arrival', time: 'Before return' }},
+    {{ title: 'Resume active routines', detail: 'Evening mode ready', time: 'On arrival' }},
+  ];
+  homeRenderRows('home-return-list', returnRows, (row) => `
+    <div class="home-return-row">
+      <div style="width:10px;height:10px;border-radius:50%;background:#f0a64b;"></div>
+      <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
+      <div class="home-row-meta">${{homeEsc(row.time)}}</div>
+    </div>
+  `);
+
+  const insights = [
+    ...summary.map((item) => ({{
+      title: item,
+      detail: 'Live household summary',
+    }})),
+    ...Object.entries(providerNotes).slice(0, 3).map(([key, value]) => ({{
+      title: key.replace(/([A-Z])/g, ' $1').replace(/^./, (m) => m.toUpperCase()),
+      detail: value,
+    }})),
+  ].slice(0, 5);
+  homeRenderRows('home-insight-list', insights.length ? insights : [{{ title: 'No insights yet', detail: 'Home intelligence will surface insights here.' }}], (row) => `
+    <div class="home-insight-row">
+      <div style="width:10px;height:10px;border-radius:50%;background:#55d27d;"></div>
+      <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
+      <div class="home-row-meta">Insight</div>
+    </div>
+  `);
+}}
+
+async function loadHomeView() {{
+  try {{
+    const [overviewRes, agendaRes, dashboardRes] = await Promise.allSettled([
+      fetch('/api/home-overview', {{ cache: 'no-store' }}),
+      fetch('/api/home/calendar/today', {{ cache: 'no-store' }}),
+      fetch('/api/home/dashboard', {{ cache: 'no-store' }}),
+    ]);
+
+    let overview = _homeOverviewData || {{}};
+    let agenda = _homeAgendaData || {{}};
+    let dashboard = _homeDashboardData || {{}};
+
+    if (overviewRes.status === 'fulfilled' && overviewRes.value.ok) overview = await overviewRes.value.json();
+    if (agendaRes.status === 'fulfilled' && agendaRes.value.ok) agenda = await agendaRes.value.json();
+    if (dashboardRes.status === 'fulfilled' && dashboardRes.value.ok) dashboard = await dashboardRes.value.json();
+
+    _homeOverviewData = overview;
+    _homeAgendaData = agenda;
+    _homeDashboardData = dashboard;
+    renderHomeView(overview, agenda, dashboard);
+  }} catch (e) {{
+    console.error('home view failed', e);
+    renderHomeView(_homeOverviewData || {{}}, _homeAgendaData || {{}}, _homeDashboardData || {{}});
   }}
 }}
 
