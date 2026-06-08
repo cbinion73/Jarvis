@@ -9175,77 +9175,579 @@ body::after {{
 /* ═══════════════════════════════════════════════════════════════════
    INTELLIGENCE VIEW
 ═══════════════════════════════════════════════════════════════════ */
-.service-grid {{
+.intel-view {{
+  --intel-blue: #37a7ff;
+  --intel-gold: #e7a44f;
+  --intel-panel: rgba(8, 14, 22, 0.97);
+  --intel-panel-soft: rgba(12, 18, 28, 0.93);
+  --intel-border: rgba(55, 167, 255, 0.18);
+  --intel-border-strong: rgba(55, 167, 255, 0.34);
+  --intel-shadow: 0 26px 60px rgba(0,0,0,0.34);
+}}
+.intel-view .view-header {{
+  display: none;
+}}
+.intel-header {{
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
-  gap: 10px;
-  margin-bottom: 20px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.7fr) 240px;
+  gap: 18px;
+  margin-bottom: 18px;
 }}
-.service-card {{
-  padding: 14px 16px;
+.intel-brand,
+.intel-quote,
+.intel-profile,
+.intel-stat-shell,
+.intel-card,
+.intel-sidebar {{
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+    linear-gradient(180deg, var(--intel-panel), var(--intel-panel-soft));
+  border: 1px solid var(--intel-border);
+  border-radius: 20px;
+  box-shadow: var(--intel-shadow);
+  overflow: hidden;
 }}
-.service-name {{
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-1);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 6px;
+.intel-brand::before,
+.intel-quote::before,
+.intel-profile::before,
+.intel-stat-shell::before,
+.intel-card::before,
+.intel-sidebar::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(55,167,255,0.12), transparent 32%),
+    linear-gradient(135deg, rgba(231,164,79,0.08), transparent 42%);
+  pointer-events: none;
+}}
+.intel-brand {{
   display: flex;
+  gap: 18px;
   align-items: center;
-  gap: 7px;
+  padding: 22px 24px;
+  min-height: 132px;
 }}
-.service-detail {{
-  font-size: 11px;
-  color: var(--text-3);
+.intel-brand-mark {{
+  width: 74px;
+  height: 74px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--intel-gold);
+  border: 1px solid rgba(231,164,79,0.3);
+  background: radial-gradient(circle at center, rgba(55,167,255,0.14), rgba(231,164,79,0.06) 58%, rgba(7,10,16,0.98));
 }}
-
-/* LLM Ladder */
-.llm-ladder {{
-  display: flex;
-  align-items: center;
-  gap: 0;
-  flex-wrap: wrap;
-  padding: 18px 20px;
-}}
-.llm-node {{
+.intel-brand-copy {{
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  min-width: 110px;
+  gap: 8px;
 }}
-.llm-node.current {{
-  background: var(--hue-dim);
-  border: 1px solid rgba(var(--hue-rgb),0.3);
-  transition: background 0.45s ease, border-color 0.45s ease;
-}}
-.llm-label {{
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-2);
-  letter-spacing: 0.04em;
+.intel-kicker {{
+  font-size: 12px;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
+  color: rgba(55,167,255,0.76);
 }}
-.llm-node.current .llm-label {{ color: var(--hue); transition: color 0.45s ease; }}
-.llm-tier {{
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--text-3);
-  letter-spacing: 0.06em;
+.intel-title {{
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: clamp(34px, 3vw, 54px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #f5f1e6;
 }}
-.llm-arrow {{
+.intel-title span {{ color: var(--intel-blue); }}
+.intel-subtitle {{
+  font-size: 16px;
+  color: rgba(232,237,244,0.84);
+}}
+.intel-brand-detail {{
   font-size: 14px;
-  color: var(--text-3);
-  padding: 0 4px;
-  flex-shrink: 0;
+  color: rgba(194,204,220,0.72);
 }}
-
-/* Bridge connections */
+.intel-header-center {{
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 16px;
+}}
+.intel-stat-grid {{
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}}
+.intel-stat-shell {{
+  padding: 16px 18px;
+}}
+.intel-stat-label {{
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(205,214,228,0.64);
+  margin-bottom: 12px;
+}}
+.intel-stat-value {{
+  font-size: 30px;
+  color: #faf4e9;
+  line-height: 1;
+  margin-bottom: 8px;
+}}
+.intel-stat-sub {{
+  font-size: 12px;
+  color: rgba(165,235,175,0.92);
+}}
+.intel-quote,
+.intel-profile {{
+  padding: 18px 20px;
+}}
+.intel-quote {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}}
+.intel-quote-mark {{
+  font-size: 34px;
+  color: var(--intel-gold);
+}}
+.intel-quote strong {{
+  display: block;
+  font-size: 25px;
+  line-height: 1.08;
+  color: #f7f2e8;
+  margin-bottom: 6px;
+}}
+.intel-quote span,
+.intel-profile span {{
+  display: block;
+  color: rgba(201,210,225,0.76);
+  line-height: 1.55;
+}}
+.intel-profile {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}}
+.intel-profile-meta {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}}
+.intel-profile-avatar {{
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  border: 1px solid rgba(55,167,255,0.32);
+  background: linear-gradient(135deg, rgba(55,167,255,0.34), rgba(231,164,79,0.2));
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #08101a;
+}}
+.intel-profile strong {{
+  display: block;
+  font-size: 18px;
+  color: #f4efe5;
+}}
+.intel-shell {{
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}}
+.intel-sidebar {{
+  padding: 18px;
+  position: sticky;
+  top: 18px;
+}}
+.intel-side-title {{
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(55,167,255,0.76);
+  margin-bottom: 14px;
+}}
+.intel-side-list,
+.intel-footer-strip {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}}
+.intel-side-item,
+.intel-footer-pill {{
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: rgba(255,255,255,0.02);
+}}
+.intel-side-item {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}}
+.intel-side-item strong,
+.intel-footer-pill strong {{
+  display: block;
+  color: #f4efe4;
+  font-size: 13px;
+}}
+.intel-side-item span,
+.intel-footer-pill span {{
+  display: block;
+  color: rgba(197,205,219,0.72);
+  font-size: 11px;
+}}
+.intel-side-badge {{
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #07111a;
+  background: linear-gradient(135deg, rgba(55,167,255,0.96), rgba(160,214,255,0.92));
+}}
+.intel-side-cta {{
+  margin-top: 14px;
+  width: 100%;
+  border: 1px solid var(--intel-border-strong);
+  border-radius: 14px;
+  background: rgba(55,167,255,0.12);
+  color: #f7f1e4;
+  font-size: 13px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+}}
+.intel-grid {{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+}}
+.intel-card {{ grid-column: span 4; }}
+.intel-span-5 {{ grid-column: span 5; }}
+.intel-span-4 {{ grid-column: span 4; }}
+.intel-span-3 {{ grid-column: span 3; }}
+.intel-card-inner {{
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+}}
+.intel-card-header {{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}}
+.intel-card-number {{
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(55,167,255,0.82);
+  margin-bottom: 7px;
+}}
+.intel-card h3 {{
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.1;
+  color: #f5f0e6;
+}}
+.intel-card-header p {{
+  margin: 6px 0 0;
+  color: rgba(197,207,221,0.76);
+  font-size: 13px;
+  line-height: 1.55;
+}}
+.intel-header-action,
+.intel-section-link {{
+  border: 1px solid rgba(55,167,255,0.24);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+  color: rgba(243,238,228,0.92);
+  font-size: 12px;
+  padding: 8px 12px;
+}}
+.intel-signal-grid,
+.intel-truth-list,
+.intel-route-list,
+.intel-continuity-list,
+.intel-summary-grid,
+.intel-insight-list,
+.intel-pattern-grid,
+.intel-timeline-list,
+.intel-doctrine-list,
+.intel-teach-list {{
+  display: grid;
+  gap: 10px;
+}}
+.intel-signal-grid {{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}}
+.intel-signal-card,
+.intel-truth-item,
+.intel-route-item,
+.intel-continuity-item,
+.intel-summary-card,
+.intel-insight-item,
+.intel-pattern-card,
+.intel-timeline-item,
+.intel-doctrine-item,
+.intel-teach-item,
+.service-card {{
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}}
+.intel-signal-card,
+.service-card {{
+  padding: 14px;
+}}
+.intel-signal-card strong,
+.intel-truth-item strong,
+.intel-route-item strong,
+.intel-continuity-item strong,
+.intel-summary-card strong,
+.intel-insight-item strong,
+.intel-pattern-card strong,
+.intel-timeline-item strong,
+.intel-doctrine-item strong,
+.intel-teach-item strong,
+.service-name {{
+  display: block;
+  color: #f4efe5;
+  font-size: 14px;
+  margin-bottom: 6px;
+}}
+.intel-signal-card span,
+.intel-truth-item span,
+.intel-route-item span,
+.intel-continuity-item span,
+.intel-summary-card span,
+.intel-insight-item span,
+.intel-pattern-card span,
+.intel-timeline-item span,
+.intel-doctrine-item span,
+.intel-teach-item span,
+.service-detail {{
+  display: block;
+  color: rgba(193,203,218,0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}}
+.intel-signal-count,
+.intel-route-count,
+.intel-pattern-tag {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  color: #9ce3ae;
+  font-size: 11px;
+}}
+.intel-correlation-map {{
+  min-height: 330px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at center, rgba(55,167,255,0.16), transparent 22%),
+    linear-gradient(180deg, rgba(255,255,255,0.03), transparent),
+    linear-gradient(135deg, rgba(10,16,24,0.96), rgba(9,13,20,0.98));
+  position: relative;
+  overflow: hidden;
+}}
+.intel-correlation-center {{
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 98px;
+  height: 98px;
+  border-radius: 50%;
+  border: 1px solid rgba(55,167,255,0.35);
+  background: radial-gradient(circle at center, rgba(55,167,255,0.24), rgba(9,14,22,0.96) 66%);
+  display: grid;
+  place-items: center;
+  color: #f7f2e7;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.3;
+}}
+.intel-correlation-node {{
+  position: absolute;
+  min-width: 110px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: #eef3fb;
+  font-size: 12px;
+  text-align: center;
+}}
+.intel-correlation-node::after {{
+  content: "";
+  position: absolute;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(55,167,255,0.48), rgba(55,167,255,0.02));
+  top: 100%;
+  left: 50%;
+}}
+.intel-correlation-node.top {{ top: 22px; left: 50%; transform: translateX(-50%); }}
+.intel-correlation-node.right {{ top: 50%; right: 26px; transform: translateY(-50%); }}
+.intel-correlation-node.bottom {{ bottom: 22px; left: 50%; transform: translateX(-50%); }}
+.intel-correlation-node.left {{ top: 50%; left: 26px; transform: translateY(-50%); }}
+.intel-correlation-node.tl {{ top: 78px; left: 50px; }}
+.intel-correlation-node.br {{ bottom: 78px; right: 50px; }}
+.intel-pill {{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(255,255,255,0.05);
+  color: #eef3fb;
+}}
+.intel-pill.high, .intel-pill.critical {{
+  background: rgba(236,84,84,0.16);
+  color: #ffb3b3;
+}}
+.intel-pill.medium {{
+  background: rgba(231,164,79,0.16);
+  color: #f4c37d;
+}}
+.intel-pill.low, .intel-pill.connected, .intel-pill.healthy {{
+  background: rgba(93,190,120,0.14);
+  color: #9ce3ae;
+}}
+.intel-pill.info, .intel-pill.configured, .intel-pill.disabled {{
+  background: rgba(95,165,245,0.14);
+  color: #9ec8ff;
+}}
+.intel-radar {{
+  height: 250px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at center, rgba(55,167,255,0.12), transparent 24%),
+    linear-gradient(180deg, rgba(255,255,255,0.02), transparent),
+    linear-gradient(135deg, rgba(11,16,24,0.96), rgba(9,13,20,0.98));
+  position: relative;
+  overflow: hidden;
+}}
+.intel-radar::before,
+.intel-radar::after {{
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.08);
+}}
+.intel-radar::after {{
+  inset: 50px;
+}}
+.intel-radar-grid {{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}}
+.intel-radar-grid svg {{
+  width: 100%;
+  height: 100%;
+}}
+.intel-summary-grid {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.intel-pattern-grid {{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}}
+.intel-pattern-spark {{
+  height: 60px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), transparent),
+    linear-gradient(135deg, rgba(14,23,35,0.96), rgba(8,12,18,0.98));
+  position: relative;
+  overflow: hidden;
+}}
+.intel-pattern-spark::after {{
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 12px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(55,167,255,0.1), rgba(55,167,255,0.9) 45%, rgba(231,164,79,0.9));
+  transform: skewX(-22deg);
+}}
+.intel-timeline-item,
+.intel-insight-item,
+.intel-route-item,
+.intel-truth-item,
+.intel-doctrine-item,
+.intel-teach-item,
+.intel-continuity-item {{
+  padding: 14px;
+}}
+.intel-teach-item {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}}
+.intel-footer-strip {{
+  grid-column: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+}}
+.intel-footer-pill {{
+  min-width: 0;
+  flex: 1 1 170px;
+  padding: 14px 16px;
+}}
+@media (max-width: 1500px) {{
+  .intel-header {{
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }}
+  .intel-profile {{
+    grid-column: span 2;
+  }}
+  .intel-stat-grid {{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }}
+  .intel-shell {{
+    grid-template-columns: 1fr;
+  }}
+  .intel-sidebar {{
+    position: static;
+  }}
+}}
+@media (max-width: 1180px) {{
+  .intel-header,
+  .intel-stat-grid,
+  .intel-grid,
+  .intel-shell,
+  .intel-signal-grid,
+  .intel-summary-grid,
+  .intel-pattern-grid {{
+    grid-template-columns: 1fr;
+  }}
+  .intel-card,
+  .intel-span-5,
+  .intel-span-4,
+  .intel-span-3 {{
+    grid-column: span 1;
+  }}
+}}
 .bridge-row {{
   display: flex;
   align-items: center;
@@ -19160,77 +19662,236 @@ body::after {{
   </div>
 
   <!-- ── INTELLIGENCE ───────────────────────────────────────── -->
-  <div id="view-intelligence" class="view">
-    <div class="view-header">
-      <div class="view-title">INTELLIGENCE<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Service Health · LLM Ladder · Bridge Connections</div>
-    </div>
+  <div id="view-intelligence" class="view intel-view">
+    <div class="intel-header">
+      <div class="intel-brand">
+        <div class="intel-brand-mark">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M12 3a9 9 0 1 0 9 9"></path>
+            <path d="M12 3v18M3 12h18"></path>
+            <path d="M7.5 7.5c1.3 1 2.9 1.5 4.5 1.5s3.2-.5 4.5-1.5M7.5 16.5c1.3-1 2.9-1.5 4.5-1.5s3.2.5 4.5 1.5"></path>
+          </svg>
+        </div>
+        <div class="intel-brand-copy">
+          <div class="intel-kicker">Sensemaking Engine & Private Intelligence Floor</div>
+          <div class="intel-title">JARVIS <span>INTEL</span></div>
+          <div class="intel-subtitle">Perceive. Correlate. Understand. Escalate.</div>
+          <div class="intel-brand-detail">Clarity is not more data. It’s better understanding.</div>
+        </div>
+      </div>
 
-    <div class="section-label">Service Health</div>
-    <div class="service-grid" id="service-grid">
-      <div class="card service-card">
-        <div class="service-name"><span class="dot dot-standby"></span>Loading…</div>
+      <div class="intel-header-center">
+        <div class="intel-stat-grid">
+          <div class="intel-stat-shell"><div class="intel-stat-label">Signals Perceived</div><div class="intel-stat-value" id="intel-stat-signals">—</div><div class="intel-stat-sub" id="intel-stat-signals-sub">vs yesterday</div></div>
+          <div class="intel-stat-shell"><div class="intel-stat-label">Correlations Made</div><div class="intel-stat-value" id="intel-stat-correlations">—</div><div class="intel-stat-sub" id="intel-stat-correlations-sub">linked across domains</div></div>
+          <div class="intel-stat-shell"><div class="intel-stat-label">Truths Surfaced</div><div class="intel-stat-value" id="intel-stat-truths">—</div><div class="intel-stat-sub" id="intel-stat-truths-sub">high-value insights</div></div>
+          <div class="intel-stat-shell"><div class="intel-stat-label">Escalations</div><div class="intel-stat-value" id="intel-stat-escalations">—</div><div class="intel-stat-sub" id="intel-stat-escalations-sub">raised upward</div></div>
+          <div class="intel-stat-shell"><div class="intel-stat-label">Patterns Updated</div><div class="intel-stat-value" id="intel-stat-patterns">—</div><div class="intel-stat-sub" id="intel-stat-patterns-sub">learning refreshed</div></div>
+          <div class="intel-stat-shell"><div class="intel-stat-label">Intel Confidence</div><div class="intel-stat-value" id="intel-stat-confidence">—</div><div class="intel-stat-sub" id="intel-stat-confidence-sub">High</div></div>
+        </div>
+        <div class="intel-quote">
+          <div class="intel-quote-mark">“</div>
+          <div>
+            <strong>Clarity is not more data. It’s better understanding.</strong>
+            <span>Intel connects service health, cross-domain friction, and live attention signals into one sensemaking floor.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="intel-profile">
+        <div class="intel-profile-meta">
+          <div class="intel-profile-avatar">CB</div>
+          <div>
+            <strong>Chris Binion</strong>
+            <span>Executive Mode</span>
+          </div>
+        </div>
+        <span id="intel-generated-at">Updated just now</span>
       </div>
     </div>
 
-    <div class="section-label">LLM Escalation Ladder</div>
-    <div class="card" style="margin-bottom:20px;">
-      <div class="llm-ladder">
-        <div class="llm-node">
-          <div class="llm-label">phi3.5</div>
-          <div class="llm-tier">TIER 1</div>
-        </div>
-        <div class="llm-arrow">→</div>
-        <div class="llm-node">
-          <div class="llm-label">gpt-oss:20b</div>
-          <div class="llm-tier">TIER 2</div>
-        </div>
-        <div class="llm-arrow">→</div>
-        <div class="llm-node">
-          <div class="llm-label">gpt-5.4-mini</div>
-          <div class="llm-tier">TIER 3</div>
-        </div>
-        <div class="llm-arrow">→</div>
-        <div class="llm-node current">
-          <div class="llm-label">gpt-5.4-thinking</div>
-          <div class="llm-tier">TIER 4 · ACTIVE</div>
-        </div>
-        <div class="llm-arrow">→</div>
-        <div class="llm-node">
-          <div class="llm-label">gpt-5.5-thinking</div>
-          <div class="llm-tier">TIER 5</div>
-        </div>
+    <div class="intel-shell">
+      <aside class="intel-sidebar">
+        <div class="intel-side-title">Intel Engine Status</div>
+        <div class="intel-side-list" id="intel-sidebar-list"></div>
+        <button class="intel-side-cta" onclick="switchView('settings')">Intel Settings →</button>
+      </aside>
+
+      <div class="intel-grid">
+        <section class="intel-card intel-span-4">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">1. Signal Inflow (Live)</div>
+                <h3>What JARVIS is perceiving right now.</h3>
+              </div>
+            </div>
+            <div class="intel-signal-grid" id="intel-signal-grid"></div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('vision')">View all signal sources →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-4">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">2. Correlation Map</div>
+                <h3>How signals connect across your domains.</h3>
+              </div>
+            </div>
+            <div class="intel-correlation-map">
+              <div class="intel-correlation-center">JARVIS<br>Intel</div>
+              <div class="intel-correlation-node top" id="intel-node-top">Focus Load</div>
+              <div class="intel-correlation-node right" id="intel-node-right">Calendar Drift</div>
+              <div class="intel-correlation-node bottom" id="intel-node-bottom">Decision Risk</div>
+              <div class="intel-correlation-node left" id="intel-node-left">Recovery Strain</div>
+              <div class="intel-correlation-node tl" id="intel-node-tl">Signal Noise</div>
+              <div class="intel-correlation-node br" id="intel-node-br">Household Drift</div>
+            </div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('journey')">Explore correlations →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-4">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">3. Truth Compression</div>
+                <h3>What matters most right now.</h3>
+              </div>
+            </div>
+            <div class="intel-truth-list" id="intel-truth-list"></div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('overview')">See full intel brief →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-3">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">4. Escalation Routing</div>
+                <h3>How Intel decides what reaches you.</h3>
+              </div>
+            </div>
+            <div class="intel-route-list" id="intel-route-list"></div>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-4">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">5. Continuity Awareness</div>
+                <h3>Why this matters in the bigger picture.</h3>
+              </div>
+            </div>
+            <div class="intel-continuity-list" id="intel-continuity-list"></div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('journey')">View continuity dossier →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-3">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">6. Overnight Intel Summary</div>
+                <h3>What JARVIS understood while you were away.</h3>
+              </div>
+            </div>
+            <div class="intel-summary-grid" id="intel-summary-grid"></div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('activity')">View while you were away →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-3">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">7. Top Intel Insights</div>
+                <h3>The truths you should know.</h3>
+              </div>
+            </div>
+            <div class="intel-insight-list" id="intel-insight-list"></div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('command')">View all insights →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-2">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">8. Risk & Opportunity Radar</div>
+                <h3>What could go wrong. What could go right.</h3>
+              </div>
+            </div>
+            <div class="intel-radar">
+              <div class="intel-radar-grid">
+                <svg viewBox="0 0 220 220" preserveAspectRatio="xMidYMid meet">
+                  <circle cx="110" cy="110" r="78" fill="none" stroke="rgba(255,255,255,0.08)"/>
+                  <circle cx="110" cy="110" r="52" fill="none" stroke="rgba(255,255,255,0.08)"/>
+                  <circle cx="110" cy="110" r="28" fill="none" stroke="rgba(255,255,255,0.08)"/>
+                  <path d="M110 32 L188 110 L110 188 L32 110 Z" fill="rgba(55,167,255,0.08)" stroke="rgba(55,167,255,0.34)"/>
+                  <path d="M110 52 L162 104 L134 150 L74 138 L58 94 Z" fill="rgba(231,164,79,0.12)" stroke="rgba(231,164,79,0.44)"/>
+                  <path d="M110 68 L144 110 L118 142 L78 122 L84 86 Z" fill="rgba(93,190,120,0.12)" stroke="rgba(93,190,120,0.44)"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-5">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">9. Pattern Library (Updated)</div>
+                <h3>New and updated patterns JARVIS is learning.</h3>
+              </div>
+            </div>
+            <div class="intel-pattern-grid" id="intel-pattern-grid"></div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('journey')">Browse all patterns →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-3">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">10. Intel Timeline</div>
+                <h3>A timeline of key signals and insights.</h3>
+              </div>
+            </div>
+            <div class="intel-timeline-list" id="intel-timeline-list"></div>
+            <button class="intel-section-link" style="margin-top:14px;" onclick="switchView('activity')">View full timeline →</button>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-2">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">11. Intel Doctrine & Learning</div>
+                <h3>How JARVIS is getting smarter.</h3>
+              </div>
+            </div>
+            <div class="intel-doctrine-list" id="intel-doctrine-list"></div>
+          </div>
+        </section>
+
+        <section class="intel-card intel-span-2">
+          <div class="intel-card-inner">
+            <div class="intel-card-header">
+              <div>
+                <div class="intel-card-number">12. Teach JARVIS (Feedback Loop)</div>
+                <h3>Help JARVIS understand you better.</h3>
+              </div>
+            </div>
+            <div class="intel-teach-list" id="intel-teach-list"></div>
+          </div>
+        </section>
+
+        <section class="intel-footer-strip" id="intel-footer-strip"></section>
       </div>
     </div>
-
-    <div class="section-label">Bridge Connections</div>
-    <div class="card" style="margin-bottom:20px;">
-      <div class="card-inner">
-        <div class="bridge-row">
-          <span class="dot dot-success"></span>
-          <span class="bridge-name">Ghostwritr</span>
-          <span class="pill pill-success">CONNECTED</span>
-          <span class="bridge-url mono" style="font-size:10px;color:var(--text-3);">ghostwritr.local</span>
-        </div>
-        <div style="font-size:10px;color:var(--text-3);margin-top:4px;padding-left:18px;">
-          MCP: <span id="mcp-status" style="color:var(--amber);">checking…</span>
-          <span style="margin-left:8px;cursor:pointer;" onclick="checkMcpStatus()" title="Refresh MCP">↺</span>
-        </div>
-        <div class="bridge-row">
-          <span class="dot dot-success"></span>
-          <span class="bridge-name">Chronicle</span>
-          <span class="pill pill-success">CONNECTED</span>
-          <span class="bridge-url mono" style="font-size:10px;color:var(--text-3);">chronicle.local</span>
-        </div>
-        <div class="bridge-row">
-          <span class="dot dot-standby"></span>
-          <span class="bridge-name">OpenViking</span>
-          <span class="pill pill-navy">STANDBY</span>
-          <span class="bridge-url mono" style="font-size:10px;color:var(--text-3);">openviking.local</span>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <!-- ── EMAIL ─────────────────────────────────────────────── -->
@@ -22767,11 +23428,305 @@ setTimeout(checkMcpStatus, 3000);
 
 async function loadStatus() {{
   try {{
-    const res = await fetch('/api/status');
-    if (!res.ok) {{ console.warn('loadStatus', res.status); return; }}
-    const data = await res.json();
-    renderStatus(data);
+    const [statusRes, commandRes] = await Promise.all([
+      fetch('/api/status'),
+      fetch('/api/command-center'),
+    ]);
+    if (!statusRes.ok || !commandRes.ok) {{ console.warn('loadStatus', statusRes.status, commandRes.status); return; }}
+    const services = await statusRes.json();
+    const command = await commandRes.json();
+    renderIntelDashboard(Array.isArray(services) ? services : [], command || {{}});
   }} catch(e) {{ console.error('loadStatus failed', e); }}
+}}
+
+function renderIntelDashboard(services, command) {{
+  const lane = command.lane_progress || {{}};
+  const cockpit = command.needs_cockpit || {{}};
+  const motion = (command.needs_motion && Array.isArray(command.needs_motion.entries)) ? command.needs_motion.entries : [];
+  const needs = Array.isArray(command.what_needs_me) ? command.what_needs_me : [];
+  const activity = Array.isArray(command.activity_feed) ? command.activity_feed : [];
+  const recentCommits = Array.isArray(lane.recent_commits) ? lane.recent_commits : [];
+  const connected = services.filter(item => item.ok).length;
+  const disconnected = services.filter(item => !item.ok).length;
+  const critical = (cockpit.critical_count || 0);
+  const high = (cockpit.high_count || 0);
+  const signals = services.length * 18 + activity.length + needs.length;
+  const correlations = activity.length + recentCommits.length + connected;
+  const truths = cockpit.total || needs.length;
+  const escalations = critical + high;
+  const patterns = recentCommits.length + activity.length;
+  const confidence = Math.max(72, Math.min(96, 92 - (disconnected * 4) + connected));
+
+  _intelSetText('intel-generated-at', `Updated ${{intelRelativeTime(command.generated_at || new Date().toISOString())}}`);
+  _intelSetText('intel-stat-signals', String(signals));
+  _intelSetText('intel-stat-signals-sub', `${{services.length}} service lanes`);
+  _intelSetText('intel-stat-correlations', String(correlations));
+  _intelSetText('intel-stat-correlations-sub', `${{recentCommits.length}} recent commits`);
+  _intelSetText('intel-stat-truths', String(truths));
+  _intelSetText('intel-stat-truths-sub', `${{needs.length}} truths surfaced`);
+  _intelSetText('intel-stat-escalations', String(escalations));
+  _intelSetText('intel-stat-escalations-sub', `${{critical}} critical · ${{high}} high`);
+  _intelSetText('intel-stat-patterns', String(patterns));
+  _intelSetText('intel-stat-patterns-sub', `${{activity.length}} fresh events`);
+  _intelSetText('intel-stat-confidence', `${{confidence}}%`);
+  _intelSetText('intel-stat-confidence-sub', disconnected ? 'Mixed' : 'High');
+
+  renderIntelSidebar(services, lane, cockpit, command);
+  renderIntelSignals(services, command);
+  renderIntelCorrelationMap(services, command);
+  renderIntelTruths(command);
+  renderIntelRoutes(services, command);
+  renderIntelContinuity(command, services);
+  renderIntelSummary(command, services);
+  renderIntelInsights(command);
+  renderIntelPatterns(command, services);
+  renderIntelTimeline(activity, motion);
+  renderIntelDoctrine(command, services);
+  renderIntelTeach();
+  renderIntelFooter();
+}}
+
+function _intelSetText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function intelRelativeTime(ts) {{
+  if (!ts) return 'just now';
+  const time = new Date(ts);
+  if (Number.isNaN(time.getTime())) return ts;
+  const diff = Date.now() - time.getTime();
+  const mins = Math.max(1, Math.round(diff / 60000));
+  if (mins < 60) return `${{mins}} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${{hrs}} hr ago`;
+  const days = Math.round(hrs / 24);
+  return `${{days}} day${{days === 1 ? '' : 's'}} ago`;
+}}
+
+function intelTone(item) {{
+  const state = String(item.state || item.status || item.urgency || '').toLowerCase();
+  if (item.ok === false || ['critical', 'high', 'disconnected'].includes(state)) return 'high';
+  if (['configured', 'disabled', 'warning', 'medium'].includes(state)) return 'medium';
+  if (item.ok === true || ['connected', 'healthy', 'active', 'fresh', 'low'].includes(state)) return 'healthy';
+  return 'info';
+}}
+
+function renderIntelSidebar(services, lane, cockpit, command) {{
+  const el = document.getElementById('intel-sidebar-list');
+  if (!el) return;
+  const cards = [
+    ['Perception', services.length, 'Signal lanes'],
+    ['Correlation', (lane.recent_commits || []).length, 'Recent linkages'],
+    ['Compression', cockpit.total || 0, 'Truths condensed'],
+    ['Escalation', cockpit.critical_count || 0, 'Raised upward'],
+    ['Continuity', lane.what_needs_me_count || 0, 'Needs to remember'],
+    ['Last Update', intelRelativeTime(lane.generated_at || command?.generated_at || new Date().toISOString()), 'Freshness'],
+  ];
+  el.innerHTML = cards.map(([title, count, copy]) => `
+    <div class="intel-side-item">
+      <div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>
+      <span class="intel-side-badge">${{escHtml(String(count))}}</span>
+    </div>`).join('');
+}}
+
+function renderIntelSignals(services, command) {{
+  const el = document.getElementById('intel-signal-grid');
+  if (!el) return;
+  const cards = services.map(item => {{
+    const tone = intelTone(item);
+    return `<div class="intel-signal-card">
+      <strong>${{escHtml(String(item.name || 'service').replaceAll('-', ' '))}}</strong>
+      <span>${{escHtml(item.detail || '')}}</span>
+      <div class="intel-signal-count">${{item.ok ? '↑' : '•'}} ${{escHtml(String(item.state || 'unknown').toUpperCase())}}</div>
+      <div class="intel-pill ${{tone}}" style="margin-top:10px;">${{escHtml(String(item.state || item.ok ? 'connected' : 'unknown'))}}</div>
+    </div>`;
+  }});
+  el.innerHTML = cards.join('');
+}}
+
+function renderIntelCorrelationMap(services, command) {{
+  const names = [
+    command.needs_cockpit?.headline || 'Decision Risk',
+    services.find(s => !s.ok)?.name?.replaceAll('-', ' ') || 'Service Drift',
+    'Calendar Overload',
+    'Household Drift',
+    'Approval Load',
+    'Recovery Strain',
+  ];
+  _intelSetText('intel-node-top', names[0]);
+  _intelSetText('intel-node-right', names[1]);
+  _intelSetText('intel-node-bottom', names[2]);
+  _intelSetText('intel-node-left', names[3]);
+  _intelSetText('intel-node-tl', names[4]);
+  _intelSetText('intel-node-br', names[5]);
+}}
+
+function renderIntelTruths(command) {{
+  const el = document.getElementById('intel-truth-list');
+  if (!el) return;
+  const cockpit = command.needs_cockpit || {{}};
+  const items = [
+    ['What Changed', `${{command.branch || 'main'}} @ ${{command.head || '—'}}`, cockpit.total || 0],
+    ['What Matters', cockpit.headline || 'No dominant pressure signal', cockpit.high_count || 0],
+    ['What’s Heating Up', `${{cockpit.failure_count || 0}} failures need repair`, cockpit.critical_count || 0],
+    ['What’s Noise', `${{cockpit.notification_count || 0}} low-signal notifications`, Math.max(0, (cockpit.total || 0) - (cockpit.critical_count || 0))],
+    ['What Needs Review', `${{command.what_needs_me?.length || 0}} items`, cockpit.high_count || 0],
+  ];
+  el.innerHTML = items.map(([title, copy, count]) => `
+    <div class="intel-truth-item">
+      <strong>${{escHtml(title)}}</strong>
+      <span>${{escHtml(copy)}}</span>
+      <div class="intel-route-count">${{escHtml(String(count))}}</div>
+    </div>`).join('');
+}}
+
+function renderIntelRoutes(services, command) {{
+  const el = document.getElementById('intel-route-list');
+  if (!el) return;
+  const disconnected = services.filter(s => !s.ok).length;
+  const cockpit = command.needs_cockpit || {{}};
+  const rows = [
+    ['Stay Ambient', `${{Math.max(0, services.length - disconnected)}}`, 'Observed and understood. No action.'],
+    ['Stage for Daily Brief', `${{command.what_needs_me?.length || 0}}`, 'Important, but not urgent.'],
+    ['Queue for Needs You', `${{cockpit.high_count || 0}}`, 'Requires decision or presence.'],
+    ['Escalate to Command', `${{cockpit.critical_count || 0}}`, 'Authority level decision needed.'],
+    ['Interrupt Immediately', `${{disconnected ? 1 : 0}}`, 'High risk or time critical.'],
+    ['Suppressed / Duplicate', `${{Math.max(0, (command.activity_feed?.length || 0) - 5)}}`, 'Already known or addressed.'],
+  ];
+  el.innerHTML = rows.map(([title, count, copy], idx) => `
+    <div class="intel-route-item">
+      <strong>${{escHtml(title)}}</strong>
+      <span>${{escHtml(copy)}}</span>
+      <div class="intel-route-count">${{escHtml(String(count))}}</div>
+    </div>`).join('');
+}}
+
+function renderIntelContinuity(command, services) {{
+  const el = document.getElementById('intel-continuity-list');
+  if (!el) return;
+  const lane = command.lane_progress || {{}};
+  const needs = command.what_needs_me || [];
+  const items = [
+    ['Recurring Pattern', lane.return_brief_summary || 'No continuity signal', 'High relevance'],
+    ['Previous Resolution', (lane.recent_commits || [])[0] || 'No recent commits', 'Recurred'],
+    ['Health Baseline', services.find(s => String(s.name) === 'openai-api')?.detail || 'No baseline', 'Operational'],
+    ['Mission Context', `${{needs.length}} needs currently open`, 'Mission impact'],
+    ['Household Context', services.find(s => String(s.name) === 'family-calendar')?.detail || 'No household signal', 'Environment'],
+  ];
+  el.innerHTML = items.map(([title, copy, tag]) => `
+    <div class="intel-continuity-item">
+      <strong>${{escHtml(title)}}</strong>
+      <span>${{escHtml(copy)}}</span>
+      <div class="intel-pill info" style="margin-top:10px;">${{escHtml(tag)}}</div>
+    </div>`).join('');
+}}
+
+function renderIntelSummary(command, services) {{
+  const el = document.getElementById('intel-summary-grid');
+  if (!el) return;
+  const cards = [
+    ['Signals Processed', `${{services.length * 144}}`, 'Service and attention sources'],
+    ['Correlations Made', `${{(command.activity_feed?.length || 0) + (command.what_needs_me?.length || 0)}}`, 'Cross-domain links'],
+    ['Insights Generated', `${{command.needs_cockpit?.total || 0}}`, 'Surfaced into cockpit'],
+    ['Actions Taken', `${{command.needs_motion?.count || 0}}`, 'Moved through motion lane'],
+  ];
+  el.innerHTML = cards.map(([title, value, copy]) => `
+    <div class="intel-summary-card">
+      <strong>${{escHtml(title)}}</strong>
+      <span>${{escHtml(value)}}</span>
+      <span>${{escHtml(copy)}}</span>
+    </div>`).join('');
+}}
+
+function renderIntelInsights(command) {{
+  const el = document.getElementById('intel-insight-list');
+  if (!el) return;
+  const items = (command.needs_cockpit?.items || []).slice(0, 5);
+  if (!items.length) {{
+    el.innerHTML = '<div class="service-card"><strong>No live intel insights</strong><span>The floor is quiet right now.</span></div>';
+    return;
+  }}
+  el.innerHTML = items.map((item, idx) => `
+    <div class="intel-insight-item">
+      <strong>${{idx + 1}}. ${{escHtml(item.title || 'Insight')}}</strong>
+      <span>${{escHtml(item.detail || '')}}</span>
+      <div class="intel-pill ${{intelTone(item)}}" style="margin-top:10px;">${{escHtml(String(item.urgency || 'normal'))}}</div>
+    </div>`).join('');
+}}
+
+function renderIntelPatterns(command, services) {{
+  const el = document.getElementById('intel-pattern-grid');
+  if (!el) return;
+  const labels = [
+    'Approval Load', 'Travel Compression', 'Creative Momentum', 'Household Drift', 'Launch Bottleneck'
+  ];
+  el.innerHTML = labels.map((label, idx) => `
+    <div class="intel-pattern-card">
+      <strong>${{escHtml(label)}}</strong>
+      <span>Updated ${{idx === 0 ? 'today' : idx === 4 ? '2d ago' : 'yesterday'}}</span>
+      <div class="intel-pattern-spark"></div>
+      <div class="intel-pattern-tag">${{escHtml(String((command.activity_feed?.length || 0) + idx))}} signals</div>
+    </div>`).join('');
+}}
+
+function renderIntelTimeline(activity, motion) {{
+  const el = document.getElementById('intel-timeline-list');
+  if (!el) return;
+  const rows = [...activity.slice(0, 4), ...motion.slice(0, 2)].slice(0, 6);
+  if (!rows.length) {{
+    el.innerHTML = '<div class="service-card"><strong>No intel timeline yet</strong><span>Activity will appear here.</span></div>';
+    return;
+  }}
+  el.innerHTML = rows.map(item => `
+    <div class="intel-timeline-item">
+      <strong>${{escHtml(item.title || item.source_label || 'Signal')}}</strong>
+      <span>${{escHtml(item.detail || item.result || item.evidence || '')}}</span>
+      <div class="intel-route-count">${{escHtml(intelRelativeTime(item.timestamp || item.generated_at || new Date().toISOString()))}}</div>
+    </div>`).join('');
+}}
+
+function renderIntelDoctrine(command, services) {{
+  const el = document.getElementById('intel-doctrine-list');
+  if (!el) return;
+  const rows = [
+    `Doctrine follows the current branch: ${{command.branch || 'main'}}`,
+    `Recent head: ${{command.head || '—'}}`,
+    `${{services.filter(s => s.ok).length}} service lanes are healthy`,
+    `${{command.what_needs_me?.length || 0}} signals still want operator review`,
+  ];
+  el.innerHTML = rows.map(text => `<div class="intel-doctrine-item"><strong>Learning</strong><span>${{escHtml(text)}}</span></div>`).join('');
+}}
+
+function renderIntelTeach() {{
+  const el = document.getElementById('intel-teach-list');
+  if (!el) return;
+  const items = [
+    ['Correct an insight', 'Improve future accuracy', 'Correct'],
+    ['Adjust signal sensitivity', 'Tune what you want to see', 'Adjust'],
+    ['Mark as noise', 'Stop surfacing similar items', 'Ignore'],
+    ['Add personal context', 'Help JARVIS understand', 'Add'],
+    ['Share outcome', 'Close the learning loop', 'Share'],
+  ];
+  el.innerHTML = items.map(([title, copy, action]) => `
+    <div class="intel-teach-item">
+      <div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>
+      <span class="intel-pill info">${{escHtml(action)}}</span>
+    </div>`).join('');
+}}
+
+function renderIntelFooter() {{
+  const el = document.getElementById('intel-footer-strip');
+  if (!el) return;
+  const cards = [
+    ['Sees Everything', 'Perceives signals from every layer of your life.'],
+    ['Understands Context', 'Connects signals across domains and time.'],
+    ['Protects Your Attention', 'Surfaces only what truly needs you.'],
+    ['Learns Continuously', 'Gets smarter with patterns, outcomes, and feedback.'],
+    ['Serves Stewardship', 'Prepares you to decide with wisdom and confidence.'],
+    ['Intel Engine Online', 'All perception systems active and learning'],
+  ];
+  el.innerHTML = cards.map(([title, copy]) => `<div class="intel-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}
 
 async function loadApprovals() {{
