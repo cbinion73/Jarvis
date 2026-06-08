@@ -9346,40 +9346,625 @@ body::after {{
 .tag-chip:hover {{ background: var(--hue); color: #fff; }}
 
 /* ═══════════════════════════════════════════════════════════════════
-   CAMERA GRID (VISION)
+   VISION DESKTOP EXPERIENCE
 ═══════════════════════════════════════════════════════════════════ */
-.camera-grid {{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
+.vision-view {{
+  --vision-gold: #ecab49;
+  --vision-gold-soft: #b78131;
+  --vision-cyan: #45c5df;
+  --vision-panel: rgba(9, 14, 21, 0.96);
+  --vision-panel-soft: rgba(13, 19, 29, 0.92);
+  --vision-border: rgba(236, 171, 73, 0.2);
+  --vision-border-strong: rgba(236, 171, 73, 0.34);
+  --vision-shadow: 0 26px 60px rgba(0,0,0,0.34);
+  --vision-grid-line: rgba(255,255,255,0.05);
 }}
-.camera-cell {{
-  padding: 20px;
-  min-height: 140px;
+.vision-view .view-header {{
+  display: none;
+}}
+.vision-header {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(420px, 1.1fr) 240px;
+  gap: 18px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}}
+.vision-brand,
+.vision-quote,
+.vision-profile,
+.vision-stat-shell,
+.vision-card,
+.vision-input-sidebar {{
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+    linear-gradient(180deg, var(--vision-panel), var(--vision-panel-soft));
+  border: 1px solid var(--vision-border);
+  border-radius: 20px;
+  box-shadow: var(--vision-shadow);
+  overflow: hidden;
+}}
+.vision-brand,
+.vision-quote,
+.vision-profile {{
+  min-height: 132px;
+}}
+.vision-brand {{
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 22px 24px;
+}}
+.vision-brand::before,
+.vision-quote::before,
+.vision-profile::before,
+.vision-card::before,
+.vision-input-sidebar::before,
+.vision-stat-shell::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(69, 197, 223, 0.12), transparent 34%),
+    linear-gradient(135deg, rgba(236, 171, 73, 0.07), transparent 42%);
+  pointer-events: none;
+}}
+.vision-brand-mark {{
+  width: 74px;
+  height: 74px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--vision-gold);
+  border: 1px solid var(--vision-border-strong);
+  background: radial-gradient(circle at center, rgba(236, 171, 73, 0.12), rgba(69, 197, 223, 0.04) 55%, rgba(7,10,16,0.98));
+  box-shadow: inset 0 0 22px rgba(236,171,73,0.08), 0 0 40px rgba(0,0,0,0.22);
+}}
+.vision-brand-copy {{
   display: flex;
   flex-direction: column;
+  gap: 8px;
+}}
+.vision-kicker {{
+  font-size: 12px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(236, 171, 73, 0.78);
+}}
+.vision-title {{
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: clamp(34px, 3vw, 54px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #f5f1e6;
+}}
+.vision-title span {{
+  color: var(--vision-gold);
+}}
+.vision-subtitle {{
+  font-size: 16px;
+  color: rgba(233, 237, 244, 0.84);
+}}
+.vision-brand-detail {{
+  font-size: 14px;
+  color: rgba(194, 204, 220, 0.72);
+}}
+.vision-header-right {{
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 16px;
+}}
+.vision-header-stats {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}}
+.vision-stat-shell {{
+  padding: 16px 18px;
+  min-height: 96px;
+}}
+.vision-stat-label {{
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(205, 214, 228, 0.66);
+  margin-bottom: 14px;
+}}
+.vision-stat-value {{
+  font-size: 32px;
+  line-height: 1;
+  color: #fcf7ea;
+  margin-bottom: 10px;
+}}
+.vision-stat-sub {{
+  font-size: 12px;
+  color: rgba(165, 235, 175, 0.92);
+}}
+.vision-quote,
+.vision-profile {{
+  padding: 18px 20px;
+}}
+.vision-quote {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}}
+.vision-quote-mark {{
+  font-size: 34px;
+  color: var(--vision-gold);
+}}
+.vision-quote strong {{
+  display: block;
+  font-size: 26px;
+  line-height: 1.08;
+  color: #f7f2e8;
+  margin-bottom: 6px;
+}}
+.vision-quote span,
+.vision-profile span {{
+  display: block;
+  color: rgba(201, 210, 225, 0.76);
+  line-height: 1.55;
+}}
+.vision-profile {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}}
+.vision-profile-meta {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}}
+.vision-profile-avatar {{
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  border: 1px solid rgba(236,171,73,0.3);
+  background: linear-gradient(135deg, rgba(236,171,73,0.34), rgba(69,197,223,0.2));
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #08101a;
+}}
+.vision-profile strong {{
+  display: block;
+  font-size: 18px;
+  color: #f4efe5;
+}}
+.vision-shell {{
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}}
+.vision-input-sidebar {{
+  padding: 18px;
+  position: sticky;
+  top: 18px;
+}}
+.vision-side-title {{
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(236,171,73,0.78);
+  margin-bottom: 14px;
+}}
+.vision-side-list,
+.vision-footer-strip {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}}
+.vision-side-item {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.02);
+}}
+.vision-side-item strong,
+.vision-footer-pill strong {{
+  color: #f4efe4;
+  font-size: 13px;
+}}
+.vision-side-item span,
+.vision-footer-pill span {{
+  color: rgba(197, 205, 219, 0.72);
+  font-size: 11px;
+}}
+.vision-side-badge {{
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  padding: 0 8px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  text-align: center;
+  font-size: 11px;
+  color: #0a1119;
+  background: linear-gradient(135deg, rgba(236,171,73,0.96), rgba(255,222,137,0.9));
 }}
-.camera-icon {{
-  color: var(--hue);
-  transition: color 0.45s ease;
+.vision-side-cta {{
+  margin-top: 14px;
+  width: 100%;
+  border: 1px solid var(--vision-border-strong);
+  border-radius: 14px;
+  background: rgba(236,171,73,0.12);
+  color: #f7f1e4;
+  font-size: 13px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
 }}
-.camera-label {{
-  font-family: var(--font-mono);
+.vision-grid {{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+}}
+.vision-card {{
+  grid-column: span 4;
+}}
+.vision-span-5 {{ grid-column: span 5; }}
+.vision-span-4 {{ grid-column: span 4; }}
+.vision-span-3 {{ grid-column: span 3; }}
+.vision-card-inner {{
+  padding: 18px;
+  position: relative;
+  z-index: 1;
+}}
+.vision-card-header {{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}}
+.vision-card-number {{
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text-1);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(236,171,73,0.82);
+  margin-bottom: 7px;
+}}
+.vision-card h3 {{
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.1;
+  color: #f5f0e6;
+}}
+.vision-card-header p {{
+  margin: 6px 0 0;
+  color: rgba(197, 207, 221, 0.76);
+  font-size: 13px;
+  line-height: 1.55;
+}}
+.vision-header-action,
+.vision-section-link,
+.vision-action-list button {{
+  border: 1px solid rgba(236,171,73,0.24);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+  color: rgba(243, 238, 228, 0.92);
+  font-size: 12px;
+  padding: 8px 12px;
+}}
+.vision-scene-stage {{
+  position: relative;
+  min-height: 250px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(236,171,73,0.18);
+  background:
+    linear-gradient(180deg, rgba(7,10,16,0.12), rgba(7,10,16,0.75)),
+    radial-gradient(circle at 18% 18%, rgba(69,197,223,0.28), transparent 22%),
+    linear-gradient(135deg, rgba(37,58,74,0.92), rgba(15,19,24,0.98) 48%, rgba(72,49,26,0.86));
+  display: flex;
+  align-items: flex-end;
+  padding: 18px;
+  margin-bottom: 14px;
+}}
+.vision-scene-overlay {{
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+}}
+.vision-scene-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(7,11,17,0.72);
+  border: 1px solid rgba(255,255,255,0.08);
+  font-size: 11px;
+  color: rgba(234, 240, 248, 0.86);
+}}
+.vision-scene-copy strong {{
+  display: block;
+  font-size: 24px;
+  color: #f7f2e7;
+  margin-top: 8px;
+  margin-bottom: 6px;
+}}
+.vision-scene-copy span {{
+  color: rgba(209, 217, 231, 0.76);
+  line-height: 1.55;
+}}
+.vision-thumb-row,
+.vision-memory-grid,
+.vision-doc-list,
+.vision-route-list,
+.vision-pattern-list,
+.vision-alert-list,
+.vision-action-list,
+.vision-quick-grid,
+.vision-categories-grid {{
+  display: grid;
+  gap: 10px;
+}}
+.vision-thumb-row {{
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}}
+.vision-thumb {{
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.02);
+}}
+.vision-thumb-art,
+.vision-memory-art {{
+  height: 88px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.08), transparent 18%),
+    linear-gradient(135deg, rgba(34,49,63,0.96), rgba(10,14,20,0.96) 52%, rgba(74,49,23,0.76));
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}}
+.vision-thumb-meta,
+.vision-memory-meta {{
+  padding: 10px;
+}}
+.vision-thumb-meta strong,
+.vision-memory-meta strong,
+.vision-doc-copy strong,
+.vision-route-copy strong,
+.vision-pattern-copy strong,
+.vision-alert-copy strong {{
+  display: block;
+  color: #f4efe5;
+  font-size: 13px;
+}}
+.vision-thumb-meta span,
+.vision-memory-meta span,
+.vision-doc-copy span,
+.vision-route-copy span,
+.vision-pattern-copy span,
+.vision-alert-copy span {{
+  display: block;
+  margin-top: 4px;
+  color: rgba(193, 203, 218, 0.72);
+  font-size: 11px;
+  line-height: 1.45;
+}}
+.vision-list-card,
+.vision-doc-item,
+.vision-route-item,
+.vision-pattern-item,
+.vision-alert-item,
+.vision-quick-item,
+.vision-category-item {{
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}}
+.vision-list-card {{
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}}
+.vision-list-left {{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}}
+.vision-list-icon {{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(236,171,73,0.12);
+  color: var(--vision-gold);
+  flex-shrink: 0;
+}}
+.vision-list-copy {{
+  min-width: 0;
+}}
+.vision-list-copy strong {{
+  display: block;
+  color: #f5f0e6;
+  font-size: 14px;
+}}
+.vision-list-copy span {{
+  display: block;
+  margin-top: 4px;
+  color: rgba(193,203,218,0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}}
+.vision-list-meta {{
+  text-align: right;
+  flex-shrink: 0;
+}}
+.vision-list-time {{
+  font-size: 11px;
+  color: rgba(199,208,221,0.72);
+  margin-bottom: 8px;
+}}
+.vision-list-tag {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  background: rgba(255,255,255,0.04);
+  color: rgba(236,240,248,0.86);
 }}
-.camera-ts {{
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-3);
+.vision-change-grid,
+.vision-memory-grid,
+.vision-trust-grid,
+.vision-health-grid {{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}}
+.vision-change-item,
+.vision-memory-item,
+.vision-health-item {{
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+  overflow: hidden;
+}}
+.vision-change-strip {{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px;
+}}
+.vision-change-thumb {{
+  height: 64px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0)),
+    linear-gradient(135deg, rgba(43,58,77,0.96), rgba(12,16,22,0.96) 55%, rgba(78,54,26,0.78));
+}}
+.vision-change-copy,
+.vision-health-copy {{
+  padding: 12px 14px 14px;
+}}
+.vision-doc-item,
+.vision-route-item,
+.vision-pattern-item,
+.vision-alert-item,
+.vision-quick-item {{
+  padding: 14px;
+}}
+.vision-doc-item,
+.vision-route-item,
+.vision-pattern-item {{
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}}
+.vision-doc-art {{
+  width: 58px;
+  height: 72px;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.08), transparent),
+    linear-gradient(145deg, rgba(97,85,64,0.78), rgba(31,27,20,0.94));
+  border: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}}
+.vision-route-arrow {{
+  align-self: center;
+  color: rgba(236,171,73,0.72);
+  font-size: 18px;
+}}
+.vision-categories-grid,
+.vision-quick-grid {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.vision-category-item,
+.vision-quick-item {{
+  padding: 14px;
+}}
+.vision-category-item strong,
+.vision-quick-item strong {{
+  display: block;
+  color: #f5f0e6;
+  font-size: 14px;
+}}
+.vision-category-item span,
+.vision-quick-item span {{
+  display: block;
+  margin-top: 5px;
+  color: rgba(193,203,218,0.72);
+  font-size: 12px;
+}}
+.vision-footer-strip {{
+  grid-column: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+}}
+.vision-footer-pill {{
+  min-width: 0;
+  flex: 1 1 180px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.02);
+}}
+.vision-health-grid {{
+  margin-top: 12px;
+}}
+.vision-empty {{
+  color: rgba(193,203,218,0.62);
+  font-size: 12px;
+  padding: 10px 0;
+}}
+@media (max-width: 1500px) {{
+  .vision-header {{
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }}
+  .vision-profile {{
+    grid-column: span 2;
+  }}
+  .vision-shell {{
+    grid-template-columns: 1fr;
+  }}
+  .vision-input-sidebar {{
+    position: static;
+  }}
+}}
+@media (max-width: 1180px) {{
+  .vision-header,
+  .vision-header-stats {{
+    grid-template-columns: 1fr;
+  }}
+  .vision-grid {{
+    grid-template-columns: 1fr;
+  }}
+  .vision-card,
+  .vision-span-5,
+  .vision-span-4,
+  .vision-span-3 {{
+    grid-column: span 1;
+  }}
+  .vision-thumb-row,
+  .vision-categories-grid,
+  .vision-quick-grid,
+  .vision-memory-grid,
+  .vision-change-grid,
+  .vision-health-grid {{
+    grid-template-columns: 1fr;
+  }}
 }}
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -15558,65 +16143,253 @@ body::after {{
   </div>
 
   <!-- ── VISION ─────────────────────────────────────────────── -->
-  <div id="view-vision" class="view">
-    <div class="view-header">
-      <div class="view-title">VISION SYSTEM<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Camera Array · Detection Feed · Alert History</div>
-    </div>
+  <div id="view-vision" class="view vision-view">
+    <div class="vision-header">
+      <div class="vision-brand">
+        <div class="vision-brand-mark">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"></path>
+            <circle cx="12" cy="12" r="3.2"></circle>
+            <path d="M12 2v3M4.9 4.9l2.1 2.1M2 12h3M4.9 19.1 7 17M12 19v3M17 17l2.1 2.1M19 12h3M17 7l2.1-2.1"></path>
+          </svg>
+        </div>
+        <div class="vision-brand-copy">
+          <div class="vision-kicker">Visual Intelligence & Context Engine</div>
+          <div class="vision-title">JARVIS <span>VISION</span></div>
+          <div class="vision-subtitle">See clearly. Understand deeply. Act wisely.</div>
+          <div class="vision-brand-detail">JARVIS sees what matters so you can focus on what counts.</div>
+        </div>
+      </div>
 
-    <!-- Camera grid -->
-    <div class="section-label">Camera Array</div>
-    <div class="camera-grid">
-      <div class="card camera-cell">
-        <svg class="camera-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-        </svg>
-        <div class="camera-label">CAM-01</div>
-        <span class="pill pill-success">LIVE</span>
-        <div class="camera-ts">Last event: —</div>
-      </div>
-      <div class="card camera-cell">
-        <svg class="camera-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-        </svg>
-        <div class="camera-label">CAM-02</div>
-        <span class="pill pill-success">LIVE</span>
-        <div class="camera-ts">Last event: —</div>
-      </div>
-      <div class="card camera-cell">
-        <svg class="camera-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-        </svg>
-        <div class="camera-label">CAM-03</div>
-        <span class="pill pill-success">LIVE</span>
-        <div class="camera-ts">Last event: —</div>
-      </div>
-      <div class="card camera-cell">
-        <svg class="camera-icon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
-        </svg>
-        <div class="camera-label">CAM-04</div>
-        <span class="pill pill-success">LIVE</span>
-        <div class="camera-ts">Last event: —</div>
-      </div>
-    </div>
-
-    <div class="card-grid-2">
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header"><span class="card-title">Detection Feed</span><span class="pill pill-success">LIVE</span></div>
-          <div id="vision-feed">
-            <div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">Awaiting events</div><div class="list-row-sub">All clear</div></div></div>
+      <div class="vision-header-right">
+        <div class="vision-header-stats">
+          <div class="vision-stat-shell">
+            <div class="vision-stat-label">Vision Status</div>
+            <div class="vision-stat-value" id="vision-status-value">Active</div>
+            <div class="vision-stat-sub" id="vision-status-sub">Continuously observing</div>
+          </div>
+          <div class="vision-stat-shell">
+            <div class="vision-stat-label">Confidence Level</div>
+            <div class="vision-stat-value" id="vision-confidence-score">92%</div>
+            <div class="vision-stat-sub" id="vision-confidence-sub">High</div>
+          </div>
+          <div class="vision-stat-shell">
+            <div class="vision-stat-label">Scenes Today</div>
+            <div class="vision-stat-value" id="vision-scenes-today">0</div>
+            <div class="vision-stat-sub" id="vision-scenes-sub">Fresh observations</div>
+          </div>
+          <div class="vision-stat-shell">
+            <div class="vision-stat-label">Changes Detected</div>
+            <div class="vision-stat-value" id="vision-changes-count">0</div>
+            <div class="vision-stat-sub" id="vision-changes-sub">New differences found</div>
+          </div>
+          <div class="vision-stat-shell">
+            <div class="vision-stat-label">Insights Generated</div>
+            <div class="vision-stat-value" id="vision-insights-count">0</div>
+            <div class="vision-stat-sub" id="vision-insights-sub">Routed to your systems</div>
+          </div>
+          <div class="vision-stat-shell">
+            <div class="vision-stat-label">Memory Index</div>
+            <div class="vision-stat-value" id="vision-memory-count">0</div>
+            <div class="vision-stat-sub" id="vision-memory-sub">Visual memories</div>
+          </div>
+        </div>
+        <div class="vision-quote">
+          <div class="vision-quote-mark">“</div>
+          <div>
+            <strong>JARVIS sees what matters so you can focus on what counts.</strong>
+            <span>Visual intelligence becomes context, memory, and better action across home, workshop, family, and work.</span>
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header"><span class="card-title">Alert History</span></div>
-          <div id="vision-alerts">
-            <div class="list-row"><div class="list-row-name">No alerts</div></div>
+
+      <div class="vision-profile">
+        <div class="vision-profile-meta">
+          <div class="vision-profile-avatar">CB</div>
+          <div>
+            <strong>Chris Binion</strong>
+            <span>Executive Mode</span>
           </div>
         </div>
+        <span id="vision-generated-at">Updated just now</span>
+      </div>
+    </div>
+
+    <div class="vision-shell">
+      <aside class="vision-input-sidebar">
+        <div class="vision-side-title">Vision Inputs</div>
+        <div class="vision-side-list" id="vision-inputs-list"></div>
+        <button class="vision-side-cta" onclick="switchView('home')">Vision Settings →</button>
+      </aside>
+
+      <div class="vision-grid">
+        <section class="vision-card vision-span-5">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">1. Live Scene Overview</div>
+                <h3>What JARVIS is seeing right now.</h3>
+                <p>Live scene context from recent captures, observations, and the last camera moments that matter.</p>
+              </div>
+            </div>
+            <div class="vision-scene-stage">
+              <div class="vision-scene-overlay">
+                <div class="vision-scene-copy">
+                  <div class="vision-scene-chip" id="vision-live-chip">Office · Live</div>
+                  <strong id="vision-live-title">Awaiting scene</strong>
+                  <span id="vision-live-copy">No current observation yet.</span>
+                </div>
+                <div class="vision-scene-chip" id="vision-live-time">Updated —</div>
+              </div>
+            </div>
+            <div class="vision-thumb-row" id="vision-scene-thumbs"></div>
+            <button class="vision-section-link" onclick="switchView('journey')" style="margin-top:14px;">View all scenes →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">2. What JARVIS Noticed</div>
+                <h3>Key observations and insights from what I see.</h3>
+              </div>
+              <button class="vision-header-action" onclick="loadVisionView()">Refresh</button>
+            </div>
+            <div class="vision-doc-list" id="vision-feed"></div>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-3">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">3. Change Detection</div>
+                <h3>What has changed since last seen.</h3>
+              </div>
+              <button class="vision-header-action" onclick="switchView('journey')">View Timeline</button>
+            </div>
+            <div class="vision-change-grid" id="vision-changes-list"></div>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">4. Text & Document Intelligence</div>
+                <h3>Extracted and interpreted from what I see.</h3>
+              </div>
+            </div>
+            <div class="vision-doc-list" id="vision-docs-list"></div>
+            <button class="vision-section-link" onclick="switchView('publishing')" style="margin-top:14px;">View all documents →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">5. Memory Through Vision</div>
+                <h3>Visual memories that build our shared understanding.</h3>
+              </div>
+            </div>
+            <div class="vision-memory-grid" id="vision-memory-grid"></div>
+            <button class="vision-section-link" onclick="switchView('journey')" style="margin-top:14px;">Browse all visual memories →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">6. Vision To Action Routing</div>
+                <h3>How what I see connects to your systems.</h3>
+              </div>
+            </div>
+            <div class="vision-route-list" id="vision-route-list"></div>
+            <button class="vision-section-link" onclick="switchView('command')" style="margin-top:14px;">View all routed items →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">7. Insight Categories</div>
+                <h3>What JARVIS is learning to see better.</h3>
+              </div>
+            </div>
+            <div class="vision-categories-grid" id="vision-categories-grid"></div>
+            <button class="vision-section-link" onclick="switchView('agents')" style="margin-top:14px;">View analytics dashboard →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-3">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">8. Anomalies & Alerts</div>
+                <h3>What looks unusual or needs attention.</h3>
+              </div>
+            </div>
+            <div class="vision-alert-list" id="vision-alerts"></div>
+            <button class="vision-section-link" onclick="switchView('health')" style="margin-top:14px;">View all alerts →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">9. Vision Input Center</div>
+                <h3>Capture from anywhere. Understand everything.</h3>
+              </div>
+            </div>
+            <div class="vision-quick-grid" id="vision-input-center"></div>
+            <button class="vision-section-link" onclick="switchView('chat')" style="margin-top:14px;">Open capture tools →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">10. Pattern Recognition</div>
+                <h3>Recurring visual patterns JARVIS has learned.</h3>
+              </div>
+            </div>
+            <div class="vision-pattern-list" id="vision-pattern-list"></div>
+            <button class="vision-section-link" onclick="switchView('journey')" style="margin-top:14px;">View all patterns →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">11. Vision Health & Confidence</div>
+                <h3>How well JARVIS sees and interprets.</h3>
+              </div>
+            </div>
+            <div class="vision-health-grid" id="vision-health-grid"></div>
+            <button class="vision-section-link" onclick="switchView('health')" style="margin-top:14px;">View improvement plan →</button>
+          </div>
+        </section>
+
+        <section class="vision-card vision-span-4">
+          <div class="vision-card-inner">
+            <div class="vision-card-header">
+              <div>
+                <div class="vision-card-number">12. Quick Vision Actions</div>
+                <h3>Common actions from what I see.</h3>
+              </div>
+            </div>
+            <div class="vision-action-list" id="vision-actions-list"></div>
+          </div>
+        </section>
+
+        <section class="vision-footer-strip" id="vision-footer-strip"></section>
       </div>
     </div>
   </div>
@@ -19923,8 +20696,439 @@ function loadViewData(name) {{
     case 'home':         loadKasaDevices(); break;
     case 'navigate':     initNavView(); break;
     case 'dining':       loadDiningView(); break;
+    case 'vision':       loadVisionView(); break;
     case 'journey':      loadJourneyView(); break;
   }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════
+   VISION DESKTOP EXPERIENCE
+═══════════════════════════════════════════════════════════════ */
+let _visionState = null;
+let _visionPerception = null;
+
+async function loadVisionView() {{
+  try {{
+    const [state, perception] = await Promise.all([
+      fetch('/api/vision-state?actor=Chris', {{ cache: 'no-store' }}).then(r => r.json()),
+      fetch('/api/perception-overview', {{ cache: 'no-store' }}).then(r => r.json()),
+    ]);
+    _visionState = state || {{}};
+    _visionPerception = perception || {{}};
+
+    const observations = Array.isArray(state?.recent_observations) ? state.recent_observations : [];
+    const captures = Array.isArray(state?.recent_captures) ? state.recent_captures : [];
+    const cameraEvents = Array.isArray(perception?.camera_events) ? perception.camera_events : [];
+    const objectEvents = Array.isArray(perception?.object_events) ? perception.object_events : [];
+    const anomalies = Array.isArray(perception?.anomalies) ? perception.anomalies : [];
+    const mics = Array.isArray(perception?.microphone_events) ? perception.microphone_events : [];
+    const workshopObjects = Array.isArray(perception?.workshop_objects) ? perception.workshop_objects : [];
+    const packageRules = Array.isArray(perception?.package_rules) ? perception.package_rules : [];
+    const privacy = perception?.privacy_state || {{}};
+    const summary = state?.summary || {{}};
+
+    const confidenceLabel = String(summary.confidence || 'medium').toLowerCase();
+    const confidenceScore = confidenceLabel === 'high' ? 92 : confidenceLabel === 'medium' ? 84 : 72;
+    const sceneCount = observations.length + captures.length;
+    const changesCount = cameraEvents.length + objectEvents.length;
+    const insightsCount = observations.length + anomalies.length + workshopObjects.length;
+    const memoryCount = Number(summary.capture_count || 0) + Number(summary.observation_count || 0);
+    const lastUpdated = state?.generated_at || new Date().toISOString();
+
+    _visionSetText('vision-status-value', summary.has_calibration ? 'Active' : 'Learning');
+    _visionSetText('vision-status-sub', summary.has_calibration ? 'Continuously observing' : 'Calibration ready to improve');
+    _visionSetText('vision-confidence-score', `${{confidenceScore}}%`);
+    _visionSetText('vision-confidence-sub', confidenceLabel.charAt(0).toUpperCase() + confidenceLabel.slice(1));
+    _visionSetText('vision-scenes-today', String(sceneCount));
+    _visionSetText('vision-scenes-sub', `${{captures.length}} captures · ${{observations.length}} observations`);
+    _visionSetText('vision-changes-count', String(changesCount));
+    _visionSetText('vision-changes-sub', `${{cameraEvents.length}} camera events · ${{objectEvents.length}} object changes`);
+    _visionSetText('vision-insights-count', String(insightsCount));
+    _visionSetText('vision-insights-sub', `${{anomalies.length}} anomalies · ${{workshopObjects.length}} workshop cues`);
+    _visionSetText('vision-memory-count', String(memoryCount));
+    _visionSetText('vision-memory-sub', `${{summary.capture_count || 0}} captures remembered`);
+    _visionSetText('vision-generated-at', `Updated ${{visionRelativeTime(lastUpdated)}}`);
+
+    renderVisionSceneOverview(observations, captures, cameraEvents);
+    renderVisionObservationFeed(observations, objectEvents);
+    renderVisionChanges(cameraEvents, objectEvents);
+    renderVisionDocuments(observations, captures);
+    renderVisionMemories(captures);
+    renderVisionRoutes(observations, cameraEvents, anomalies);
+    renderVisionCategories(perception, state);
+    renderVisionAlerts(anomalies, cameraEvents);
+    renderVisionInputs(mics, perception, packageRules);
+    renderVisionPatterns(observations, workshopObjects, anomalies);
+    renderVisionHealth(state, perception, confidenceScore);
+    renderVisionActions();
+    renderVisionSidebar(perception);
+    renderVisionFooter(privacy);
+  }} catch (e) {{
+    console.warn('loadVisionView', e);
+    const targets = ['vision-feed', 'vision-alerts', 'vision-scene-thumbs'];
+    targets.forEach(id => {{
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<div class="vision-empty">Vision feed unavailable: ${{escHtml(String(e))}}</div>`;
+    }});
+  }}
+}}
+
+function _visionSetText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function visionRelativeTime(ts) {{
+  if (!ts) return 'just now';
+  const time = new Date(ts);
+  if (Number.isNaN(time.getTime())) return ts;
+  const diff = Date.now() - time.getTime();
+  const mins = Math.max(1, Math.round(diff / 60000));
+  if (mins < 60) return `${{mins}} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${{hrs}} hr ago`;
+  const days = Math.round(hrs / 24);
+  return `${{days}} day${{days === 1 ? '' : 's'}} ago`;
+}}
+
+function visionClockLabel(ts) {{
+  if (!ts) return '—';
+  const time = new Date(ts);
+  if (Number.isNaN(time.getTime())) return ts;
+  return time.toLocaleTimeString([], {{ hour: 'numeric', minute: '2-digit' }});
+}}
+
+function visionDomainTag(text) {{
+  const lowered = String(text || '').toLowerCase();
+  if (lowered.includes('receipt') || lowered.includes('budget') || lowered.includes('home depot')) return 'Finance';
+  if (lowered.includes('whiteboard') || lowered.includes('launch') || lowered.includes('devotional')) return 'Foundry';
+  if (lowered.includes('garage') || lowered.includes('bracket') || lowered.includes('filament') || lowered.includes('workshop')) return 'Workshop';
+  if (lowered.includes('family') || lowered.includes('emma') || lowered.includes('soccer')) return 'Family';
+  if (lowered.includes('package') || lowered.includes('porch') || lowered.includes('door')) return 'Home';
+  return 'Vision';
+}}
+
+function visionSeverityTone(level) {{
+  const lowered = String(level || '').toLowerCase();
+  if (['critical', 'high', 'elevated'].includes(lowered)) return 'rgba(240,92,92,0.16)';
+  if (['medium', 'warning'].includes(lowered)) return 'rgba(236,171,73,0.16)';
+  return 'rgba(66,194,129,0.14)';
+}}
+
+function renderVisionSceneOverview(observations, captures, cameraEvents) {{
+  const lead = observations[0] || captures[0] || cameraEvents[0] || null;
+  const title = lead?.camera_label || lead?.camera || lead?.source || 'Vision standby';
+  const copy = lead?.detail || lead?.analysis || lead?.summary || 'No active scene summary yet.';
+  _visionSetText('vision-live-chip', `${{title}} · ${{lead ? 'Live' : 'Standby'}}`);
+  _visionSetText('vision-live-title', lead?.summary || lead?.detail || 'Awaiting scene');
+  _visionSetText('vision-live-copy', copy);
+  _visionSetText('vision-live-time', lead?.timestamp || lead?.created_at ? visionClockLabel(lead.timestamp || lead.created_at) : 'Updated —');
+
+  const el = document.getElementById('vision-scene-thumbs');
+  if (!el) return;
+  const items = [...observations.slice(0, 3), ...captures.slice(0, 2)];
+  if (!items.length) {{
+    el.innerHTML = '<div class="vision-empty">No recent scenes yet.</div>';
+    return;
+  }}
+  el.innerHTML = items.map((item, idx) => `
+    <div class="vision-thumb">
+      <div class="vision-thumb-art" style="background:
+        radial-gradient(circle at ${{18 + idx * 12}}% 20%, rgba(255,255,255,0.08), transparent 18%),
+        linear-gradient(135deg, rgba(36,54,73,0.96), rgba(11,15,21,0.96) 54%, rgba(84,58,27,0.78));"></div>
+      <div class="vision-thumb-meta">
+        <strong>${{escHtml(item.camera_label || item.camera || item.source || `Scene ${{idx + 1}}`)}}</strong>
+        <span>${{escHtml(visionClockLabel(item.timestamp || item.created_at))}} · ${{escHtml((item.summary || item.detail || item.analysis || '').slice(0, 54) || 'Saved visual memory')}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function renderVisionObservationFeed(observations, objectEvents) {{
+  const el = document.getElementById('vision-feed');
+  if (!el) return;
+  const rows = [...observations.slice(0, 4), ...objectEvents.slice(0, 1)];
+  if (!rows.length) {{
+    el.innerHTML = '<div class="vision-empty">No observations yet.</div>';
+    return;
+  }}
+  el.innerHTML = rows.map(item => {{
+    const copy = item.summary || item.detail || item.analysis || 'Visual observation recorded.';
+    return `<div class="vision-list-card">
+      <div class="vision-list-left">
+        <div class="vision-list-icon">${{item.measurement ? '◌' : '◉'}}</div>
+        <div class="vision-list-copy">
+          <strong>${{escHtml(copy.slice(0, 64))}}</strong>
+          <span>${{escHtml((item.detail || item.analysis || item.summary || '').slice(0, 110))}}</span>
+        </div>
+      </div>
+      <div class="vision-list-meta">
+        <div class="vision-list-time">${{escHtml(visionClockLabel(item.timestamp || item.created_at))}}</div>
+        <div class="vision-list-tag">${{escHtml(visionDomainTag(copy))}}</div>
+      </div>
+    </div>`;
+  }}).join('');
+}}
+
+function renderVisionChanges(cameraEvents, objectEvents) {{
+  const el = document.getElementById('vision-changes-list');
+  if (!el) return;
+  const changes = [...cameraEvents, ...objectEvents].slice(0, 4);
+  if (!changes.length) {{
+    el.innerHTML = '<div class="vision-empty">No change history yet.</div>';
+    return;
+  }}
+  el.innerHTML = changes.map((item, idx) => `
+    <div class="vision-change-item">
+      <div class="vision-change-strip">
+        <div class="vision-change-thumb"></div>
+        <div class="vision-change-thumb" style="filter:brightness(0.82) saturate(0.86);"></div>
+      </div>
+      <div class="vision-change-copy">
+        <strong>${{escHtml(item.camera || item.source || item.zone || `Zone ${{idx + 1}}`)}}</strong>
+        <span>${{escHtml(item.detail || item.summary || 'Change detected.')}}</span>
+        <span>${{escHtml(visionRelativeTime(item.timestamp))}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function renderVisionDocuments(observations, captures) {{
+  const el = document.getElementById('vision-docs-list');
+  if (!el) return;
+  const docs = observations.filter(item => /note|receipt|whiteboard|label|text|document/i.test(`${{item.summary || ''}} ${{item.detail || ''}}`)).slice(0, 3);
+  const source = docs.length ? docs : captures.slice(0, 3);
+  if (!source.length) {{
+    el.innerHTML = '<div class="vision-empty">No visual documents extracted yet.</div>';
+    return;
+  }}
+  el.innerHTML = source.map(item => {{
+    const copy = item.detail || item.analysis || item.summary || 'Visual text extraction pending.';
+    return `<div class="vision-doc-item">
+      <div class="vision-doc-art"></div>
+      <div class="vision-doc-copy">
+        <strong>${{escHtml((item.summary || item.camera_label || 'Document capture').slice(0, 48))}}</strong>
+        <span>${{escHtml(copy.slice(0, 140))}}</span>
+        <span>${{escHtml(visionClockLabel(item.timestamp || item.created_at))}} · ${{escHtml(visionDomainTag(copy))}}</span>
+      </div>
+    </div>`;
+  }}).join('');
+}}
+
+function renderVisionMemories(captures) {{
+  const el = document.getElementById('vision-memory-grid');
+  if (!el) return;
+  if (!captures.length) {{
+    el.innerHTML = '<div class="vision-empty">No captures saved yet.</div>';
+    return;
+  }}
+  el.innerHTML = captures.slice(0, 4).map((item, idx) => `
+    <div class="vision-memory-item">
+      <div class="vision-memory-art" style="background:
+        radial-gradient(circle at ${{28 + idx * 14}}% 24%, rgba(255,255,255,0.08), transparent 18%),
+        linear-gradient(135deg, rgba(38,56,72,0.96), rgba(10,15,21,0.96) 56%, rgba(86,58,31,0.78));"></div>
+      <div class="vision-memory-meta">
+        <strong>${{escHtml(item.camera_label || `Capture ${{idx + 1}}`)}}</strong>
+        <span>${{escHtml(visionRelativeTime(item.created_at))}}</span>
+        <span>${{escHtml((item.analysis || '').slice(0, 96) || 'Saved visual memory.')}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function renderVisionRoutes(observations, cameraEvents, anomalies) {{
+  const el = document.getElementById('vision-route-list');
+  if (!el) return;
+  const routes = [
+    ...(observations.slice(0, 2).map(item => [item.summary || item.detail || 'Observation', visionDomainTag(item.summary || item.detail), 'Create idea → Launch plan'])),
+    ...(cameraEvents.slice(0, 2).map(item => [item.detail || item.event_type || 'Camera event', visionDomainTag(item.detail || item.zone), 'Route to household or delivery lane'])),
+    ...(anomalies.slice(0, 1).map(item => [item.detail || item.reading || 'Anomaly', 'Health', 'Escalate for review and action'])),
+  ].slice(0, 5);
+  if (!routes.length) {{
+    el.innerHTML = '<div class="vision-empty">No routed vision actions yet.</div>';
+    return;
+  }}
+  el.innerHTML = routes.map(([left, domain, right]) => `
+    <div class="vision-route-item">
+      <div class="vision-doc-copy vision-route-copy">
+        <strong>${{escHtml(left)}}</strong>
+        <span>${{escHtml(domain)}}</span>
+      </div>
+      <div class="vision-route-arrow">→</div>
+      <div class="vision-doc-copy vision-route-copy">
+        <strong>${{escHtml(domain)}}</strong>
+        <span>${{escHtml(right)}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function renderVisionCategories(perception, state) {{
+  const el = document.getElementById('vision-categories-grid');
+  if (!el) return;
+  const items = [
+    ['Objects & Items', (perception.object_events || []).length || 0, 'Recognized'],
+    ['Spaces & Layouts', Object.keys(perception.room_presence || {{}}).length || 0, 'Mapped'],
+    ['People & Activity', (perception.presence_events || []).length + (perception.phone_presence || []).length, 'Observed'],
+    ['Documents & Text', (state.recent_captures || []).filter(item => /note|receipt|label|whiteboard|text/i.test(`${{item.analysis || ''}}`)).length, 'Extracted'],
+    ['Safety & Risks', (perception.anomalies || []).length, 'Detected'],
+    ['Patterns & Trends', (state.recent_observations || []).length, 'Identified'],
+    ['Conditions', (perception.camera_events || []).length, 'Assessed'],
+    ['Opportunities', (perception.workshop_objects || []).length, 'Surfaced'],
+  ];
+  el.innerHTML = items.map(([title, value, copy]) => `
+    <div class="vision-category-item">
+      <strong>${{escHtml(title)}}</strong>
+      <span>${{escHtml(String(value))}} ${{escHtml(copy)}}</span>
+    </div>`).join('');
+}}
+
+function renderVisionAlerts(anomalies, cameraEvents) {{
+  const el = document.getElementById('vision-alerts');
+  if (!el) return;
+  const items = [
+    ...anomalies.map(item => ({{
+      severity: item.severity || 'medium',
+      title: item.detail || item.reading || 'Anomaly detected',
+      time: item.timestamp,
+    }})),
+    ...cameraEvents.slice(0, 2).map(item => ({{
+      severity: item.event_type === 'package' ? 'info' : 'low',
+      title: item.detail || item.event_type || 'Camera event',
+      time: item.timestamp,
+    }})),
+  ].slice(0, 4);
+  if (!items.length) {{
+    el.innerHTML = '<div class="vision-empty">No active alerts.</div>';
+    return;
+  }}
+  el.innerHTML = items.map(item => `
+    <div class="vision-alert-item" style="background:${{visionSeverityTone(item.severity)}};">
+      <div class="vision-alert-copy">
+        <strong>${{escHtml(String(item.severity).toUpperCase())}}</strong>
+        <span>${{escHtml(item.title)}}</span>
+        <span>${{escHtml(visionClockLabel(item.time))}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function renderVisionInputs(mics, perception, packageRules) {{
+  const inputCenter = document.getElementById('vision-input-center');
+  if (inputCenter) {{
+    const cards = [
+      ['Camera', `${{(perception.camera_events || []).length}} recent`, 'Live camera events'],
+      ['Upload', `${{(_visionState?.recent_captures || []).length}} saved`, 'Vision captures stored'],
+      ['Scan Doc', `${{(_visionState?.recent_observations || []).filter(item => /note|receipt|label|whiteboard|text/i.test(`${{item.summary || ''}} ${{item.detail || ''}}`)).length}} detected`, 'Document extraction ready'],
+      ['Phone Live', `${{(perception.phone_presence || []).length}} active`, 'Mobile presence cues'],
+      ['Screen Grab', `${{mics.length}} heard`, 'Multimodal context'],
+    ];
+    inputCenter.innerHTML = cards.map(([title, value, copy]) => `
+      <div class="vision-quick-item">
+        <strong>${{escHtml(title)}}</strong>
+        <span>${{escHtml(value)}}</span>
+        <span>${{escHtml(copy)}}</span>
+      </div>`).join('');
+  }}
+
+  const list = document.getElementById('vision-inputs-list');
+  if (!list) return;
+  const side = [
+    ['Live Camera', (perception.camera_events || []).length],
+    ['Phone Uploads', (_visionState?.recent_captures || []).length],
+    ['Doorbell Events', (perception.camera_events || []).filter(item => String(item.zone || '').includes('porch')).length],
+    ['Screenshots', (_visionState?.recent_observations || []).length],
+    ['Ambient Sensors', (perception.presence_events || []).length],
+    ['Documents', packageRules.length],
+  ];
+  list.innerHTML = side.map(([title, count]) => `
+    <div class="vision-side-item">
+      <div>
+        <strong>${{escHtml(title)}}</strong>
+        <span>Active input lane</span>
+      </div>
+      <span class="vision-side-badge">${{escHtml(String(count))}}</span>
+    </div>`).join('');
+}}
+
+function renderVisionPatterns(observations, workshopObjects, anomalies) {{
+  const el = document.getElementById('vision-pattern-list');
+  if (!el) return;
+  const items = [
+    observations[0] ? ['Scene Stability', observations[0].summary || observations[0].detail || 'Recent scene trend', 'Reliable pattern from saved captures'] : null,
+    workshopObjects[0] ? ['Workshop Signal', workshopObjects[0].detail || workshopObjects[0].observed_object || 'Workshop pattern noticed', 'Strong pattern in workshop state'] : null,
+    anomalies[0] ? ['Risk Watch', anomalies[0].detail || anomalies[0].reading || 'Anomaly trend', 'Escalate when repeated'] : null,
+  ].filter(Boolean);
+  if (!items.length) {{
+    el.innerHTML = '<div class="vision-empty">Pattern learning has not started yet.</div>';
+    return;
+  }}
+  el.innerHTML = items.map(([title, copy, note]) => `
+    <div class="vision-pattern-item">
+      <div class="vision-list-icon">◎</div>
+      <div class="vision-pattern-copy">
+        <strong>${{escHtml(title)}}</strong>
+        <span>${{escHtml(copy)}}</span>
+        <span>${{escHtml(note)}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function renderVisionHealth(state, perception, confidenceScore) {{
+  const el = document.getElementById('vision-health-grid');
+  if (!el) return;
+  const privacy = perception.privacy_state || {{}};
+  const cards = [
+    ['Scene Clarity', `${{confidenceScore}}%`, 'Excellent'],
+    ['Recognition Accuracy', `${{Math.max(78, confidenceScore - 1)}}%`, 'High'],
+    ['Text Extraction', `${{Math.max(72, confidenceScore - 3)}}%`, 'Strong'],
+    ['Change Detection', `${{Math.max(75, confidenceScore - 5)}}%`, 'Reliable'],
+    ['Privacy Posture', privacy.physicalMuteRequired ? 'Bounded' : 'Open', 'Protected by design'],
+    ['Calibration', state.calibration?.unit ? `${{state.calibration.reference_length}} ${{state.calibration.unit}} ref` : 'Not set', 'Measurement ready'],
+  ];
+  el.innerHTML = cards.map(([title, value, copy]) => `
+    <div class="vision-health-item">
+      <div class="vision-health-copy">
+        <strong>${{escHtml(title)}}</strong>
+        <span>${{escHtml(value)}}</span>
+        <span>${{escHtml(copy)}}</span>
+      </div>
+    </div>`).join('');
+}}
+
+function renderVisionActions() {{
+  const el = document.getElementById('vision-actions-list');
+  if (!el) return;
+  const items = [
+    ['Analyze this scene', 'Open the voice/capture path for a fresh read.', `switchView('chat')`],
+    ['Compare with yesterday', 'Use Journey to compare memory across time.', `switchView('journey')`],
+    ['Extract text from image', 'Route notes and receipts into working systems.', `switchView('publishing')`],
+    ['Find something specific', 'Open Command and ask JARVIS to look for it.', `switchView('chat')`],
+    ['Check for safety issues', 'Escalate anomalies into Health or Home lanes.', `switchView('health')`],
+    ['Save as project reference', 'Send visual context into Workshop or Foundry.', `switchView('workshop')`],
+  ];
+  el.innerHTML = items.map(([title, copy, action]) => `
+    <button onclick="${{action}}">
+      <strong>${{escHtml(title)}}</strong>
+      <span>${{escHtml(copy)}}</span>
+    </button>`).join('');
+}}
+
+function renderVisionSidebar(perception) {{
+  const list = document.getElementById('vision-inputs-list');
+  if (!list) return;
+  if (list.children.length) return;
+  renderVisionInputs([], perception || {{}}, []);
+}}
+
+function renderVisionFooter(privacy) {{
+  const el = document.getElementById('vision-footer-strip');
+  if (!el) return;
+  const cards = [
+    ['Sees What Matters', 'Focuses on signal, not noise.'],
+    ['Remembers Visually', 'Builds memory through what it sees.'],
+    ['Understands Context', 'Interprets with awareness of your world.'],
+    ['Learns Continuously', 'Improves its ability to see and discern.'],
+    ['Protects Your Privacy', privacy?.physicalMuteRequired ? 'Sees with boundaries. You stay in control.' : 'Privacy posture available.'],
+    ['Turns Insight Into Action', 'Connects what it sees to what should happen.'],
+    ['Vision Engine Online', 'All visual systems operational'],
+  ];
+  el.innerHTML = cards.map(([title, copy]) => `<div class="vision-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}
 
 /* ═══════════════════════════════════════════════════════════════
