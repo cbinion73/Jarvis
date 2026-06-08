@@ -19709,7 +19709,10 @@ body::after {{
             <span>Executive Mode</span>
           </div>
         </div>
-        <span id="needs-generated-at">Updated just now</span>
+        <div style="display:grid;gap:4px;">
+          <span id="needs-generated-at">Updated just now</span>
+          <span id="needs-runtime-note">Needs You is live.</span>
+        </div>
       </div>
     </div>
 
@@ -28902,71 +28905,725 @@ async function loadApprovals() {{
   }} catch(e) {{ console.error('loadApprovals failed', e); }}
 }}
 
-async function loadNotificationCenter() {{
+let _needsRequestSerial = 0;
+let _needsDesktopState = null;
+
+function needsRuntimeNote(text) {{
+  _needsSetText('needs-runtime-note', text || 'Needs You is live.');
+}}
+
+function needsActorName() {{
+  return (typeof dailyBriefName === 'function' && dailyBriefName()) || 'Chris';
+}}
+
+function needsNormalizeApprovals(payload) {{
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.pending)) return payload.pending;
+  return [];
+}}
+
+function needsList(value) {{
+  return Array.isArray(value) ? value : [];
+}}
+
+function needsText(...values) {{
+  for (const value of values) {{
+    const text = String(value || '').trim();
+    if (text) return text;
+  }}
+  return '';
+}}
+
+function needsTitleCase(value) {{
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\\b\\w/g, (char) => char.toUpperCase())
+    .trim();
+}}
+
+function needsFallbackViewForRoute(route, domain = '', packet = '') {{
+  const direct = {{
+    '/supervision-snapshot': 'supervision',
+    '/approval-queue': 'approvals',
+    '/activity-center': 'activity',
+    '/command-center': 'chat',
+    '/briefing-center': 'overview',
+    '/chronicle-center': 'chronicle',
+    '/settings-center': 'settings',
+    '/health-center': 'health',
+    '/huddle-center': 'huddle',
+    '/mission-board': 'workshop',
+    '/progress-center': 'activity',
+    '/navigation-center': 'navigate',
+  }};
+  if (direct[route]) return direct[route];
+  const packetMap = {{
+    today: 'overview',
+    tasks: 'workshop',
+    inbox: 'email',
+    home: 'home',
+    approvals: 'approvals',
+    activity: 'activity',
+    command: 'chat',
+    navigation: 'navigate',
+    health: 'health',
+  }};
+  if (packetMap[packet]) return packetMap[packet];
+  const domainMap = {{
+    family: 'home',
+    home: 'home',
+    household: 'home',
+    executive: 'chat',
+    growth: 'workshop',
+    workshop: 'workshop',
+    content: 'publishing',
+    publishing: 'publishing',
+    finance: 'activity',
+    memory: 'chronicle',
+    health: 'health',
+    travel: 'navigate',
+  }};
+  return domainMap[String(domain || '').toLowerCase()] || '';
+}}
+
+function needsItemRoute(item) {{
+  const route = needsText(item.route, item.related_route, item.open, item.href);
+  return {{
+    route,
+    fallbackView: needsFallbackViewForRoute(route, item.domain, item.suggested_packet),
+  }};
+}}
+
+function needsMakeItem(base = {{}}) {{
+  const routeInfo = needsItemRoute(base);
+  return {{
+    sourceKind: base.sourceKind || 'need',
+    sourceLabel: base.sourceLabel || '',
+    id: base.id || '',
+    itemId: base.itemId || '',
+    requestId: base.requestId || '',
+    title: needsText(base.title, base.request, base.name, 'Need'),
+    detail: needsText(base.detail, base.summary, base.body, base.why_now, 'Attention required.'),
+    urgency: needsText(base.urgency, base.priority, base.priority_class, base.status, 'info'),
+    status: needsText(base.status, base.priority, 'open'),
+    timestamp: needsText(base.timestamp, base.updatedAt, base.createdAt),
+    meta: needsText(base.meta, base.ownerAgent, base.sourceLabel, base.sourceKind),
+    route: routeInfo.route,
+    routeLabel: needsText(base.routeLabel, base.actionHint, 'Open Context'),
+    fallbackView: base.fallbackView || routeInfo.fallbackView || '',
+    actionHint: needsText(base.actionHint, base.nextAction, base.recommendation),
+    whyNow: needsText(base.whyNow, base.detail),
+    sourceSummary: needsText(base.sourceSummary, base.meta, base.sourceLabel),
+    domain: needsText(base.domain),
+    ownerAgent: needsText(base.ownerAgent),
+    suggestedPacket: needsText(base.suggestedPacket),
+    availableActions: Array.isArray(base.availableActions) ? base.availableActions : [],
+    autoExecution: base.autoExecution || null,
+    threshold: base.threshold || null,
+    raw: base.raw || null,
+  }};
+}}
+
+function needsBuildCockpitItem(item) {{
+  return needsMakeItem({{
+    sourceKind: 'cockpit',
+    sourceLabel: needsList(item.sources).map(needsTitleCase).join(' · ') || 'Needs cockpit',
+    id: item.need_key || '',
+    title: item.title,
+    detail: item.detail,
+    urgency: item.urgency,
+    timestamp: item.generated_at || '',
+    meta: item.route_label || needsList(item.focus_targets).map(needsTitleCase).join(' · ') || 'Needs review',
+    route: item.route || '',
+    routeLabel: item.route_label || 'Open context',
+    actionHint: item.action_hint || '',
+    whyNow: item.detail || item.action_hint || '',
+    domain: needsList(item.sources)[0] || '',
+    raw: item,
+  }});
+}}
+
+function needsBuildOpenLoopItem(item) {{
+  const threshold = item.approval_threshold || null;
+  const status = String(item.status || '').trim().toLowerCase();
+  const urgency = status.includes('pending') || status.includes('blocked')
+    ? 'high'
+    : (item.needs_revisit ? 'medium' : 'low');
+  return needsMakeItem({{
+    sourceKind: 'open-loop',
+    sourceLabel: item.task_lane || item.domain || 'Open loop',
+    id: item.item_id || '',
+    itemId: item.item_id || '',
+    title: item.title,
+    detail: item.summary,
+    urgency,
+    status: item.status,
+    timestamp: item.next_review_at || item.timestamp || '',
+    meta: needsText(item.owner_agent, item.domain, item.task_lane),
+    route: '',
+    routeLabel: 'Open command board',
+    fallbackView: needsFallbackViewForRoute('', item.domain, item.suggested_packet),
+    actionHint: needsText(item.next_action, item.proactive_reason, threshold?.summary),
+    whyNow: needsText(item.why_this_surfaced_now, item.proactive_reason, threshold?.summary),
+    sourceSummary: needsText(item.owner_agent, item.task_lane, item.domain),
+    domain: item.domain,
+    ownerAgent: item.owner_agent,
+    suggestedPacket: item.suggested_packet,
+    availableActions: needsList(item.available_actions),
+    autoExecution: item.auto_execution || null,
+    threshold,
+    raw: item,
+  }});
+}}
+
+function needsBuildApprovalItem(item) {{
+  return needsMakeItem({{
+    sourceKind: 'approval',
+    sourceLabel: needsText(item.agent_label, item.requested_by, 'Approval'),
+    id: item.request_id || item.id || '',
+    requestId: item.request_id || item.id || '',
+    title: item.title,
+    detail: needsText(item.summary, item.detail, item.description),
+    urgency: needsText(item.priority, item.status, 'medium'),
+    status: item.status || 'pending',
+    timestamp: needsText(item.updated_at, item.created_at),
+    meta: needsText(item.agent_label, item.action_type, 'Approval'),
+    route: '/approval-queue',
+    routeLabel: 'Open approval queue',
+    fallbackView: 'approvals',
+    actionHint: needsText(item.summary, item.description, 'Prepared and waiting on you.'),
+    whyNow: needsText(item.description, item.summary),
+    sourceSummary: needsText(item.agent_label, item.action_type),
+    domain: item.domain || 'approvals',
+    raw: item,
+  }});
+}}
+
+function needsBuildNotificationItem(item) {{
+  return needsMakeItem({{
+    sourceKind: 'notification',
+    sourceLabel: needsText(item.packet, item.delivery_mode, 'Assistant inbox'),
+    id: item.notification_id || item.id || '',
+    title: item.title,
+    detail: needsText(item.detail, item.why_this_surfaced_now, item.delivery_policy_summary),
+    urgency: needsText(item.priority_class, item.status, 'info'),
+    status: item.status || 'unseen',
+    timestamp: needsText(item.updated_at, item.surfaced_at, item.created_at),
+    meta: needsText(item.domain, item.packet, item.delivery_mode),
+    route: '',
+    routeLabel: 'Open command board',
+    fallbackView: 'chat',
+    actionHint: needsText(item.why_this_surfaced_now, item.delivery_policy_summary),
+    whyNow: needsText(item.why_this_surfaced_now, item.why_this_surfaced, item.delivery_policy_summary),
+    sourceSummary: needsText(item.domain, item.packet),
+    domain: item.domain || '',
+    raw: item,
+  }});
+}}
+
+function needsBuildPresenceItem(item) {{
+  return needsMakeItem({{
+    sourceKind: 'presence',
+    sourceLabel: needsText(item.sourceLabel, item.domain, 'Presence'),
+    id: item.id || item.item_id || item.title || '',
+    title: item.title,
+    detail: item.detail,
+    urgency: item.urgency || 'info',
+    status: item.status || 'presence',
+    timestamp: item.timestamp || '',
+    meta: item.meta || item.when || item.sourceLabel || 'Be present',
+    route: item.route || '',
+    routeLabel: item.routeLabel || 'Be present',
+    fallbackView: item.fallbackView || 'home',
+    actionHint: item.actionHint || item.detail || '',
+    whyNow: item.detail || '',
+    domain: item.domain || '',
+    raw: item,
+  }});
+}}
+
+function needsDedup(items) {{
+  const seen = new Set();
+  return items.filter((item) => {{
+    const key = needsText(item.requestId, item.itemId, item.id, item.title + '::' + item.detail);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }});
+}}
+
+function needsActionButtonHtml(item, maxCount = 3) {{
+  if (!item) return '';
+  if (item.sourceKind === 'open-loop' && item.itemId) {{
+    return needsList(item.availableActions).slice(0, maxCount).map((action) => {{
+      const actionId = String(action?.id || action?.label || '').trim();
+      const actionLabel = String(action?.label || actionId || 'Act').trim() || 'Act';
+      return `<button class="${{commandActionButtonClass(actionId)}}"
+        onclick='needsApplyOpenLoopAction(${{JSON.stringify(item.itemId)}}, ${{JSON.stringify(item.domain || "")}}, ${{JSON.stringify(actionId)}}, ${{JSON.stringify(item.title || "Open loop")}})'>${{escHtml(actionLabel)}}</button>`;
+    }}).join('');
+  }}
+  if (item.sourceKind === 'approval' && item.requestId) {{
+    return [
+      `<button class="${{commandActionButtonClass('approve')}}" onclick='needsApplyApprovalAction(${{JSON.stringify(item.requestId)}}, "approve", ${{JSON.stringify(item.title || "Approval")}})'>Approve</button>`,
+      `<button class="${{commandActionButtonClass('reject')}}" onclick='needsApplyApprovalAction(${{JSON.stringify(item.requestId)}}, "reject", ${{JSON.stringify(item.title || "Approval")}})'>Reject</button>`,
+    ].join('');
+  }}
+  if (item.sourceKind === 'notification' && item.id) {{
+    return [
+      `<button class="${{commandActionButtonClass('open')}}" onclick='needsApplyNotificationAction(${{JSON.stringify(item.id)}}, "opened", ${{JSON.stringify(item.title || "Notification")}})'>Open</button>`,
+      `<button class="${{commandActionButtonClass('dismiss')}}" onclick='needsApplyNotificationAction(${{JSON.stringify(item.id)}}, "dismissed", ${{JSON.stringify(item.title || "Notification")}})'>Dismiss</button>`,
+    ].join('');
+  }}
+  if (item.route || item.fallbackView) {{
+    return `<button class="${{commandActionButtonClass(item.urgency)}}" onclick='needsOpenRouteAction(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.routeLabel || "Open Context")}}, ${{JSON.stringify(item.detail || item.actionHint || "")}}, ${{JSON.stringify(item.fallbackView || "")}})'>${{escHtml(item.routeLabel || 'Open Context')}}</button>`;
+  }}
+  return '';
+}}
+
+function needsOpenRouteAction(route, label, detail, fallbackView = '') {{
+  needsRuntimeNote(`Opening ${{label || 'linked surface'}}…`);
+  needsRecordAction({{
+    action: label || 'Open route',
+    title: label || 'Open route',
+    detail: detail || '',
+    why_now: 'Needs You opened a related operating surface from the authority board.',
+    result_summary: `Navigated to ${{route || fallbackView || 'linked surface'}}.`,
+    related_kind: 'needs-route',
+    related_label: label || route || fallbackView || 'Needs route',
+    route: route || '/command-center',
+    route_label: label || 'Open route',
+  }});
+  commandOpenCommandRoute(route || '', fallbackView || '');
+}}
+
+async function needsRecordAction(payload) {{
   try {{
-    const [notifRes, eventRes, focusRes, soundRes, visionRes, mediaRes, controlRes, approvalsRes, commandRes] = await Promise.all([
-      fetch('/api/apple/notifications'),
-      fetch('/api/apple/events/recent?limit=20'),
-      fetch('/api/apple/focus-state'),
-      fetch('/api/apple/sound-alerts'),
-      fetch('/api/apple/vision/scans'),
-      fetch('/api/apple/now-playing/state'),
-      fetch('/api/apple/control-plane/state'),
-      fetch('/api/approvals'),
-      fetch('/api/command-center'),
-    ]);
-    const payloads = await Promise.all([
-      notifRes.json(), eventRes.json(), focusRes.json(), soundRes.json(), visionRes.json(),
-      mediaRes.json(), controlRes.json(), approvalsRes.json(), commandRes.json(),
-    ]);
-    const [notifPayload, eventPayload, focusPayload, soundPayload, visionPayload, mediaPayload, controlPayload, approvalsPayload, commandPayload] = payloads;
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: needsActorName(),
+        domain: 'needs-you',
+        route: '/command-center',
+        route_label: 'Open Command',
+        ...payload,
+      }}),
+    }});
+  }} catch (_) {{}}
+}}
 
-    const notifications = ((notifPayload || {{}}).data || {{}}).notifications || [];
-    const events = ((eventPayload || {{}}).data || {{}}).events || [];
-    const focus = ((focusPayload || {{}}).data || {{}});
-    const sound = ((soundPayload || {{}}).data || {{}});
-    const vision = ((visionPayload || {{}}).data || {{}});
-    const media = ((mediaPayload || {{}}).data || {{}});
-    const control = ((controlPayload || {{}}).data || {{}});
-    const approvals = Array.isArray(approvalsPayload) ? approvalsPayload : [];
-    const command = commandPayload || {{}};
+async function needsApplyOpenLoopAction(itemId, domain, action, title) {{
+  needsRuntimeNote(`Applying ${{action}} to ${{title}}…`);
+  try {{
+    const response = await fetch('/api/open-loops/action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: needsActorName(),
+        domain,
+        item_id: itemId,
+        action,
+        item_title: title,
+        route: '/command-center',
+        route_label: 'Open Command',
+        activity_domain: 'needs-you',
+        why_now: 'Needs You moved a live open-loop item forward from the authority board.',
+        result_summary: `Needs You applied ${{action}} to ${{title}}.`,
+        related_kind: 'needs-open-loop',
+        related_label: title,
+      }}),
+    }});
+    const payload = await commandReadJson(response);
+    if (!response.ok) throw new Error(payload?.detail || `HTTP ${{response.status}}`);
+    if (typeof showToast === 'function') showToast(`${{title}}: ${{action}}`, 'success');
+    needsRuntimeNote(`Applied ${{action}} to ${{title}}.`);
+    await loadNotificationCenter(true);
+  }} catch (error) {{
+    needsRuntimeNote(`Open-loop action failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Open-loop action failed', 'error');
+  }}
+}}
+
+async function needsApplyApprovalAction(requestId, action, title) {{
+  needsRuntimeNote(`${{action}} ${{title}}…`);
+  try {{
+    const payload = action === 'approve'
+      ? {{ approved_by: 'chris' }}
+      : {{ rejected_by: 'chris', reason: 'Rejected from Needs You.' }};
+    const response = await fetch(`/api/approvals/${{encodeURIComponent(requestId)}}/${{action}}`, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify(payload),
+    }});
+    const result = await commandReadJson(response);
+    if (!response.ok) throw new Error(result?.detail || `HTTP ${{response.status}}`);
+    await needsRecordAction({{
+      action: `${{action.replace(/-/g, ' ')}} approval`,
+      title,
+      detail: `Needs You ${{action.replace(/-/g, ' ')}} for ${{title}}.`,
+      why_now: 'Needs You resolved a live approval gate.',
+      result_summary: `Approval action completed: ${{action}}.`,
+      related_kind: 'approval',
+      related_label: title,
+    }});
+    if (typeof showToast === 'function') showToast(`${{title}} ${{action}}d`, action === 'approve' ? 'success' : 'info');
+    needsRuntimeNote(`${{title}} ${{action}}d successfully.`);
+    await loadNotificationCenter(true);
+  }} catch (error) {{
+    needsRuntimeNote(`Approval action failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Approval action failed', 'error');
+  }}
+}}
+
+async function needsApplyNotificationAction(notificationId, status, title) {{
+  needsRuntimeNote(`${{needsTitleCase(status)}} ${{title}}…`);
+  try {{
+    const response = await fetch(`/api/assistant-core/notifications/${{encodeURIComponent(notificationId)}}`, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: needsActorName(),
+        status,
+      }}),
+    }});
+    const result = await commandReadJson(response);
+    if (!response.ok) throw new Error(result?.detail || `HTTP ${{response.status}}`);
+    await needsRecordAction({{
+      action: needsTitleCase(status),
+      title,
+      detail: `Needs You marked "${{title}}" as ${{status}}.`,
+      why_now: 'Needs You updated the assistant notification state from the authority board.',
+      result_summary: `Assistant notification updated: ${{status}}.`,
+      related_kind: 'assistant-notification',
+      related_label: title,
+    }});
+    if (typeof showToast === 'function') showToast(`${{title}} updated`, 'success');
+    needsRuntimeNote(`${{title}} marked ${{status}}.`);
+    await loadNotificationCenter(true);
+  }} catch (error) {{
+    needsRuntimeNote(`Notification action failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Notification action failed', 'error');
+  }}
+}}
+
+function needsDecisionMode(mode) {{
+  const state = _needsDesktopState || {{}};
+  const lead = state.leadNeed || null;
+  const firstPresence = needsList(state.presenceItems)[0] || null;
+  const firstApproval = needsList(state.approvalItems)[0] || null;
+  const firstOpenLoop = needsList(state.approvalItems).find((item) => item.sourceKind === 'open-loop') || needsList(state.immediateItems).find((item) => item.sourceKind === 'open-loop') || null;
+  switch (String(mode || '').toLowerCase()) {{
+    case 'approve':
+      if (firstApproval?.sourceKind === 'approval' && firstApproval.requestId) {{
+        needsApplyApprovalAction(firstApproval.requestId, 'approve', firstApproval.title || 'Approval');
+        return;
+      }}
+      if (firstOpenLoop?.availableActions?.some((item) => String(item?.id || '').toLowerCase() === 'approve')) {{
+        needsApplyOpenLoopAction(firstOpenLoop.itemId, firstOpenLoop.domain || '', 'approve', firstOpenLoop.title || 'Open loop');
+        return;
+      }}
+      break;
+    case 'reject':
+      if (firstApproval?.sourceKind === 'approval' && firstApproval.requestId) {{
+        needsApplyApprovalAction(firstApproval.requestId, 'reject', firstApproval.title || 'Approval');
+        return;
+      }}
+      if (firstOpenLoop?.availableActions?.some((item) => String(item?.id || '').toLowerCase() === 'reject')) {{
+        needsApplyOpenLoopAction(firstOpenLoop.itemId, firstOpenLoop.domain || '', 'reject', firstOpenLoop.title || 'Open loop');
+        return;
+      }}
+      break;
+    case 'choose':
+      if (lead) {{
+        needsOpenRouteAction(lead.route || '', lead.routeLabel || 'Open context', lead.detail || lead.actionHint || '', lead.fallbackView || 'chat');
+        return;
+      }}
+      break;
+    case 'clarify':
+      commandQuickAction(`Clarify the top Needs You thread for ${{needsActorName()}} and tell me the best next move.`);
+      needsRuntimeNote('Opening a clarification thread in Command…');
+      return;
+    case 'escalate':
+      needsOpenRouteAction('/supervision-snapshot', 'Open supervision', 'Escalate this thread for a fuller authority and recovery review.', 'supervision');
+      return;
+    case 'be present':
+      if (firstPresence) {{
+        needsOpenRouteAction(firstPresence.route || '', firstPresence.routeLabel || 'Be present', firstPresence.detail || '', firstPresence.fallbackView || 'home');
+        return;
+      }}
+      break;
+    case 'protect':
+      needsOpenRouteAction('', 'Protect the calendar', 'Open the calendar to protect the right block before the day fragments.', 'calendar');
+      return;
+    case 'pause':
+      if (firstOpenLoop) {{
+        const deferAction = needsList(firstOpenLoop.availableActions).find((item) => String(item?.id || '').startsWith('defer-'));
+        if (deferAction) {{
+          needsApplyOpenLoopAction(firstOpenLoop.itemId, firstOpenLoop.domain || '', String(deferAction.id), firstOpenLoop.title || 'Open loop');
+          return;
+        }}
+      }}
+      break;
+    case 'intervene':
+      commandQuickAction(`Intervene on the highest authority item in Needs You and tell me what should happen now.`);
+      needsRuntimeNote('Opening intervention thread in Command…');
+      return;
+  }}
+  needsRuntimeNote(`No direct ${{mode}} action is available on the current lead item, so JARVIS is keeping the context visible.`);
+  if (typeof showToast === 'function') showToast(`No direct ${{mode}} action is available right now.`, 'info');
+}}
+
+function refreshNotificationCenter() {{
+  return loadNotificationCenter(true);
+}}
+
+function needsOptimizeTiming() {{
+  const state = _needsDesktopState || {{}};
+  const lead = state.leadNeed || null;
+  if (lead?.actionHint) {{
+    needsRuntimeNote(`Timing recommendation: ${{lead.actionHint}}`);
+  }} else {{
+    needsRuntimeNote('Opening Calendar to protect the next clean decision window…');
+  }}
+  needsOpenRouteAction('', 'Open Calendar', lead?.actionHint || 'Use Calendar to protect the right decision window.', 'calendar');
+}}
+
+async function loadNotificationCenter(forceLive = false) {{
+  const requestSerial = ++_needsRequestSerial;
+  needsRuntimeNote(forceLive ? 'Refreshing live authority surfaces…' : 'Loading Needs You surface…');
+  const actor = needsActorName();
+  try {{
+    const [
+      commandResult,
+      notificationsResult,
+      openLoopsResult,
+      approvalsResult,
+      activityResult,
+      homeResult,
+      devicesResult,
+      focusResult,
+      soundResult,
+      visionResult,
+      controlResult,
+    ] = await Promise.all([
+      commandFetchJson('/api/command-center'),
+      commandFetchJson(`/api/assistant-core/notifications?actor=${{encodeURIComponent(actor)}}&limit=12`),
+      commandFetchJson(`/api/open-loops?actor=${{encodeURIComponent(actor)}}&limit=12`),
+      commandFetchJson('/api/approvals'),
+      commandFetchJson('/api/activity/module'),
+      commandFetchJson('/api/home/dashboard'),
+      commandFetchJson('/api/connected-devices'),
+      commandFetchJson('/api/apple/focus-state'),
+      commandFetchJson('/api/apple/sound-alerts'),
+      commandFetchJson('/api/apple/vision/scans'),
+      commandFetchJson('/api/apple/control-plane/state'),
+    ]);
+    if (requestSerial !== _needsRequestSerial) return;
+
+    const command = commandResult.payload || {{}};
+    const notificationsPayload = notificationsResult.payload || {{}};
+    const openLoopsPayload = openLoopsResult.payload || {{}};
+    const approvalsPayload = approvalsResult.payload || [];
+    const activity = activityResult.payload || {{}};
+    const home = homeResult.payload || {{}};
+    const devices = devicesResult.payload || {{}};
+    const focus = (focusResult.payload || {{}}).data || {{}};
+    const sound = (soundResult.payload || {{}}).data || {{}};
+    const vision = (visionResult.payload || {{}}).data || {{}};
+    const control = (controlResult.payload || {{}}).data || {{}};
+
     const cockpit = command.needs_cockpit || {{}};
-    const cockpitItems = Array.isArray(cockpit.items) ? cockpit.items : [];
-    const motion = (command.needs_motion && Array.isArray(command.needs_motion.entries)) ? command.needs_motion.entries : [];
-    const whatNeedsMe = Array.isArray(command.what_needs_me) ? command.what_needs_me : [];
-    const freshness = Array.isArray((control || {{}}).freshness) ? control.freshness : [];
-    const summary = ((notifPayload || {{}}).data || {{}}).summary || {{}};
-    const routing = ((notifPayload || {{}}).data || {{}}).routing || {{}};
-    const eventSummary = ((notifPayload || {{}}).data || {{}}).event_summary || {{}};
-    const leadNeed = cockpitItems[0] || notifications[0] || motion[0] || events[0] || null;
-    const presenceEvents = events.filter(item => String(item.domain || '').toLowerCase() === 'home').slice(0, 3);
-    const escalationItems = [
-      ...cockpitItems.filter(item => ['critical', 'high'].includes(String(item.urgency || '').toLowerCase())),
-      ...((sound.attention_flags || []).map(item => ({{
-        title: item.title,
-        detail: item.detail,
-        urgency: item.severity || 'medium',
-        source: 'sound',
-      }}))),
-      ...((vision.attention_flags || []).map(item => ({{
-        title: item.title,
-        detail: item.detail,
-        urgency: item.severity || 'medium',
-        source: 'vision',
-      }}))),
-    ].slice(0, 4);
-    const approvalList = approvals.length ? approvals : cockpitItems.filter(item => String(item.sources || []).includes('supervision')).slice(0, 4);
+    const motion = needsList(command.needs_motion?.entries);
+    const whatNeedsMe = needsList(command.what_needs_me);
+    const activityFeed = needsList(activity.activity_feed).length ? needsList(activity.activity_feed) : needsList(command.activity_feed);
+    const notifications = needsList(notificationsPayload.items).map(needsBuildNotificationItem);
+    const approvals = needsNormalizeApprovals(approvalsPayload).map(needsBuildApprovalItem);
+    const openLoopItems = needsList(openLoopsPayload.items).map(needsBuildOpenLoopItem);
+    const proactiveLoops = needsList(openLoopsPayload.proactive_surface).map(needsBuildOpenLoopItem);
+    const cockpitItems = needsList(cockpit.items).map(needsBuildCockpitItem);
+    const needsReview = whatNeedsMe.map((item) => needsMakeItem({{
+      sourceKind: 'review',
+      sourceLabel: item.kind || 'Needs review',
+      id: item.title || '',
+      title: item.title,
+      detail: item.detail,
+      urgency: item.kind === 'integration' ? 'critical' : 'high',
+      status: 'needs-review',
+      route: item.kind === 'integration' ? '/supervision-snapshot' : '/chronicle-center',
+      routeLabel: item.kind === 'integration' ? 'Open supervision' : 'Open legacy',
+      fallbackView: item.kind === 'integration' ? 'supervision' : 'chronicle',
+      actionHint: item.kind === 'integration' ? 'Inspect the failing integration and decide whether to recover or defer.' : 'Review the pending memory thread with full context.',
+      whyNow: item.detail,
+      domain: item.kind || '',
+      raw: item,
+    }}));
+    const availabilityNotes = [];
+    if (!commandResult.ok) availabilityNotes.push(`Command substrate unavailable: ${{commandResult.payload?.detail || commandResult.error?.message || 'service not reachable'}}`);
+    if (!openLoopsResult.ok) availabilityNotes.push(`Open loops unavailable: ${{openLoopsResult.payload?.detail || openLoopsResult.error?.message || 'service not reachable'}}`);
+    if (!notificationsResult.ok) availabilityNotes.push(`Assistant notifications unavailable: ${{notificationsResult.payload?.detail || notificationsResult.error?.message || 'service not reachable'}}`);
+    if (!approvalsResult.ok) availabilityNotes.push(`Approvals unavailable: ${{approvalsResult.payload?.detail || approvalsResult.error?.message || 'service not reachable'}}`);
+    if (!homeResult.ok) availabilityNotes.push(`Home dashboard unavailable: ${{homeResult.payload?.detail || homeResult.error?.message || 'service not reachable'}}`);
 
-    const decisionsCount = cockpitItems.filter(item => ['critical', 'high'].includes(String(item.urgency || '').toLowerCase())).length || notifications.length;
-    const presenceCount = presenceEvents.length;
+    const onlineDevices = needsList(devices.devices);
+    const devicePresence = onlineDevices
+      .filter((item) => !!item.owner_display_name)
+      .slice(0, 4)
+      .map((item) => needsBuildPresenceItem({{
+        id: item.device_id,
+        title: item.owner_display_name,
+        detail: item.room ? `Active near ${{item.room}}.` : (item.label ? `Active on ${{item.label}}.` : 'Connected right now.'),
+        urgency: 'low',
+        status: item.posture || 'online',
+        timestamp: item.last_seen_at || '',
+        meta: item.label || 'Connected device',
+        route: '',
+        routeLabel: 'Open Home',
+        fallbackView: 'home',
+        domain: 'home',
+      }}));
+    const loopPresence = needsDedup([
+      ...proactiveLoops.filter((item) => ['family', 'home', 'household'].includes(String(item.domain || '').toLowerCase())),
+      ...openLoopItems.filter((item) => ['family', 'home', 'household'].includes(String(item.domain || '').toLowerCase())),
+    ]).slice(0, 3).map((item) => needsBuildPresenceItem({{
+      id: item.itemId || item.id,
+      title: item.title,
+      detail: item.detail,
+      urgency: item.urgency,
+      status: item.status,
+      timestamp: item.timestamp,
+      meta: item.ownerAgent || item.meta || 'Presence lane',
+      route: '',
+      routeLabel: 'Open Home',
+      fallbackView: 'home',
+      actionHint: item.actionHint,
+      domain: item.domain,
+    }}));
+    const calendarPresence = needsList(home.calendar?.upcoming_3_days).slice(0, 3).map((item) => needsBuildPresenceItem({{
+      id: item.id || item.title,
+      title: item.title || 'Upcoming calendar moment',
+      detail: needsText(item.location, item.category, 'A scheduled moment is approaching.'),
+      urgency: item.is_today ? 'high' : 'medium',
+      status: item.is_today ? 'today' : 'scheduled',
+      timestamp: item.start_time || '',
+      meta: item.start_time ? dailyBriefFormatDayTime(item.start_time) : 'Scheduled',
+      route: '',
+      routeLabel: 'Open Calendar',
+      fallbackView: 'calendar',
+      actionHint: item.is_today ? 'Protect this moment and arrive present.' : 'Review this before the day shifts.',
+      domain: 'calendar',
+    }}));
+    const presenceItems = needsDedup([...loopPresence, ...calendarPresence, ...devicePresence]).slice(0, 4);
+
+    const approvalLikeLoops = needsDedup(openLoopItems.filter((item) => needsList(item.availableActions).length)).slice(0, 4);
+    const approvalItems = needsDedup([...approvals, ...approvalLikeLoops]).slice(0, 4);
+    const immediateItems = needsDedup([
+      ...approvals,
+      ...openLoopItems.filter((item) => ['high', 'critical'].includes(needsTone(item.urgency)) || ['pending-approval', 'staged', 'blocked'].includes(String(item.status || '').toLowerCase())),
+      ...cockpitItems.filter((item) => ['critical', 'high'].includes(String(item.urgency || '').toLowerCase())),
+      ...needsReview,
+      ...notifications,
+    ]).slice(0, 5);
+    const leadNeed = immediateItems[0] || needsReview[0] || cockpitItems[0] || proactiveLoops[0] || notifications[0] || null;
+
+    const rosterItems = needsList(command.agent_ops_roster?.items);
+    const escalationItems = needsDedup([
+      ...cockpitItems.filter((item) => ['critical', 'high'].includes(String(item.urgency || '').toLowerCase())),
+      ...rosterItems.filter((item) => ['blocked', 'attention'].includes(String(item.status || '').toLowerCase())).slice(0, 3).map((item) => needsMakeItem({{
+        sourceKind: 'agent',
+        sourceLabel: 'Agent supervision',
+        id: item.agent_id || item.name,
+        title: item.name || item.agent_id || 'Blocked agent',
+        detail: item.attention_reason || item.purpose || 'Agent attention required.',
+        urgency: item.status === 'blocked' ? 'high' : 'medium',
+        status: item.status || 'blocked',
+        meta: item.assignment || item.domain || 'Agent lane',
+        route: '/supervision-snapshot',
+        routeLabel: 'Open supervision',
+        fallbackView: 'supervision',
+        actionHint: 'Inspect the blocked agent and recovery boundary before more work piles behind it.',
+        whyNow: item.attention_reason || item.purpose || '',
+        domain: item.domain || '',
+      }})),
+      ...needsList(sound.attention_flags).map((item) => needsMakeItem({{
+        sourceKind: 'sound',
+        sourceLabel: 'Sound alert',
+        id: item.id || item.title,
+        title: item.title,
+        detail: item.detail,
+        urgency: item.severity || 'medium',
+        status: item.status || 'sound',
+        meta: 'Sound lane',
+        route: '',
+        routeLabel: 'Open Home',
+        fallbackView: 'home',
+        actionHint: item.detail,
+        whyNow: item.detail,
+        domain: 'home',
+      }})),
+      ...needsList(vision.attention_flags).map((item) => needsMakeItem({{
+        sourceKind: 'vision',
+        sourceLabel: 'Vision alert',
+        id: item.id || item.title,
+        title: item.title,
+        detail: item.detail,
+        urgency: item.severity || 'medium',
+        status: item.status || 'vision',
+        meta: 'Vision lane',
+        route: '',
+        routeLabel: 'Open Vision',
+        fallbackView: 'vision',
+        actionHint: item.detail,
+        whyNow: item.detail,
+        domain: 'vision',
+      }})),
+    ]).slice(0, 5);
+
+    const state = {{
+      actor,
+      command,
+      cockpit,
+      motion,
+      focus,
+      sound,
+      vision,
+      control,
+      home,
+      activity,
+      activityFeed,
+      notifications,
+      notificationSummary: notificationsPayload.summary || {{}},
+      openLoops: openLoopsPayload,
+      openLoopItems,
+      proactiveLoops,
+      approvals,
+      approvalItems,
+      needsReview,
+      presenceItems,
+      immediateItems,
+      leadNeed,
+      escalationItems,
+      availabilityNotes,
+      generatedAt: command.generated_at || notificationsPayload.generated_at || openLoopsPayload.generated_at || new Date().toISOString(),
+    }};
+    _needsDesktopState = state;
+
+    const totalCount = Math.max(
+      Number(cockpit.total || 0),
+      immediateItems.length + escalationItems.length + approvalItems.length,
+      Number((openLoopsPayload.summary || {{}}).total || 0),
+      Number((notificationsPayload.summary || {{}}).total || 0)
+    );
+    const decisionsCount = needsDedup([...needsReview, ...approvalItems, ...cockpitItems.filter((item) => ['high', 'critical'].includes(String(item.urgency || '').toLowerCase()))]).length;
+    const presenceCount = presenceItems.length;
     const escalationCount = escalationItems.length;
-    const approvalCount = approvals.length || Number(cockpit.approval_count || 0);
-    const waitingCount = motion.filter(item => String(item.kind || '') === 'active').length;
-    const totalCount = cockpit.total || notifications.length + escalationCount + approvalCount;
+    const approvalCount = approvalItems.length;
+    const waitingCount = Number((openLoopsPayload.summary || {{}}).waiting_on_you || 0);
 
-    _needsSetText('needs-generated-at', `Updated ${{needsRelativeTime(command.generated_at || summary.last_updated_at || new Date().toISOString())}}`);
+    _needsSetText('needs-generated-at', `Updated ${{needsRelativeTime(state.generatedAt)}}`);
     _needsSetText('needs-stat-total', String(totalCount));
-    _needsSetText('needs-stat-total-sub', `${{Math.max(0, totalCount - 1)}} vs visible lanes`);
+    _needsSetText('needs-stat-total-sub', `${{Math.max(0, waitingCount)}} waiting on you`);
     _needsSetText('needs-stat-decisions', String(decisionsCount));
     _needsSetText('needs-stat-decisions-sub', leadNeed ? 'High authority' : 'No major decisions');
     _needsSetText('needs-stat-presence', String(presenceCount));
@@ -28978,22 +29635,38 @@ async function loadNotificationCenter() {{
     _needsSetText('needs-stat-waiting', String(waitingCount));
     _needsSetText('needs-stat-waiting-sub', waitingCount ? 'Blocked without you' : 'Moving without you');
 
-    renderNeedsSidebar(cockpit, presenceCount, freshness, focus);
-    renderNeedsImmediate(cockpitItems, notifications);
-    renderNeedsLead(leadNeed, focus, routing);
-    renderNeedsPresence(presenceEvents, routing, events);
-    renderNeedsEscalations(escalationItems);
-    renderNeedsApprovals(approvalList, notifications);
-    renderNeedsContext(leadNeed, whatNeedsMe, command, focus, media);
-    renderNeedsAuthority(cockpit, notifications, approvals, routing);
-    renderNeedsModes();
-    renderNeedsTiming(focus, freshness, leadNeed, routing);
-    renderNeedsImpact(leadNeed, routing, motion);
-    renderNeedsOutcomes(notifications, events, control);
-    renderNeedsCoaching(leadNeed, focus, sound, vision);
-    renderNeedsFooter();
+    renderNeedsSidebar(state);
+    renderNeedsImmediate(state);
+    renderNeedsLead(state);
+    renderNeedsPresence(state);
+    renderNeedsEscalations(state);
+    renderNeedsApprovals(state);
+    renderNeedsContext(state);
+    renderNeedsAuthority(state);
+    renderNeedsModes(state);
+    renderNeedsTiming(state);
+    renderNeedsImpact(state);
+    renderNeedsOutcomes(state);
+    renderNeedsCoaching(state);
+    renderNeedsFooter(state);
+    needsRuntimeNote(state.availabilityNotes.length ? state.availabilityNotes.join(' • ') : 'Needs You is live and connected.');
+    syncDesktopCardSequence('notifications');
   }} catch (e) {{
-    ['needs-immediate-list','needs-presence-list','needs-escalations-list','needs-approvals-list','needs-outcome-list'].forEach(id => {{
+    needsRuntimeNote(`Needs You unavailable: ${{String(e)}}`);
+    [
+      'needs-immediate-list',
+      'needs-presence-list',
+      'needs-escalations-list',
+      'needs-approvals-list',
+      'needs-outcome-list',
+      'needs-context-summary',
+      'needs-authority-list',
+      'needs-modes-grid',
+      'needs-timing-grid',
+      'needs-impact-grid',
+      'needs-coaching-list',
+      'needs-footer-strip',
+    ].forEach((id) => {{
       const el = document.getElementById(id);
       if (el) el.innerHTML = `<div class="needs-empty">Could not load Needs You surface: ${{escHtml(String(e))}}</div>`;
     }});
@@ -29060,14 +29733,19 @@ function renderNeedsItem(item, options = {{}}) {{
     </div>`;
 }}
 
-function renderNeedsSidebar(cockpit, presenceCount, freshness, focus) {{
+function renderNeedsSidebar(state) {{
   const el = document.getElementById('needs-sidebar-list');
   if (!el) return;
-  const activeFresh = freshness.filter(item => String(item.status || '').toLowerCase() === 'fresh').length;
-  const stale = freshness.filter(item => String(item.status || '').toLowerCase() === 'stale').length;
+  const cockpit = state.cockpit || {{}};
+  const controlFreshness = needsList(state.control?.freshness);
+  const presenceCount = needsList(state.presenceItems).length;
+  const focus = state.focus || {{}};
+  const openSummary = state.openLoops?.summary || {{}};
+  const activeFresh = controlFreshness.filter(item => String(item.status || '').toLowerCase() === 'fresh').length;
+  const stale = controlFreshness.filter(item => String(item.status || '').toLowerCase() === 'stale').length;
   const items = [
     ['Waiting Now', cockpit.critical_count || 0, 'Immediate threshold'],
-    ['Due Today', cockpit.high_count || 0, 'High authority items'],
+    ['Due Today', openSummary.waiting_on_you || cockpit.high_count || 0, 'High authority items'],
     ['Presence', presenceCount || 0, 'Moments needing you'],
     ['Fresh Sources', activeFresh, 'Synced now'],
     ['Stale Sources', stale, 'May need recovery'],
@@ -29080,36 +29758,35 @@ function renderNeedsSidebar(cockpit, presenceCount, freshness, focus) {{
     </div>`).join('');
 }}
 
-function renderNeedsImmediate(cockpitItems, notifications) {{
+function renderNeedsImmediate(state) {{
   const el = document.getElementById('needs-immediate-list');
   if (!el) return;
-  const items = cockpitItems.length ? cockpitItems.slice(0, 4) : notifications.slice(0, 4);
+  const items = needsList(state.immediateItems).slice(0, 4);
   if (!items.length) {{
     el.innerHTML = '<div class="needs-empty">No immediate needs right now.</div>';
     return;
   }}
   el.innerHTML = items.map(item => renderNeedsItem(item, {{
-    meta: item.route_label || item.category || 'Today',
+    meta: item.meta || item.routeLabel || 'Today',
+    actionHtml: needsActionButtonHtml(item, 2),
   }})).join('');
 }}
 
-function renderNeedsLead(leadNeed, focus, routing) {{
+function renderNeedsLead(state) {{
   const el = document.getElementById('needs-lead-card');
   if (!el) return;
+  const leadNeed = state.leadNeed;
+  const focus = state.focus || {{}};
   if (!leadNeed) {{
     el.innerHTML = '<div class="needs-empty">No lead decision at the moment.</div>';
     return;
   }}
-  const title = leadNeed.title || leadNeed.request || leadNeed.name || 'Attention needed';
-  const detail = leadNeed.detail || leadNeed.body || leadNeed.why_now || 'JARVIS prepared the context.';
-  const next = leadNeed.action_hint || (routing.reason || 'JARVIS will keep this visible until you act.');
+  const title = leadNeed.title || 'Attention needed';
+  const detail = leadNeed.detail || 'JARVIS prepared the context.';
+  const next = leadNeed.actionHint || 'JARVIS will keep this visible until you act.';
   const route = leadNeed.route || '';
-  const routeLabel = leadNeed.route_label || 'Open Full Context';
-  const actions = Array.isArray(leadNeed.available_actions) ? leadNeed.available_actions : [];
-  const primaryActions = actions.filter(a => a && a !== 'open').slice(0, 3).map(action => {{
-    const label = String(action).replaceAll('_',' ').replace(/\\b\\w/g, c => c.toUpperCase());
-    return `<button onclick="notificationAction('${{String(leadNeed.id || '').replaceAll(\"'\", \"\\\\'\")}}','${{String(action).replaceAll(\"'\", \"\\\\'\")}}')">${{escHtml(label)}}</button>`;
-  }}).join('');
+  const routeLabel = leadNeed.routeLabel || 'Open Full Context';
+  const primaryActions = needsActionButtonHtml(leadNeed, 3);
   el.innerHTML = `
     <strong>${{escHtml(title)}}</strong>
     <span>${{escHtml(detail)}}</span>
@@ -29117,74 +29794,83 @@ function renderNeedsLead(leadNeed, focus, routing) {{
       <div class="needs-context-col">
         <h4>Why this requires you</h4>
         <div class="needs-bullet-list">
-          <div>${{escHtml(leadNeed.why_now || focus.summary?.detail || 'This crosses your authority boundary.')}}</div>
-          <div>${{escHtml(leadNeed.action_hint || 'JARVIS has already narrowed the choice.')}}</div>
-          <div>${{escHtml((leadNeed.sources || []).join(', ') || 'Prepared from live signals and supervision context.')}}</div>
+          <div>${{escHtml(leadNeed.whyNow || focus.summary?.detail || 'This crosses your authority boundary.')}}</div>
+          <div>${{escHtml(leadNeed.actionHint || 'JARVIS has already narrowed the choice.')}}</div>
+          <div>${{escHtml(leadNeed.sourceLabel || 'Prepared from live signals and supervision context.')}}</div>
         </div>
       </div>
       <div class="needs-context-col">
         <h4>What happens next</h4>
         <div class="needs-bullet-list">
           <div>${{escHtml(next)}}</div>
-          <div>${{escHtml(route ? `${{routeLabel}} follows.` : 'The lane keeps moving once you decide.')}}</div>
+          <div>${{escHtml(route || leadNeed.fallbackView ? `${{routeLabel}} follows.` : 'The lane keeps moving once you decide.')}}</div>
           <div>${{escHtml(leadNeed.urgency ? `Urgency: ${{leadNeed.urgency}}` : 'JARVIS will hold this visibly until you act.')}}</div>
         </div>
       </div>
     </div>
     <div class="needs-actions">
       ${{primaryActions || ''}}
-      ${{route ? `<button onclick="window.location.href='${{escHtml(route)}}'">${{escHtml(routeLabel)}}</button>` : ''}}
+      ${{route || leadNeed.fallbackView ? `<button onclick='needsOpenRouteAction(${{JSON.stringify(route)}}, ${{JSON.stringify(routeLabel)}}, ${{JSON.stringify(detail)}}, ${{JSON.stringify(leadNeed.fallbackView || "")}})'>${{escHtml(routeLabel)}}</button>` : ''}}
     </div>`;
 }}
 
-function renderNeedsPresence(presenceEvents, routing, events) {{
+function renderNeedsPresence(state) {{
   const el = document.getElementById('needs-presence-list');
   if (!el) return;
-  const items = presenceEvents.length ? presenceEvents : events.filter(item => String(item.domain || '').toLowerCase() === 'calendar').slice(0, 3);
+  const items = needsList(state.presenceItems).slice(0, 3);
   if (!items.length) {{
     el.innerHTML = '<div class="needs-empty">No current presence requests.</div>';
     return;
   }}
   el.innerHTML = items.map(item => renderNeedsItem(item, {{
-    meta: item.ts ? fmtLocalTime(item.ts, {{short:true}}) : (routing.label || 'Be present'),
+    meta: item.meta || 'Be present',
+    actionHtml: needsActionButtonHtml(item, 1),
   }})).join('');
 }}
 
-function renderNeedsEscalations(items) {{
+function renderNeedsEscalations(state) {{
   const el = document.getElementById('needs-escalations-list');
   if (!el) return;
+  const items = needsList(state.escalationItems).slice(0, 4);
   if (!items.length) {{
     el.innerHTML = '<div class="needs-empty">No escalations have crossed threshold.</div>';
     return;
   }}
   el.innerHTML = items.map(item => renderNeedsItem(item, {{
-    meta: item.source || item.route_label || 'Escalated',
+    meta: item.meta || item.sourceLabel || 'Escalated',
+    actionHtml: needsActionButtonHtml(item, 1),
   }})).join('');
 }}
 
-function renderNeedsApprovals(items, notifications) {{
+function renderNeedsApprovals(state) {{
   const el = document.getElementById('needs-approvals-list');
   if (!el) return;
-  const source = items.length ? items : notifications.slice(0, 4);
+  const source = needsList(state.approvalItems).length ? needsList(state.approvalItems).slice(0, 4) : needsList(state.notifications).slice(0, 4);
   if (!source.length) {{
     el.innerHTML = '<div class="needs-empty">No approvals waiting right now.</div>';
     return;
   }}
   el.innerHTML = source.map(item => renderNeedsItem(item, {{
-    meta: item.updated_at ? needsRelativeTime(item.updated_at) : (item.route_label || 'Ready'),
+    meta: item.timestamp ? needsRelativeTime(item.timestamp) : (item.routeLabel || 'Ready'),
+    actionHtml: needsActionButtonHtml(item, 2),
   }})).join('');
 }}
 
-function renderNeedsContext(leadNeed, whatNeedsMe, command, focus, media) {{
+function renderNeedsContext(state) {{
   const summaryEl = document.getElementById('needs-context-summary');
   const threadsEl = document.getElementById('needs-related-threads');
   const agentsEl = document.getElementById('needs-relevant-agents');
+  const leadNeed = state.leadNeed;
+  const whatNeedsMe = needsList(state.needsReview);
+  const command = state.command || {{}};
+  const focus = state.focus || {{}};
+  const openSummary = state.openLoops?.summary || {{}};
   if (summaryEl) {{
     const cards = [
       ['Key Impact', leadNeed?.urgency || 'Normal', leadNeed?.detail || 'No immediate consequence detected.'],
-      ['Time Sensitivity', leadNeed ? 'Today' : 'Stable', focus.summary?.detail || 'JARVIS is holding this in the right lane.'],
+      ['Time Sensitivity', leadNeed?.timestamp ? needsRelativeTime(leadNeed.timestamp) : (leadNeed ? 'Today' : 'Stable'), focus.summary?.detail || 'JARVIS is holding this in the right lane.'],
       ['Confidence', `${{Math.max(82, 92 - (whatNeedsMe.length * 2))}}%`, 'JARVIS analysis confidence'],
-      ['Recommendation', leadNeed?.action_hint || 'Review context', media.summary?.label || 'Prepared with routing context'],
+      ['Recommendation', leadNeed?.actionHint || 'Review context', `Waiting ${{openSummary.waiting_on_you || 0}} · revisit ${{openSummary.needs_revisit || 0}}`],
     ];
     summaryEl.innerHTML = cards.map(([title, value, copy]) => `
       <div class="needs-summary-card">
@@ -29195,34 +29881,37 @@ function renderNeedsContext(leadNeed, whatNeedsMe, command, focus, media) {{
   }}
   if (threadsEl) {{
     const rows = (whatNeedsMe.slice(0, 4).map(item => `${{item.title}} — ${{item.detail}}`)).concat(
-      ((command.activity_feed || []).slice(0, 2).map(item => `${{item.title}} — ${{item.subtitle || item.actor || ''}}`))
+      (needsList(state.activityFeed).slice(0, 2).map(item => `${{item.title}} — ${{item.subtitle || item.actor || item.result || ''}}`))
     ).slice(0, 4);
     threadsEl.innerHTML = rows.length ? rows.map(text => `<div>${{escHtml(text)}}</div>`).join('') : '<div>No related threads yet.</div>';
   }}
   if (agentsEl) {{
     const rows = [
-      leadNeed?.source_summary || 'JARVIS orchestration',
+      leadNeed?.sourceSummary || 'JARVIS orchestration',
       focus.summary?.label || 'Focus posture',
-      media.title ? `Media context: ${{media.title}}` : 'Media context idle',
+      leadNeed?.ownerAgent ? `Owner agent: ${{leadNeed.ownerAgent}}` : 'Media context idle',
       (command.branch && command.head) ? `Runtime: ${{command.branch}} @ ${{command.head}}` : 'Runtime continuity ready',
     ].filter(Boolean).slice(0, 4);
     agentsEl.innerHTML = rows.map(text => `<div>${{escHtml(text)}}</div>`).join('');
   }}
 }}
 
-function renderNeedsAuthority(cockpit, notifications, approvals, routing) {{
+function renderNeedsAuthority(state) {{
   const scoreEl = document.getElementById('needs-authority-score');
   const listEl = document.getElementById('needs-authority-list');
-  const total = Math.max(1, Number(cockpit.total || notifications.length || 1));
-  const handled = Math.max(0, total - (cockpit.critical_count || 0) - (cockpit.high_count || 0));
+  const cockpit = state.cockpit || {{}};
+  const notifications = needsList(state.notifications);
+  const approvals = needsList(state.approvalItems);
+  const total = Math.max(1, Number(cockpit.total || notifications.length || approvals.length || 1));
+  const handled = Math.max(0, total - Number((state.openLoops?.summary || {{}}).waiting_on_you || 0));
   const score = Math.round((handled / total) * 100);
   if (scoreEl) scoreEl.textContent = `${{score}}%`;
   if (!listEl) return;
   const cards = [
     ['Handled by Agents', `${{score}}%`, 'Within delegated authority', 'dot-success'],
-    ['Needs Your Authority', `${{Math.round(((cockpit.high_count || 0) / total) * 100)}}%`, 'Crossed authority boundary', 'dot-active'],
+    ['Needs Your Authority', `${{Math.round(((state.openLoops?.summary?.waiting_on_you || cockpit.high_count || 0) / total) * 100)}}%`, 'Crossed authority boundary', 'dot-active'],
     ['Blocked Waiting You', `${{Math.round(((cockpit.critical_count || 0) / total) * 100)}}%`, 'Cannot proceed', 'dot-error'],
-    ['Watch / Informational', `${{Math.round(((notifications.length - approvals.length) / total) * 100)}}%`, routing.label || 'FYI, no action needed', 'dot-standby'],
+    ['Watch / Informational', `${{Math.round((Math.max(0, notifications.length - approvals.length) / total) * 100)}}%`, state.focus?.interruption_posture?.label || 'FYI, no action needed', 'dot-standby'],
   ];
   listEl.innerHTML = cards.map(([title, value, copy, dot]) => `
     <div class="needs-authority-card">
@@ -29234,7 +29923,7 @@ function renderNeedsAuthority(cockpit, notifications, approvals, routing) {{
     </div>`).join('');
 }}
 
-function renderNeedsModes() {{
+function renderNeedsModes(state) {{
   const el = document.getElementById('needs-modes-grid');
   if (!el) return;
   const modes = [
@@ -29242,60 +29931,87 @@ function renderNeedsModes() {{
     ['Clarify', 'Ask / Get info'], ['Escalate', 'Raise higher'], ['Be Present', 'Human moment'],
     ['Protect', 'Set a boundary'], ['Pause', 'Hold / Delay'], ['Intervene', 'Direct action'],
   ];
-  el.innerHTML = modes.map(([title, copy]) => `<button class="needs-mode-button"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></button>`).join('');
+  el.innerHTML = modes.map(([title, copy]) => `<button class="needs-mode-button" onclick='needsDecisionMode(${{JSON.stringify(title)}})'><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></button>`).join('');
 }}
 
-function renderNeedsTiming(focus, freshness, leadNeed, routing) {{
+function renderNeedsTiming(state) {{
   const el = document.getElementById('needs-timing-grid');
   if (!el) return;
+  const focus = state.focus || {{}};
+  const freshness = needsList(state.control?.freshness);
+  const leadNeed = state.leadNeed;
   const staleCount = freshness.filter(item => String(item.status || '').toLowerCase() === 'stale').length;
   const cards = [
-    ['Best Time To Decide', leadNeed ? 'Now' : 'Stable', routing.reason || 'High-impact window is open.'],
+    ['Best Time To Decide', leadNeed ? 'Now' : 'Stable', leadNeed?.actionHint || focus.interruption_posture?.reason || 'High-impact window is open.'],
     ['After Current Mode', focus.summary?.label || 'Focus active', 'JARVIS respects your current posture.'],
     ['Freshness Pressure', `${{staleCount}} stale`, 'Some sources may want review soon.'],
-    ['Recommendation', leadNeed?.urgency || 'Low', leadNeed?.action_hint || 'Wait if better data is coming.'],
+    ['Recommendation', leadNeed?.urgency || 'Low', leadNeed?.actionHint || 'Wait if better data is coming.'],
   ];
   el.innerHTML = cards.map(([title, value, copy]) => `<div class="needs-timing-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(String(value))}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
 }}
 
-function renderNeedsImpact(leadNeed, routing, motion) {{
+function renderNeedsImpact(state) {{
   const el = document.getElementById('needs-impact-grid');
   if (!el) return;
+  const leadNeed = state.leadNeed;
+  const motion = needsList(state.motion);
   const cards = [
     ['Your Decision', leadNeed?.title || 'No lead need', leadNeed?.detail || 'Nothing is blocked right now.'],
-    ['Agents Act', routing.label || 'Routing updates', `${{motion.filter(item => item.kind === 'active').length}} lanes will continue`],
-    ['People Impacted', 'Audience / family / partners', leadNeed?.why_now || 'Context already preserved'],
-    ['Next Milestone', 'Motion resumes', leadNeed?.action_hint || 'JARVIS will keep the lane visible'],
+    ['Agents Act', leadNeed?.ownerAgent || 'Routing updates', `${{motion.filter(item => item.kind === 'active').length}} lanes will continue`],
+    ['People Impacted', leadNeed?.domain ? needsTitleCase(leadNeed.domain) : 'Audience / family / partners', leadNeed?.whyNow || 'Context already preserved'],
+    ['Next Milestone', leadNeed?.autoExecution?.allowed ? 'Automation resumes' : 'Motion resumes', leadNeed?.actionHint || 'JARVIS will keep the lane visible'],
   ];
   el.innerHTML = cards.map(([title, value, copy]) => `<div class="needs-impact-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(value)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
 }}
 
-function renderNeedsOutcomes(notifications, events, control) {{
+function renderNeedsOutcomes(state) {{
   const el = document.getElementById('needs-outcome-list');
   if (!el) return;
-  const notifSummary = control.notifications || {{}};
-  const rows = [
-    ['Approved / Visible', `${{notifSummary.seen || 0}} items`, 'Visible without becoming noisy'],
-    ['Protected', `${{(control.events && control.events.recent_count) || events.length}} event traces`, 'Continuity preserved'],
-    ['Resolved', `${{notifSummary.resolved || 0}}`, 'Handled and cleared'],
-    ['Dismissed', `${{notifSummary.dismissed || 0}}`, 'Intentionally removed'],
-  ];
-  el.innerHTML = rows.map(([title, value, copy]) => `<div class="needs-outcome-row"><strong>${{escHtml(title)}}</strong><span>${{escHtml(value)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+  const rows = needsList(state.activityFeed).slice(0, 4);
+  if (!rows.length) {{
+    const notifSummary = state.notificationSummary || {{}};
+    const fallback = [
+      ['Unread Assistant Items', `${{notifSummary.unread || 0}}`, 'Visible without becoming noisy'],
+      ['Waiting On You', `${{(state.openLoops?.summary || {{}}).waiting_on_you || 0}}`, 'Still staged for review'],
+    ];
+    el.innerHTML = fallback.map(([title, value, copy]) => `<div class="needs-outcome-row"><strong>${{escHtml(title)}}</strong><span>${{escHtml(value)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+    return;
+  }}
+  el.innerHTML = rows.map((item) => {{
+    const route = needsText(item.related_route);
+    const label = needsText(item.route_label, item.related_label, 'Open activity');
+    const fallbackView = needsFallbackViewForRoute(route, '', '');
+    const actionButton = route || fallbackView
+      ? `<button class="${{commandActionButtonClass(item.result || 'info')}}" onclick='needsOpenRouteAction(${{JSON.stringify(route)}}, ${{JSON.stringify(label)}}, ${{JSON.stringify(item.detail || item.result_summary || "")}}, ${{JSON.stringify(fallbackView)}})'>${{escHtml(label)}}</button>`
+      : '';
+    return `<div class="needs-outcome-row">
+      <strong>${{escHtml(item.title || item.entry_type || 'Outcome')}}</strong>
+      <span>${{escHtml(item.detail || item.result_summary || item.result || 'No detail available.')}}</span>
+      <span>${{escHtml(item.timestamp ? needsRelativeTime(item.timestamp) : (item.review_status_label || 'Recent'))}}</span>
+      ${{actionButton ? `<div class="dailybrief-row-actions" style="justify-content:flex-start;margin-top:8px;">${{actionButton}}</div>` : ''}}
+    </div>`;
+  }}).join('');
 }}
 
-function renderNeedsCoaching(leadNeed, focus, sound, vision) {{
+function renderNeedsCoaching(state) {{
   const el = document.getElementById('needs-coaching-list');
   if (!el) return;
+  const leadNeed = state.leadNeed;
+  const focus = state.focus || {{}};
+  const sound = state.sound || {{}};
+  const vision = state.vision || {{}};
+  const thresholdNote = leadNeed?.threshold?.summary || leadNeed?.autoExecution?.summary || '';
   const items = [
-    leadNeed?.why_now || 'Use JARVIS context before deciding quickly.',
+    leadNeed?.whyNow || 'Use JARVIS context before deciding quickly.',
     focus.summary?.detail || 'Protect your current focus unless urgency truly crosses threshold.',
     (sound.policy_rules || [])[0]?.detail || 'Security and household sounds stay reviewable for a reason.',
     (vision.policy_rules || [])[0]?.detail || 'Visual captures can stay quiet until the right review window.',
+    thresholdNote,
   ];
   el.innerHTML = items.filter(Boolean).slice(0, 4).map(text => `<div class="needs-coaching-item"><strong>Guardrail</strong><span>${{escHtml(text)}}</span></div>`).join('');
 }}
 
-function renderNeedsFooter() {{
+function renderNeedsFooter(state) {{
   const el = document.getElementById('needs-footer-strip');
   if (!el) return;
   const cards = [
@@ -29305,7 +30021,7 @@ function renderNeedsFooter() {{
     ['Right Context', 'All the facts you need. None you do not.'],
     ['Right Respect', 'Your attention is protected, not harvested.'],
     ['Right Stewardship', 'We preserve your humanity and your authority.'],
-    ['Needs You Engine Online', 'Authority detection active'],
+    ['Needs You Engine Online', state.availabilityNotes.length ? state.availabilityNotes.join(' • ') : 'Authority detection active'],
   ];
   el.innerHTML = cards.map(([title, copy]) => `<div class="needs-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}

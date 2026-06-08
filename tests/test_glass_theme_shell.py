@@ -64,6 +64,22 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("Open Recovery Loop", html)
         self.assertIn("Schedule Family Time", html)
 
+    def test_render_glass_shell_wires_needs_you_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="needs-runtime-note"', html)
+        self.assertIn("function refreshNotificationCenter()", html)
+        self.assertIn("function needsApplyOpenLoopAction(", html)
+        self.assertIn("function needsApplyApprovalAction(", html)
+        self.assertIn("function needsApplyNotificationAction(", html)
+        self.assertIn("function needsDecisionMode(", html)
+        self.assertIn("function needsOptimizeTiming()", html)
+        self.assertIn("/api/assistant-core/notifications?actor=", html)
+        self.assertIn("/api/open-loops?actor=", html)
+        self.assertIn("/api/activity/module", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Needs You is live and connected.", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 
