@@ -2115,6 +2115,360 @@ body::after {{
     align-items: flex-start;
   }}
 }}
+.publish-view {{
+  position: relative;
+  padding: 0 6px 22px;
+  --publish-copy: #f5efe2;
+  --publish-copy-soft: rgba(232,219,194,0.78);
+  --publish-copy-faint: rgba(181,166,137,0.62);
+  --publish-gold: #d6ab62;
+  --publish-gold-soft: rgba(214,171,98,0.72);
+  --publish-stroke: rgba(214,171,98,0.16);
+  --publish-stroke-strong: rgba(214,171,98,0.34);
+}}
+.publish-view::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(214,171,98,0.09), transparent 22%),
+    radial-gradient(circle at 84% 12%, rgba(255,255,255,0.04), transparent 24%),
+    linear-gradient(180deg, rgba(5,8,12,0.96), rgba(4,6,10,0.99));
+  border-radius: 28px;
+  z-index: 0;
+}}
+.publish-view > * {{
+  position: relative;
+  z-index: 1;
+}}
+.publish-view .view-title {{ color: var(--publish-copy); }}
+.publish-view .view-title-line {{
+  background: linear-gradient(90deg, var(--publish-gold), rgba(214,171,98,0));
+}}
+.publish-header {{
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}}
+.publish-kicker {{
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--publish-gold-soft);
+  margin-bottom: 10px;
+}}
+.publish-subtitle {{
+  max-width: 760px;
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--publish-copy-soft);
+}}
+.publish-motto {{
+  max-width: 330px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--publish-stroke);
+  background: linear-gradient(180deg, rgba(16,14,10,0.94), rgba(9,8,6,0.99));
+}}
+.publish-motto strong {{
+  display: block;
+  color: var(--publish-gold);
+  font-size: 14px;
+}}
+.publish-motto span {{
+  display: block;
+  margin-top: 6px;
+  color: var(--publish-copy-faint);
+  font-size: 12px;
+  line-height: 1.55;
+}}
+.publish-desktop-stage {{
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--publish-stroke);
+  background:
+    linear-gradient(180deg, rgba(10,11,12,0.985), rgba(5,6,7,0.995));
+  box-shadow: 0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.publish-desktop-shell {{
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  min-height: 900px;
+}}
+.publish-sidebar {{
+  padding: 18px 14px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  background: linear-gradient(180deg, rgba(11,12,14,0.98), rgba(7,7,8,0.99));
+  display: flex;
+  flex-direction: column;
+}}
+.publish-sidebar-brand strong {{
+  display: block;
+  color: var(--publish-copy);
+  font-size: 28px;
+  letter-spacing: 0.03em;
+}}
+.publish-sidebar-brand span {{
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--publish-gold-soft);
+}}
+.publish-sidebar-nav {{
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}}
+.publish-sidebar-item {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  color: var(--publish-copy-faint);
+  font-size: 13px;
+}}
+.publish-sidebar-item.active {{
+  background: rgba(214,171,98,0.10);
+  border-color: rgba(214,171,98,0.20);
+  color: var(--publish-copy);
+}}
+.publish-sidebar-foot {{
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}}
+.publish-sidebar-foot strong {{
+  display: block;
+  color: var(--publish-copy);
+  margin-bottom: 6px;
+}}
+.publish-main {{
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}}
+.publish-topbar {{
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}}
+.publish-topbar-kicker {{
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--publish-gold-soft);
+  margin-bottom: 4px;
+}}
+.publish-topbar-title {{
+  font-size: 30px;
+  color: var(--publish-copy);
+}}
+.publish-topbar-subtitle {{
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--publish-copy-soft);
+  max-width: 720px;
+}}
+.publish-nav {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}}
+.publish-nav-btn {{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--publish-stroke);
+  background: rgba(255,255,255,0.03);
+  color: var(--publish-copy);
+  cursor: pointer;
+}}
+.publish-nav-btn:disabled {{
+  opacity: 0.4;
+  cursor: default;
+}}
+.publish-nav-status {{
+  min-width: 110px;
+  text-align: center;
+}}
+.publish-nav-page {{
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--publish-copy-faint);
+}}
+.publish-nav-title {{
+  margin-top: 3px;
+  font-size: 14px;
+  color: var(--publish-copy);
+}}
+.publish-page-deck {{
+  position: relative;
+}}
+.publish-page {{
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}}
+.publish-page.active {{
+  display: flex;
+}}
+.publish-card-shell,
+.publish-panel-shell,
+.publish-mini-shell {{
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.024);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}}
+.publish-card-heading {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}}
+.publish-card-label {{
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--publish-copy-faint);
+}}
+.publish-card-label strong {{
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--publish-copy);
+}}
+.publish-chip {{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(214,171,98,0.18);
+  color: var(--publish-copy-soft);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  background: rgba(255,255,255,0.03);
+}}
+.publish-grid-two,
+.publish-grid-three,
+.publish-hero-grid,
+.publish-launch-grid {{
+  display: grid;
+  gap: 14px;
+}}
+.publish-grid-two {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.publish-grid-three {{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}}
+.publish-hero-grid {{
+  grid-template-columns: minmax(220px, 0.6fr) minmax(0, 1.1fr) 260px;
+}}
+.publish-launch-grid {{
+  grid-template-columns: minmax(0, 1fr) 280px;
+}}
+.publish-book-cover {{
+  min-height: 340px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    linear-gradient(180deg, rgba(11,16,24,0.18), rgba(6,8,12,0.78)),
+    radial-gradient(circle at center, rgba(214,171,98,0.18), transparent 30%),
+    url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='820' viewBox='0 0 520 820'%3E%3Crect width='520' height='820' fill='%230a0f17'/%3E%3Crect x='70' y='52' width='380' height='716' rx='14' fill='%23151b26' stroke='rgba(255,255,255,0.08)'/%3E%3Ctext x='260' y='192' fill='%23f7f0dd' font-size='54' text-anchor='middle' font-family='Georgia'%3ESYSTEMS%3C/text%3E%3Ctext x='260' y='258' fill='%23f7f0dd' font-size='42' text-anchor='middle' font-family='Georgia'%3EOF%3C/text%3E%3Ctext x='260' y='326' fill='%23f7f0dd' font-size='54' text-anchor='middle' font-family='Georgia'%3EINFLUENCE%3C/text%3E%3Ctext x='260' y='684' fill='%23c7b38a' font-size='30' text-anchor='middle' font-family='Georgia'%3ECHRIS BINION%3C/text%3E%3C/svg%3E\") center/cover no-repeat;
+}}
+.publish-kv-list,
+.publish-mini-list,
+.publish-checklist,
+.publish-launch-list {{
+  display: grid;
+  gap: 10px;
+}}
+.publish-kv-row,
+.publish-mini-row,
+.publish-check-row,
+.publish-launch-row {{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+}}
+.publish-kv-row span,
+.publish-mini-row span,
+.publish-check-row span,
+.publish-launch-row span {{
+  color: var(--publish-copy-faint);
+  font-size: 12px;
+}}
+.publish-kv-row strong,
+.publish-mini-row strong,
+.publish-check-row strong,
+.publish-launch-row strong {{
+  color: var(--publish-copy);
+}}
+.publish-supervisor-strip {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}}
+.publish-supervisor-card {{
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.024);
+}}
+.publish-supervisor-card strong {{
+  display: block;
+  color: var(--publish-copy);
+  font-size: 14px;
+}}
+.publish-supervisor-card span {{
+  display: block;
+  margin-top: 6px;
+  color: var(--publish-copy-faint);
+  font-size: 12px;
+  line-height: 1.55;
+}}
+@media (max-width: 1280px) {{
+  .publish-hero-grid,
+  .publish-launch-grid,
+  .publish-supervisor-strip {{
+    grid-template-columns: 1fr 1fr;
+  }}
+}}
+@media (max-width: 1180px) {{
+  .publish-desktop-shell,
+  .publish-grid-two,
+  .publish-grid-three,
+  .publish-hero-grid,
+  .publish-launch-grid,
+  .publish-supervisor-strip {{
+    grid-template-columns: 1fr;
+  }}
+  .publish-topbar,
+  .publish-header {{
+    flex-direction: column;
+    align-items: flex-start;
+  }}
+}}
 .score-domain-fill {{
   height: 100%;
   border-radius: 2px;
@@ -10586,151 +10940,282 @@ body::after {{
   </div>
 
   <!-- ── PUBLISHING ─────────────────────────────────────────── -->
-  <div id="view-publishing" class="view">
-    <div class="view-header">
-      <div class="view-title">PUBLISHING<div class="view-title-line"></div></div>
-      <div class="view-subtitle" id="pub-subtitle">Ghostwritr Book Studio · Stage Pipeline · Pending Reviews</div>
-    </div>
-
-    <!-- Stats strip -->
-    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-      <div class="card" style="flex:1;min-width:120px;padding:12px 16px;">
-        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Books</div>
-        <div style="font-size:22px;font-weight:700;color:var(--text-1);" id="homeProjectsBadge">—</div>
+  <div id="view-publishing" class="view publish-view">
+    <div class="publish-header">
+      <div>
+        <div class="publish-kicker">Desktop Experience</div>
+        <div class="view-title">PUBLISH<div class="view-title-line"></div></div>
+        <div class="publish-subtitle" id="pub-subtitle">Ghostwritr publish handoff, chapter readiness, format packaging, and connected launch operations in one supervised desktop workflow.</div>
       </div>
-      <div class="card" style="flex:1;min-width:120px;padding:12px 16px;">
-        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Reviews</div>
-        <div style="font-size:22px;font-weight:700;color:#f0b429;" id="pub-review-count">—</div>
-      </div>
-      <div class="card" style="flex:1;min-width:120px;padding:12px 16px;">
-        <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">In Progress</div>
-        <div style="font-size:22px;font-weight:700;color:var(--hue);" id="pub-inprogress-count">—</div>
-      </div>
-      <div class="card" style="flex:1;min-width:160px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;">Ghostwritr</div>
-          <div style="font-size:12px;font-weight:500;" id="pub-gw-status">—</div>
-        </div>
-        <a href="http://localhost:3000" target="_blank" class="btn btn-sm" style="font-size:10px;text-decoration:none;white-space:nowrap;">Open Studio ↗</a>
+      <div class="publish-motto">
+        <strong>Meaningful data concept.</strong>
+        <span>Prepare the manuscript, validate the handoff, package the formats, and supervise downstream launch surfaces from one place.</span>
       </div>
     </div>
 
-    <!-- Pending Reviews — shown only if reviews exist -->
-    <div id="pub-reviews-section" style="display:none;margin-bottom:20px;">
-      <div class="section-label" style="display:flex;align-items:center;gap:8px;">
-        Pending Reviews
-        <span id="pub-review-count-badge" class="pill pill-gold" style="font-size:9px;">0</span>
-      </div>
-      <div class="card card-needs-you">
-        <div class="card-inner" style="padding:0;">
-          <div id="publishing-reviews"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Book Pipeline -->
-    <div class="section-label">Book Pipeline</div>
-    <div id="publishing-books">
-      <!-- Skeleton while loading -->
-      <div class="pub-book-card">
-        <div class="skel" style="height:14px;width:55%;margin-bottom:10px;"></div>
-        <div class="skel" style="height:4px;width:100%;margin-bottom:14px;"></div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-          <div class="skel" style="height:60px;border-radius:8px;"></div>
-          <div class="skel" style="height:60px;border-radius:8px;"></div>
-          <div class="skel" style="height:60px;border-radius:8px;"></div>
-          <div class="skel" style="height:60px;border-radius:8px;"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Book Launch Campaign Panel -->
-    <div class="section-label" style="margin-top:24px;">
-      Book Launch
-      <button class="card-badge" style="margin-left:auto;cursor:pointer;padding:3px 10px;font-size:10px;"
-        onclick="loadLaunchPanel()">↺ Scan</button>
-    </div>
-    <div class="card card-tactical" style="margin-bottom:20px;">
-      <div class="card-hdr">
-        <span class="card-title">LAUNCH ASSETS</span>
-        <span class="card-badge" id="launch-books-badge">—</span>
-      </div>
-      <div class="card-inner" style="padding-top:8px;">
-        <div id="publishing-launch-books">
-          <div class="loading-state" style="text-align:left;padding:12px 0;font-size:12px;color:var(--text-3);">
-            Connect Ghostwritr and click Scan to see your books here.
+    <div class="publish-desktop-stage">
+      <div class="publish-desktop-shell">
+        <aside class="publish-sidebar">
+          <div class="publish-sidebar-brand">
+            <strong>PUBLISH</strong>
+            <span>Ghostwritr handoff</span>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Asset Viewer (shown when a book is expanded) -->
-    <div id="publishing-launch-assets" style="display:none;margin-bottom:20px;">
-      <div class="card">
-        <div class="card-hdr" style="align-items:center;gap:12px;">
-          <span class="card-title" id="launch-asset-title">Launch Assets</span>
-          <div style="margin-left:auto;display:flex;gap:8px;">
-            <button class="btn btn-sm" style="font-size:10px;" onclick="regenerateLaunchAssets()">↺ Regenerate</button>
-            <button class="btn btn-sm" style="font-size:10px;" onclick="document.getElementById('publishing-launch-assets').style.display='none'">✕ Close</button>
+          <div class="publish-sidebar-nav">
+            <div class="publish-sidebar-item active">⌂ Handoff Overview</div>
+            <div class="publish-sidebar-item">☑ Validation Report</div>
+            <div class="publish-sidebar-item">◎ Readiness</div>
+            <div class="publish-sidebar-item">☷ Chapter Readiness</div>
+            <div class="publish-sidebar-item">⬚ Assembly &amp; Export</div>
+            <div class="publish-sidebar-item">☰ Format Profiles</div>
+            <div class="publish-sidebar-item">⇢ Launch Ops</div>
+            <div class="publish-sidebar-item">◌ Audit &amp; Provenance</div>
+            <div class="publish-sidebar-item">⚙ Settings</div>
           </div>
-        </div>
-        <!-- Tab strip -->
-        <div style="display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--border);overflow-x:auto;">
-          <button class="launch-tab active" data-tab="dispatch"   onclick="switchLaunchTab(this,'dispatch')">📣 Dispatch</button>
-          <button class="launch-tab"         data-tab="bureau"    onclick="switchLaunchTab(this,'bureau')">📰 Bureau</button>
-          <button class="launch-tab"         data-tab="marquee"   onclick="switchLaunchTab(this,'marquee')">🏷️ Marquee</button>
-          <button class="launch-tab"         data-tab="studio"    onclick="switchLaunchTab(this,'studio')">🎙️ Studio</button>
-          <button class="launch-tab"         data-tab="podium"    onclick="switchLaunchTab(this,'podium')">🎓 Podium</button>
-          <button class="launch-tab"         data-tab="lectern"   onclick="switchLaunchTab(this,'lectern')">🎤 Lectern</button>
-          <button class="launch-tab"         data-tab="twitter"   onclick="switchLaunchTab(this,'twitter')">𝕏 Quick Social</button>
-          <button class="launch-tab"         data-tab="amazon"    onclick="switchLaunchTab(this,'amazon')">Quick Amazon</button>
-          <button class="launch-tab"         data-tab="extended"  onclick="switchLaunchTab(this,'extended')">Extended</button>
-        </div>
-        <div id="launch-asset-content" class="card-inner" style="padding-top:16px;min-height:120px;">
-          <!-- populated by viewLaunchAssets() -->
-        </div>
+          <div class="publish-sidebar-foot">
+            <strong>Ghostwritr Workspace</strong>
+            <div id="pub-side-workspace">Waiting for active book…</div>
+            <a href="http://localhost:3000" target="_blank" class="btn btn-sm" style="font-size:10px;text-decoration:none;margin-top:10px;display:inline-flex;">Open in Ghostwritr ↗</a>
+          </div>
+        </aside>
+
+        <main class="publish-main">
+          <div class="publish-topbar">
+            <div class="publish-topbar-copy">
+              <div class="publish-topbar-kicker">Desktop Sequence</div>
+              <div class="publish-topbar-title" id="publish-nav-title">1. Handoff Overview</div>
+              <div class="publish-topbar-subtitle" id="publish-nav-subtitle">Open the active manuscript, inspect handoff state, and see whether the package is truly ready to leave Ghostwritr.</div>
+            </div>
+            <div class="publish-nav">
+              <button class="publish-nav-btn" id="publish-nav-prev" onclick="advancePublishPage(-1)" aria-label="Previous Publish page">←</button>
+              <div class="publish-nav-status">
+                <div class="publish-nav-page" id="publish-page-count">Page 1 of 6</div>
+                <div class="publish-nav-title" id="publish-page-label">Handoff Overview</div>
+              </div>
+              <button class="publish-nav-btn" id="publish-nav-next" onclick="advancePublishPage(1)" aria-label="Next Publish page">→</button>
+            </div>
+          </div>
+
+          <div class="publish-page-deck">
+            <section class="publish-page active" data-publish-page="1">
+              <div class="publish-hero-grid">
+                <div class="publish-book-cover"></div>
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Handoff Overview<strong id="pub-hero-title">Waiting for Ghostwritr…</strong></div>
+                    <span class="publish-chip" id="pub-gw-status">—</span>
+                  </div>
+                  <div class="publish-kv-list" id="pub-hero-kv">
+                    <div class="publish-kv-row"><span>Author</span><strong>—</strong></div>
+                    <div class="publish-kv-row"><span>Workflow</span><strong>—</strong></div>
+                    <div class="publish-kv-row"><span>Package State</span><strong>—</strong></div>
+                    <div class="publish-kv-row"><span>Sync State</span><strong>—</strong></div>
+                  </div>
+                </div>
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Source Provenance<strong>Artifact authority</strong></div>
+                  </div>
+                  <div class="publish-mini-list" id="pub-provenance-list">
+                    <div class="publish-mini-row"><span>Current assembly</span><strong>—</strong></div>
+                    <div class="publish-mini-row"><span>Package source</span><strong>—</strong></div>
+                    <div class="publish-mini-row"><span>Last refreshed</span><strong>—</strong></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="publish-page" data-publish-page="2">
+              <div class="publish-grid-two">
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Validation Report<strong>Pending reviews and gate checks</strong></div>
+                    <span class="publish-chip" id="pub-review-count-badge">0</span>
+                  </div>
+                  <div id="pub-reviews-section" style="display:none;">
+                    <div id="publishing-reviews"></div>
+                  </div>
+                  <div id="pub-validation-empty" class="publish-panel-shell">No blocking review items yet.</div>
+                </div>
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Readiness Metrics<strong>Package quality baseline</strong></div>
+                  </div>
+                  <div class="publish-grid-three">
+                    <div class="publish-mini-shell"><strong id="homeProjectsBadge">—</strong><p>Books</p></div>
+                    <div class="publish-mini-shell"><strong id="pub-review-count">—</strong><p>Reviews</p></div>
+                    <div class="publish-mini-shell"><strong id="pub-inprogress-count">—</strong><p>In Progress</p></div>
+                    <div class="publish-mini-shell"><strong id="pub-metric-committed">—</strong><p>Committed chapters</p></div>
+                    <div class="publish-mini-shell"><strong id="pub-metric-words">—</strong><p>Committed words</p></div>
+                    <div class="publish-mini-shell"><strong id="pub-metric-formats">—</strong><p>Export formats</p></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="publish-page" data-publish-page="3">
+              <div class="publish-card-shell">
+                <div class="publish-card-heading">
+                  <div class="publish-card-label">Chapter Readiness<strong>Book pipeline and stage groups</strong></div>
+                </div>
+                <div id="publishing-books">
+                  <div class="pub-book-card">
+                    <div class="skel" style="height:14px;width:55%;margin-bottom:10px;"></div>
+                    <div class="skel" style="height:4px;width:100%;margin-bottom:14px;"></div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+                      <div class="skel" style="height:60px;border-radius:8px;"></div>
+                      <div class="skel" style="height:60px;border-radius:8px;"></div>
+                      <div class="skel" style="height:60px;border-radius:8px;"></div>
+                      <div class="skel" style="height:60px;border-radius:8px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="publish-page" data-publish-page="4">
+              <div class="publish-grid-two">
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Final Delivery Checklist<strong>What still stands between draft and handoff</strong></div>
+                  </div>
+                  <div class="publish-checklist" id="pub-delivery-checklist">
+                    <div class="publish-check-row"><span>Waiting</span><strong>Load active manuscript</strong></div>
+                  </div>
+                </div>
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Assembly &amp; Export<strong>Source and artifact notes</strong></div>
+                  </div>
+                  <div class="publish-mini-list" id="pub-assembly-notes">
+                    <div class="publish-mini-row"><span>Assembly</span><strong>—</strong></div>
+                    <div class="publish-mini-row"><span>Target pages</span><strong>—</strong></div>
+                    <div class="publish-mini-row"><span>Last commit</span><strong>—</strong></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="publish-page" data-publish-page="5">
+              <div class="publish-grid-three">
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Format Profiles<strong>Print</strong></div>
+                  </div>
+                  <div class="publish-mini-list" id="pub-format-print">
+                    <div class="publish-mini-row"><span>Status</span><strong>Ready</strong></div>
+                  </div>
+                </div>
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Format Profiles<strong>Ebook</strong></div>
+                  </div>
+                  <div class="publish-mini-list" id="pub-format-ebook">
+                    <div class="publish-mini-row"><span>Status</span><strong>Ready</strong></div>
+                  </div>
+                </div>
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Format Profiles<strong>Audio</strong></div>
+                  </div>
+                  <div class="publish-mini-list" id="pub-format-audio">
+                    <div class="publish-mini-row"><span>Status</span><strong>Not requested</strong></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="publish-page" data-publish-page="6">
+              <div class="publish-launch-grid">
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">Connected Launch Ops<strong>Downstream release surfaces</strong></div>
+                    <button class="card-badge" style="cursor:pointer;padding:3px 10px;font-size:10px;" onclick="loadLaunchPanel()">↺ Scan</button>
+                  </div>
+                  <div id="publishing-launch-books">
+                    <div class="loading-state" style="text-align:left;padding:12px 0;font-size:12px;color:var(--text-3);">
+                      Connect Ghostwritr and click Scan to see your books here.
+                    </div>
+                  </div>
+                  <div id="publishing-launch-assets" style="display:none;margin-top:16px;">
+                    <div class="publish-panel-shell">
+                      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                        <strong id="launch-asset-title">Launch Assets</strong>
+                        <div style="margin-left:auto;display:flex;gap:8px;">
+                          <button class="btn btn-sm" style="font-size:10px;" onclick="regenerateLaunchAssets()">↺ Regenerate</button>
+                          <button class="btn btn-sm" style="font-size:10px;" onclick="document.getElementById('publishing-launch-assets').style.display='none'">✕ Close</button>
+                        </div>
+                      </div>
+                      <div style="display:flex;gap:2px;padding:0 0 12px;border-bottom:1px solid var(--border);overflow-x:auto;">
+                        <button class="launch-tab active" data-tab="dispatch" onclick="switchLaunchTab(this,'dispatch')">📣 Dispatch</button>
+                        <button class="launch-tab" data-tab="bureau" onclick="switchLaunchTab(this,'bureau')">📰 Bureau</button>
+                        <button class="launch-tab" data-tab="marquee" onclick="switchLaunchTab(this,'marquee')">🏷️ Marquee</button>
+                        <button class="launch-tab" data-tab="studio" onclick="switchLaunchTab(this,'studio')">🎙️ Studio</button>
+                        <button class="launch-tab" data-tab="podium" onclick="switchLaunchTab(this,'podium')">🎓 Podium</button>
+                        <button class="launch-tab" data-tab="lectern" onclick="switchLaunchTab(this,'lectern')">🎤 Lectern</button>
+                        <button class="launch-tab" data-tab="twitter" onclick="switchLaunchTab(this,'twitter')">𝕏 Quick Social</button>
+                        <button class="launch-tab" data-tab="amazon" onclick="switchLaunchTab(this,'amazon')">Quick Amazon</button>
+                        <button class="launch-tab" data-tab="extended" onclick="switchLaunchTab(this,'extended')">Extended</button>
+                      </div>
+                      <div id="launch-asset-content" style="padding-top:16px;min-height:120px;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="publish-card-shell">
+                  <div class="publish-card-heading">
+                    <div class="publish-card-label">JARVIS Supervisory Strip<strong>Who owns the downstream launch</strong></div>
+                    <span class="publish-chip" id="launch-books-badge">—</span>
+                  </div>
+                  <div class="publish-launch-list" id="pub-launch-summary">
+                    <div class="publish-launch-row"><span>Press Kit</span><strong>Waiting</strong></div>
+                    <div class="publish-launch-row"><span>Speaking Kit</span><strong>Draft Ready</strong></div>
+                    <div class="publish-launch-row"><span>Launch Listing</span><strong>Blocked</strong></div>
+                    <div class="publish-launch-row"><span>Social Campaign</span><strong>Staged</strong></div>
+                    <div class="publish-launch-row"><span>Retailer Manifest</span><strong>Pending</strong></div>
+                  </div>
+                  <button class="huddle-cta" type="button" onclick="loadLaunchPanel()">
+                    <strong>Open Launch Ops Hub</strong>
+                    <span>Scan the downstream Ghostwritr surfaces, refresh generated assets, and supervise the release package from one place.</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="publish-supervisor-strip">
+            <div class="publish-supervisor-card"><strong>JARVIS</strong><span>Monitoring package integrity and handoff readiness.</span></div>
+            <div class="publish-supervisor-card"><strong>Veronica</strong><span>Launch assets staged. Coordinating press kit and cover reveal.</span></div>
+            <div class="publish-supervisor-card"><strong>Herald</strong><span>Speaking brief in review. Outline and key messages under evaluation.</span></div>
+            <div class="publish-supervisor-card"><strong>Ghostwritr</strong><span>Source manuscript authority. Commits and versions remain the system of record.</span></div>
+          </div>
+
+          <div style="display:none;">
+            <div class="view-section" style="margin-top:24px;">
+              <div class="section-title-row">
+                <h2 class="section-title">KDP · AMAZON PUBLISHING</h2>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <span id="kdp-view-status" style="font-size:11px;color:var(--text-3);">—</span>
+                  <button class="card-action-btn" onclick="kdpViewSync()" id="kdp-sync-btn">↻ Sync</button>
+                </div>
+              </div>
+              <div class="stats-strip" id="kdp-stats-strip">
+                <div class="stat-tile"><div class="stat-value" id="kdp-stat-books">—</div><div class="stat-label">Books</div></div>
+                <div class="stat-tile"><div class="stat-value" id="kdp-stat-units">—</div><div class="stat-label">Units Sold</div></div>
+                <div class="stat-tile"><div class="stat-value" id="kdp-stat-kenp">—</div><div class="stat-label">KENP Reads</div></div>
+                <div class="stat-tile"><div class="stat-value" id="kdp-stat-royalties">—</div><div class="stat-label">Royalties</div></div>
+              </div>
+              <div id="kdp-insights" style="margin:16px 0;display:none;"><div id="kdp-insights-list"></div></div>
+              <div id="kdp-books-section" style="display:none;"><div id="kdp-books-list"></div></div>
+              <div id="kdp-not-configured" style="text-align:center;padding:40px 20px;color:var(--text-3);">
+                <div style="font-size:32px;margin-bottom:12px;">📚</div>
+                <div style="font-size:14px;color:var(--text-2);margin-bottom:8px;">KDP not connected</div>
+                <div style="font-size:12px;margin-bottom:16px;">Add your Amazon credentials in Settings → Accounts → KDP</div>
+                <button class="card-action-btn" onclick="openSettings();settingsNavTo('accounts')">Open Settings</button>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
-
-    <!-- KDP Section -->
-    <div class="view-section" style="margin-top:24px;">
-      <div class="section-title-row">
-        <h2 class="section-title">KDP · AMAZON PUBLISHING</h2>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <span id="kdp-view-status" style="font-size:11px;color:var(--text-3);">—</span>
-          <button class="card-action-btn" onclick="kdpViewSync()" id="kdp-sync-btn">↻ Sync</button>
-        </div>
-      </div>
-
-      <!-- Stats strip -->
-      <div class="stats-strip" id="kdp-stats-strip">
-        <div class="stat-tile"><div class="stat-value" id="kdp-stat-books">—</div><div class="stat-label">Books</div></div>
-        <div class="stat-tile"><div class="stat-value" id="kdp-stat-units">—</div><div class="stat-label">Units Sold</div></div>
-        <div class="stat-tile"><div class="stat-value" id="kdp-stat-kenp">—</div><div class="stat-label">KENP Reads</div></div>
-        <div class="stat-tile"><div class="stat-value" id="kdp-stat-royalties">—</div><div class="stat-label">Royalties</div></div>
-      </div>
-
-      <!-- Insights -->
-      <div id="kdp-insights" style="margin:16px 0;display:none;">
-        <div class="section-title-row"><h3 style="font-size:11px;font-family:var(--font-mono);text-transform:uppercase;color:var(--text-3);letter-spacing:.08em;">Insights</h3></div>
-        <div id="kdp-insights-list"></div>
-      </div>
-
-      <!-- Books table -->
-      <div id="kdp-books-section" style="display:none;">
-        <div class="section-title-row"><h3 style="font-size:11px;font-family:var(--font-mono);text-transform:uppercase;color:var(--text-3);letter-spacing:.08em;">Your Books</h3></div>
-        <div id="kdp-books-list"></div>
-      </div>
-
-      <!-- Not configured state -->
-      <div id="kdp-not-configured" style="text-align:center;padding:40px 20px;color:var(--text-3);">
-        <div style="font-size:32px;margin-bottom:12px;">📚</div>
-        <div style="font-size:14px;color:var(--text-2);margin-bottom:8px;">KDP not connected</div>
-        <div style="font-size:12px;margin-bottom:16px;">Add your Amazon credentials in Settings → Accounts → KDP</div>
-        <button class="card-action-btn" onclick="openSettings();settingsNavTo('accounts')">Open Settings</button>
-      </div>
-    </div>
-
   </div>
 
   <!-- ── WORKSHOP ───────────────────────────────────────────── -->
@@ -14038,6 +14523,7 @@ async function signalHistoryAction(domain, id, action) {{
 }}
 
 async function loadPublishing() {{
+  syncPublishStoryboard();
   try {{
     const res = await fetch('/api/publishing/dashboard');
     if (!res.ok) {{ console.warn('loadPublishing', res.status); return; }}
@@ -14046,6 +14532,142 @@ async function loadPublishing() {{
   }} catch(e) {{ console.error('loadPublishing failed', e); }}
   loadLaunchPanel();
   loadKdpView();
+}}
+
+let publishStoryboardPage = 1;
+let _publishingDashboard = null;
+let _publishingLaunchScan = null;
+const PUBLISH_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Handoff Overview',
+    label: 'Handoff Overview',
+    subtitle: 'Open the active manuscript, inspect handoff state, and see whether the package is truly ready to leave Ghostwritr.',
+  }},
+  2: {{
+    title: '2. Validation Report',
+    label: 'Validation',
+    subtitle: 'Review warnings, approvals, and readiness metrics before the package moves into final export or launch prep.',
+  }},
+  3: {{
+    title: '3. Chapter Readiness',
+    label: 'Chapter Readiness',
+    subtitle: 'Check the active book, committed stages, and chapter progress across the entire Ghostwritr pipeline.',
+  }},
+  4: {{
+    title: '4. Final Delivery Checklist',
+    label: 'Delivery Checklist',
+    subtitle: 'See what is ready, what still needs editorial closure, and what the handoff package is waiting on.',
+  }},
+  5: {{
+    title: '5. Format Profiles',
+    label: 'Format Profiles',
+    subtitle: 'Surface print, ebook, and audio packaging assumptions so the manuscript can leave the studio cleanly.',
+  }},
+  6: {{
+    title: '6. Connected Launch Ops',
+    label: 'Launch Ops',
+    subtitle: 'Supervise the downstream release surfaces, generated assets, and the launch package once the manuscript is ready.',
+  }},
+}};
+
+function syncPublishStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-publishing .publish-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  publishStoryboardPage = Math.max(1, Math.min(publishStoryboardPage, pageCount));
+  panels.forEach((panel, idx) => {{
+    panel.classList.toggle('active', idx + 1 === publishStoryboardPage);
+  }});
+  const pageMeta = PUBLISH_STORYBOARD_TITLES[publishStoryboardPage];
+  const title = document.getElementById('publish-nav-title');
+  if (title) title.textContent = pageMeta?.title || `Page ${{publishStoryboardPage}}`;
+  const subtitle = document.getElementById('publish-nav-subtitle');
+  if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
+  const count = document.getElementById('publish-page-count');
+  if (count) count.textContent = `Page ${{publishStoryboardPage}} of ${{pageCount}}`;
+  const label = document.getElementById('publish-page-label');
+  if (label) label.textContent = pageMeta?.label || `Page ${{publishStoryboardPage}}`;
+  const prev = document.getElementById('publish-nav-prev');
+  const next = document.getElementById('publish-nav-next');
+  if (prev) prev.disabled = publishStoryboardPage === 1;
+  if (next) next.disabled = publishStoryboardPage === pageCount;
+}}
+
+function advancePublishPage(delta) {{
+  publishStoryboardPage += delta;
+  syncPublishStoryboard();
+}}
+
+function renderPublishDesktopState(data) {{
+  const books = data.active_books || [];
+  const reviews = data.pending_review_list || [];
+  const book = books[0] || null;
+  const titleEl = document.getElementById('pub-hero-title');
+  if (titleEl) titleEl.textContent = book ? (book.title || book.slug || 'Untitled project') : 'Waiting for Ghostwritr…';
+  const kv = document.getElementById('pub-hero-kv');
+  if (kv) {{
+    const total = book?.total_stages || 0;
+    const complete = book?.stages_complete || 0;
+    const reviewCount = (book?.stages_ready_for_review || []).length;
+    kv.innerHTML = `
+      <div class="publish-kv-row"><span>Author</span><strong>${{escHtml(book?.author_name || 'Chris Binion')}}</strong></div>
+      <div class="publish-kv-row"><span>Workflow</span><strong>${{escHtml(book?.workflow_type || 'Publish')}}</strong></div>
+      <div class="publish-kv-row"><span>Package State</span><strong>${{reviews.length ? 'Prepared, needs editorial revision' : (book ? 'Prepared and staged' : 'No active package')}}</strong></div>
+      <div class="publish-kv-row"><span>Sync State</span><strong>${{data.ghostwritr_available ? 'Connected to Ghostwritr' : 'Refresh required'}}</strong></div>
+      <div class="publish-kv-row"><span>Stage Progress</span><strong>${{total ? `${{complete}} / ${{total}} complete` : '—'}}</strong></div>
+      <div class="publish-kv-row"><span>Current Stage</span><strong>${{escHtml(book?.current_stage ? book.current_stage.replace(/_/g,' ') : '—')}}</strong></div>`;
+  }}
+  const side = document.getElementById('pub-side-workspace');
+  if (side) {{
+    side.innerHTML = book
+      ? `Book: ${{escHtml(book.title || '—')}}<br>Status: ${{reviews.length ? 'EDITORIALLY BLOCKED' : 'READY'}}<br>Committed Words: ${{book.word_count ? book.word_count.toLocaleString() : '—'}}`
+      : 'Ghostwritr not connected or no active books.';
+  }}
+  const provenance = document.getElementById('pub-provenance-list');
+  if (provenance) {{
+    provenance.innerHTML = `
+      <div class="publish-mini-row"><span>Current assembly</span><strong>v${{book?.stages_complete || 0}}</strong></div>
+      <div class="publish-mini-row"><span>Package source</span><strong>${{escHtml(book?.slug || '—')}}</strong></div>
+      <div class="publish-mini-row"><span>Last refreshed</span><strong>${{new Date().toLocaleString()}}</strong></div>`;
+  }}
+  const committedEl = document.getElementById('pub-metric-committed');
+  if (committedEl) committedEl.textContent = book ? `${{book.stages_complete || 0}} / ${{book.total_stages || 0}}` : '—';
+  const wordsEl = document.getElementById('pub-metric-words');
+  if (wordsEl) wordsEl.textContent = book?.word_count ? book.word_count.toLocaleString() : '—';
+  const formatsEl = document.getElementById('pub-metric-formats');
+  if (formatsEl) formatsEl.textContent = 'docx, html, markdown';
+  const delivery = document.getElementById('pub-delivery-checklist');
+  if (delivery) {{
+    delivery.innerHTML = [
+      ['Manuscript assembled from latest committed draft', book ? 'Complete' : 'Waiting'],
+      ['Front matter mapped and package source identified', book ? 'Complete' : 'Waiting'],
+      ['Editorial reviews cleared', reviews.length ? 'Pending' : 'Complete'],
+      ['Launch asset package refreshed', _publishingLaunchScan?.books?.length ? 'Staged' : 'Pending'],
+      ['Distribution manifest ready for final handoff', data.ghostwritr_available ? 'Pending final clearance' : 'Blocked'],
+    ].map(([label, state]) => `<div class="publish-check-row"><span>${{label}}</span><strong>${{state}}</strong></div>`).join('');
+  }}
+  const assembly = document.getElementById('pub-assembly-notes');
+  if (assembly) {{
+    assembly.innerHTML = `
+      <div class="publish-mini-row"><span>Assembly</span><strong>${{escHtml(book?.slug || '—')}}</strong></div>
+      <div class="publish-mini-row"><span>Target pages</span><strong>${{book?.word_count ? Math.max(96, Math.round(book.word_count / 320)) : '—'}}</strong></div>
+      <div class="publish-mini-row"><span>Last commit</span><strong>${{escHtml(book?.updated_at || '—')}}</strong></div>`;
+  }}
+  const printEl = document.getElementById('pub-format-print');
+  if (printEl) printEl.innerHTML = `
+    <div class="publish-mini-row"><span>Status</span><strong>Ready</strong></div>
+    <div class="publish-mini-row"><span>Interior</span><strong>Trim package prepared</strong></div>
+    <div class="publish-mini-row"><span>Source</span><strong>${{book?.word_count ? book.word_count.toLocaleString() + ' words' : '—'}}</strong></div>`;
+  const ebookEl = document.getElementById('pub-format-ebook');
+  if (ebookEl) ebookEl.innerHTML = `
+    <div class="publish-mini-row"><span>Status</span><strong>Ready</strong></div>
+    <div class="publish-mini-row"><span>Formats</span><strong>HTML + Markdown</strong></div>
+    <div class="publish-mini-row"><span>TOC</span><strong>${{book ? 'Chapter hierarchy intact' : '—'}}</strong></div>`;
+  const audioEl = document.getElementById('pub-format-audio');
+  if (audioEl) audioEl.innerHTML = `
+    <div class="publish-mini-row"><span>Status</span><strong>${{book ? 'Not requested' : 'Standby'}}</strong></div>
+    <div class="publish-mini-row"><span>Runtime</span><strong>${{book?.word_count ? Math.max(4, Math.round(book.word_count / 9300)) + 'h est.' : '—'}}</strong></div>
+    <div class="publish-mini-row"><span>Voice</span><strong>Pending selection</strong></div>`;
 }}
 
 // ── KDP / Amazon Publishing ────────────────────────────────────
@@ -14156,15 +14778,18 @@ async function loadLaunchPanel() {{
   try {{
     const res = await fetch('/api/publishing/launch-scan');
     const data = await res.json();
+    _publishingLaunchScan = data;
     if (!data.bridge_available) {{
       if (listEl) listEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:8px 0;">Ghostwritr not connected — start Ghostwritr to see your books.</div>';
       if (badgeEl) badgeEl.textContent = '—';
+      renderPublishLaunchSummary();
       return;
     }}
     const books = data.books || [];
     if (badgeEl) badgeEl.textContent = books.length + ' book' + (books.length !== 1 ? 's' : '');
     if (!books.length) {{
       if (listEl) listEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);padding:8px 0;">No books found in Ghostwritr.</div>';
+      renderPublishLaunchSummary();
       return;
     }}
     if (listEl) listEl.innerHTML = books.map(b => {{
@@ -14190,9 +14815,21 @@ async function loadLaunchPanel() {{
         <div style="margin-left:auto;display:flex;gap:6px;">${{genBtn}}${{viewBtn}}${{regenBtn}}</div>
       </div>`;
     }}).join('');
+    renderPublishLaunchSummary();
   }} catch(e) {{
     if (listEl) listEl.innerHTML = '<div style="font-size:12px;color:var(--text-3);">Scan failed: ' + escHtml(String(e)) + '</div>';
   }}
+}}
+
+function renderPublishLaunchSummary() {{
+  const summary = document.getElementById('pub-launch-summary');
+  if (!summary) return;
+  const books = ((_publishingLaunchScan || {{}}).books || []).slice(0, 5);
+  if (!books.length) return;
+  summary.innerHTML = books.map(b => {{
+    const state = b.has_assets ? 'Ready' : (b.trigger ? 'Generate' : 'Waiting');
+    return `<div class="publish-launch-row"><span>${{escHtml(b.title || b.slug || 'Book')}}</span><strong>${{state}}</strong></div>`;
+  }}).join('');
 }}
 
 async function generateLaunchAssets(slug, btn, force) {{
@@ -18934,6 +19571,9 @@ function renderBriefSection(s) {{
 
 function renderPublishing(data) {{
   if (!data) return;
+  _publishingDashboard = data;
+  syncPublishStoryboard();
+  renderPublishDesktopState(data);
 
   const books   = data.active_books || [];
   const reviews = data.pending_review_list || [];
@@ -18953,7 +19593,9 @@ function renderPublishing(data) {{
   // ── Pending Reviews ────────────────────────────────────────────
   const revSection = document.getElementById('pub-reviews-section');
   const revEl      = document.getElementById('publishing-reviews');
+  const emptyEl    = document.getElementById('pub-validation-empty');
   if (revSection) revSection.style.display = reviews.length > 0 ? '' : 'none';
+  if (emptyEl) emptyEl.style.display = reviews.length > 0 ? 'none' : '';
   if (revEl) {{
     if (reviews.length === 0) {{
       revEl.innerHTML = '';
