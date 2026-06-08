@@ -9346,6 +9346,591 @@ body::after {{
 .tag-chip:hover {{ background: var(--hue); color: #fff; }}
 
 /* ═══════════════════════════════════════════════════════════════════
+   NEEDS YOU DESKTOP EXPERIENCE
+═══════════════════════════════════════════════════════════════════ */
+.needs-view {{
+  --needs-gold: #e5a14a;
+  --needs-gold-soft: #ad7130;
+  --needs-amber: #f1b25b;
+  --needs-panel: rgba(9, 14, 21, 0.97);
+  --needs-panel-soft: rgba(13, 18, 27, 0.93);
+  --needs-border: rgba(229, 161, 74, 0.2);
+  --needs-border-strong: rgba(229, 161, 74, 0.34);
+  --needs-shadow: 0 26px 60px rgba(0,0,0,0.34);
+}}
+.needs-view .view-header {{
+  display: none;
+}}
+.needs-header {{
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr) 240px;
+  gap: 18px;
+  margin-bottom: 18px;
+}}
+.needs-brand,
+.needs-quote,
+.needs-profile,
+.needs-stat-shell,
+.needs-card,
+.needs-sidebar {{
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)),
+    linear-gradient(180deg, var(--needs-panel), var(--needs-panel-soft));
+  border: 1px solid var(--needs-border);
+  border-radius: 20px;
+  box-shadow: var(--needs-shadow);
+  overflow: hidden;
+}}
+.needs-brand::before,
+.needs-quote::before,
+.needs-profile::before,
+.needs-stat-shell::before,
+.needs-card::before,
+.needs-sidebar::before {{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(229,161,74,0.12), transparent 32%),
+    linear-gradient(135deg, rgba(255,255,255,0.04), transparent 42%);
+  pointer-events: none;
+}}
+.needs-brand {{
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 22px 24px;
+  min-height: 132px;
+}}
+.needs-brand-mark {{
+  width: 74px;
+  height: 74px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--needs-gold);
+  border: 1px solid var(--needs-border-strong);
+  background: radial-gradient(circle at center, rgba(229,161,74,0.12), rgba(255,214,150,0.04) 55%, rgba(7,10,16,0.98));
+}}
+.needs-brand-copy {{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}}
+.needs-kicker {{
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(229,161,74,0.76);
+}}
+.needs-title {{
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: clamp(34px, 3vw, 54px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #f5f1e6;
+}}
+.needs-title span {{
+  color: var(--needs-gold);
+}}
+.needs-subtitle {{
+  font-size: 16px;
+  color: rgba(232, 237, 244, 0.84);
+}}
+.needs-brand-detail {{
+  font-size: 14px;
+  color: rgba(194, 204, 220, 0.72);
+}}
+.needs-header-center {{
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 16px;
+}}
+.needs-stat-grid {{
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}}
+.needs-stat-shell {{
+  padding: 16px 18px;
+}}
+.needs-stat-label {{
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(205,214,228,0.64);
+  margin-bottom: 12px;
+}}
+.needs-stat-value {{
+  font-size: 30px;
+  color: #faf4e9;
+  line-height: 1;
+  margin-bottom: 8px;
+}}
+.needs-stat-sub {{
+  font-size: 12px;
+  color: rgba(165,235,175,0.92);
+}}
+.needs-quote,
+.needs-profile {{
+  padding: 18px 20px;
+}}
+.needs-quote {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}}
+.needs-quote-mark {{
+  font-size: 34px;
+  color: var(--needs-gold);
+}}
+.needs-quote strong {{
+  display: block;
+  font-size: 25px;
+  line-height: 1.08;
+  color: #f7f2e8;
+  margin-bottom: 6px;
+}}
+.needs-quote span,
+.needs-profile span {{
+  display: block;
+  color: rgba(201,210,225,0.76);
+  line-height: 1.55;
+}}
+.needs-profile {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}}
+.needs-profile-meta {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}}
+.needs-profile-avatar {{
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  border: 1px solid rgba(229,161,74,0.3);
+  background: linear-gradient(135deg, rgba(229,161,74,0.34), rgba(255,214,150,0.2));
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #08101a;
+}}
+.needs-profile strong {{
+  display: block;
+  font-size: 18px;
+  color: #f4efe5;
+}}
+.needs-shell {{
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}}
+.needs-sidebar {{
+  padding: 18px;
+  position: sticky;
+  top: 18px;
+}}
+.needs-side-title {{
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(229,161,74,0.76);
+  margin-bottom: 14px;
+}}
+.needs-side-list,
+.needs-footer-strip {{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}}
+.needs-side-item,
+.needs-footer-pill {{
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: rgba(255,255,255,0.02);
+}}
+.needs-side-item {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}}
+.needs-side-item strong,
+.needs-footer-pill strong {{
+  display: block;
+  color: #f4efe4;
+  font-size: 13px;
+}}
+.needs-side-item span,
+.needs-footer-pill span {{
+  display: block;
+  color: rgba(197,205,219,0.72);
+  font-size: 11px;
+}}
+.needs-side-badge {{
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #0a1119;
+  background: linear-gradient(135deg, rgba(229,161,74,0.96), rgba(255,221,138,0.9));
+}}
+.needs-side-cta {{
+  margin-top: 14px;
+  width: 100%;
+  border: 1px solid var(--needs-border-strong);
+  border-radius: 14px;
+  background: rgba(229,161,74,0.12);
+  color: #f7f1e4;
+  font-size: 13px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+}}
+.needs-grid {{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px;
+}}
+.needs-card {{
+  grid-column: span 4;
+}}
+.needs-span-5 {{ grid-column: span 5; }}
+.needs-span-4 {{ grid-column: span 4; }}
+.needs-span-3 {{ grid-column: span 3; }}
+.needs-card-inner {{
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+}}
+.needs-card-header {{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}}
+.needs-card-number {{
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(229,161,74,0.82);
+  margin-bottom: 7px;
+}}
+.needs-card h3 {{
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.1;
+  color: #f5f0e6;
+}}
+.needs-card-header p {{
+  margin: 6px 0 0;
+  color: rgba(197,207,221,0.76);
+  font-size: 13px;
+  line-height: 1.55;
+}}
+.needs-header-action,
+.needs-section-link,
+.needs-mode-button,
+.needs-cta-row button,
+.needs-actions button {{
+  border: 1px solid rgba(229,161,74,0.24);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+  color: rgba(243,238,228,0.92);
+  font-size: 12px;
+  padding: 8px 12px;
+}}
+.needs-list,
+.needs-summary-grid,
+.needs-modes-grid,
+.needs-timing-grid,
+.needs-impact-grid,
+.needs-outcome-list,
+.needs-coaching-list {{
+  display: grid;
+  gap: 10px;
+}}
+.needs-item,
+.needs-summary-card,
+.needs-mode-button,
+.needs-timing-card,
+.needs-impact-card,
+.needs-outcome-row,
+.needs-coaching-item,
+.needs-authority-card,
+.needs-lead-card,
+.needs-context-split,
+.needs-map-card {{
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}}
+.needs-item {{
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}}
+.needs-item-left {{
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}}
+.needs-item-icon {{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(229,161,74,0.12);
+  color: var(--needs-gold);
+  flex-shrink: 0;
+}}
+.needs-item-copy strong,
+.needs-lead-card strong,
+.needs-summary-card strong,
+.needs-timing-card strong,
+.needs-impact-card strong,
+.needs-outcome-row strong,
+.needs-coaching-item strong,
+.needs-authority-card strong,
+.needs-map-card strong {{
+  display: block;
+  color: #f4efe5;
+  font-size: 14px;
+}}
+.needs-item-copy span,
+.needs-lead-card span,
+.needs-summary-card span,
+.needs-timing-card span,
+.needs-impact-card span,
+.needs-outcome-row span,
+.needs-coaching-item span,
+.needs-authority-card span,
+.needs-map-card span {{
+  display: block;
+  margin-top: 4px;
+  color: rgba(193,203,218,0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}}
+.needs-item-meta {{
+  text-align: right;
+  flex-shrink: 0;
+}}
+.needs-pill {{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: rgba(255,255,255,0.05);
+  color: #eef3fb;
+}}
+.needs-pill.high, .needs-pill.critical {{
+  background: rgba(236, 84, 84, 0.16);
+  color: #ffb3b3;
+}}
+.needs-pill.medium {{
+  background: rgba(229,161,74,0.16);
+  color: #f4c37d;
+}}
+.needs-pill.low, .needs-pill.normal {{
+  background: rgba(93, 190, 120, 0.14);
+  color: #9ce3ae;
+}}
+.needs-pill.info, .needs-pill.seen {{
+  background: rgba(95, 165, 245, 0.14);
+  color: #9ec8ff;
+}}
+.needs-lead-card {{
+  padding: 16px;
+}}
+.needs-context-split {{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+}}
+.needs-context-col {{
+  padding: 16px;
+}}
+.needs-context-col + .needs-context-col {{
+  border-left: 1px solid rgba(255,255,255,0.06);
+}}
+.needs-context-col h4,
+.needs-map-card h4 {{
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(229,161,74,0.76);
+}}
+.needs-bullet-list {{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}}
+.needs-bullet-list div {{
+  font-size: 12px;
+  color: rgba(205,212,224,0.78);
+}}
+.needs-bullet-list div::before {{
+  content: "•";
+  color: var(--needs-gold);
+  margin-right: 8px;
+}}
+.needs-cta-row,
+.needs-actions {{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}}
+.needs-summary-grid,
+.needs-timing-grid,
+.needs-impact-grid {{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}}
+.needs-summary-card,
+.needs-timing-card,
+.needs-impact-card,
+.needs-authority-card,
+.needs-map-card,
+.needs-coaching-item,
+.needs-outcome-row {{
+  padding: 14px;
+}}
+.needs-authority-wrap {{
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}}
+.needs-donut {{
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  border-radius: 50%;
+  position: relative;
+  background: conic-gradient(#58c46a 0deg 210deg, #e5a14a 210deg 310deg, #d86363 310deg 340deg, #8f7bd9 340deg 360deg);
+}}
+.needs-donut::after {{
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(10,15,22,0.98), rgba(8,12,18,0.98));
+  border: 1px solid rgba(255,255,255,0.05);
+}}
+.needs-donut-center {{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+  text-align: center;
+}}
+.needs-donut-center strong {{
+  font-size: 34px;
+  color: #f7f2e7;
+}}
+.needs-donut-center span {{
+  font-size: 11px;
+  color: rgba(193,203,218,0.72);
+}}
+.needs-authority-list {{
+  display: grid;
+  gap: 8px;
+}}
+.needs-authority-card {{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}}
+.needs-authority-card .dot {{
+  margin-top: 5px;
+}}
+.needs-modes-grid {{
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}}
+.needs-mode-button {{
+  text-align: left;
+  padding: 14px;
+}}
+.needs-footer-strip {{
+  grid-column: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+}}
+.needs-footer-pill {{
+  min-width: 0;
+  flex: 1 1 170px;
+  padding: 14px 16px;
+}}
+.needs-empty {{
+  color: rgba(193,203,218,0.62);
+  font-size: 12px;
+  padding: 10px 0;
+}}
+@media (max-width: 1500px) {{
+  .needs-header {{
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }}
+  .needs-profile {{
+    grid-column: span 2;
+  }}
+  .needs-stat-grid {{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }}
+  .needs-shell {{
+    grid-template-columns: 1fr;
+  }}
+  .needs-sidebar {{
+    position: static;
+  }}
+}}
+@media (max-width: 1180px) {{
+  .needs-header,
+  .needs-stat-grid,
+  .needs-grid,
+  .needs-shell,
+  .needs-authority-wrap,
+  .needs-context-split,
+  .needs-modes-grid,
+  .needs-summary-grid,
+  .needs-timing-grid,
+  .needs-impact-grid {{
+    grid-template-columns: 1fr;
+  }}
+  .needs-card,
+  .needs-span-5,
+  .needs-span-4,
+  .needs-span-3 {{
+    grid-column: span 1;
+  }}
+}}
+
+/* ═══════════════════════════════════════════════════════════════════
    VISION DESKTOP EXPERIENCE
 ═══════════════════════════════════════════════════════════════════ */
 .vision-view {{
@@ -15251,84 +15836,234 @@ body::after {{
   </div>
 
   <!-- ── NOTIFICATIONS ───────────────────────────────────────── -->
-  <div id="view-notifications" class="view" style="display:none;">
-    <div class="view-header">
-      <div class="view-title">NOTIFICATION CENTER<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Shared household attention, event spine, and actionable alerts</div>
-    </div>
-
-    <div class="stats-strip" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
-      <div class="card stat-tile accent">
-        <div class="stat-label">Pending</div>
-        <div class="stat-value" id="notif-stat-pending">—</div>
-        <div class="stat-sub">needs triage</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="stat-label">Visible</div>
-        <div class="stat-value" id="notif-stat-active">—</div>
-        <div class="stat-sub">in inbox</div>
-      </div>
-      <div class="card stat-tile">
-        <div class="stat-label">Recent Events</div>
-        <div class="stat-value" id="notif-stat-events">—</div>
-        <div class="stat-sub">event spine</div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-inner">
-        <div class="card-header"><span class="card-title">Focus Posture</span></div>
-        <div id="notification-focus-posture">
-          <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading focus posture…</div></div>
+  <div id="view-notifications" class="view needs-view" style="display:none;">
+    <div class="needs-header">
+      <div class="needs-brand">
+        <div class="needs-brand-mark">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M9.09 5.25a2.91 2.91 0 1 1 5.82 0c0 .71.26 1.39.73 1.93.92 1.05 1.86 2.61 1.86 4.82V15l1.13 1.5c.31.42.01 1-.52 1H5.89c-.53 0-.83-.58-.52-1L6.5 15v-3c0-2.21.94-3.77 1.86-4.82.47-.54.73-1.22.73-1.93Z"></path>
+            <path d="M10 18a2 2 0 0 0 4 0"></path>
+          </svg>
+        </div>
+        <div class="needs-brand-copy">
+          <div class="needs-kicker">Authority, Presence & Conscience Engine</div>
+          <div class="needs-title">JARVIS <span>NEEDS YOU</span></div>
+          <div class="needs-subtitle">Only what truly requires your authority, judgment, presence, or conscience.</div>
+          <div class="needs-brand-detail">Your wisdom is the threshold automation cannot cross.</div>
         </div>
       </div>
-    </div>
 
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-inner">
-        <div class="card-header"><span class="card-title">Signal History</span></div>
-        <div id="notification-signal-history">
-          <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading signal history…</div></div>
+      <div class="needs-header-center">
+        <div class="needs-stat-grid">
+          <div class="needs-stat-shell"><div class="needs-stat-label">Total Needs You</div><div class="needs-stat-value" id="needs-stat-total">—</div><div class="needs-stat-sub" id="needs-stat-total-sub">Attention stack</div></div>
+          <div class="needs-stat-shell"><div class="needs-stat-label">Decisions</div><div class="needs-stat-value" id="needs-stat-decisions">—</div><div class="needs-stat-sub" id="needs-stat-decisions-sub">High authority</div></div>
+          <div class="needs-stat-shell"><div class="needs-stat-label">Presence</div><div class="needs-stat-value" id="needs-stat-presence">—</div><div class="needs-stat-sub" id="needs-stat-presence-sub">Human presence</div></div>
+          <div class="needs-stat-shell"><div class="needs-stat-label">Escalations</div><div class="needs-stat-value" id="needs-stat-escalations">—</div><div class="needs-stat-sub" id="needs-stat-escalations-sub">Time sensitive</div></div>
+          <div class="needs-stat-shell"><div class="needs-stat-label">Approvals</div><div class="needs-stat-value" id="needs-stat-approvals">—</div><div class="needs-stat-sub" id="needs-stat-approvals-sub">Awaiting you</div></div>
+          <div class="needs-stat-shell"><div class="needs-stat-label">Waiting For You</div><div class="needs-stat-value" id="needs-stat-waiting">—</div><div class="needs-stat-sub" id="needs-stat-waiting-sub">Blocked without you</div></div>
         </div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-inner">
-        <div class="card-header"><span class="card-title">Control Plane</span></div>
-        <div id="notification-control-plane">
-          <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading control plane…</div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card-grid-2">
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header">
-            <span class="card-title">Inbox</span>
-            <button class="btn-ghost" style="font-size:10px;padding:3px 8px;" onclick="loadNotificationCenter()">Refresh ↻</button>
-          </div>
-          <div id="notification-center-search" style="margin-bottom:10px;"></div>
-          <div id="notification-center-filters-status" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
-          <div id="notification-center-filters-category" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
-          <div id="notification-center-filters-severity" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
-          <div id="notification-center-match-count" style="font-size:11px;color:var(--text-3);margin-bottom:10px;"></div>
-          <div id="notification-center-list">
-            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading notifications…</div></div>
+        <div class="needs-quote">
+          <div class="needs-quote-mark">“</div>
+          <div>
+            <strong>Your wisdom is the threshold automation cannot cross.</strong>
+            <span>JARVIS gathers the facts, preserves the context, and only surfaces the moments that truly require you.</span>
           </div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-inner">
-          <div class="card-header"><span class="card-title">Event Spine</span></div>
-          <div id="notification-event-search" style="margin-bottom:10px;"></div>
-          <div id="notification-event-filters-domain" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
-          <div id="notification-event-match-count" style="font-size:11px;color:var(--text-3);margin-bottom:10px;"></div>
-          <div id="notification-event-list">
-            <div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading events…</div></div>
+
+      <div class="needs-profile">
+        <div class="needs-profile-meta">
+          <div class="needs-profile-avatar">CB</div>
+          <div>
+            <strong>Chris Binion</strong>
+            <span>Executive Mode</span>
           </div>
         </div>
+        <span id="needs-generated-at">Updated just now</span>
+      </div>
+    </div>
+
+    <div class="needs-shell">
+      <aside class="needs-sidebar">
+        <div class="needs-side-title">Needs You Status</div>
+        <div class="needs-side-list" id="needs-sidebar-list"></div>
+        <button class="needs-side-cta" onclick="switchView('settings')">Needs You Settings →</button>
+      </aside>
+
+      <div class="needs-grid">
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">1. Immediate Needs (Attention Now)</div>
+                <h3>Requires your decision or presence today.</h3>
+              </div>
+              <button class="needs-header-action" onclick="loadNotificationCenter()">Refresh</button>
+            </div>
+            <div class="needs-list" id="needs-immediate-list"></div>
+            <button class="needs-section-link" style="margin-top:14px;" onclick="switchView('command')">View all needs →</button>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">2. Why This Needs You</div>
+                <h3>We’ve already analyzed and prepared the context.</h3>
+              </div>
+            </div>
+            <div class="needs-lead-card" id="needs-lead-card"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">3. Presence Requests</div>
+                <h3>Moments that need you, not just a decision.</h3>
+              </div>
+              <button class="needs-header-action" onclick="switchView('home')">View All</button>
+            </div>
+            <div class="needs-list" id="needs-presence-list"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">4. Escalations</div>
+                <h3>Crossed important thresholds.</h3>
+              </div>
+              <button class="needs-header-action" onclick="switchView('supervision')">View All</button>
+            </div>
+            <div class="needs-list" id="needs-escalations-list"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">5. Approvals Waiting</div>
+                <h3>Decisions prepared, waiting on you.</h3>
+              </div>
+              <button class="needs-header-action" onclick="switchView('approvals')">View All</button>
+            </div>
+            <div class="needs-list" id="needs-approvals-list"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">6. Context Summary</div>
+                <h3>Everything you need to decide well.</h3>
+              </div>
+            </div>
+            <div class="needs-summary-grid" id="needs-context-summary"></div>
+            <div class="needs-context-split" style="margin-top:12px;">
+              <div class="needs-context-col">
+                <h4>Related Threads</h4>
+                <div class="needs-bullet-list" id="needs-related-threads"></div>
+              </div>
+              <div class="needs-context-col">
+                <h4>Relevant Agents</h4>
+                <div class="needs-bullet-list" id="needs-relevant-agents"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">7. Authority Map</div>
+                <h3>What requires you vs. what can move without you.</h3>
+              </div>
+              <button class="needs-header-action" onclick="switchView('supervision')">Manage Boundaries</button>
+            </div>
+            <div class="needs-authority-wrap">
+              <div class="needs-donut">
+                <div class="needs-donut-center">
+                  <div>
+                    <strong id="needs-authority-score">64%</strong>
+                    <span>Handled with your intervention</span>
+                  </div>
+                </div>
+              </div>
+              <div class="needs-authority-list" id="needs-authority-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">8. Decision Modes</div>
+                <h3>Different needs, different actions.</h3>
+              </div>
+            </div>
+            <div class="needs-modes-grid" id="needs-modes-grid"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">9. Timing Intelligence</div>
+                <h3>When JARVIS recommends you act.</h3>
+              </div>
+              <button class="needs-header-action" onclick="loadNotificationCenter()">Optimize Timing</button>
+            </div>
+            <div class="needs-timing-grid" id="needs-timing-grid"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">10. What Happens After You Decide</div>
+                <h3>The ripple effect of your decision.</h3>
+              </div>
+            </div>
+            <div class="needs-impact-grid" id="needs-impact-grid"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">11. Recent Decisions & Outcomes</div>
+                <h3>How your decisions shaped results.</h3>
+              </div>
+              <button class="needs-header-action" onclick="switchView('activity')">View History</button>
+            </div>
+            <div class="needs-outcome-list" id="needs-outcome-list"></div>
+          </div>
+        </section>
+
+        <section class="needs-card needs-span-4">
+          <div class="needs-card-inner">
+            <div class="needs-card-header">
+              <div>
+                <div class="needs-card-number">12. Coaching & Guardrails</div>
+                <h3>Helping you decide with wisdom.</h3>
+              </div>
+            </div>
+            <div class="needs-coaching-list" id="needs-coaching-list"></div>
+          </div>
+        </section>
+
+        <section class="needs-footer-strip" id="needs-footer-strip"></section>
       </div>
     </div>
   </div>
@@ -22049,26 +22784,8 @@ async function loadApprovals() {{
 }}
 
 async function loadNotificationCenter() {{
-  const notifEl = document.getElementById('notification-center-list');
-  const eventEl = document.getElementById('notification-event-list');
-  const focusEl = document.getElementById('notification-focus-posture');
-  const signalEl = document.getElementById('notification-signal-history');
-  const controlEl = document.getElementById('notification-control-plane');
-  const pendingEl = document.getElementById('notif-stat-pending');
-  const activeEl = document.getElementById('notif-stat-active');
-  const eventsEl = document.getElementById('notif-stat-events');
-  const notificationSearchEl = document.getElementById('notification-center-search');
-  const statusFilterEl = document.getElementById('notification-center-filters-status');
-  const categoryFilterEl = document.getElementById('notification-center-filters-category');
-  const severityFilterEl = document.getElementById('notification-center-filters-severity');
-  const notificationMatchCountEl = document.getElementById('notification-center-match-count');
-  const eventSearchEl = document.getElementById('notification-event-search');
-  const domainFilterEl = document.getElementById('notification-event-filters-domain');
-  const eventMatchCountEl = document.getElementById('notification-event-match-count');
-  if (!notifEl || !eventEl) return;
-
   try {{
-    const [notifRes, eventRes, focusRes, soundRes, visionRes, mediaRes, controlRes] = await Promise.all([
+    const [notifRes, eventRes, focusRes, soundRes, visionRes, mediaRes, controlRes, approvalsRes, commandRes] = await Promise.all([
       fetch('/api/apple/notifications'),
       fetch('/api/apple/events/recent?limit=20'),
       fetch('/api/apple/focus-state'),
@@ -22076,17 +22793,15 @@ async function loadNotificationCenter() {{
       fetch('/api/apple/vision/scans'),
       fetch('/api/apple/now-playing/state'),
       fetch('/api/apple/control-plane/state'),
+      fetch('/api/approvals'),
+      fetch('/api/command-center'),
     ]);
-    if (!notifRes.ok || !eventRes.ok || !focusRes.ok || !soundRes.ok || !visionRes.ok || !mediaRes.ok || !controlRes.ok) {{
-      throw new Error('notification center unavailable');
-    }}
-    const notifPayload = await notifRes.json();
-    const eventPayload = await eventRes.json();
-    const focusPayload = await focusRes.json();
-    const soundPayload = await soundRes.json();
-    const visionPayload = await visionRes.json();
-    const mediaPayload = await mediaRes.json();
-    const controlPayload = await controlRes.json();
+    const payloads = await Promise.all([
+      notifRes.json(), eventRes.json(), focusRes.json(), soundRes.json(), visionRes.json(),
+      mediaRes.json(), controlRes.json(), approvalsRes.json(), commandRes.json(),
+    ]);
+    const [notifPayload, eventPayload, focusPayload, soundPayload, visionPayload, mediaPayload, controlPayload, approvalsPayload, commandPayload] = payloads;
+
     const notifications = ((notifPayload || {{}}).data || {{}}).notifications || [];
     const events = ((eventPayload || {{}}).data || {{}}).events || [];
     const focus = ((focusPayload || {{}}).data || {{}});
@@ -22094,249 +22809,386 @@ async function loadNotificationCenter() {{
     const vision = ((visionPayload || {{}}).data || {{}});
     const media = ((mediaPayload || {{}}).data || {{}});
     const control = ((controlPayload || {{}}).data || {{}});
-    window.__jarvisNotificationCenterState = window.__jarvisNotificationCenterState || {{
-      notificationStatus: 'all',
-      notificationCategory: 'all',
-      notificationSeverity: 'all',
-      eventDomain: 'all',
-      notificationSearch: '',
-      eventSearch: '',
-    }};
-    const state = window.__jarvisNotificationCenterState;
+    const approvals = Array.isArray(approvalsPayload) ? approvalsPayload : [];
+    const command = commandPayload || {{}};
+    const cockpit = command.needs_cockpit || {{}};
+    const cockpitItems = Array.isArray(cockpit.items) ? cockpit.items : [];
+    const motion = (command.needs_motion && Array.isArray(command.needs_motion.entries)) ? command.needs_motion.entries : [];
+    const whatNeedsMe = Array.isArray(command.what_needs_me) ? command.what_needs_me : [];
+    const freshness = Array.isArray((control || {{}}).freshness) ? control.freshness : [];
+    const summary = ((notifPayload || {{}}).data || {{}}).summary || {{}};
+    const routing = ((notifPayload || {{}}).data || {{}}).routing || {{}};
+    const eventSummary = ((notifPayload || {{}}).data || {{}}).event_summary || {{}};
+    const leadNeed = cockpitItems[0] || notifications[0] || motion[0] || events[0] || null;
+    const presenceEvents = events.filter(item => String(item.domain || '').toLowerCase() === 'home').slice(0, 3);
+    const escalationItems = [
+      ...cockpitItems.filter(item => ['critical', 'high'].includes(String(item.urgency || '').toLowerCase())),
+      ...((sound.attention_flags || []).map(item => ({{
+        title: item.title,
+        detail: item.detail,
+        urgency: item.severity || 'medium',
+        source: 'sound',
+      }}))),
+      ...((vision.attention_flags || []).map(item => ({{
+        title: item.title,
+        detail: item.detail,
+        urgency: item.severity || 'medium',
+        source: 'vision',
+      }}))),
+    ].slice(0, 4);
+    const approvalList = approvals.length ? approvals : cockpitItems.filter(item => String(item.sources || []).includes('supervision')).slice(0, 4);
 
-    const pendingCount = notifications.filter(n => (n.status || '') === 'pending').length;
-    if (pendingEl) pendingEl.textContent = String(pendingCount);
-    if (activeEl) activeEl.textContent = String(notifications.length);
-    if (eventsEl) eventsEl.textContent = String(events.length);
-    if (focusEl) {{
-      const posture = focus.interruption_posture || {{}};
-      const rules = Array.isArray(focus.suppression_rules) ? focus.suppression_rules : [];
-      focusEl.innerHTML = `
-        <div class="list-row">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">${{escHtml((focus.summary && focus.summary.label) || posture.label || 'Focus posture')}}</div>
-            <div class="list-row-sub">${{escHtml((focus.summary && focus.summary.detail) || posture.reason || '')}}</div>
-          </div>
-          <span class="kv-tag">${{escHtml(String((posture.recommended_delivery || '').replaceAll('_',' ') || 'unknown').toUpperCase())}}</span>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
-          ${{rules.slice(0, 4).map(rule => `<span class="kv-tag" style="opacity:${{rule.active ? '1' : '.65'}};">${{escHtml(rule.title)}}: ${{rule.active ? 'ACTIVE' : 'IDLE'}}</span>`).join('')}}
-        </div>
-      `;
-    }}
-    if (signalEl) {{
-      const soundItems = Array.isArray(sound.recent_items) ? sound.recent_items : [];
-      const visionItems = Array.isArray(vision.recent_items) ? vision.recent_items : [];
-      const unresolvedSound = soundItems.find(item => !item.resolved);
-      const unresolvedVision = visionItems.find(item => !item.resolved);
-      signalEl.innerHTML = `
-        <div class="list-row">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">Sound History</div>
-            <div class="list-row-sub">${{soundItems.length ? escHtml(soundItems[0].label || 'Recent sound alert') : 'No recent sound alerts.'}}</div>
-          </div>
-          <span class="kv-tag">${{escHtml(String(sound.count || 0))}}</span>
-        </div>
-        ${{unresolvedSound ? `
-        <div class="list-row" style="margin-top:8px;">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">${{escHtml(unresolvedSound.label || 'Sound alert')}}</div>
-            <div class="list-row-sub">${{escHtml(unresolvedSound.detail || 'Awaiting review')}}</div>
-          </div>
-          <button class="btn btn-hue btn-sm" onclick="signalHistoryAction('sound','${{String(unresolvedSound.id || '').replaceAll(\"'\", \"\\\\'\")}}','resolve')">Resolve</button>
-        </div>` : ''}}
-        <div class="list-row" style="margin-top:8px;">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">Vision History</div>
-            <div class="list-row-sub">${{visionItems.length ? escHtml(visionItems[0].context || 'Recent vision capture') : 'No recent vision captures.'}}</div>
-          </div>
-          <span class="kv-tag">${{escHtml(String(vision.count || 0))}}</span>
-        </div>
-        ${{unresolvedVision ? `
-        <div class="list-row" style="margin-top:8px;">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">${{escHtml(unresolvedVision.context || 'Vision scan')}}</div>
-            <div class="list-row-sub">${{escHtml(unresolvedVision.text_preview || 'Awaiting review')}}</div>
-          </div>
-          <button class="btn btn-hue btn-sm" onclick="signalHistoryAction('vision','${{String(unresolvedVision.id || '').replaceAll(\"'\", \"\\\\'\")}}','resolve')">Resolve</button>
-        </div>` : ''}}
-      `;
-    }}
-    if (controlEl) {{
-      const notif = control.notifications || {{}};
-      const eventStats = control.events || {{}};
-      const mediaState = control.media || media || {{}};
-      const freshness = Array.isArray(control.freshness) ? control.freshness : [];
-      const freshnessHtml = freshness.slice(0, 8).map(item => `
-        <div class="list-row" style="margin-top:8px;">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">${{escHtml(item.label || 'Source')}}</div>
-            <div class="list-row-sub">${{escHtml(item.detail || (item.updated_at ? fmtLocalTime(item.updated_at, {{short:true}}) : 'Not updated yet'))}}</div>
-          </div>
-          <span class="kv-tag">${{escHtml(String(item.status || 'unknown').replaceAll('_',' ').toUpperCase())}}</span>
-        </div>
-      `).join('');
-      controlEl.innerHTML = `
-        <div class="list-row">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">Notification freshness</div>
-            <div class="list-row-sub">${{escHtml(notif.last_updated_at ? fmtLocalTime(notif.last_updated_at, {{short:true}}) : 'Not updated yet')}}</div>
-          </div>
-          <span class="kv-tag">${{escHtml(String(notif.pending || 0))}} pending</span>
-        </div>
-        <div class="list-row" style="margin-top:8px;">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">Event spine freshness</div>
-            <div class="list-row-sub">${{escHtml(eventStats.last_event_at ? fmtLocalTime(eventStats.last_event_at, {{short:true}}) : 'No recent events')}}</div>
-          </div>
-          <span class="kv-tag">${{escHtml(String(eventStats.recent_count || 0))}} events</span>
-        </div>
-        <div class="list-row" style="margin-top:8px;">
-          <div style="flex:1;min-width:0;">
-            <div class="list-row-name">Now playing</div>
-            <div class="list-row-sub">${{escHtml(mediaState.title || media.title || 'Nothing playing')}}</div>
-          </div>
-          <span class="kv-tag">${{(mediaState.is_playing || media.is_playing) ? 'PLAYING' : 'IDLE'}}</span>
-        </div>
-        ${{freshnessHtml ? `<div style="margin-top:10px;">
-          <div class="list-row-name" style="margin-bottom:4px;">Source freshness</div>
-          ${{freshnessHtml}}
-        </div>` : ''}}
-      `;
-    }}
+    const decisionsCount = cockpitItems.filter(item => ['critical', 'high'].includes(String(item.urgency || '').toLowerCase())).length || notifications.length;
+    const presenceCount = presenceEvents.length;
+    const escalationCount = escalationItems.length;
+    const approvalCount = approvals.length || Number(cockpit.approval_count || 0);
+    const waitingCount = motion.filter(item => String(item.kind || '') === 'active').length;
+    const totalCount = cockpit.total || notifications.length + escalationCount + approvalCount;
 
-    const statuses = ['all', ...new Set(notifications.map(item => String(item.status || '').toLowerCase()).filter(Boolean))];
-    const categories = ['all', ...new Set(notifications.map(item => String(item.category || '').toLowerCase()).filter(Boolean))];
-    const severities = ['all', ...new Set(notifications.map(item => String(item.severity || '').toLowerCase()).filter(Boolean))];
-    const domains = ['all', ...new Set(events.map(item => String(item.domain || '').toLowerCase()).filter(Boolean))];
-    if (notificationSearchEl) {{
-      notificationSearchEl.innerHTML = notificationSearchField('notificationSearch', state.notificationSearch, 'Search title, detail, or reason');
-    }}
-    if (statusFilterEl) {{
-      statusFilterEl.innerHTML = statuses.map(value => notificationFilterButton('notificationStatus', value, state.notificationStatus === value)).join('');
-    }}
-    if (categoryFilterEl) {{
-      categoryFilterEl.innerHTML = categories.map(value => notificationFilterButton('notificationCategory', value, state.notificationCategory === value)).join('');
-    }}
-    if (severityFilterEl) {{
-      severityFilterEl.innerHTML = severities.map(value => notificationFilterButton('notificationSeverity', value, state.notificationSeverity === value)).join('');
-    }}
-    if (eventSearchEl) {{
-      eventSearchEl.innerHTML = notificationSearchField('eventSearch', state.eventSearch, 'Search title, detail, or domain');
-    }}
-    if (domainFilterEl) {{
-      domainFilterEl.innerHTML = domains.map(value => notificationFilterButton('eventDomain', value, state.eventDomain === value)).join('');
-    }}
+    _needsSetText('needs-generated-at', `Updated ${{needsRelativeTime(command.generated_at || summary.last_updated_at || new Date().toISOString())}}`);
+    _needsSetText('needs-stat-total', String(totalCount));
+    _needsSetText('needs-stat-total-sub', `${{Math.max(0, totalCount - 1)}} vs visible lanes`);
+    _needsSetText('needs-stat-decisions', String(decisionsCount));
+    _needsSetText('needs-stat-decisions-sub', leadNeed ? 'High authority' : 'No major decisions');
+    _needsSetText('needs-stat-presence', String(presenceCount));
+    _needsSetText('needs-stat-presence-sub', presenceCount ? 'Human presence' : 'No presence requests');
+    _needsSetText('needs-stat-escalations', String(escalationCount));
+    _needsSetText('needs-stat-escalations-sub', escalationCount ? 'Time sensitive' : 'No escalations');
+    _needsSetText('needs-stat-approvals', String(approvalCount));
+    _needsSetText('needs-stat-approvals-sub', approvalCount ? 'Awaiting you' : 'No queued approvals');
+    _needsSetText('needs-stat-waiting', String(waitingCount));
+    _needsSetText('needs-stat-waiting-sub', waitingCount ? 'Blocked without you' : 'Moving without you');
 
-    const filteredNotifications = notifications.filter(item => {{
-      const haystack = [
-        item.title || '',
-        item.detail || item.body || '',
-        item.why_now || '',
-        item.category || '',
-        item.status || '',
-        item.severity || '',
-        item.decision_reason || '',
-        item.delivery_mode || '',
-        (item.posture_snapshot && item.posture_snapshot.label) || '',
-      ].join(' ').toLowerCase();
-      const query = String(state.notificationSearch || '').trim().toLowerCase();
-      return (
-      (state.notificationStatus === 'all' || String(item.status || '').toLowerCase() === state.notificationStatus) &&
-      (state.notificationCategory === 'all' || String(item.category || '').toLowerCase() === state.notificationCategory) &&
-      (state.notificationSeverity === 'all' || String(item.severity || '').toLowerCase() === state.notificationSeverity) &&
-      (!query || haystack.includes(query))
-      );
-    }});
-    const filteredEvents = events.filter(item => {{
-      const haystack = [
-        item.title || '',
-        item.detail || '',
-        item.why_now || '',
-        item.domain || '',
-        item.severity || '',
-      ].join(' ').toLowerCase();
-      const query = String(state.eventSearch || '').trim().toLowerCase();
-      return (state.eventDomain === 'all' || String(item.domain || '').toLowerCase() === state.eventDomain) &&
-        (!query || haystack.includes(query));
-    }});
-    if (notificationMatchCountEl) {{
-      notificationMatchCountEl.textContent = `Showing ${{filteredNotifications.length}} of ${{notifications.length}} notifications`;
-    }}
-    if (eventMatchCountEl) {{
-      eventMatchCountEl.textContent = `Showing ${{filteredEvents.length}} of ${{events.length}} events`;
-    }}
-
-    if (!notifications.length) {{
-      notifEl.innerHTML = '<div class="list-row"><span class="dot dot-standby"></span><div><div class="list-row-name">No active notifications</div><div class="list-row-sub">JARVIS has no unresolved household attention items right now.</div></div></div>';
-    }} else if (!filteredNotifications.length) {{
-      notifEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No notifications match the current filters.</div></div>';
-    }} else {{
-      notifEl.innerHTML = filteredNotifications.map(item => {{
-        const severity = String(item.severity || 'low').toLowerCase();
-        const dotCls = severity === 'critical' ? 'dot-error' : severity === 'high' ? 'dot-active' : 'dot-standby';
-        const actions = (Array.isArray(item.available_actions) && item.available_actions.length ? item.available_actions : ['seen','dismiss','resolve'])
-          .filter(action => action && action !== 'open')
-          .map(action => {{
-            const labelMap = {{
-              complete_reminder: 'Complete',
-              snooze_reminder: 'Snooze 1h',
-              stage_prep: 'Stage Prep',
-            }};
-            const label = labelMap[action] || String(action).replaceAll('_',' ').replace(/\\b\\w/g, c => c.toUpperCase());
-            const cls = action === 'dismiss'
-              ? 'btn btn-crimson btn-sm'
-              : (action === 'resolve' || action === 'complete_reminder' || action === 'stage_prep')
-                ? 'btn btn-hue btn-sm'
-                : 'btn btn-navy btn-sm';
-            return `<button class="${{cls}}" onclick="notificationAction('${{item.id}}','${{action}}')">${{label}}</button>`;
-          }});
-        return `
-          <div class="approval-item">
-            <div style="display:flex;align-items:flex-start;gap:8px;">
-              <span class="dot ${{dotCls}}" style="margin-top:5px;"></span>
-              <div style="flex:1;min-width:0;">
-                <div class="approval-title">${{escHtml(item.title || 'JARVIS Alert')}}</div>
-                <div class="approval-meta">${{escHtml(String(item.category || 'system').toUpperCase())}} &nbsp;·&nbsp; ${{escHtml(String(item.status || 'pending').toUpperCase())}}</div>
-                <div style="font-size:12px;color:var(--text-2);margin-top:6px;line-height:1.5;">${{escHtml(item.detail || item.body || '')}}</div>
-                ${{item.why_now ? `<div style="font-size:10px;color:var(--gold);margin-top:6px;">${{escHtml(item.why_now)}}</div>` : ''}}
-                ${{item.decision_reason ? `<div style="font-size:10px;color:var(--sky);margin-top:4px;">${{escHtml(item.decision_reason)}}</div>` : ''}}
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-                  ${{item.delivery_mode ? `<span class="kv-tag">${{escHtml(String(item.delivery_mode).replaceAll('_',' '))}}</span>` : ''}}
-                  ${{item.posture_snapshot && item.posture_snapshot.label ? `<span class="kv-tag">${{escHtml(item.posture_snapshot.label)}}</span>` : ''}}
-                </div>
-                <div class="approval-actions" style="margin-top:10px;">${{actions.join('')}}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }}).join('');
-    }}
-
-    if (!events.length) {{
-      eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No recent events</div></div>';
-    }} else if (!filteredEvents.length) {{
-      eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No events match the current filters.</div></div>';
-    }} else {{
-      eventEl.innerHTML = filteredEvents.slice(0, 12).map(item => {{
-        const severity = String(item.severity || 'low').toLowerCase();
-        const dotCls = severity === 'critical' ? 'dot-error' : severity === 'high' ? 'dot-active' : 'dot-standby';
-        return `
-          <div class="list-row">
-            <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
-            <div style="flex:1;min-width:0;">
-              <div class="list-row-name">${{escHtml(item.title || 'Event')}}</div>
-              <div class="list-row-sub">${{escHtml(item.domain || 'system')}} · ${{fmtLocalTime(item.ts, {{short:true}})}}</div>
-              ${{item.detail ? `<div style="font-size:11px;color:var(--text-2);margin-top:4px;line-height:1.5;">${{escHtml(item.detail)}}</div>` : ''}}
-            </div>
-          </div>
-        `;
-      }}).join('');
-    }}
+    renderNeedsSidebar(cockpit, presenceCount, freshness, focus);
+    renderNeedsImmediate(cockpitItems, notifications);
+    renderNeedsLead(leadNeed, focus, routing);
+    renderNeedsPresence(presenceEvents, routing, events);
+    renderNeedsEscalations(escalationItems);
+    renderNeedsApprovals(approvalList, notifications);
+    renderNeedsContext(leadNeed, whatNeedsMe, command, focus, media);
+    renderNeedsAuthority(cockpit, notifications, approvals, routing);
+    renderNeedsModes();
+    renderNeedsTiming(focus, freshness, leadNeed, routing);
+    renderNeedsImpact(leadNeed, routing, motion);
+    renderNeedsOutcomes(notifications, events, control);
+    renderNeedsCoaching(leadNeed, focus, sound, vision);
+    renderNeedsFooter();
   }} catch (e) {{
-    notifEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Could not load notifications</div></div>';
-    eventEl.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Could not load event spine</div></div>';
+    ['needs-immediate-list','needs-presence-list','needs-escalations-list','needs-approvals-list','needs-outcome-list'].forEach(id => {{
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<div class="needs-empty">Could not load Needs You surface: ${{escHtml(String(e))}}</div>`;
+    }});
   }}
+}}
+
+function _needsSetText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function needsRelativeTime(ts) {{
+  if (!ts) return 'just now';
+  const time = new Date(ts);
+  if (Number.isNaN(time.getTime())) return ts;
+  const diff = Date.now() - time.getTime();
+  const mins = Math.max(1, Math.round(diff / 60000));
+  if (mins < 60) return `${{mins}} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${{hrs}} hr ago`;
+  const days = Math.round(hrs / 24);
+  return `${{days}} day${{days === 1 ? '' : 's'}} ago`;
+}}
+
+function needsTone(level) {{
+  const lowered = String(level || '').toLowerCase();
+  if (['critical', 'high'].includes(lowered)) return 'high';
+  if (['medium', 'warning'].includes(lowered)) return 'medium';
+  if (['low', 'normal'].includes(lowered)) return 'low';
+  return 'info';
+}}
+
+function needsIcon(kind) {{
+  const lowered = String(kind || '').toLowerCase();
+  if (lowered.includes('failure') || lowered.includes('escalation')) return '!';
+  if (lowered.includes('presence') || lowered.includes('home')) return '⌂';
+  if (lowered.includes('approval')) return '✓';
+  if (lowered.includes('memory')) return '◎';
+  if (lowered.includes('calendar')) return '◷';
+  return '•';
+}}
+
+function renderNeedsItem(item, options = {{}}) {{
+  const title = item.title || item.request || item.name || 'Need';
+  const detail = item.detail || item.body || item.why_now || 'Attention required.';
+  const level = item.urgency || item.severity || item.status || 'info';
+  const when = item.timestamp || item.created_at || item.updated_at || '';
+  const meta = options.meta || item.route_label || item.source || item.category || '';
+  const actionHtml = options.actionHtml || '';
+  return `
+    <div class="needs-item">
+      <div class="needs-item-left">
+        <div class="needs-item-icon">${{needsIcon(meta || title)}}</div>
+        <div class="needs-item-copy">
+          <strong>${{escHtml(title)}}</strong>
+          <span>${{escHtml(detail)}}</span>
+        </div>
+      </div>
+      <div class="needs-item-meta">
+        <div class="needs-pill ${{needsTone(level)}}">${{escHtml(String(level).replaceAll('_',' '))}}</div>
+        <div style="font-size:11px;color:rgba(193,203,218,0.72);margin-top:8px;">${{escHtml(meta || needsRelativeTime(when))}}</div>
+        ${{actionHtml}}
+      </div>
+    </div>`;
+}}
+
+function renderNeedsSidebar(cockpit, presenceCount, freshness, focus) {{
+  const el = document.getElementById('needs-sidebar-list');
+  if (!el) return;
+  const activeFresh = freshness.filter(item => String(item.status || '').toLowerCase() === 'fresh').length;
+  const stale = freshness.filter(item => String(item.status || '').toLowerCase() === 'stale').length;
+  const items = [
+    ['Waiting Now', cockpit.critical_count || 0, 'Immediate threshold'],
+    ['Due Today', cockpit.high_count || 0, 'High authority items'],
+    ['Presence', presenceCount || 0, 'Moments needing you'],
+    ['Fresh Sources', activeFresh, 'Synced now'],
+    ['Stale Sources', stale, 'May need recovery'],
+    ['Posture', (focus.summary && focus.summary.label) || 'Focus', 'Current authority mode'],
+  ];
+  el.innerHTML = items.map(([title, count, copy]) => `
+    <div class="needs-side-item">
+      <div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>
+      <span class="needs-side-badge">${{escHtml(String(count))}}</span>
+    </div>`).join('');
+}}
+
+function renderNeedsImmediate(cockpitItems, notifications) {{
+  const el = document.getElementById('needs-immediate-list');
+  if (!el) return;
+  const items = cockpitItems.length ? cockpitItems.slice(0, 4) : notifications.slice(0, 4);
+  if (!items.length) {{
+    el.innerHTML = '<div class="needs-empty">No immediate needs right now.</div>';
+    return;
+  }}
+  el.innerHTML = items.map(item => renderNeedsItem(item, {{
+    meta: item.route_label || item.category || 'Today',
+  }})).join('');
+}}
+
+function renderNeedsLead(leadNeed, focus, routing) {{
+  const el = document.getElementById('needs-lead-card');
+  if (!el) return;
+  if (!leadNeed) {{
+    el.innerHTML = '<div class="needs-empty">No lead decision at the moment.</div>';
+    return;
+  }}
+  const title = leadNeed.title || leadNeed.request || leadNeed.name || 'Attention needed';
+  const detail = leadNeed.detail || leadNeed.body || leadNeed.why_now || 'JARVIS prepared the context.';
+  const next = leadNeed.action_hint || (routing.reason || 'JARVIS will keep this visible until you act.');
+  const route = leadNeed.route || '';
+  const routeLabel = leadNeed.route_label || 'Open Full Context';
+  const actions = Array.isArray(leadNeed.available_actions) ? leadNeed.available_actions : [];
+  const primaryActions = actions.filter(a => a && a !== 'open').slice(0, 3).map(action => {{
+    const label = String(action).replaceAll('_',' ').replace(/\\b\\w/g, c => c.toUpperCase());
+    return `<button onclick="notificationAction('${{String(leadNeed.id || '').replaceAll(\"'\", \"\\\\'\")}}','${{String(action).replaceAll(\"'\", \"\\\\'\")}}')">${{escHtml(label)}}</button>`;
+  }}).join('');
+  el.innerHTML = `
+    <strong>${{escHtml(title)}}</strong>
+    <span>${{escHtml(detail)}}</span>
+    <div class="needs-context-split" style="margin-top:14px;">
+      <div class="needs-context-col">
+        <h4>Why this requires you</h4>
+        <div class="needs-bullet-list">
+          <div>${{escHtml(leadNeed.why_now || focus.summary?.detail || 'This crosses your authority boundary.')}}</div>
+          <div>${{escHtml(leadNeed.action_hint || 'JARVIS has already narrowed the choice.')}}</div>
+          <div>${{escHtml((leadNeed.sources || []).join(', ') || 'Prepared from live signals and supervision context.')}}</div>
+        </div>
+      </div>
+      <div class="needs-context-col">
+        <h4>What happens next</h4>
+        <div class="needs-bullet-list">
+          <div>${{escHtml(next)}}</div>
+          <div>${{escHtml(route ? `${{routeLabel}} follows.` : 'The lane keeps moving once you decide.')}}</div>
+          <div>${{escHtml(leadNeed.urgency ? `Urgency: ${{leadNeed.urgency}}` : 'JARVIS will hold this visibly until you act.')}}</div>
+        </div>
+      </div>
+    </div>
+    <div class="needs-actions">
+      ${{primaryActions || ''}}
+      ${{route ? `<button onclick="window.location.href='${{escHtml(route)}}'">${{escHtml(routeLabel)}}</button>` : ''}}
+    </div>`;
+}}
+
+function renderNeedsPresence(presenceEvents, routing, events) {{
+  const el = document.getElementById('needs-presence-list');
+  if (!el) return;
+  const items = presenceEvents.length ? presenceEvents : events.filter(item => String(item.domain || '').toLowerCase() === 'calendar').slice(0, 3);
+  if (!items.length) {{
+    el.innerHTML = '<div class="needs-empty">No current presence requests.</div>';
+    return;
+  }}
+  el.innerHTML = items.map(item => renderNeedsItem(item, {{
+    meta: item.ts ? fmtLocalTime(item.ts, {{short:true}}) : (routing.label || 'Be present'),
+  }})).join('');
+}}
+
+function renderNeedsEscalations(items) {{
+  const el = document.getElementById('needs-escalations-list');
+  if (!el) return;
+  if (!items.length) {{
+    el.innerHTML = '<div class="needs-empty">No escalations have crossed threshold.</div>';
+    return;
+  }}
+  el.innerHTML = items.map(item => renderNeedsItem(item, {{
+    meta: item.source || item.route_label || 'Escalated',
+  }})).join('');
+}}
+
+function renderNeedsApprovals(items, notifications) {{
+  const el = document.getElementById('needs-approvals-list');
+  if (!el) return;
+  const source = items.length ? items : notifications.slice(0, 4);
+  if (!source.length) {{
+    el.innerHTML = '<div class="needs-empty">No approvals waiting right now.</div>';
+    return;
+  }}
+  el.innerHTML = source.map(item => renderNeedsItem(item, {{
+    meta: item.updated_at ? needsRelativeTime(item.updated_at) : (item.route_label || 'Ready'),
+  }})).join('');
+}}
+
+function renderNeedsContext(leadNeed, whatNeedsMe, command, focus, media) {{
+  const summaryEl = document.getElementById('needs-context-summary');
+  const threadsEl = document.getElementById('needs-related-threads');
+  const agentsEl = document.getElementById('needs-relevant-agents');
+  if (summaryEl) {{
+    const cards = [
+      ['Key Impact', leadNeed?.urgency || 'Normal', leadNeed?.detail || 'No immediate consequence detected.'],
+      ['Time Sensitivity', leadNeed ? 'Today' : 'Stable', focus.summary?.detail || 'JARVIS is holding this in the right lane.'],
+      ['Confidence', `${{Math.max(82, 92 - (whatNeedsMe.length * 2))}}%`, 'JARVIS analysis confidence'],
+      ['Recommendation', leadNeed?.action_hint || 'Review context', media.summary?.label || 'Prepared with routing context'],
+    ];
+    summaryEl.innerHTML = cards.map(([title, value, copy]) => `
+      <div class="needs-summary-card">
+        <strong>${{escHtml(title)}}</strong>
+        <span>${{escHtml(String(value))}}</span>
+        <span>${{escHtml(copy)}}</span>
+      </div>`).join('');
+  }}
+  if (threadsEl) {{
+    const rows = (whatNeedsMe.slice(0, 4).map(item => `${{item.title}} — ${{item.detail}}`)).concat(
+      ((command.activity_feed || []).slice(0, 2).map(item => `${{item.title}} — ${{item.subtitle || item.actor || ''}}`))
+    ).slice(0, 4);
+    threadsEl.innerHTML = rows.length ? rows.map(text => `<div>${{escHtml(text)}}</div>`).join('') : '<div>No related threads yet.</div>';
+  }}
+  if (agentsEl) {{
+    const rows = [
+      leadNeed?.source_summary || 'JARVIS orchestration',
+      focus.summary?.label || 'Focus posture',
+      media.title ? `Media context: ${{media.title}}` : 'Media context idle',
+      (command.branch && command.head) ? `Runtime: ${{command.branch}} @ ${{command.head}}` : 'Runtime continuity ready',
+    ].filter(Boolean).slice(0, 4);
+    agentsEl.innerHTML = rows.map(text => `<div>${{escHtml(text)}}</div>`).join('');
+  }}
+}}
+
+function renderNeedsAuthority(cockpit, notifications, approvals, routing) {{
+  const scoreEl = document.getElementById('needs-authority-score');
+  const listEl = document.getElementById('needs-authority-list');
+  const total = Math.max(1, Number(cockpit.total || notifications.length || 1));
+  const handled = Math.max(0, total - (cockpit.critical_count || 0) - (cockpit.high_count || 0));
+  const score = Math.round((handled / total) * 100);
+  if (scoreEl) scoreEl.textContent = `${{score}}%`;
+  if (!listEl) return;
+  const cards = [
+    ['Handled by Agents', `${{score}}%`, 'Within delegated authority', 'dot-success'],
+    ['Needs Your Authority', `${{Math.round(((cockpit.high_count || 0) / total) * 100)}}%`, 'Crossed authority boundary', 'dot-active'],
+    ['Blocked Waiting You', `${{Math.round(((cockpit.critical_count || 0) / total) * 100)}}%`, 'Cannot proceed', 'dot-error'],
+    ['Watch / Informational', `${{Math.round(((notifications.length - approvals.length) / total) * 100)}}%`, routing.label || 'FYI, no action needed', 'dot-standby'],
+  ];
+  listEl.innerHTML = cards.map(([title, value, copy, dot]) => `
+    <div class="needs-authority-card">
+      <div style="display:flex;gap:10px;">
+        <span class="dot ${{dot}}"></span>
+        <div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>
+      </div>
+      <span>${{escHtml(value)}}</span>
+    </div>`).join('');
+}}
+
+function renderNeedsModes() {{
+  const el = document.getElementById('needs-modes-grid');
+  if (!el) return;
+  const modes = [
+    ['Approve', 'Give permission'], ['Reject', 'Stop / Decline'], ['Choose', 'Select an option'],
+    ['Clarify', 'Ask / Get info'], ['Escalate', 'Raise higher'], ['Be Present', 'Human moment'],
+    ['Protect', 'Set a boundary'], ['Pause', 'Hold / Delay'], ['Intervene', 'Direct action'],
+  ];
+  el.innerHTML = modes.map(([title, copy]) => `<button class="needs-mode-button"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></button>`).join('');
+}}
+
+function renderNeedsTiming(focus, freshness, leadNeed, routing) {{
+  const el = document.getElementById('needs-timing-grid');
+  if (!el) return;
+  const staleCount = freshness.filter(item => String(item.status || '').toLowerCase() === 'stale').length;
+  const cards = [
+    ['Best Time To Decide', leadNeed ? 'Now' : 'Stable', routing.reason || 'High-impact window is open.'],
+    ['After Current Mode', focus.summary?.label || 'Focus active', 'JARVIS respects your current posture.'],
+    ['Freshness Pressure', `${{staleCount}} stale`, 'Some sources may want review soon.'],
+    ['Recommendation', leadNeed?.urgency || 'Low', leadNeed?.action_hint || 'Wait if better data is coming.'],
+  ];
+  el.innerHTML = cards.map(([title, value, copy]) => `<div class="needs-timing-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(String(value))}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+}}
+
+function renderNeedsImpact(leadNeed, routing, motion) {{
+  const el = document.getElementById('needs-impact-grid');
+  if (!el) return;
+  const cards = [
+    ['Your Decision', leadNeed?.title || 'No lead need', leadNeed?.detail || 'Nothing is blocked right now.'],
+    ['Agents Act', routing.label || 'Routing updates', `${{motion.filter(item => item.kind === 'active').length}} lanes will continue`],
+    ['People Impacted', 'Audience / family / partners', leadNeed?.why_now || 'Context already preserved'],
+    ['Next Milestone', 'Motion resumes', leadNeed?.action_hint || 'JARVIS will keep the lane visible'],
+  ];
+  el.innerHTML = cards.map(([title, value, copy]) => `<div class="needs-impact-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(value)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+}}
+
+function renderNeedsOutcomes(notifications, events, control) {{
+  const el = document.getElementById('needs-outcome-list');
+  if (!el) return;
+  const notifSummary = control.notifications || {{}};
+  const rows = [
+    ['Approved / Visible', `${{notifSummary.seen || 0}} items`, 'Visible without becoming noisy'],
+    ['Protected', `${{(control.events && control.events.recent_count) || events.length}} event traces`, 'Continuity preserved'],
+    ['Resolved', `${{notifSummary.resolved || 0}}`, 'Handled and cleared'],
+    ['Dismissed', `${{notifSummary.dismissed || 0}}`, 'Intentionally removed'],
+  ];
+  el.innerHTML = rows.map(([title, value, copy]) => `<div class="needs-outcome-row"><strong>${{escHtml(title)}}</strong><span>${{escHtml(value)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+}}
+
+function renderNeedsCoaching(leadNeed, focus, sound, vision) {{
+  const el = document.getElementById('needs-coaching-list');
+  if (!el) return;
+  const items = [
+    leadNeed?.why_now || 'Use JARVIS context before deciding quickly.',
+    focus.summary?.detail || 'Protect your current focus unless urgency truly crosses threshold.',
+    (sound.policy_rules || [])[0]?.detail || 'Security and household sounds stay reviewable for a reason.',
+    (vision.policy_rules || [])[0]?.detail || 'Visual captures can stay quiet until the right review window.',
+  ];
+  el.innerHTML = items.filter(Boolean).slice(0, 4).map(text => `<div class="needs-coaching-item"><strong>Guardrail</strong><span>${{escHtml(text)}}</span></div>`).join('');
+}}
+
+function renderNeedsFooter() {{
+  const el = document.getElementById('needs-footer-strip');
+  if (!el) return;
+  const cards = [
+    ['Right Person', 'Only you can bring your judgment and conscience.'],
+    ['Right Threshold', 'Surfacing only what crosses real authority boundaries.'],
+    ['Right Time', 'Timing matters as much as the decision.'],
+    ['Right Context', 'All the facts you need. None you do not.'],
+    ['Right Respect', 'Your attention is protected, not harvested.'],
+    ['Right Stewardship', 'We preserve your humanity and your authority.'],
+    ['Needs You Engine Online', 'Authority detection active'],
+  ];
+  el.innerHTML = cards.map(([title, copy]) => `<div class="needs-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}
 
 function notificationFilterButton(kind, value, selected) {{
