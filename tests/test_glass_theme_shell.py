@@ -45,6 +45,25 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/apple/health/summary", html)
         self.assertIn("/api/activity/operator-action", html)
 
+    def test_render_glass_shell_wires_command_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="command-refresh-button"', html)
+        self.assertIn('id="command-live-button"', html)
+        self.assertIn('id="command-runtime-note"', html)
+        self.assertIn("function refreshCommandDesktop()", html)
+        self.assertIn("function refreshCommandLiveSignal()", html)
+        self.assertIn("function commandApplyOpenLoopAction(", html)
+        self.assertIn("function commandApplyApprovalAction(", html)
+        self.assertIn("function commandCompleteTask(", html)
+        self.assertIn("function commandOpenCommandRoute(", html)
+        self.assertIn("function commandRunNamedAction(", html)
+        self.assertIn("/api/open-loops?actor=Chris&limit=12", html)
+        self.assertIn("/api/apple/health/summary", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Open Recovery Loop", html)
+        self.assertIn("Schedule Family Time", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

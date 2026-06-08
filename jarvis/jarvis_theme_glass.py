@@ -19415,26 +19415,31 @@ body::after {{
             <span>Command</span>
           </div>
           <div class="command-sidebar-nav">
-            <div class="command-sidebar-item active">⌂ Command</div>
-            <div class="command-sidebar-item">☀ Daily Brief</div>
-            <div class="command-sidebar-item">▣ Mission Board</div>
-            <div class="command-sidebar-item">◎ Agent Ops</div>
-            <div class="command-sidebar-item">☑ Approvals</div>
-            <div class="command-sidebar-item">⟡ Supervision</div>
-            <div class="command-sidebar-item">✦ Foundry</div>
-            <div class="command-sidebar-item">⇢ Publish</div>
-            <div class="command-sidebar-item">❖ Legacy</div>
-            <div class="command-sidebar-item">⚑ Huddle</div>
-            <div class="command-sidebar-item">🧭 Navigation</div>
-            <div class="command-sidebar-item">♥ Health</div>
-            <div class="command-sidebar-item">⌂ Home</div>
-            <div class="command-sidebar-item">⚙ Systems</div>
-            <div class="command-sidebar-item">⛭ Forge</div>
+            <div class="command-sidebar-item active" onclick="switchView('chat')">⌂ Command</div>
+            <div class="command-sidebar-item" onclick="switchView('overview')">☀ Daily Brief</div>
+            <div class="command-sidebar-item" onclick="commandOpenCommandRoute('/mission-board')">▣ Mission Board</div>
+            <div class="command-sidebar-item" onclick="switchView('agents')">◎ Agent Ops</div>
+            <div class="command-sidebar-item" onclick="switchView('approvals')">☑ Approvals</div>
+            <div class="command-sidebar-item" onclick="commandOpenCommandRoute('/supervision-snapshot')">⟡ Supervision</div>
+            <div class="command-sidebar-item" onclick="switchView('workshop')">✦ Foundry</div>
+            <div class="command-sidebar-item" onclick="switchView('publishing')">⇢ Publish</div>
+            <div class="command-sidebar-item" onclick="switchView('chronicle')">❖ Legacy</div>
+            <div class="command-sidebar-item" onclick="switchView('huddle')">⚑ Huddle</div>
+            <div class="command-sidebar-item" onclick="switchView('navigate')">🧭 Navigation</div>
+            <div class="command-sidebar-item" onclick="switchView('health')">♥ Health</div>
+            <div class="command-sidebar-item" onclick="switchView('home')">⌂ Home</div>
+            <div class="command-sidebar-item" onclick="commandOpenCommandRoute('/settings-center')">⚙ Systems</div>
+            <div class="command-sidebar-item" onclick="switchView('forge')">⛭ Forge</div>
           </div>
           <div class="command-sidebar-foot">
             <div class="command-status-card">
               <strong>System Status</strong>
               <span id="command-system-status">Loading command posture…</span>
+              <div class="command-mini-actions" style="margin-top:10px;">
+                <button class="command-sequence-btn" id="command-refresh-button" onclick="refreshCommandDesktop()">Refresh</button>
+                <button class="command-sequence-btn" id="command-live-button" onclick="refreshCommandLiveSignal()">Refresh Live</button>
+              </div>
+              <span id="command-runtime-note" style="display:block;margin-top:10px;color:rgba(255,255,255,0.58);font-size:11px;line-height:1.45;">Command posture is loading live data…</span>
               <div class="command-status-link" onclick="switchView('notifications')">System Overview →</div>
             </div>
           </div>
@@ -30520,24 +30525,335 @@ function commandQuickAction(text) {{
   sendCmd();
 }}
 
+let _commandRequestSerial = 0;
+let _commandDesktopData = null;
+
+function commandRuntimeNote(text) {{
+  _setTextIfPresent('command-runtime-note', text || 'Command posture is live.');
+}}
+
 function commandBadge(priority) {{
   const raw = String(priority || '').toLowerCase();
   return raw === 'critical' || raw === 'high' ? 'high' : raw === 'low' ? 'low' : '';
 }}
 
+async function commandReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_) {{
+    return null;
+  }}
+}}
+
+async function commandFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    if (!response.ok) {{
+      return {{ ok: false, status: response.status, payload: await commandReadJson(response) }};
+    }}
+    return {{ ok: true, status: response.status, payload: await commandReadJson(response) }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
+
+function commandActionTone(value) {{
+  const raw = String(value || '').toLowerCase();
+  if (['critical', 'high', 'urgent', 'blocked', 'pending-approval', 'error', 'failed'].includes(raw)) return 'high';
+  if (['approved', 'complete', 'completed', 'healthy', 'good', 'online', 'clear'].includes(raw)) return 'good';
+  if (['low', 'quiet', 'fyi', 'watch', 'stable'].includes(raw)) return 'low';
+  return '';
+}}
+
+function commandActionButtonClass(value) {{
+  const tone = commandActionTone(value);
+  if (tone === 'high') return 'dailybrief-button warn';
+  if (tone === 'good') return 'dailybrief-button good';
+  if (tone === 'danger') return 'dailybrief-button danger';
+  if (tone === 'low') return 'dailybrief-button secondary';
+  return 'dailybrief-button secondary';
+}}
+
+function commandNormalizeApprovals(payload) {{
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.pending)) return payload.pending;
+  return [];
+}}
+
+async function commandLoadHealthSummary() {{
+  const primary = await commandFetchJson('/api/health/summary');
+  if (primary.ok) return {{ source: '/api/health/summary', data: dailyBriefNormalizeHealthSummary(primary.payload) }};
+  const fallback = await commandFetchJson('/api/apple/health/summary');
+  if (fallback.ok) return {{ source: '/api/apple/health/summary', data: dailyBriefNormalizeHealthSummary(fallback.payload) }};
+  return {{
+    source: '/api/apple/health/summary',
+    data: {{
+      available: false,
+      estimated: false,
+      readiness: {{ score: null, grade: '', message: '' }},
+      metrics: {{ sleep_hours: 0, hrv: null, resting_hr: null, steps_today: 0, active_calories: 0, stand_hours: 0 }},
+      thor_note: '',
+      completeness: {{}},
+      watchlist: [],
+    }},
+    error: primary.payload?.detail || fallback.payload?.detail || primary.error?.message || fallback.error?.message || 'Health source unavailable',
+  }};
+}}
+
+async function commandRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: dailyBriefName(),
+        domain: 'command',
+        route: '/command-center',
+        route_label: 'Open Command',
+        ...payload,
+      }}),
+    }});
+  }} catch (_) {{}}
+}}
+
+function commandOpenCommandRoute(route, fallbackView = '') {{
+  const raw = String(route || '').trim();
+  if (!raw) {{
+    if (fallbackView) switchView(fallbackView);
+    return;
+  }}
+  const routeMap = {{
+    '/briefing-center': 'overview',
+    '/command-center': 'chat',
+    '/chronicle-center': 'chronicle',
+    '/navigation-center': 'navigate',
+    '/health-center': 'health',
+    '/huddle-center': 'huddle',
+    '/settings-center': 'settings',
+    '/publish': 'publishing',
+  }};
+  const mapped = routeMap[raw];
+  if (mapped) {{
+    switchView(mapped);
+    return;
+  }}
+  if (fallbackView) {{
+    switchView(fallbackView);
+    return;
+  }}
+  window.location.href = raw;
+}}
+
+async function commandOpenRouteAction(route, label, detail, fallbackView = '') {{
+  commandRuntimeNote(`Opening ${{label || 'linked surface'}}…`);
+  await commandRecordAction({{
+    action: label || 'Open route',
+    title: label || 'Open route',
+    detail: detail || '',
+    why_now: 'Command opened a related operating surface from the desktop board.',
+    result_summary: `Navigated to ${{route || fallbackView || 'linked surface'}}.`,
+    related_kind: 'command-route',
+    related_label: label || route || fallbackView || 'Command route',
+    route: route || '/command-center',
+    route_label: label || 'Open route',
+  }});
+  commandOpenCommandRoute(route, fallbackView);
+}}
+
+function commandOpenLoopButtons(item) {{
+  const actions = Array.isArray(item?.available_actions) ? item.available_actions.slice(0, 3) : [];
+  return actions.map(action => {{
+    const key = String(action.id || action.label || 'act');
+    return `<button class="${{commandActionButtonClass(key)}}"
+      onclick='commandApplyOpenLoopAction(${{JSON.stringify(item.item_id || "")}}, ${{JSON.stringify(item.domain || "")}}, ${{JSON.stringify(key)}}, ${{JSON.stringify(item.title || "Open loop")}})'>${{escHtml(action.label || key)}}</button>`;
+  }}).join('');
+}}
+
+function commandApprovalButtons(item) {{
+  const requestId = String(item?.request_id || item?.id || '');
+  if (!requestId) return '';
+  return [
+    `<button class="${{commandActionButtonClass('approve')}}" onclick='commandApplyApprovalAction(${{JSON.stringify(requestId)}}, "approve", ${{JSON.stringify(item.title || "Approval")}})'>Approve</button>`,
+    `<button class="${{commandActionButtonClass('reject')}}" onclick='commandApplyApprovalAction(${{JSON.stringify(requestId)}}, "reject", ${{JSON.stringify(item.title || "Approval")}})'>Reject</button>`,
+  ].join('');
+}}
+
+function commandTaskButtons(task) {{
+  if (!task?.id) return '';
+  return `<button class="${{commandActionButtonClass(task.priority)}}" onclick='commandCompleteTask(${{JSON.stringify(task.id)}}, ${{JSON.stringify(task.title || "Task")}})'>Complete</button>`;
+}}
+
+async function commandApplyOpenLoopAction(itemId, domain, action, title) {{
+  commandRuntimeNote(`Applying ${{action}} to ${{title}}…`);
+  try {{
+    const response = await fetch('/api/open-loops/action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: dailyBriefName(),
+        domain,
+        item_id: itemId,
+        action,
+        item_title: title,
+        route: '/command-center',
+        route_label: 'Open Command',
+        activity_domain: 'command',
+        why_now: 'Command moved an open loop directly from the desktop operating board.',
+        result_summary: `Command applied ${{action}} to ${{title}}.`,
+        related_kind: 'command-open-loop',
+        related_label: title,
+      }}),
+    }});
+    const payload = await commandReadJson(response);
+    if (!response.ok) throw new Error(payload?.detail || `HTTP ${{response.status}}`);
+    if (typeof showToast === 'function') showToast(`${{title}}: ${{action}}`, 'success');
+    commandRuntimeNote(`Applied ${{action}} to ${{title}}.`);
+    await refreshCommandDesktop();
+  }} catch (error) {{
+    commandRuntimeNote(`Open-loop action failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Open-loop action failed', 'error');
+  }}
+}}
+
+async function commandApplyApprovalAction(requestId, action, title) {{
+  commandRuntimeNote(`${{action}} ${{title}}…`);
+  try {{
+    const payload = action === 'approve'
+      ? {{ approved_by: 'chris' }}
+      : {{ rejected_by: 'chris', reason: 'Rejected from Command.' }};
+    const response = await fetch(`/api/approvals/${{encodeURIComponent(requestId)}}/${{action}}`, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify(payload),
+    }});
+    const result = await commandReadJson(response);
+    if (!response.ok) throw new Error(result?.detail || `HTTP ${{response.status}}`);
+    await commandRecordAction({{
+      action: `${{action.replace(/-/g, ' ')}} approval`,
+      title,
+      detail: `Command ${{action.replace(/-/g, ' ')}} for ${{title}}.`,
+      why_now: 'Command resolved a live approval gate.',
+      result_summary: `Approval action completed: ${{action}}.`,
+      related_kind: 'approval',
+      related_label: title,
+    }});
+    if (typeof showToast === 'function') showToast(`${{title}} ${{action}}d`, action === 'approve' ? 'success' : 'info');
+    commandRuntimeNote(`${{title}} ${{action}}d successfully.`);
+    await refreshCommandDesktop();
+  }} catch (error) {{
+    commandRuntimeNote(`Approval action failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Approval action failed', 'error');
+  }}
+}}
+
+async function commandCompleteTask(taskId, title) {{
+  commandRuntimeNote(`Completing ${{title}}…`);
+  try {{
+    const response = await fetch(`/api/tasks/${{encodeURIComponent(taskId)}}/complete`, {{ method: 'POST' }});
+    const result = await commandReadJson(response);
+    if (!response.ok || !result?.ok) throw new Error(result?.detail || 'Task completion was not accepted.');
+    await commandRecordAction({{
+      action: 'Complete Task',
+      title,
+      detail: `Command completed task "${{title}}".`,
+      why_now: 'Command closed a follow-through item from the operating board.',
+      result_summary: 'Task completed from Command.',
+      related_kind: 'task',
+      related_label: title,
+    }});
+    if (typeof showToast === 'function') showToast(`Completed ${{title}}`, 'success');
+    commandRuntimeNote(`Completed ${{title}}.`);
+    await refreshCommandDesktop();
+  }} catch (error) {{
+    commandRuntimeNote(`Task completion failed: ${{String(error)}}`);
+    if (typeof showToast === 'function') showToast('Task completion failed', 'error');
+  }}
+}}
+
+const _COMMAND_ACTION_LIBRARY = {{
+  focus_project: {{
+    title: 'Start Creative Sprint',
+    prompt: 'Open a focused build window around the highest leverage active project and tell me what should move first.',
+    detail: 'Launch a focused build sprint from Command.',
+  }},
+  review_needs: {{
+    title: 'Open Recovery Loop',
+    route: '/supervision-snapshot',
+    fallbackView: '',
+    detail: 'Inspect failure and recovery posture before the next decision.',
+  }},
+  protect_family: {{
+    title: 'Schedule Family Time',
+    route: '',
+    fallbackView: 'calendar',
+    detail: 'Protect tonight in the family calendar before the day fragments.',
+  }},
+  workshop_lane: {{
+    title: 'Wake Workshop Concept Lab',
+    route: '',
+    fallbackView: 'workshop',
+    detail: 'Open the Workshop lane and protect one creative asset.',
+  }},
+  send_priority_message: {{
+    title: 'Send Priority Message',
+    prompt: 'Draft the highest-value message I should send next based on the current command posture.',
+    detail: 'Use JARVIS to prepare the next highest-value relationship message.',
+  }},
+  lock_focus: {{
+    title: 'Lock Distraction Shield',
+    prompt: 'Set command posture around a guarded focus block and tell me what can wait until after it.',
+    detail: 'Use the transcript to reinforce a bounded focus posture.',
+  }},
+}};
+
+async function commandRunNamedAction(key) {{
+  const action = _COMMAND_ACTION_LIBRARY[String(key || '')];
+  if (!action) return;
+  if (action.prompt) {{
+    commandRuntimeNote(`Launching ${{action.title}}…`);
+    await commandRecordAction({{
+      action: action.title,
+      title: action.title,
+      detail: action.detail || action.prompt,
+      why_now: 'Command launched a direct operating action through the transcript.',
+      result_summary: `Prompt launched from Command: ${{action.title}}.`,
+      related_kind: 'command-prompt',
+      related_label: action.title,
+    }});
+    commandQuickAction(action.prompt);
+    return;
+  }}
+  await commandOpenRouteAction(action.route || '', action.title, action.detail || '', action.fallbackView || '');
+}}
+
+async function refreshCommandLiveSignal() {{
+  commandRuntimeNote('Refreshing live command signal…');
+  await loadCommandDesktop(true);
+}}
+
+async function refreshCommandDesktop() {{
+  commandRuntimeNote('Refreshing command board…');
+  await loadCommandDesktop(true);
+}}
+
 function renderCommandDesktop(data) {{
+  _commandDesktopData = data;
   const name = dailyBriefName();
   const home = data.command?.home_overview || {{}};
   const needs = data.command?.needs_cockpit || {{}};
   const activity = Array.isArray(data.command?.activity_feed) ? data.command.activity_feed : [];
-  const approvals = Array.isArray(data.command?.pending_approvals) ? data.command.pending_approvals : [];
+  const approvals = commandNormalizeApprovals(data.approvals).length ? commandNormalizeApprovals(data.approvals) : (Array.isArray(data.command?.pending_approvals) ? data.command.pending_approvals : []);
   const roster = data.command?.agent_ops_roster || {{}};
   const progress = data.command?.progress_dashboard || {{}};
   const recovery = data.command?.failure_recovery || {{}};
   const memory = data.command?.memory || {{}};
   const modules = data.command?.core_modules || {{}};
   const timeline = data.command?.timeline_preview || {{}};
-  const openLoops = data.command?.open_loop_inspector || {{}};
+  const openLoops = data.openLoops || data.command?.open_loop_inspector || {{}};
   const projects = Array.isArray(data.projects) ? data.projects : [];
   const tasks = Array.isArray(data.tasks) ? data.tasks : [];
   const reminders = Array.isArray(data.reminders?.open_items) ? data.reminders.open_items : [];
@@ -30551,6 +30867,9 @@ function renderCommandDesktop(data) {{
   const focusProject = projects[0] || null;
   const focusTask = tasks[0] || null;
   const activeAgent = home.active_agent || {{}};
+  const openLoopItems = Array.isArray(openLoops.items) ? openLoops.items : [];
+  const proactiveLoops = Array.isArray(openLoops.proactive_surface) ? openLoops.proactive_surface : [];
+  const availabilityNotes = Array.isArray(data.availabilityNotes) ? data.availabilityNotes.filter(Boolean) : [];
 
   const setText = (id, value) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }};
   setText('command-profile-name', name);
@@ -30563,6 +30882,7 @@ function renderCommandDesktop(data) {{
   setText('command-watch-chip', recovery.integration_issue_count ? 'Alerted' : 'Normal');
   setText('command-quote', 'Lead with wisdom. Act with clarity.');
   setText('command-quote-copy', home.summary || 'JARVIS protects what matters and moves what moves you.');
+  commandRuntimeNote(availabilityNotes.length ? availabilityNotes.join(' • ') : (home.summary || 'Command is live and connected.'));
 
   setText('command-presence-title', focusProject ? 'Focus Block Mode' : 'Command Review');
   setText('command-presence-copy', focusProject ? `Deep work is centered on ${{focusProject.title || 'the lead project'}}. ${{home.system_state?.detail || ''}}` : (home.headline || 'Command is surveying the day.'));
@@ -30583,12 +30903,46 @@ function renderCommandDesktop(data) {{
     ];
     truthEl.innerHTML = truthItems.map(([title, copy]) => `<div class="command-truth-tile"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
   }}
-  setText('command-truth-summary', home.summary || 'JARVIS is gathering the real state of your world.');
+  const truthSummaryBits = [
+    home.summary || '',
+    data.home?.available === false ? `Home unavailable: ${{data.home?.error || 'not connected'}}.` : '',
+    data.health?.available === false ? 'Health telemetry unavailable.' : (data.health?.estimated ? 'Health posture is estimated because key signals are missing.' : ''),
+    proactiveLoops.length ? `Proactive resurfacing: ${{proactiveLoops.map(item => item.title || 'open loop').slice(0, 2).join(' · ')}}.` : '',
+  ].filter(Boolean);
+  setText('command-truth-summary', truthSummaryBits.join(' ') || 'JARVIS is gathering the real state of your world.');
 
   const decisionEl = document.getElementById('command-decision-list');
   if (decisionEl) {{
-    const items = (needs.items || []).slice(0, 6);
-    decisionEl.innerHTML = items.length ? items.map(item => `<div class="command-decision-row"><div><strong>${{escHtml(item.title || 'Decision gate')}}</strong><span>${{escHtml(item.detail || item.action_hint || '')}}</span></div><div class="command-row-meta"><div class="command-badge ${{commandBadge(item.urgency)}}">${{escHtml(String(item.urgency || 'normal'))}}</div><div style="margin-top:8px;">${{escHtml(item.route_label || 'Review')}}</div></div></div>`).join('') : '<div class="command-decision-row"><div><strong>No surfaced decision gates</strong><span>Your current command queue is clear.</span></div><div class="command-row-meta">Clear</div></div>';
+    const items = [];
+    approvals.slice(0, 3).forEach(item => items.push({{
+      title: item.title || 'Approval item',
+      copy: item.summary || item.detail || item.description || 'Decision needed.',
+      meta: item.requested_by || item.agent_label || item.action_type || 'Approval',
+      badge: String(item.priority || item.status || 'review'),
+      actions: commandApprovalButtons(item),
+      route: '/approval-queue',
+      routeLabel: 'Open approval queue',
+      fallbackView: 'approvals',
+    }}));
+    (needs.items || []).slice(0, 3).forEach(item => items.push({{
+      title: item.title || 'Decision gate',
+      copy: item.detail || item.action_hint || '',
+      meta: item.route_label || 'Review',
+      badge: String(item.urgency || 'normal'),
+      actions: `<button class="${{commandActionButtonClass(item.urgency)}}" onclick='commandOpenRouteAction(${{JSON.stringify(item.route || "/supervision-snapshot")}}, ${{JSON.stringify(item.route_label || "Review")}}, ${{JSON.stringify(item.detail || item.action_hint || "")}})'>${{escHtml(item.route_label || 'Review')}}</button>`,
+      route: item.route || '',
+      routeLabel: item.route_label || 'Review',
+    }}));
+    openLoopItems.filter(item => Array.isArray(item.available_actions) && item.available_actions.length).slice(0, 2).forEach(item => items.push({{
+      title: item.title || 'Open loop',
+      copy: item.summary || item.next_action || 'Needs review.',
+      meta: item.owner_agent || item.domain || 'Open loop',
+      badge: String(item.status || 'open'),
+      actions: commandOpenLoopButtons(item),
+      route: '/command-center',
+      routeLabel: 'Open command center',
+    }}));
+    decisionEl.innerHTML = items.length ? items.slice(0, 6).map(item => `<div class="command-decision-row command-decision-row-stack"><div><strong>${{escHtml(item.title || 'Decision gate')}}</strong><span>${{escHtml(item.copy || '')}}</span></div><div class="command-row-meta"><div class="command-badge ${{commandBadge(item.badge)}}">${{escHtml(String(item.badge || item.meta || 'review'))}}</div><div style="margin-top:8px;">${{escHtml(item.meta || item.routeLabel || 'Review')}}</div></div>${{item.actions ? `<div class="dailybrief-row-actions" style="grid-column:1 / -1;justify-content:flex-start;">${{item.actions}}</div>` : ''}}</div>`).join('') : '<div class="command-decision-row"><div><strong>No surfaced decision gates</strong><span>Your current command queue is clear.</span></div><div class="command-row-meta">Clear</div></div>';
   }}
 
   const actionsEl = document.getElementById('command-actions-list');
@@ -30600,22 +30954,22 @@ function renderCommandDesktop(data) {{
       {{ label: 'Open Daily Brief', route: '/briefing-center', detail: 'Re-center the day.' }},
       {{ label: 'Open Activity Feed', route: '/activity-center', detail: 'Review recent motion.' }},
     ];
-    actionsEl.innerHTML = merged.slice(0, 7).map(item => `<div class="command-row"><div><strong>${{escHtml(item.label || 'Open route')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="command-row-meta" style="cursor:pointer;" onclick="window.location.href='${{escHtml(item.route || '/command-center')}}'">Open</div></div>`).join('');
+    actionsEl.innerHTML = merged.slice(0, 7).map(item => `<div class="command-row"><div><strong>${{escHtml(item.label || 'Open route')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="command-row-meta" style="cursor:pointer;" onclick='commandOpenRouteAction(${{JSON.stringify(item.route || "/command-center")}}, ${{JSON.stringify(item.label || "Open route")}}, ${{JSON.stringify(item.detail || "")}})'>Open</div></div>`).join('');
   }}
 
   const directActionsEl = document.getElementById('command-direct-actions');
   if (directActionsEl) {{
     const directItems = [
-      ['Launch Devotional Sequence', 'Publish launch plan for the current devotional asset.'],
-      ['Queue Agent Mission', 'Research what gaps remain in the top need.'],
-      ['Start Creative Sprint', focusProject ? `Advance ${{focusProject.title}}` : 'Open a 90 minute focused build window.'],
-      ['Schedule Family Time', 'Protect tonight in the calendar and household posture.'],
-      ['Wake Workshop Concept Lab', 'Surface the strongest asset to build next.'],
-      ['Send Priority Message', 'Draft a direct message for the most important relationship today.'],
-      ['Open Recovery Loop', 'Review sleep, stress, and health signals.'],
-      ['Lock Distraction Shield', 'Guard the current focus block until the hard stop.'],
+      ['Launch Devotional Sequence', 'Publish launch plan for the current devotional asset.', `commandQuickAction(${{JSON.stringify('Prepare the next devotional launch sequence, surface the blockers, and tell me the first move.')}})`],
+      ['Queue Agent Mission', 'Research what gaps remain in the top need.', `commandQuickAction(${{JSON.stringify('Research the top command need "' + (topNeed.title || 'the current blocker') + '" and tell me what should happen next.')}})`],
+      ['Start Creative Sprint', focusProject ? `Advance ${{focusProject.title}}` : 'Open a 90 minute focused build window.', `commandRunNamedAction("focus_project")`],
+      ['Schedule Family Time', 'Protect tonight in the calendar and household posture.', `commandRunNamedAction("protect_family")`],
+      ['Wake Workshop Concept Lab', 'Surface the strongest asset to build next.', `commandRunNamedAction("workshop_lane")`],
+      ['Send Priority Message', 'Draft a direct message for the most important relationship today.', `commandRunNamedAction("send_priority_message")`],
+      ['Open Recovery Loop', 'Review system failures, health, and recovery posture.', `commandRunNamedAction("review_needs")`],
+      ['Lock Distraction Shield', 'Guard the current focus block until the hard stop.', `commandRunNamedAction("lock_focus")`],
     ];
-    directActionsEl.innerHTML = directItems.map(([title, copy]) => `<div class="command-action-tile" onclick="commandQuickAction('${{String(copy).replace(/'/g, "\\'")}}')"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
+    directActionsEl.innerHTML = directItems.map(([title, copy, handler]) => `<div class="command-action-tile" onclick="${{handler}}"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
   }}
 
   const awayEl = document.getElementById('command-away-list');
@@ -30643,19 +30997,41 @@ function renderCommandDesktop(data) {{
 
   const healthEl = document.getElementById('command-health-list');
   if (healthEl) {{
-    const rows = [
-      ['Sleep Score', metrics.sleep_hours ? `${{metrics.sleep_hours.toFixed(1)}}h` : '—', metrics.sleep_hours >= 7 ? 'Good recovery window.' : 'Recovery may need protection.'],
-      ['Readiness', readiness.score != null ? String(readiness.score) : '—', readiness.grade || 'Awaiting readiness signal.'],
+    const rows = health.available ? [
+      ['Sleep Score', metrics.sleep_hours ? `${{metrics.sleep_hours.toFixed(1)}}h` : '—', metrics.sleep_hours >= 7 ? 'Good recovery window.' : (metrics.sleep_hours ? 'Recovery may need protection.' : 'Sleep signal missing.')],
+      ['Readiness', readiness.score != null ? String(readiness.score) : '—', readiness.grade || readiness.message || 'Awaiting readiness signal.'],
       ['HRV', metrics.hrv != null ? `${{metrics.hrv}} ms` : '—', metrics.hrv != null ? 'Autonomic balance posture.' : 'No live HRV yet.'],
-      ['Stress Trend', metrics.stress_load != null ? String(metrics.stress_load) : '—', metrics.stress_load != null ? 'Keep the afternoon light if needed.' : 'No stress trend yet.'],
+      ['Watchlist', Array.isArray(health.watchlist) && health.watchlist[0] ? String(health.watchlist[0].severity || 'watch').toUpperCase() : 'Clear', Array.isArray(health.watchlist) && health.watchlist[0] ? (health.watchlist[0].title || 'Health watch item') : 'No active health watch item is surfaced.'],
+    ] : [
+      ['Health Source', 'Unavailable', 'Apple health summary is not reachable from Command right now.'],
+      ['Why', 'Not Connected', data.healthUnavailableReason || 'No live health telemetry is available, so Command is not fabricating recovery posture.'],
     ];
     healthEl.innerHTML = rows.map(([title, value, copy]) => `<div class="command-health-row"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="command-row-meta">${{escHtml(value)}}</div></div>`).join('');
   }}
 
   const followEl = document.getElementById('command-follow-list');
   if (followEl) {{
-    const followSource = tasks.length ? tasks.slice(0, 5) : (openLoops.proactive_surface || []).slice(0, 5);
-    followEl.innerHTML = followSource.length ? followSource.map(item => `<div class="command-row"><div><strong>${{escHtml(item.title || 'Open loop')}}</strong><span>${{escHtml(item.status || item.proactive_reason || item.detail || 'Needs follow-through.')}}</span></div><div class="command-badge ${{commandBadge(item.priority)}}">${{escHtml(String(item.priority || 'open'))}}</div></div>`).join('') : '<div class="command-row"><div><strong>No follow-through lane is open</strong><span>You are clear to stay on the main mission.</span></div><div class="command-badge low">Clear</div></div>';
+    const followItems = [
+      ...openLoopItems.slice(0, 3).map(item => ({{
+        title: item.title || 'Open loop',
+        copy: item.summary || item.proactive_reason || item.detail || 'Needs follow-through.',
+        badge: item.status || item.priority || 'open',
+        actions: commandOpenLoopButtons(item),
+      }})),
+      ...tasks.slice(0, 2).map(item => ({{
+        title: item.title || 'Task',
+        copy: `${{item.status || 'open'}}${{item.due ? ' · due ' + item.due : ''}}`,
+        badge: item.priority || 'open',
+        actions: commandTaskButtons(item),
+      }})),
+      ...(!openLoopItems.length && !tasks.length ? proactiveLoops.slice(0, 2).map(item => ({{
+        title: item.title || 'Proactive surfacing',
+        copy: item.proactive_reason || 'Needs review.',
+        badge: 'watch',
+        actions: item.route ? `<button class="${{commandActionButtonClass('watch')}}" onclick='commandOpenRouteAction(${{JSON.stringify(item.route)}}, ${{JSON.stringify(item.route_label || 'Review')}}, ${{JSON.stringify(item.proactive_reason || '')}})'>${{escHtml(item.route_label || 'Review')}}</button>` : '',
+      }})) : []),
+    ].slice(0, 5);
+    followEl.innerHTML = followItems.length ? followItems.map(item => `<div class="command-row command-follow-row-stack"><div><strong>${{escHtml(item.title || 'Open loop')}}</strong><span>${{escHtml(item.copy || 'Needs follow-through.')}}</span></div><div class="command-badge ${{commandBadge(item.badge)}}">${{escHtml(String(item.badge || 'open'))}}</div>${{item.actions ? `<div class="dailybrief-row-actions" style="grid-column:1 / -1;justify-content:flex-start;">${{item.actions}}</div>` : ''}}</div>`).join('') : '<div class="command-row"><div><strong>No follow-through lane is open</strong><span>You are clear to stay on the main mission.</span></div><div class="command-badge low">Clear</div></div>';
   }}
 
   const agentCount = roster.counts?.running || 0;
@@ -30695,7 +31071,7 @@ function renderCommandDesktop(data) {{
   setText('command-next-copy', topNeed.detail || focusTask?.status || 'JARVIS is looking for the next move with the highest leverage and lowest confusion.');
   const nextBtn = document.getElementById('command-next-button');
   if (nextBtn) nextBtn.onclick = () => {{
-    if (topNeed.route) window.location.href = topNeed.route;
+    if (topNeed.route) commandOpenRouteAction(topNeed.route, topNeed.route_label || 'Open next need', topNeed.detail || '');
     else if (focusTask) commandQuickAction(`Help me resolve ${{focusTask.title}}`);
     else switchView('notifications');
   }};
@@ -30703,16 +31079,29 @@ function renderCommandDesktop(data) {{
   setText('command-reminder-copy', 'Courage is doing it anyway. Love is why you do it for.');
 }}
 
-async function loadCommandDesktop() {{
-  const [command, home, tasksPayload, projectsPayload, remindersPayload, health, devicesPayload] = await Promise.all([
-    _fetchJsonSafe('/api/command-center'),
-    _fetchJsonSafe('/api/home/dashboard'),
-    _fetchJsonSafe('/api/tasks'),
-    _fetchJsonSafe('/api/home/projects?status=active'),
-    _fetchJsonSafe('/api/apple/reminders/state'),
-    _fetchJsonSafe('/api/health/summary'),
-    _fetchJsonSafe('/api/connected-devices'),
+async function loadCommandDesktop(forceLive = false) {{
+  const requestSerial = ++_commandRequestSerial;
+  commandRuntimeNote(forceLive ? 'Refreshing live command surfaces…' : 'Loading command surface…');
+  const [commandResult, homeResult, tasksResult, projectsResult, remindersResult, healthResult, devicesResult, approvalsResult, openLoopsResult] = await Promise.all([
+    commandFetchJson('/api/command-center'),
+    commandFetchJson('/api/home/dashboard'),
+    commandFetchJson('/api/tasks'),
+    commandFetchJson('/api/home/projects?status=active'),
+    commandFetchJson('/api/apple/reminders/state'),
+    commandLoadHealthSummary(),
+    commandFetchJson('/api/connected-devices'),
+    commandFetchJson('/api/approvals'),
+    commandFetchJson('/api/open-loops?actor=Chris&limit=12'),
   ]);
+  if (requestSerial !== _commandRequestSerial) return;
+  const command = commandResult.payload || {{}};
+  const home = homeResult.payload || {{}};
+  const tasksPayload = tasksResult.payload || {{}};
+  const projectsPayload = projectsResult.payload || {{}};
+  const remindersPayload = remindersResult.payload || {{}};
+  const devicesPayload = devicesResult.payload || {{}};
+  const approvalsPayload = approvalsResult.payload || [];
+  const openLoopsPayload = openLoopsResult.payload || {{}};
   const devices = Array.isArray(devicesPayload?.devices) ? devicesPayload.devices : [];
   const now = Date.now();
   const familyLookup = {{ chris: 'Chris', rebekah: 'Rebekah', caleb: 'Caleb', anna: 'Anna' }};
@@ -30720,14 +31109,26 @@ async function loadCommandDesktop() {{
     name: familyLookup[uid] || uid,
     detail: 'Connected and active in the last ten minutes.',
   }}));
+  const availabilityNotes = [];
+  if (!commandResult.ok) availabilityNotes.push(`Command substrate unavailable: ${{commandResult.payload?.detail || commandResult.error?.message || 'service not reachable'}}`);
+  if (home?.available === false) availabilityNotes.push(`Home unavailable: ${{home.error || 'home data not connected'}}`);
+  if (!healthResult.data?.available) availabilityNotes.push(`Health unavailable: ${{healthResult.error || 'Apple health summary not connected'}}`);
+  else if (healthResult.data?.estimated) availabilityNotes.push('Health posture is estimated because key recovery signals are missing.');
+  if (!openLoopsResult.ok) availabilityNotes.push(`Open loops unavailable: ${{openLoopsResult.payload?.detail || openLoopsResult.error?.message || 'service not reachable'}}`);
+  if (!approvalsResult.ok) availabilityNotes.push(`Approvals unavailable: ${{approvalsResult.payload?.detail || approvalsResult.error?.message || 'service not reachable'}}`);
+
   renderCommandDesktop({{
-    command: command || {{}},
-    home: home || {{}},
+    command,
+    home,
     tasks: tasksPayload?.tasks || [],
     projects: projectsPayload?.projects || [],
     reminders: remindersPayload?.data || {{}},
-    health: health || {{}},
+    health: healthResult.data || {{}},
+    healthUnavailableReason: healthResult.error || '',
+    approvals: commandNormalizeApprovals(approvalsPayload),
+    openLoops: openLoopsPayload || {{}},
     onlineUsers,
+    availabilityNotes,
   }});
   syncDesktopCardSequence('chat');
 }}
