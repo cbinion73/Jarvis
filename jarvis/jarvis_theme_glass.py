@@ -8173,6 +8173,62 @@ body::after {{
   gap: 16px;
   align-items: stretch;
 }}
+.command-sequence-bar {{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--cmd-border);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(13,18,28,.95), rgba(8,11,17,.92));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}}
+.command-sequence-copy {{
+  display: grid;
+  gap: 6px;
+}}
+.command-sequence-copy strong {{
+  color: var(--cmd-copy);
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}}
+.command-sequence-copy span {{
+  color: var(--cmd-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}}
+.command-sequence-controls {{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}}
+.command-sequence-page {{
+  min-width: 112px;
+  text-align: center;
+  color: var(--cmd-copy);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}}
+.command-sequence-btn {{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--cmd-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--cmd-copy);
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}}
+.command-sequence-btn:disabled {{
+  opacity: 0.35;
+  cursor: default;
+}}
 .command-chipbar,
 .command-profile-card,
 .command-quote-card {{
@@ -12299,6 +12355,19 @@ body::after {{
                 <strong id="command-profile-name">Chris</strong>
                 <span id="command-profile-role">Executive / Builder</span>
               </div>
+            </div>
+          </div>
+
+          <div class="command-sequence-bar">
+            <div class="command-sequence-copy">
+              <div class="command-kicker">Desktop Sequence</div>
+              <strong id="command-page-label">Command Board</strong>
+              <span>One active desktop command board is in focus, with the shared navigation pattern preserved for consistency across the system.</span>
+            </div>
+            <div class="command-sequence-controls">
+              <button class="command-sequence-btn" id="command-nav-prev" disabled aria-label="Previous command page">←</button>
+              <div class="command-sequence-page" id="command-page-count">Page 1 of 1</div>
+              <button class="command-sequence-btn" id="command-nav-next" disabled aria-label="Next command page">→</button>
             </div>
           </div>
 
