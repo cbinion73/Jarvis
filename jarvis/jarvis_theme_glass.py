@@ -8554,62 +8554,780 @@ body::after {{
 /* ═══════════════════════════════════════════════════════════════════
    FORGE — OBJECT-TO-MANUFACTURING WORKSPACE
 ═══════════════════════════════════════════════════════════════════ */
-.forge-workspace {{ display:flex; flex-direction:column; gap:16px; height:100%; }}
-.forge-header {{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }}
-.forge-header select {{ flex:1; min-width:200px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-hi); font-size:13px; color:var(--text-1); cursor:pointer; }}
-.forge-main {{ display:grid; grid-template-columns:1fr 1fr; gap:16px; flex:1; min-height:0; }}
-@media(max-width:900px){{ .forge-main{{ grid-template-columns:1fr; }} }}
-.forge-left,.forge-right {{ display:flex; flex-direction:column; gap:12px; }}
-.forge-viewer-container {{ position:relative; background:#111827; border-radius:12px; overflow:hidden; min-height:320px; flex:1; border:1px solid rgba(255,255,255,0.08); }}
+.forge-view {{
+  --forge-amber: #f3a74f;
+  --forge-copper: #cf7632;
+  --forge-ink: #edf3fb;
+  --forge-ink-soft: rgba(237,243,251,0.74);
+  --forge-ink-faint: rgba(237,243,251,0.46);
+  --forge-stroke: rgba(243,167,79,0.22);
+  --forge-stroke-strong: rgba(243,167,79,0.50);
+  --forge-green: #8ae2ac;
+  --forge-red: #f58b8b;
+  position:relative;
+  color:var(--forge-ink);
+}}
+.forge-view::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:26px;
+  background:
+    radial-gradient(circle at top left, rgba(243,167,79,0.10), transparent 32%),
+    radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 24%),
+    radial-gradient(circle at bottom center, rgba(243,167,79,0.05), transparent 34%);
+  pointer-events:none;
+}}
+.forge-view .view-title {{ color:var(--forge-ink); }}
+.forge-view .view-title-line {{ background:linear-gradient(90deg, var(--forge-amber), rgba(243,167,79,0)); }}
+.forge-header {{
+  display:flex;
+  justify-content:space-between;
+  gap:18px;
+  align-items:flex-start;
+  margin-bottom:20px;
+}}
+.forge-kicker {{
+  font-size:11px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:var(--forge-copper);
+  margin-bottom:10px;
+}}
+.forge-subtitle {{
+  max-width:860px;
+  margin-top:10px;
+  font-size:15px;
+  line-height:1.64;
+  color:var(--forge-ink-soft);
+}}
+.forge-motto {{
+  max-width:330px;
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid var(--forge-stroke);
+  background:linear-gradient(180deg, rgba(18,14,10,0.96), rgba(8,8,8,0.99));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);
+}}
+.forge-motto strong {{
+  display:block;
+  color:var(--forge-amber);
+  font-size:15px;
+  line-height:1.45;
+}}
+.forge-motto span {{
+  display:block;
+  margin-top:6px;
+  color:var(--forge-ink-faint);
+  font-size:12px;
+}}
+.forge-stage {{
+  position:relative;
+  overflow:hidden;
+  border-radius:28px;
+  border:1px solid var(--forge-stroke);
+  background:
+    radial-gradient(circle at top right, rgba(243,167,79,0.08), transparent 24%),
+    linear-gradient(180deg, rgba(13,12,11,0.99), rgba(6,7,8,0.995));
+  box-shadow:0 28px 80px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.04);
+}}
+.forge-stage::before {{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.03), transparent 28%),
+    repeating-linear-gradient(90deg, transparent 0 34px, rgba(255,255,255,0.012) 34px 35px);
+  pointer-events:none;
+}}
+.forge-desktop-shell {{
+  position:relative;
+  z-index:1;
+  display:grid;
+  grid-template-columns:228px minmax(0, 1fr);
+  min-height:980px;
+}}
+.forge-sidebar {{
+  padding:18px 14px;
+  border-right:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(10,10,10,0.98), rgba(6,6,7,0.99));
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}}
+.forge-brand-block {{
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg, rgba(22,18,14,0.92), rgba(8,8,8,0.98));
+  padding:18px 16px;
+  text-align:center;
+}}
+.forge-brand-mark {{
+  width:58px;
+  height:58px;
+  margin:0 auto 12px;
+  border-radius:18px;
+  border:1px solid var(--forge-stroke-strong);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  background:radial-gradient(circle, rgba(243,167,79,0.20), rgba(243,167,79,0.05) 64%, transparent 72%);
+}}
+.forge-brand-title {{
+  font-size:15px;
+  letter-spacing:0.28em;
+  text-transform:uppercase;
+}}
+.forge-brand-sub {{
+  margin-top:6px;
+  font-size:28px;
+  line-height:1;
+  letter-spacing:0.08em;
+}}
+.forge-side-nav {{
+  display:grid;
+  gap:8px;
+}}
+.forge-side-link {{
+  border-radius:14px;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.02);
+  color:var(--forge-ink-soft);
+  font-size:12px;
+}}
+.forge-side-link.active {{
+  color:var(--forge-ink);
+  border-color:var(--forge-stroke-strong);
+  background:linear-gradient(90deg, rgba(243,167,79,0.16), rgba(255,255,255,0.04));
+}}
+.forge-sidebar-status {{
+  margin-top:auto;
+  padding:14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.025);
+}}
+.forge-sidebar-status strong {{
+  display:block;
+  color:var(--forge-amber);
+  font-size:11px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+}}
+.forge-status-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size:11px;
+  color:var(--forge-ink-soft);
+  margin-bottom:8px;
+}}
+.forge-main {{
+  padding:18px;
+}}
+.forge-topbar {{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  margin-bottom:16px;
+}}
+.forge-topbar-kicker {{
+  font-size:10px;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+  color:var(--forge-ink-faint);
+  margin-bottom:6px;
+}}
+.forge-topbar-title {{
+  font-size:28px;
+  font-family:var(--font-mono);
+  letter-spacing:0.03em;
+}}
+.forge-topbar-subtitle {{
+  margin-top:6px;
+  max-width:760px;
+  color:var(--forge-ink-soft);
+  font-size:13px;
+  line-height:1.6;
+}}
+.forge-nav {{ display:flex; align-items:center; gap:10px; }}
+.forge-nav-btn {{
+  width:40px;
+  height:40px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);
+  color:var(--forge-ink);
+  font-size:18px;
+  cursor:pointer;
+}}
+.forge-nav-btn:disabled {{ opacity:0.35; cursor:not-allowed; }}
+.forge-nav-status {{ text-align:right; }}
+.forge-nav-page {{
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--forge-ink-faint);
+}}
+.forge-nav-title {{
+  margin-top:4px;
+  color:var(--forge-amber);
+  font-size:13px;
+}}
+.forge-process-strip {{
+  display:grid;
+  grid-template-columns:repeat(5, minmax(0, 1fr));
+  gap:12px;
+  margin-bottom:16px;
+}}
+.forge-process-pill {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.06);
+  background:rgba(255,255,255,0.03);
+  padding:14px 16px;
+}}
+.forge-process-pill span {{
+  display:block;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--forge-ink-faint);
+}}
+.forge-process-pill strong {{
+  display:block;
+  margin-top:8px;
+  font-size:15px;
+}}
+.forge-process-pill small {{
+  display:block;
+  margin-top:6px;
+  color:var(--forge-ink-soft);
+  font-size:11px;
+}}
+.forge-page-deck {{ position:relative; }}
+.forge-page {{ display:none; }}
+.forge-page.active {{
+  display:block;
+  animation:wi-fade-in 0.18s ease;
+}}
+.forge-grid-two {{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:16px;
+}}
+.forge-grid-three {{
+  display:grid;
+  grid-template-columns:1.05fr 0.95fr 0.95fr;
+  gap:16px;
+}}
+.forge-card-shell,
+.forge-capture-panel,
+.forge-measurements-panel,
+.forge-chat-panel,
+.forge-readiness-panel {{
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:linear-gradient(180deg, rgba(18,18,18,0.90), rgba(10,10,10,0.96));
+  padding:16px 18px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+}}
+.forge-card-heading,
+.forge-panel-title {{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}}
+.forge-card-label,
+.forge-panel-title {{
+  font-size:11px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--forge-ink-faint);
+}}
+.forge-card-label strong {{
+  display:block;
+  font-size:20px;
+  letter-spacing:0.02em;
+  text-transform:none;
+  color:var(--forge-ink);
+  margin-top:8px;
+}}
+.forge-card-label small {{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  text-transform:none;
+  letter-spacing:0;
+  color:var(--forge-ink-soft);
+}}
+.forge-inline-chip {{
+  align-self:flex-start;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--forge-ink-soft);
+  font-size:10px;
+  letter-spacing:0.10em;
+  text-transform:uppercase;
+}}
+.forge-action-btn {{
+  padding:9px 18px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,0.04);
+  font-size:12px;
+  font-weight:600;
+  color:var(--forge-ink);
+  cursor:pointer;
+  transition:all 0.15s;
+  letter-spacing:0.02em;
+}}
+.forge-action-btn:hover {{ border-color:var(--forge-stroke-strong); color:var(--forge-amber); }}
+.forge-action-btn.primary {{
+  background:linear-gradient(90deg, rgba(243,167,79,0.88), rgba(207,118,50,0.92));
+  border-color:rgba(243,167,79,0.52);
+  color:#fff;
+}}
+.forge-action-btn.primary:hover {{ opacity:0.90; color:#fff; }}
+.forge-command-grid {{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:14px;
+}}
+.forge-feature-card {{
+  min-height:170px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.025);
+  padding:16px;
+}}
+.forge-feature-card span {{
+  display:block;
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--forge-ink-faint);
+}}
+.forge-feature-card strong {{
+  display:block;
+  margin-top:10px;
+  font-size:30px;
+  line-height:1.12;
+}}
+.forge-feature-card p {{
+  margin:10px 0 0;
+  color:var(--forge-ink-soft);
+  font-size:13px;
+  line-height:1.55;
+}}
+.forge-brief-grid {{
+  display:grid;
+  grid-template-columns:140px 1fr;
+  gap:14px;
+  margin-top:14px;
+}}
+.forge-thumb-card {{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:
+    radial-gradient(circle at top left, rgba(243,167,79,0.16), transparent 38%),
+    linear-gradient(180deg, rgba(29,23,16,0.96), rgba(8,8,8,0.96));
+  min-height:140px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:56px;
+}}
+.forge-brief-list {{
+  display:grid;
+  gap:8px;
+  align-content:start;
+}}
+.forge-brief-row {{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  padding-bottom:7px;
+  font-size:12px;
+}}
+.forge-brief-row span {{ color:var(--forge-ink-faint); text-transform:uppercase; letter-spacing:0.10em; font-size:10px; }}
+.forge-brief-row strong {{ color:var(--forge-ink); text-align:right; }}
+.forge-micro-grid {{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0, 1fr));
+  gap:10px;
+  margin-top:14px;
+}}
+.forge-micro-card {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:rgba(255,255,255,0.025);
+  padding:12px 14px;
+}}
+.forge-micro-card span {{
+  display:block;
+  font-size:10px;
+  letter-spacing:0.10em;
+  text-transform:uppercase;
+  color:var(--forge-ink-faint);
+}}
+.forge-micro-card strong {{
+  display:block;
+  margin-top:8px;
+  font-size:24px;
+}}
+.forge-micro-card small {{
+  display:block;
+  margin-top:4px;
+  color:var(--forge-ink-soft);
+  font-size:11px;
+}}
+.forge-viewer-container {{
+  position:relative;
+  background:#101317;
+  border-radius:20px;
+  overflow:hidden;
+  min-height:420px;
+  border:1px solid rgba(255,255,255,0.08);
+}}
 #forge-3d-canvas {{ width:100%; height:100%; display:block; }}
-.forge-viewer-overlay {{ position:absolute; top:8px; right:10px; font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.55); line-height:1.7; text-align:right; pointer-events:none; }}
-.forge-viewer-controls {{ position:absolute; bottom:10px; left:10px; display:flex; gap:6px; flex-wrap:wrap; }}
-.forge-viewer-btn {{ padding:4px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.45); color:rgba(255,255,255,0.8); font-size:11px; cursor:pointer; transition:background 0.15s; }}
-.forge-viewer-btn:hover {{ background:rgba(255,255,255,0.1); }}
-.forge-upload-zone {{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px dashed rgba(255,255,255,0.15); border-radius:12px; cursor:pointer; color:rgba(255,255,255,0.4); font-size:13px; gap:10px; text-align:center; padding:24px; transition:border-color 0.2s,background 0.2s; }}
-.forge-upload-zone:hover,.forge-upload-zone.drag-over {{ border-color:var(--hue); background:rgba(245,158,11,0.06); color:rgba(255,255,255,0.7); }}
+.forge-viewer-overlay {{
+  position:absolute;
+  top:12px;
+  right:12px;
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:rgba(255,255,255,0.55);
+  line-height:1.7;
+  text-align:right;
+  pointer-events:none;
+}}
+.forge-viewer-controls {{
+  position:absolute;
+  top:12px;
+  right:12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}}
+.forge-viewer-btn {{
+  padding:7px 10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(0,0,0,0.42);
+  color:rgba(255,255,255,0.82);
+  font-size:11px;
+  cursor:pointer;
+}}
+.forge-viewer-btn:hover {{ background:rgba(255,255,255,0.12); }}
+.forge-upload-zone {{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border:2px dashed rgba(255,255,255,0.14);
+  border-radius:20px;
+  cursor:pointer;
+  color:rgba(255,255,255,0.45);
+  font-size:13px;
+  gap:10px;
+  text-align:center;
+  padding:24px;
+  transition:border-color 0.2s,background 0.2s;
+}}
+.forge-upload-zone:hover,
+.forge-upload-zone.drag-over {{
+  border-color:var(--forge-amber);
+  background:rgba(243,167,79,0.06);
+  color:rgba(255,255,255,0.75);
+}}
 .forge-upload-zone svg {{ opacity:0.4; }}
 .forge-upload-btns {{ display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; justify-content:center; }}
-.forge-capture-panel,.forge-measurements-panel {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }}
-.forge-panel-title {{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-2); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }}
-.forge-capture-grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:6px; }}
-.forge-view-chip {{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 4px; border-radius:7px; border:1px solid var(--border); background:var(--surface-hi); font-size:9px; font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.05em; color:var(--text-3); transition:border-color 0.15s; }}
-.forge-view-chip.view-captured {{ border-color:var(--success); color:var(--success); background:rgba(16,185,129,0.07); }}
-.forge-view-chip.view-missing {{ border-color:var(--crimson); color:var(--crimson); background:rgba(196,30,58,0.06); }}
-.forge-view-chip.view-optional {{ border-color:var(--border); color:var(--text-3); }}
-.forge-confidence-row {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:10px; font-family:var(--font-mono); }}
-.forge-conf-chip {{ padding:3px 9px; border-radius:99px; font-size:9px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }}
+.forge-chat-panel {{ display:flex; flex-direction:column; min-height:420px; }}
+#forge-chat-messages {{
+  flex:1;
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:10px;
+  max-height:250px;
+  padding-right:4px;
+}}
+.forge-msg-user {{
+  align-self:flex-end;
+  background:linear-gradient(135deg, rgba(243,167,79,0.88), rgba(207,118,50,0.88));
+  color:#fff;
+  padding:8px 12px;
+  border-radius:12px 12px 4px 12px;
+  font-size:13px;
+  max-width:85%;
+}}
+.forge-msg-jarvis {{
+  align-self:flex-start;
+  background:rgba(255,255,255,0.05);
+  color:var(--forge-ink);
+  padding:8px 12px;
+  border-radius:12px 12px 12px 4px;
+  font-size:13px;
+  max-width:90%;
+  border:1px solid rgba(255,255,255,0.08);
+}}
+.forge-chat-input {{ display:flex; gap:8px; }}
+.forge-chat-input input {{
+  flex:1;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:12px;
+  background:rgba(255,255,255,0.04);
+  font-size:13px;
+  color:var(--forge-ink);
+  outline:none;
+}}
+.forge-chat-input input:focus {{ border-color:var(--forge-stroke-strong); }}
+.forge-view-chip {{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  padding:8px 4px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.04);
+  font-size:9px;
+  font-family:var(--font-mono);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  color:var(--forge-ink-faint);
+  transition:border-color 0.15s;
+}}
+.forge-view-chip.view-captured {{ border-color:var(--forge-green); color:var(--forge-green); background:rgba(16,185,129,0.07); }}
+.forge-view-chip.view-missing {{ border-color:var(--forge-red); color:var(--forge-red); background:rgba(196,30,58,0.06); }}
+.forge-view-chip.view-optional {{ border-color:rgba(255,255,255,0.08); color:var(--forge-ink-faint); }}
+.forge-capture-grid {{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:6px; }}
+.forge-confidence-row {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:10px; font-family:var(--font-mono); }}
+.forge-conf-chip {{ padding:4px 10px; border-radius:99px; font-size:9px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; }}
 .confidence-low {{ background:rgba(245,158,11,0.12); color:#F59E0B; border:1px solid rgba(245,158,11,0.3); }}
 .confidence-medium {{ background:rgba(234,179,8,0.12); color:#CA8A04; border:1px solid rgba(234,179,8,0.3); }}
-.confidence-high {{ background:rgba(16,185,129,0.12); color:var(--success); border:1px solid rgba(16,185,129,0.3); }}
-.confidence-not_ready {{ background:rgba(148,163,184,0.12); color:var(--text-3); border:1px solid var(--border); }}
-.forge-meas-list {{ display:flex; flex-direction:column; gap:5px; margin-top:6px; max-height:140px; overflow-y:auto; }}
+.confidence-high {{ background:rgba(16,185,129,0.12); color:var(--forge-green); border:1px solid rgba(16,185,129,0.3); }}
+.confidence-not_ready {{ background:rgba(148,163,184,0.12); color:var(--forge-ink-faint); border:1px solid rgba(255,255,255,0.08); }}
+.forge-meas-list {{ display:flex; flex-direction:column; gap:7px; margin-top:6px; max-height:220px; overflow-y:auto; }}
 .forge-meas-row {{ display:flex; align-items:center; gap:8px; font-size:12px; }}
-.forge-meas-label {{ flex:1; color:var(--text-2); font-weight:500; }}
-.forge-meas-value {{ font-family:var(--font-mono); font-size:11px; color:var(--text-1); font-weight:600; }}
+.forge-meas-label {{ flex:1; color:var(--forge-ink-soft); font-weight:500; }}
+.forge-meas-value {{ font-family:var(--font-mono); font-size:11px; color:var(--forge-ink); font-weight:600; }}
 .forge-meas-confirmed {{ font-size:9px; padding:2px 6px; border-radius:99px; font-family:var(--font-mono); font-weight:700; }}
-.meas-confirmed {{ background:rgba(16,185,129,0.12); color:var(--success); border:1px solid rgba(16,185,129,0.25); }}
+.meas-confirmed {{ background:rgba(16,185,129,0.12); color:var(--forge-green); border:1px solid rgba(16,185,129,0.25); }}
 .meas-assumed {{ background:rgba(245,158,11,0.1); color:#F59E0B; border:1px solid rgba(245,158,11,0.2); }}
-.forge-chat-panel {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; flex:1; min-height:280px; }}
-#forge-chat-messages {{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:10px; max-height:220px; padding-right:4px; }}
-.forge-msg-user {{ align-self:flex-end; background:var(--hue); color:#fff; padding:8px 12px; border-radius:10px 10px 2px 10px; font-size:13px; max-width:85%; }}
-.forge-msg-jarvis {{ align-self:flex-start; background:var(--surface-hi); color:var(--text-1); padding:8px 12px; border-radius:10px 10px 10px 2px; font-size:13px; max-width:90%; border:1px solid var(--border); }}
-.forge-chat-input {{ display:flex; gap:8px; }}
-.forge-chat-input input {{ flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:8px; background:var(--surface-hi); font-size:13px; color:var(--text-1); outline:none; }}
-.forge-chat-input input:focus {{ border-color:var(--hue); }}
-.forge-readiness-panel {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }}
-.forge-readiness-list {{ display:flex; flex-direction:column; gap:6px; margin:8px 0; }}
+.forge-score-list {{ display:grid; gap:12px; }}
+.forge-score-row {{
+  display:grid;
+  grid-template-columns:92px 1fr 44px;
+  gap:12px;
+  align-items:center;
+  font-size:13px;
+}}
+.forge-score-track {{
+  height:8px;
+  border-radius:999px;
+  background:rgba(255,255,255,0.08);
+  overflow:hidden;
+}}
+.forge-score-fill {{
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(243,167,79,0.24), rgba(153,208,117,0.94));
+}}
+.forge-score-value {{
+  text-align:right;
+  font-size:28px;
+  color:#99d075;
+}}
+.forge-stress-panel {{
+  min-height:340px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(71,142,255,0.24), transparent 26%),
+    radial-gradient(circle at 36% 64%, rgba(255,166,77,0.16), transparent 24%),
+    linear-gradient(180deg, rgba(15,18,20,0.96), rgba(9,9,9,0.98));
+  position:relative;
+  overflow:hidden;
+}}
+.forge-stress-panel::after {{
+  content:"";
+  position:absolute;
+  inset:26px;
+  border-radius:50%;
+  border:1px dashed rgba(255,255,255,0.10);
+}}
+.forge-stress-copy {{
+  position:absolute;
+  right:18px;
+  bottom:18px;
+  max-width:190px;
+  color:var(--forge-ink-soft);
+  font-size:12px;
+  line-height:1.6;
+}}
+.forge-factor-list {{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px 14px; margin-top:14px; }}
+.forge-factor-list div {{ color:var(--forge-ink-soft); font-size:12px; }}
+.forge-factor-list div::before {{ content:"✓"; color:var(--forge-green); margin-right:8px; }}
+.forge-pipeline-row {{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  gap:10px;
+  margin-bottom:16px;
+}}
+.forge-pipeline-stage {{
+  padding:12px 10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:rgba(255,255,255,0.025);
+  text-align:center;
+}}
+.forge-pipeline-stage span {{
+  display:block;
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--forge-ink-faint);
+}}
+.forge-pipeline-stage strong {{
+  display:block;
+  margin-top:8px;
+  font-size:13px;
+}}
+.forge-detail-grid {{
+  display:grid;
+  grid-template-columns:1.2fr 0.8fr;
+  gap:16px;
+}}
+.forge-spec-list,
+.forge-memory-list,
+.forge-learn-list,
+.forge-estimate-list,
+.forge-project-strip {{
+  display:grid;
+  gap:10px;
+}}
+.forge-spec-row,
+.forge-memory-row,
+.forge-estimate-row,
+.forge-project-chip {{
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:rgba(255,255,255,0.025);
+  padding:12px 14px;
+}}
+.forge-memory-row strong,
+.forge-project-chip strong {{
+  display:block;
+  font-size:13px;
+  color:var(--forge-ink);
+}}
+.forge-memory-row span,
+.forge-project-chip span,
+.forge-spec-row span,
+.forge-estimate-row span {{
+  display:block;
+  margin-top:5px;
+  color:var(--forge-ink-soft);
+  font-size:11px;
+  line-height:1.5;
+}}
+.forge-readiness-list {{ display:flex; flex-direction:column; gap:8px; margin:8px 0; }}
 .readiness-row {{ display:flex; align-items:center; gap:8px; font-size:12px; }}
-.readiness-ok {{ color:var(--success); font-weight:600; }}
+.readiness-ok {{ color:var(--forge-green); font-weight:600; }}
 .readiness-warn {{ color:#F59E0B; font-weight:600; }}
-.readiness-fail {{ color:var(--crimson); font-weight:600; }}
-.forge-action-bar {{ display:flex; gap:8px; flex-wrap:wrap; padding-top:4px; }}
-.forge-action-btn {{ padding:9px 18px; border-radius:8px; border:1px solid var(--border); background:var(--surface-hi); font-size:12px; font-weight:600; color:var(--text-1); cursor:pointer; transition:all 0.15s; letter-spacing:0.02em; }}
-.forge-action-btn:hover {{ border-color:var(--hue); color:var(--hue); }}
-.forge-action-btn.primary {{ background:var(--hue); color:#fff; border-color:var(--hue); }}
-.forge-action-btn.primary:hover {{ opacity:0.88; }}
-.forge-printer-chip {{ padding:5px 12px; border-radius:99px; font-size:10px; font-family:var(--font-mono); font-weight:700; text-transform:uppercase; letter-spacing:0.06em; border:1px solid var(--border); color:var(--text-3); margin-left:auto; }}
-.forge-printer-chip.online {{ border-color:var(--success); color:var(--success); background:rgba(16,185,129,0.08); }}
+.readiness-fail {{ color:var(--forge-red); font-weight:600; }}
+.forge-printer-chip {{
+  padding:6px 12px;
+  border-radius:99px;
+  font-size:10px;
+  font-family:var(--font-mono);
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--forge-ink-faint);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}}
+.forge-printer-chip.online {{ border-color:var(--forge-green); color:var(--forge-green); background:rgba(16,185,129,0.08); }}
+.forge-factory-tabs {{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }}
+.forge-factory-tab {{
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+  color:var(--forge-ink-soft);
+  font-size:11px;
+}}
+.forge-factory-tab.active {{
+  border-color:var(--forge-stroke-strong);
+  color:var(--forge-ink);
+  background:rgba(243,167,79,0.12);
+}}
+.forge-environment-row {{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  gap:12px;
+}}
+.forge-environment-card {{
+  min-height:116px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:
+    radial-gradient(circle at top left, rgba(243,167,79,0.14), transparent 34%),
+    linear-gradient(180deg, rgba(29,25,20,0.94), rgba(10,10,10,0.98));
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+}}
+.forge-environment-card strong {{ font-size:13px; }}
+.forge-environment-card span {{ margin-top:4px; color:var(--forge-ink-soft); font-size:11px; }}
+.forge-footer-strip {{
+  display:grid;
+  grid-template-columns:repeat(7, minmax(0, 1fr));
+  gap:10px;
+  margin-top:16px;
+}}
+.forge-footer-pill {{
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,0.07);
+  background:rgba(255,255,255,0.03);
+  padding:12px;
+}}
+.forge-footer-pill strong {{ display:block; font-size:12px; color:var(--forge-ink); }}
+.forge-footer-pill span {{ display:block; margin-top:5px; color:var(--forge-ink-soft); font-size:11px; line-height:1.5; }}
+.forge-action-bar {{ display:flex; gap:8px; flex-wrap:wrap; padding-top:16px; }}
+.forge-camera-preview {{ width:100%; border-radius:10px; margin-bottom:12px; max-height:220px; object-fit:cover; }}
+@media (max-width: 1200px) {{
+  .forge-desktop-shell {{ grid-template-columns:1fr; }}
+  .forge-sidebar {{ border-right:none; border-bottom:1px solid rgba(255,255,255,0.06); }}
+  .forge-process-strip,
+  .forge-footer-strip,
+  .forge-environment-row,
+  .forge-micro-grid,
+  .forge-pipeline-row {{ grid-template-columns:repeat(2, minmax(0, 1fr)); }}
+  .forge-grid-two,
+  .forge-grid-three,
+  .forge-detail-grid,
+  .forge-brief-grid,
+  .forge-command-grid {{ grid-template-columns:1fr; }}
+}}
 .forge-modal-overlay {{
   position:fixed; inset:0; z-index:900;
   background: rgba(5,10,20,0.50);
@@ -10633,154 +11351,553 @@ body::after {{
   <!-- Three.js CDN (loaded lazily when Forge view is first activated) -->
   <script id="forge-three-placeholder" data-loaded="false"></script>
 
-  <div id="view-forge" class="view">
-    <div class="view-header">
-      <div class="view-title">FORGE WORKSPACE<div class="view-title-line"></div></div>
-      <div class="view-subtitle">Object Capture · 3D Modeling · Print Gate · Manufacturing</div>
+  <div id="view-forge" class="view forge-view">
+    <div class="forge-header">
+      <div>
+        <div class="forge-kicker">Desktop Experience</div>
+        <div class="view-title">JARVIS FORGE<div class="view-title-line"></div></div>
+        <div class="forge-subtitle">Invention to reality engine for physical objects, AI-assisted product design, manufacturing, sourcing, print readiness, and long-term part memory. One desktop screen is active at a time, with arrows and a visible page count carrying the sequence.</div>
+      </div>
+      <div class="forge-motto">
+        <strong>Ideas become objects. Objects become reality.</strong>
+        <span>Capture the world, engineer with AI, validate the design, and carry each project from prototype to production.</span>
+      </div>
     </div>
 
-    <div class="forge-workspace">
+    <div class="forge-stage">
+      <div class="forge-desktop-shell">
+        <aside class="forge-sidebar">
+          <div class="forge-brand-block">
+            <div class="forge-brand-mark">⚒</div>
+            <div class="forge-brand-title">JARVIS</div>
+            <div class="forge-brand-sub">FORGE</div>
+          </div>
 
-      <!-- Header: project selector + new button -->
-      <div class="forge-header">
-        <select id="forge-project-select" onchange="forgeLoadProject(this.value)">
-          <option value="">— Select a project —</option>
-        </select>
-        <button class="forge-action-btn" onclick="forgeNewProject()">+ New Project</button>
-        <span class="pill pill-hue" id="forge-project-status" style="display:none;">IDEA</span>
-      </div>
+          <div class="forge-side-nav">
+            <div class="forge-side-link active">⌂ Forge Home</div>
+            <div class="forge-side-link">◉ Capture Lab</div>
+            <div class="forge-side-link">✎ Design Studio</div>
+            <div class="forge-side-link">⚡ Design Council</div>
+            <div class="forge-side-link">⇄ Build Pipeline</div>
+            <div class="forge-side-link">▣ Project Library</div>
+            <div class="forge-side-link">⬢ Parts Catalog</div>
+            <div class="forge-side-link">⌘ Environments</div>
+            <div class="forge-side-link">⋯ Vendors & Quotes</div>
+            <div class="forge-side-link">↗ Analytics</div>
+            <div class="forge-side-link">⚙ Settings</div>
+          </div>
 
-      <!-- Two-column main -->
-      <div class="forge-main">
+          <div class="forge-sidebar-status">
+            <strong>Forge Status</strong>
+            <div class="forge-status-row"><span>Project</span><span id="forge-sidebar-project">No project</span></div>
+            <div class="forge-status-row"><span>Signal Health</span><span id="forge-sidebar-health">Syncing…</span></div>
+            <div class="forge-status-row"><span>Recent Projects</span><span id="forge-sidebar-count">0</span></div>
+            <button class="forge-action-btn" type="button" onclick="forgeNewProject()" style="width:100%;margin-top:8px;">Open New Forge Project</button>
+          </div>
+        </aside>
 
-        <!-- LEFT: viewer + capture + measurements -->
-        <div class="forge-left">
-
-          <!-- 3D Viewer -->
-          <div class="forge-viewer-container" id="forge-viewer-container">
-            <canvas id="forge-3d-canvas"></canvas>
-            <div class="forge-viewer-overlay" id="forge-bbox-overlay" style="display:none;">
-              <div id="forge-bbox-text" style="font-size:10px;"></div>
+        <main class="forge-main">
+          <div class="forge-topbar">
+            <div>
+              <div class="forge-topbar-kicker">Desktop Sequence</div>
+              <div class="forge-topbar-title" id="forge-nav-title">1. Capture &amp; Understand</div>
+              <div class="forge-topbar-subtitle" id="forge-nav-subtitle">See the physical world, turn it into a design brief, and gather enough measurements, views, and constraints to make the project buildable.</div>
             </div>
-            <div class="forge-viewer-controls" id="forge-viewer-controls" style="display:none;">
-              <button class="forge-viewer-btn" onclick="forgeCameraReset()">Reset</button>
-              <button class="forge-viewer-btn" onclick="forgeCameraTop()">Top</button>
-              <button class="forge-viewer-btn" onclick="forgeCameraFront()">Front</button>
-              <button class="forge-viewer-btn" onclick="forgeCameraLayFlat()">Lay Flat</button>
-              <button class="forge-viewer-btn" onclick="forgeScreenshot()">Screenshot</button>
-              <button class="forge-viewer-btn" onclick="forgeDownloadSTL()" id="forge-dl-stl-btn" style="display:none;">Download STL</button>
+            <div class="forge-nav">
+              <button class="forge-nav-btn" id="forge-nav-prev" onclick="advanceForgePage(-1)" aria-label="Previous Forge page">←</button>
+              <div class="forge-nav-status">
+                <div class="forge-nav-page" id="forge-page-count">Page 1 of 7</div>
+                <div class="forge-nav-title" id="forge-page-label">Capture Lab</div>
+              </div>
+              <button class="forge-nav-btn" id="forge-nav-next" onclick="advanceForgePage(1)" aria-label="Next Forge page">→</button>
             </div>
-            <!-- Upload zone (shown when no model loaded) -->
-            <div class="forge-upload-zone" id="forge-upload-zone"
-                 onclick="document.getElementById('forge-file-input').click()"
-                 ondragover="event.preventDefault();this.classList.add('drag-over')"
-                 ondragleave="this.classList.remove('drag-over')"
-                 ondrop="forgeHandleDrop(event)">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-              <div style="font-size:13px;font-weight:500;">Drop STL / OBJ / GLB / 3MF here<br>or click to upload</div>
-              <div class="forge-upload-btns">
-                <button class="forge-action-btn" style="font-size:11px;padding:5px 12px;"
-                  onclick="event.stopPropagation();document.getElementById('forge-photo-input').click()">Upload Photos</button>
-                <button class="forge-action-btn" style="font-size:11px;padding:5px 12px;"
-                  onclick="event.stopPropagation();forgeCameraCapture()">Camera</button>
+          </div>
+
+          <div class="forge-process-strip">
+            <div class="forge-process-pill"><span>See It.</span><strong>Capture anything.</strong><small>Photos, scans, dimensions, references.</small></div>
+            <div class="forge-process-pill"><span>Design It.</span><strong>Engineer with AI.</strong><small>Turn rough intent into a real part brief.</small></div>
+            <div class="forge-process-pill"><span>Validate It.</span><strong>Review every angle.</strong><small>Multi-agent critique, fit, and stress.</small></div>
+            <div class="forge-process-pill"><span>Build It.</span><strong>Prototype to production.</strong><small>Print, machine, source, and quote.</small></div>
+            <div class="forge-process-pill"><span>Remember It.</span><strong>Learn, improve, repeat.</strong><small>Every revision becomes part memory.</small></div>
+          </div>
+
+          <div class="forge-page-deck">
+            <section class="forge-page active" data-forge-page="1">
+              <div class="forge-grid-two">
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Capture &amp; Understand<strong>See the physical world. Turn it into a design brief.</strong><small>Start with a project, then upload geometry, photos, or view captures until the brief is strong enough to build from.</small></div>
+                    <span class="forge-inline-chip" id="forge-project-status" style="display:none;">IDEA</span>
+                  </div>
+
+                  <div class="forge-command-grid">
+                    <div class="forge-feature-card">
+                      <span>Project</span>
+                      <strong id="forge-brief-title">Select a Forge project</strong>
+                      <p id="forge-brief-purpose">Choose a project to load its measurements, captures, and model history.</p>
+                    </div>
+                    <div class="forge-feature-card">
+                      <span>Strategic Priority</span>
+                      <strong id="forge-brief-priority">Capture the constraints clearly</strong>
+                      <p id="forge-brief-priority-copy">Every good physical project starts with enough signal to remove the guesswork before fabrication begins.</p>
+                    </div>
+                  </div>
+
+                  <div class="forge-brief-grid">
+                    <div class="forge-thumb-card">⚒</div>
+                    <div class="forge-brief-list">
+                      <div class="forge-brief-row"><span>Purpose</span><strong id="forge-brief-purpose-row">Waiting for project</strong></div>
+                      <div class="forge-brief-row"><span>Environment</span><strong id="forge-brief-environment">Garage / home / workshop</strong></div>
+                      <div class="forge-brief-row"><span>Load</span><strong id="forge-brief-load">Unknown</strong></div>
+                      <div class="forge-brief-row"><span>Constraints</span><strong id="forge-brief-constraints">Measurements, fit, materials</strong></div>
+                      <div class="forge-brief-row"><span>Material</span><strong id="forge-brief-material">PETG / ASA / Aluminum</strong></div>
+                      <div class="forge-brief-row"><span>Priority</span><strong id="forge-brief-priority-row">Strength, clean fit, easy install</strong></div>
+                    </div>
+                  </div>
+
+                  <div class="forge-micro-grid">
+                    <div class="forge-micro-card"><span>Measurements</span><strong id="forge-metric-measurements">0</strong><small id="forge-metric-measurements-sub">No dimensions yet</small></div>
+                    <div class="forge-micro-card"><span>Capture Frames</span><strong id="forge-metric-captures">0</strong><small id="forge-metric-captures-sub">Need multiple angles</small></div>
+                    <div class="forge-micro-card"><span>Generated Models</span><strong id="forge-metric-models">0</strong><small id="forge-metric-models-sub">Nothing built yet</small></div>
+                    <div class="forge-micro-card"><span>Confidence</span><strong id="forge-metric-confidence">—</strong><small id="forge-metric-confidence-sub">Geometry / scale / print</small></div>
+                  </div>
+                </div>
+
+                <div class="forge-grid-two">
+                  <div class="forge-capture-panel" id="forge-capture-panel">
+                    <div class="forge-panel-title">
+                      <span>Capture Status</span>
+                      <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;" onclick="forgeCameraCapture()">+ Frame</button>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                      <select id="forge-project-select" onchange="forgeLoadProject(this.value)" style="flex:1;min-width:200px;padding:10px 12px;border:1px solid rgba(255,255,255,0.10);border-radius:12px;background:rgba(255,255,255,0.04);font-size:13px;color:var(--forge-ink);cursor:pointer;">
+                        <option value="">— Select a project —</option>
+                      </select>
+                      <button class="forge-action-btn" onclick="document.getElementById('forge-file-input').click()">Upload 3D</button>
+                      <button class="forge-action-btn" onclick="document.getElementById('forge-photo-input').click()">Upload Photos</button>
+                    </div>
+                    <div class="forge-capture-grid" id="forge-capture-grid">
+                      <div class="forge-view-chip view-missing">Front</div>
+                      <div class="forge-view-chip view-missing">Back</div>
+                      <div class="forge-view-chip view-missing">Left</div>
+                      <div class="forge-view-chip view-missing">Right</div>
+                      <div class="forge-view-chip view-missing">Top</div>
+                      <div class="forge-view-chip view-optional">Bottom</div>
+                      <div class="forge-view-chip view-optional">Scale</div>
+                      <div class="forge-view-chip view-optional">Detail</div>
+                    </div>
+                    <div class="forge-confidence-row" id="forge-confidence-row">
+                      <span class="forge-conf-chip confidence-not_ready">Geometry: —</span>
+                      <span class="forge-conf-chip confidence-not_ready">Scale: —</span>
+                      <span class="forge-conf-chip confidence-not_ready">Print: —</span>
+                    </div>
+                    <button id="forge-build-3d-btn" class="forge-action-btn primary" style="display:none;margin-top:12px;width:100%;font-size:12px;" onclick="forgeTriggerReconstruct()">Build 3D Model</button>
+                  </div>
+
+                  <div class="forge-measurements-panel">
+                    <div class="forge-panel-title">
+                      <span>Measurements</span>
+                      <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;" onclick="forgeAddMeasurement()">+ Add</button>
+                    </div>
+                    <div class="forge-meas-list" id="forge-meas-list">
+                      <div style="color:var(--forge-ink-faint);font-size:11px;font-family:var(--font-mono);">No measurements yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="forge-page" data-forge-page="2">
+              <div class="forge-grid-two">
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Design Studio<strong>Design with AI like a world-class product engineer.</strong><small>The live viewer, uploads, camera capture, and downloadable model stay active here.</small></div>
+                    <button class="forge-action-btn" onclick="forgeQuickDescribe()">Describe Part</button>
+                  </div>
+                  <div class="forge-viewer-container" id="forge-viewer-container">
+                    <canvas id="forge-3d-canvas"></canvas>
+                    <div class="forge-viewer-overlay" id="forge-bbox-overlay" style="display:none;">
+                      <div id="forge-bbox-text" style="font-size:10px;"></div>
+                    </div>
+                    <div class="forge-viewer-controls" id="forge-viewer-controls" style="display:none;">
+                      <button class="forge-viewer-btn" onclick="forgeCameraReset()">Reset</button>
+                      <button class="forge-viewer-btn" onclick="forgeCameraTop()">Top</button>
+                      <button class="forge-viewer-btn" onclick="forgeCameraFront()">Front</button>
+                      <button class="forge-viewer-btn" onclick="forgeCameraLayFlat()">Lay Flat</button>
+                      <button class="forge-viewer-btn" onclick="forgeScreenshot()">Screenshot</button>
+                      <button class="forge-viewer-btn" onclick="forgeDownloadSTL()" id="forge-dl-stl-btn" style="display:none;">Download STL</button>
+                    </div>
+                    <div class="forge-upload-zone" id="forge-upload-zone"
+                         onclick="document.getElementById('forge-file-input').click()"
+                         ondragover="event.preventDefault();this.classList.add('drag-over')"
+                         ondragleave="this.classList.remove('drag-over')"
+                         ondrop="forgeHandleDrop(event)">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      <div style="font-size:13px;font-weight:500;">Drop STL / OBJ / GLB / 3MF here<br>or click to upload</div>
+                      <div class="forge-upload-btns">
+                        <button class="forge-action-btn" style="font-size:11px;padding:5px 12px;" onclick="event.stopPropagation();document.getElementById('forge-photo-input').click()">Upload Photos</button>
+                        <button class="forge-action-btn" style="font-size:11px;padding:5px 12px;" onclick="event.stopPropagation();forgeCameraCapture()">Camera</button>
+                      </div>
+                    </div>
+                    <input type="file" id="forge-file-input" style="display:none" accept=".stl,.obj,.glb,.3mf" onchange="forgeUploadFile(this.files[0])">
+                    <input type="file" id="forge-photo-input" style="display:none" accept="image/*" multiple onchange="forgeUploadPhotos(this.files)">
+                    <input type="file" id="forge-view-capture-input" style="display:none" accept="image/*" multiple onchange="forgeHandleViewCaptureFiles(this.files, this._pendingViewType)">
+                  </div>
+                </div>
+
+                <div class="forge-chat-panel">
+                  <div class="forge-panel-title" style="margin-bottom:6px;">
+                    <span>JARVIS Forge</span>
+                    <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;" onclick="document.getElementById('forge-sketch-input').click()">Upload Sketch</button>
+                  </div>
+                  <div id="forge-chat-messages">
+                    <div class="forge-msg-jarvis">Select a project to begin. Describe a part to generate it, upload a sketch to analyze it, or use Design Council for a full agent roundtable.</div>
+                  </div>
+                  <div class="forge-chat-input">
+                    <input type="text" id="forge-chat-input" placeholder="Describe a part or ask Forge anything..." onkeydown="if(event.key==='Enter')forgeSendChat()">
+                    <button class="forge-action-btn primary" onclick="forgeSendChat()">Send</button>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                    <span style="font-size:10px;color:var(--forge-ink-faint);font-weight:600;letter-spacing:0.05em;">SKETCH</span>
+                    <input type="file" id="forge-sketch-input" accept="image/*" style="display:none;" onchange="forgeHandleSketchUpload(this)">
+                    <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;" onclick="document.getElementById('forge-sketch-input').click()">Upload Drawing</button>
+                    <span id="forge-sketch-status" style="font-size:10px;color:var(--forge-ink-faint);font-family:var(--font-mono);"></span>
+                  </div>
+                  <div class="forge-project-strip" style="margin-top:14px;">
+                    <div class="forge-project-chip"><strong>Option A — Strongest</strong><span id="forge-option-a-copy">Strength-first design direction with practical geometry.</span></div>
+                    <div class="forge-project-chip"><strong>Option B — Fastest</strong><span id="forge-option-b-copy">Fastest to print and easiest to iterate in-house.</span></div>
+                    <div class="forge-project-chip"><strong>Option C — Cleanest</strong><span id="forge-option-c-copy">Clean cable management and the clearest install path.</span></div>
+                    <div class="forge-project-chip"><strong>Option D — Adjustable</strong><span id="forge-option-d-copy">Flexible mounting logic for multiple environments.</span></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="forge-page" data-forge-page="3">
+              <div class="forge-grid-two">
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Design Council<strong>Multi-agent review. Every angle considered.</strong><small>Run the council, compare options, and watch the part move from rough idea to defended design direction.</small></div>
+                    <button class="forge-action-btn primary" onclick="forgeRunDesignCouncil()">See Full Council Report</button>
+                  </div>
+                  <div class="forge-score-list">
+                    <div class="forge-score-row"><span>Option A</span><div class="forge-score-track"><div class="forge-score-fill" style="width:92%;"></div></div><strong class="forge-score-value">92</strong></div>
+                    <div class="forge-score-row"><span>Option B</span><div class="forge-score-track"><div class="forge-score-fill" style="width:87%;"></div></div><strong class="forge-score-value">87</strong></div>
+                    <div class="forge-score-row"><span>Option C</span><div class="forge-score-track"><div class="forge-score-fill" style="width:89%;"></div></div><strong class="forge-score-value">89</strong></div>
+                    <div class="forge-score-row"><span>Option D</span><div class="forge-score-track"><div class="forge-score-fill" style="width:84%;"></div></div><strong class="forge-score-value">84</strong></div>
+                  </div>
+                  <div class="forge-factor-list">
+                    <div>Load capacity</div>
+                    <div>Installation method</div>
+                    <div>Failure points</div>
+                    <div>Environment</div>
+                    <div>Print orientation</div>
+                    <div>Tolerances</div>
+                    <div>Material performance</div>
+                    <div>Cost to produce</div>
+                  </div>
+                </div>
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Stress Analysis<strong>How the current concept is holding up</strong><small id="forge-stress-copy-top">Use the Council when you want the review to feed directly into model generation.</small></div>
+                  </div>
+                  <div class="forge-stress-panel">
+                    <div class="forge-stress-copy" id="forge-stress-copy">Current model, if present, becomes the working artifact the council reasons about. Load, fit, and install logic all push the recommendation.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="forge-page" data-forge-page="4">
+              <div class="forge-card-shell">
+                <div class="forge-card-heading">
+                  <div class="forge-card-label">Build Pipeline<strong>From CAD to machine-ready. Optimized for success.</strong><small>Inspect the current model, stage the slice, and decide whether this project is ready to move forward.</small></div>
+                </div>
+                <div class="forge-pipeline-row">
+                  <div class="forge-pipeline-stage"><span>CAD</span><strong>Captured</strong></div>
+                  <div class="forge-pipeline-stage"><span>Mesh Repair</span><strong>Validate</strong></div>
+                  <div class="forge-pipeline-stage"><span>Optimize</span><strong>Refine</strong></div>
+                  <div class="forge-pipeline-stage"><span>Slice &amp; Sim</span><strong>Stage</strong></div>
+                  <div class="forge-pipeline-stage"><span>Validate</span><strong>Inspect</strong></div>
+                  <div class="forge-pipeline-stage"><span>Package</span><strong>Approve</strong></div>
+                </div>
+                <div class="forge-detail-grid">
+                  <div class="forge-readiness-panel">
+                    <div class="forge-panel-title">
+                      <span>Print Readiness</span>
+                      <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;" onclick="forgeInspectActive()">Inspect</button>
+                    </div>
+                    <div class="forge-readiness-list" id="forge-readiness-list">
+                      <div style="color:var(--forge-ink-faint);font-size:11px;font-family:var(--font-mono);">No inspection yet. Upload a model and click Inspect.</div>
+                    </div>
+                    <div id="forge-readiness-verdict" style="margin-top:8px;font-size:12px;font-weight:600;color:var(--forge-ink-faint);font-family:var(--font-mono);">VERDICT: —</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
+                      <button class="forge-action-btn" onclick="forgeStageSlice()">Stage Slice</button>
+                      <button class="forge-action-btn primary" onclick="forgeApprove()">Approve &amp; Send</button>
+                      <button class="forge-action-btn" onclick="forgeShowTimeline()">View Timeline</button>
+                    </div>
+                  </div>
+                  <div class="forge-card-shell">
+                    <div class="forge-card-heading">
+                      <div class="forge-card-label">Printer &amp; Machine Posture<strong>Current output lane</strong></div>
+                    </div>
+                    <div id="forge-printer-status-row" style="display:block;margin-bottom:12px;">
+                      <span class="forge-printer-chip" id="forge-printer-chip">K2 Pro — checking...</span>
+                    </div>
+                    <div class="forge-spec-list">
+                      <div class="forge-spec-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">Printer Setup</strong><span id="forge-printer-setup">Waiting for active model and slice report.</span></div>
+                      <div class="forge-spec-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">Material</strong><span id="forge-material-posture">PETG for durability, ASA when heat and weather matter, aluminum when production economics justify it.</span></div>
+                      <div class="forge-spec-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">Success Probability</strong><span id="forge-success-probability">Clear constraints and enough capture data keep the reprint loop small.</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="forge-page" data-forge-page="5">
+              <div class="forge-grid-two">
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Project &amp; Part Memory<strong>Every project. Every revision. Every lesson learned.</strong><small>The timeline, model history, and capture trail stay attached to the project so the next version starts smarter.</small></div>
+                  </div>
+                  <div class="forge-memory-list" id="forge-memory-list">
+                    <div class="forge-memory-row"><strong>No revisions yet</strong><span>Once a project starts generating captures, models, and inspections, they will appear here.</span></div>
+                  </div>
+                </div>
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">What We Learned<strong>Carry the lessons forward</strong></div>
+                    <button class="forge-action-btn" onclick="forgeShowTimeline()">Open Timeline</button>
+                  </div>
+                  <div class="forge-learn-list" id="forge-learning-list">
+                    <div class="forge-memory-row"><strong>Wait for active project</strong><span>Measurements, council outputs, repairs, and approvals will summarize here once the project is loaded.</span></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="forge-page" data-forge-page="6">
+              <div class="forge-grid-two">
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Manufacture &amp; Sourcing<strong>Make it here. Make it anywhere. Scale if you want.</strong><small>Compare in-house print, machining, or quote pathways without losing the project context.</small></div>
+                  </div>
+                  <div class="forge-factory-tabs">
+                    <div class="forge-factory-tab active">In-House</div>
+                    <div class="forge-factory-tab">Local Makers</div>
+                    <div class="forge-factory-tab">CNC / Laser</div>
+                    <div class="forge-factory-tab">Injection Molding</div>
+                    <div class="forge-factory-tab">Casting</div>
+                  </div>
+                  <div class="forge-estimate-list" id="forge-manufacture-plan">
+                    <div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">3D Print Prototype</strong><span>Use the current project brief to compare speed, cost, and risk before committing the design downstream.</span></div>
+                    <div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">Field Test</strong><span>Validate fit, real load, environmental exposure, and failure points before production scaling.</span></div>
+                    <div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">Finalize Design</strong><span>Repair, rescale, and convert tools stay attached so the artifact can cross fabrication methods cleanly.</span></div>
+                  </div>
+                </div>
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Production Estimate<strong>Compare the output lanes</strong></div>
+                  </div>
+                  <div class="forge-estimate-list" id="forge-estimate-list">
+                    <div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">3D Print (In-House)</strong><span>Fastest path to prototype and a tight feedback loop for fit adjustments.</span></div>
+                    <div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">CNC Machining</strong><span>Higher precision and material durability when the geometry and volumes warrant it.</span></div>
+                    <div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">Batch Production</strong><span>Use once the design is stable and the cost curve justifies a wider run.</span></div>
+                  </div>
+                  <button class="forge-action-btn primary" style="margin-top:14px;width:100%;" onclick="forgeStageSlice()">Request Quotes</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="forge-page" data-forge-page="7">
+              <div class="forge-card-shell" style="margin-bottom:16px;">
+                <div class="forge-card-heading">
+                  <div class="forge-card-label">Environments &amp; Systems Design<strong>Design whole spaces, systems, and better ways of living.</strong><small>Forge is not only for one part. It is the physical systems layer for your garage, home, office, rigs, storage, and maker environment.</small></div>
+                </div>
+                <div class="forge-environment-row">
+                  <div class="forge-environment-card"><strong>Garage Systems</strong><span>Mounts, charging, tools, and storage that reduce daily friction.</span></div>
+                  <div class="forge-environment-card"><strong>Home Organization</strong><span>Physical products that tidy, protect, and improve movement.</span></div>
+                  <div class="forge-environment-card"><strong>Office &amp; Workspaces</strong><span>Printer stands, cable paths, desks, and production rigs.</span></div>
+                  <div class="forge-environment-card"><strong>Family Command</strong><span>Support the household with systems that actually get used.</span></div>
+                  <div class="forge-environment-card"><strong>Creator Rigs</strong><span>Camera handles, shelves, docks, and modular setups.</span></div>
+                  <div class="forge-environment-card"><strong>Mobile &amp; Vehicle</strong><span>Travel adapters, mounts, and in-motion utility pieces.</span></div>
+                </div>
+              </div>
+
+              <div class="forge-grid-two">
+                <div class="forge-card-shell">
+                  <div class="forge-card-heading">
+                    <div class="forge-card-label">Recent Projects<strong>What Forge has in memory</strong></div>
+                    <button class="forge-action-btn" onclick="forgeNewProject()">+ New Project</button>
+                  </div>
+                  <div class="forge-project-strip" id="forge-recent-projects">
+                    <div class="forge-project-chip"><strong>No Forge projects yet</strong><span>Create one to begin the object-to-reality pipeline.</span></div>
+                  </div>
+                </div>
+
+                <div class="forge-grid-two">
+                  <div class="forge-measurements-panel" id="forge-wow-panel">
+                    <div class="forge-panel-title" style="cursor:pointer;" onclick="forgeWowToggle()">
+                      <span>WoW Model Bridge</span>
+                      <span id="forge-wow-count" style="font-size:10px;color:var(--forge-ink-faint);font-family:var(--font-mono);margin-left:6px;"></span>
+                      <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;margin-left:auto;" onclick="event.stopPropagation();forgeWowRefresh()">Refresh</button>
+                    </div>
+                    <div id="forge-wow-body" style="display:none;margin-top:6px;">
+                      <div id="forge-wow-status-row" style="font-size:10px;font-family:var(--font-mono);color:var(--forge-ink-faint);margin-bottom:8px;line-height:1.6;"></div>
+                      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+                        <input type="text" id="forge-wow-search" placeholder="Search models..." style="flex:1;min-width:100px;padding:8px 10px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;" oninput="forgeWowSearch(this.value)">
+                        <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;" onclick="forgeWowOpenSetup()">Setup</button>
+                      </div>
+                      <div id="forge-wow-model-list" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
+                        <div style="color:var(--forge-ink-faint);font-size:11px;font-family:var(--font-mono);">Click Refresh to scan export folder.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="forge-measurements-panel" id="forge-convert-panel">
+                    <div class="forge-panel-title" style="cursor:pointer;" onclick="forgeConvertToggle()">
+                      <span>Convert Tools</span>
+                      <button class="forge-action-btn" style="font-size:10px;padding:5px 10px;margin-left:auto;" onclick="event.stopPropagation();forgeConvertToggle()">▾</button>
+                    </div>
+                    <div id="forge-convert-body" style="display:none;margin-top:8px;">
+                      <div style="margin-bottom:12px;">
+                        <div style="font-size:10px;font-weight:700;color:var(--forge-ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Format Converter</div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+                          <select id="forge-conv-src-file" style="flex:1;min-width:120px;padding:8px 10px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;">
+                            <option value="">— pick project file —</option>
+                          </select>
+                          <select id="forge-conv-fmt" style="width:74px;padding:8px 8px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;">
+                            <option value="glb">GLB</option>
+                            <option value="obj">OBJ</option>
+                            <option value="stl">STL</option>
+                            <option value="ply">PLY</option>
+                          </select>
+                          <button class="forge-action-btn" style="font-size:10px;padding:6px 10px;" onclick="forgeConvertFormat()">Convert</button>
+                        </div>
+                        <div style="font-size:10px;color:var(--forge-ink-faint);margin-bottom:4px;">or upload a file to convert:</div>
+                        <input type="file" id="forge-conv-upload-input" accept=".stl,.obj,.glb,.ply" style="display:none;" onchange="forgeConvertFormatFromUpload(this)">
+                        <button class="forge-action-btn" style="font-size:10px;padding:6px 10px;width:100%;" onclick="document.getElementById('forge-conv-upload-input').click()">Upload &amp; Convert</button>
+                      </div>
+
+                      <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.07);">
+                        <div style="font-size:10px;font-weight:700;color:var(--forge-ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">WoW Tools</div>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                          <a href="https://github.com/Kruithne/wow.export/releases/latest" target="_blank" class="forge-action-btn" style="font-size:10px;padding:6px 10px;text-decoration:none;">Download wow.export</a>
+                          <button class="forge-action-btn" style="font-size:10px;padding:6px 10px;" onclick="forgeConvertCheckBlender()">Check Blender Setup</button>
+                        </div>
+                        <div id="forge-conv-blender-result" style="font-size:10px;font-family:var(--font-mono);color:var(--forge-ink-faint);margin-top:6px;line-height:1.6;display:none;"></div>
+                      </div>
+
+                      <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.07);">
+                        <div style="font-size:10px;font-weight:700;color:var(--forge-ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Mesh Repair</div>
+                        <select id="forge-repair-src-file" style="width:100%;padding:8px 10px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;margin-bottom:6px;">
+                          <option value="">— pick project file —</option>
+                        </select>
+                        <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+                          <label style="font-size:10px;color:var(--forge-ink-soft);display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="forge-repair-normals" checked> Fix Normals</label>
+                          <label style="font-size:10px;color:var(--forge-ink-soft);display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="forge-repair-holes" checked> Fill Holes</label>
+                          <label style="font-size:10px;color:var(--forge-ink-soft);display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" id="forge-repair-winding" checked> Fix Winding</label>
+                        </div>
+                        <button class="forge-action-btn primary" style="font-size:10px;padding:6px 12px;" onclick="forgeConvertRepair()">Repair Mesh</button>
+                        <div id="forge-conv-repair-result" style="font-size:10px;font-family:var(--font-mono);color:var(--forge-ink-faint);margin-top:6px;line-height:1.6;display:none;"></div>
+                      </div>
+
+                      <div style="padding-top:10px;border-top:1px solid rgba(255,255,255,0.07);">
+                        <div style="font-size:10px;font-weight:700;color:var(--forge-ink-soft);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Scale &amp; Units</div>
+                        <select id="forge-scale-src-file" style="width:100%;padding:8px 10px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;margin-bottom:6px;">
+                          <option value="">— pick project file —</option>
+                        </select>
+                        <select id="forge-scale-op" style="width:100%;padding:8px 10px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;margin-bottom:6px;" onchange="forgeConvertScaleOpChange(this.value)">
+                          <option value="rescale">Rescale to target size</option>
+                          <option value="normalize_bbox">Normalize bounding box (unit cube)</option>
+                          <option value="center_origin">Center on origin</option>
+                        </select>
+                        <div id="forge-scale-rescale-opts" style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center;">
+                          <input type="number" id="forge-scale-target-size" value="100" min="0.001" step="0.1" style="width:80px;padding:8px 10px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;">
+                          <select id="forge-scale-target-unit" style="width:64px;padding:8px 8px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;">
+                            <option value="mm">mm</option>
+                            <option value="cm">cm</option>
+                            <option value="in">in</option>
+                            <option value="m">m</option>
+                          </select>
+                          <span style="font-size:10px;color:var(--forge-ink-faint);">src:</span>
+                          <select id="forge-scale-current-unit" style="width:64px;padding:8px 8px;border:1px solid rgba(255,255,255,0.10);border-radius:10px;background:rgba(255,255,255,0.04);color:var(--forge-ink);font-size:11px;outline:none;">
+                            <option value="mm">mm</option>
+                            <option value="cm">cm</option>
+                            <option value="in">in</option>
+                            <option value="m">m</option>
+                          </select>
+                        </div>
+                        <button class="forge-action-btn primary" style="font-size:10px;padding:6px 12px;" onclick="forgeConvertScale()">Apply Scale</button>
+                        <div id="forge-conv-scale-result" style="font-size:10px;font-family:var(--font-mono);color:var(--forge-ink-faint);margin-top:6px;line-height:1.6;display:none;"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="forge-footer-strip">
+            <div class="forge-footer-pill"><strong>Reality Capture</strong><span>See everything. Preserve the details that matter.</span></div>
+            <div class="forge-footer-pill"><strong>AI Engineering</strong><span>Design without limits, but keep the constraints honest.</span></div>
+            <div class="forge-footer-pill"><strong>Design Council</strong><span>Review from multiple angles before you fabricate.</span></div>
+            <div class="forge-footer-pill"><strong>Build Anywhere</strong><span>From print prototype to production run.</span></div>
+            <div class="forge-footer-pill"><strong>Memory Engine</strong><span>Learn, improve, repeat across every revision.</span></div>
+            <div class="forge-footer-pill"><strong>From One to Many</strong><span>Personal use can become a product line.</span></div>
+            <div class="forge-footer-pill"><strong>Secure &amp; Private</strong><span>Your data. Your designs. Your manufacturing signal.</span></div>
+          </div>
+
+          <div class="forge-action-bar">
+            <button class="forge-action-btn" style="background:linear-gradient(135deg,#7c3aed22,#06b6d422);border-color:#7c3aed66;color:var(--forge-amber);" onclick="forgeRunDesignCouncil()">⚡ Design Council</button>
+            <button class="forge-action-btn" onclick="forgeStageSlice()">Stage Slice</button>
+            <button class="forge-action-btn primary" onclick="forgeApprove()">Approve &amp; Send</button>
+            <button class="forge-action-btn" onclick="forgeShowTimeline()">View Timeline</button>
+            <button class="forge-action-btn" onclick="forgeArchive()">Archive</button>
+            <span class="forge-printer-chip" id="forge-printer-chip-bar" style="display:none;margin-left:auto;">K2 Pro —</span>
+          </div>
+
+          <div id="forge-council-modal" class="forge-modal-overlay hidden">
+            <div class="forge-modal" style="max-width:680px;">
+              <div class="forge-modal-title">⚡ Forge Design Council</div>
+              <div style="font-size:11px;color:var(--text-3);margin-bottom:12px;">
+                Tony · Forge · AntMan · Rocket — four agents review your brief, debate the design, then generate a model.
+              </div>
+              <div id="forge-council-status" style="display:none;font-size:12px;color:var(--hue);margin-bottom:10px;font-family:var(--font-mono);">
+                Council in session...
+              </div>
+              <div id="forge-council-roundtable" style="display:none;margin-bottom:14px;"></div>
+              <div id="forge-council-spec" style="display:none;margin-bottom:14px;background:var(--surface-hi);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;font-family:var(--font-mono);color:var(--text-2);white-space:pre-wrap;max-height:160px;overflow-y:auto;"></div>
+              <div id="forge-council-result" style="display:none;margin-bottom:14px;font-size:12px;color:var(--text-2);"></div>
+              <textarea id="forge-council-brief" placeholder="Describe what you want to build in plain English. Include purpose, rough dimensions, materials, and any special requirements."
+                style="width:100%;height:80px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:12px;color:var(--text-1);font-family:var(--font-mono);resize:vertical;outline:none;box-sizing:border-box;"></textarea>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button class="forge-action-btn primary" onclick="forgeSubmitDesignCouncil()" id="forge-council-submit-btn">Convene Council</button>
+                <button class="forge-action-btn" onclick="document.getElementById('forge-council-modal').classList.add('hidden');_forgeCouncilRunning=false;">Close</button>
               </div>
             </div>
-            <input type="file" id="forge-file-input" style="display:none" accept=".stl,.obj,.glb,.3mf"
-                   onchange="forgeUploadFile(this.files[0])">
-            <input type="file" id="forge-photo-input" style="display:none" accept="image/*" multiple
-                   onchange="forgeUploadPhotos(this.files)">
-            <input type="file" id="forge-view-capture-input" style="display:none" accept="image/*" multiple
-                   onchange="forgeHandleViewCaptureFiles(this.files, this._pendingViewType)">
           </div>
 
-          <!-- Capture panel -->
-          <div class="forge-capture-panel" id="forge-capture-panel">
-            <div class="forge-panel-title">
-              Capture Status
-              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
-                onclick="forgeCameraCapture()">+ Frame</button>
-            </div>
-            <div class="forge-capture-grid" id="forge-capture-grid">
-              <!-- filled by forgeRenderCapture() -->
-              <div class="forge-view-chip view-missing">Front</div>
-              <div class="forge-view-chip view-missing">Back</div>
-              <div class="forge-view-chip view-missing">Left</div>
-              <div class="forge-view-chip view-missing">Right</div>
-              <div class="forge-view-chip view-missing">Top</div>
-              <div class="forge-view-chip view-optional">Bottom</div>
-              <div class="forge-view-chip view-optional">Scale</div>
-              <div class="forge-view-chip view-optional">Detail</div>
-            </div>
-            <div class="forge-confidence-row" id="forge-confidence-row">
-              <span class="forge-conf-chip confidence-not_ready">Geometry: —</span>
-              <span class="forge-conf-chip confidence-not_ready">Scale: —</span>
-              <span class="forge-conf-chip confidence-not_ready">Print: —</span>
-            </div>
-            <button id="forge-build-3d-btn" class="forge-action-btn primary"
-              style="display:none;margin-top:8px;width:100%;font-size:12px;"
-              onclick="forgeTriggerReconstruct()">🧊 Build 3D Model</button>
-          </div>
-
-          <!-- Measurements panel -->
-          <div class="forge-measurements-panel">
-            <div class="forge-panel-title">
-              Measurements
-              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
-                onclick="forgeAddMeasurement()">+ Add</button>
-            </div>
-            <div class="forge-meas-list" id="forge-meas-list">
-              <div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">No measurements yet.</div>
-            </div>
-          </div>
-
-          <!-- WoW Model Bridge panel -->
-          <div class="forge-measurements-panel" id="forge-wow-panel" style="margin-top:8px;">
-            <div class="forge-panel-title" style="cursor:pointer;" onclick="forgeWowToggle()">
-              <span>⚔️ WoW Models</span>
-              <span id="forge-wow-count" style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);margin-left:6px;"></span>
-              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;margin-left:auto;"
-                onclick="event.stopPropagation();forgeWowRefresh()">Refresh</button>
-            </div>
-            <div id="forge-wow-body" style="display:none;margin-top:6px;">
-              <div id="forge-wow-status-row" style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-bottom:8px;line-height:1.6;"></div>
-              <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-                <input type="text" id="forge-wow-search" placeholder="Search models..."
-                  style="flex:1;min-width:100px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;"
-                  oninput="forgeWowSearch(this.value)">
-                <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
-                  onclick="forgeWowOpenSetup()">⚙ Setup</button>
-              </div>
-              <div id="forge-wow-model-list" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;">
-                <div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">Click Refresh to scan export folder.</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- WoW Setup modal -->
           <div id="forge-wow-setup-modal" class="forge-modal-overlay hidden">
             <div class="forge-modal" style="max-width:480px;">
               <div class="forge-modal-title">⚔️ WoW Model Bridge Setup</div>
               <div style="font-size:11px;color:var(--text-3);margin-bottom:14px;line-height:1.7;">
-                <b>Step 1</b> — Download <a href="https://github.com/Kruithne/wow.export/releases/latest"
-                  target="_blank" style="color:var(--hue);">wow.export</a> (free, macOS ARM64 native)<br>
+                <b>Step 1</b> — Download <a href="https://github.com/Kruithne/wow.export/releases/latest" target="_blank" style="color:var(--hue);">wow.export</a> (free, macOS ARM64 native)<br>
                 <b>Step 2</b> — Open it, connect to your WoW install, search your character/model<br>
                 <b>Step 3</b> — Export as GLB — files land in your export folder<br>
                 <b>Step 4</b> — Hit Refresh in Forge and click Import next to the model
               </div>
               <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
                 <label style="font-size:11px;color:var(--text-2);font-weight:600;">Export Folder (where wow.export saves files)</label>
-                <input type="text" id="forge-wow-cfg-folder"
-                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
+                <input type="text" id="forge-wow-cfg-folder" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
                 <label style="font-size:11px;color:var(--text-2);font-weight:600;">WoW Install Path</label>
-                <input type="text" id="forge-wow-cfg-wow"
-                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
+                <input type="text" id="forge-wow-cfg-wow" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
                 <label style="font-size:11px;color:var(--text-2);font-weight:600;">Blender Path (optional — for M2→GLB conversion)</label>
-                <input type="text" id="forge-wow-cfg-blender"
-                  style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
+                <input type="text" id="forge-wow-cfg-blender" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;font-family:var(--font-mono);outline:none;width:100%;box-sizing:border-box;">
               </div>
               <div style="display:flex;gap:8px;">
                 <button class="forge-action-btn primary" onclick="forgeWowSaveConfig()">Save</button>
@@ -10788,207 +11905,10 @@ body::after {{
               </div>
             </div>
           </div>
-
-          <!-- Forge Convert panel -->
-          <div class="forge-measurements-panel" id="forge-convert-panel" style="margin-top:8px;">
-            <div class="forge-panel-title" style="cursor:pointer;" onclick="forgeConvertToggle()">
-              <span>🔧 Convert Tools</span>
-              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;margin-left:auto;"
-                onclick="event.stopPropagation();forgeConvertToggle()">▾</button>
-            </div>
-            <div id="forge-convert-body" style="display:none;margin-top:8px;">
-
-              <!-- Format Converter -->
-              <div style="margin-bottom:12px;">
-                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Format Converter</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
-                  <select id="forge-conv-src-file"
-                    style="flex:1;min-width:120px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
-                    <option value="">— pick project file —</option>
-                  </select>
-                  <select id="forge-conv-fmt"
-                    style="width:68px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
-                    <option value="glb">GLB</option>
-                    <option value="obj">OBJ</option>
-                    <option value="stl">STL</option>
-                    <option value="ply">PLY</option>
-                  </select>
-                  <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;"
-                    onclick="forgeConvertFormat()">Convert</button>
-                </div>
-                <div style="font-size:10px;color:var(--text-3);margin-bottom:4px;">or upload a file to convert:</div>
-                <input type="file" id="forge-conv-upload-input" accept=".stl,.obj,.glb,.ply"
-                  style="display:none;" onchange="forgeConvertFormatFromUpload(this)">
-                <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;width:100%;"
-                  onclick="document.getElementById('forge-conv-upload-input').click()">Upload &amp; Convert</button>
-              </div>
-
-              <!-- WoW-specific tools -->
-              <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border);">
-                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">WoW Tools</div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                  <a href="https://github.com/Kruithne/wow.export/releases/latest" target="_blank"
-                    class="forge-action-btn" style="font-size:10px;padding:3px 10px;text-decoration:none;">
-                    ⬇ Download wow.export
-                  </a>
-                  <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;"
-                    onclick="forgeConvertCheckBlender()">Check Blender Setup</button>
-                </div>
-                <div id="forge-conv-blender-result"
-                  style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-top:6px;line-height:1.6;display:none;"></div>
-              </div>
-
-              <!-- Mesh Repair -->
-              <div style="margin-bottom:12px;padding-top:10px;border-top:1px solid var(--border);">
-                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Mesh Repair</div>
-                <select id="forge-repair-src-file"
-                  style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;margin-bottom:6px;">
-                  <option value="">— pick project file —</option>
-                </select>
-                <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
-                  <label style="font-size:10px;color:var(--text-2);display:flex;align-items:center;gap:4px;cursor:pointer;">
-                    <input type="checkbox" id="forge-repair-normals" checked> Fix Normals</label>
-                  <label style="font-size:10px;color:var(--text-2);display:flex;align-items:center;gap:4px;cursor:pointer;">
-                    <input type="checkbox" id="forge-repair-holes" checked> Fill Holes</label>
-                  <label style="font-size:10px;color:var(--text-2);display:flex;align-items:center;gap:4px;cursor:pointer;">
-                    <input type="checkbox" id="forge-repair-winding" checked> Fix Winding</label>
-                </div>
-                <button class="forge-action-btn primary" style="font-size:10px;padding:4px 14px;"
-                  onclick="forgeConvertRepair()">Repair Mesh</button>
-                <div id="forge-conv-repair-result"
-                  style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-top:6px;line-height:1.6;display:none;"></div>
-              </div>
-
-              <!-- Scale & Unit Tools -->
-              <div style="padding-top:10px;border-top:1px solid var(--border);">
-                <div style="font-size:10px;font-weight:700;color:var(--text-2);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Scale &amp; Units</div>
-                <select id="forge-scale-src-file"
-                  style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;margin-bottom:6px;">
-                  <option value="">— pick project file —</option>
-                </select>
-                <select id="forge-scale-op"
-                  style="width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;margin-bottom:6px;"
-                  onchange="forgeConvertScaleOpChange(this.value)">
-                  <option value="rescale">Rescale to target size</option>
-                  <option value="normalize_bbox">Normalize bounding box (unit cube)</option>
-                  <option value="center_origin">Center on origin</option>
-                </select>
-                <div id="forge-scale-rescale-opts" style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center;">
-                  <input type="number" id="forge-scale-target-size" value="100" min="0.001" step="0.1"
-                    style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
-                  <select id="forge-scale-target-unit"
-                    style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
-                    <option value="mm">mm</option>
-                    <option value="cm">cm</option>
-                    <option value="in">in</option>
-                    <option value="m">m</option>
-                  </select>
-                  <span style="font-size:10px;color:var(--text-3);">src:</span>
-                  <select id="forge-scale-current-unit"
-                    style="width:60px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface-hi);color:var(--text-1);font-size:11px;outline:none;">
-                    <option value="mm">mm</option>
-                    <option value="cm">cm</option>
-                    <option value="in">in</option>
-                    <option value="m">m</option>
-                  </select>
-                </div>
-                <button class="forge-action-btn primary" style="font-size:10px;padding:4px 14px;"
-                  onclick="forgeConvertScale()">Apply Scale</button>
-                <div id="forge-conv-scale-result"
-                  style="font-size:10px;font-family:var(--font-mono);color:var(--text-3);margin-top:6px;line-height:1.6;display:none;"></div>
-              </div>
-
-            </div>
-          </div>
-
-        </div><!-- .forge-left -->
-
-        <!-- RIGHT: chat + readiness -->
-        <div class="forge-right">
-
-          <!-- Chat panel -->
-          <div class="forge-chat-panel">
-            <div class="forge-panel-title" style="margin-bottom:6px;">
-              JARVIS Forge · Chat
-              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;margin-left:auto;"
-                onclick="forgeQuickDescribe()">Describe Part</button>
-            </div>
-            <div id="forge-chat-messages">
-              <div class="forge-msg-jarvis">Select a project to begin. Describe a part to generate it, upload a sketch to analyze it, or use Design Council for a full agent roundtable.</div>
-            </div>
-            <div class="forge-chat-input">
-              <input type="text" id="forge-chat-input" placeholder="Describe a part or ask Forge anything..."
-                     onkeydown="if(event.key==='Enter')forgeSendChat()">
-              <button class="forge-action-btn primary" onclick="forgeSendChat()">Send</button>
-            </div>
-            <!-- Sketch upload row -->
-            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
-              <span style="font-size:10px;color:var(--text-3);font-weight:600;letter-spacing:0.05em;">SKETCH</span>
-              <input type="file" id="forge-sketch-input" accept="image/*"
-                     style="display:none;" onchange="forgeHandleSketchUpload(this)">
-              <button class="forge-action-btn" style="font-size:10px;padding:3px 10px;"
-                onclick="document.getElementById('forge-sketch-input').click()">Upload Drawing</button>
-              <span id="forge-sketch-status" style="font-size:10px;color:var(--text-3);font-family:var(--font-mono);"></span>
-            </div>
-          </div>
-
-          <!-- Print readiness panel -->
-          <div class="forge-readiness-panel">
-            <div class="forge-panel-title">
-              Print Readiness
-              <button class="forge-action-btn" style="font-size:10px;padding:3px 8px;"
-                onclick="forgeInspectActive()">Inspect</button>
-            </div>
-            <div class="forge-readiness-list" id="forge-readiness-list">
-              <div style="color:var(--text-3);font-size:11px;font-family:var(--font-mono);">No inspection yet. Upload a model and click Inspect.</div>
-            </div>
-            <div id="forge-readiness-verdict" style="margin-top:8px;font-size:12px;font-weight:600;color:var(--text-3);font-family:var(--font-mono);">VERDICT: —</div>
-          </div>
-
-          <!-- Printer status chip -->
-          <div id="forge-printer-status-row" style="display:none;margin-top:2px;">
-            <span class="forge-printer-chip" id="forge-printer-chip">K2 Pro — checking...</span>
-          </div>
-
-        </div><!-- .forge-right -->
-
-      </div><!-- .forge-main -->
-
-      <!-- Action bar -->
-      <div class="forge-action-bar">
-        <button class="forge-action-btn" style="background:linear-gradient(135deg,#7c3aed22,#06b6d422);border-color:#7c3aed66;color:var(--hue);"
-          onclick="forgeRunDesignCouncil()">⚡ Design Council</button>
-        <button class="forge-action-btn" onclick="forgeStageSlice()">Stage Slice</button>
-        <button class="forge-action-btn primary" onclick="forgeApprove()">Approve &amp; Send</button>
-        <button class="forge-action-btn" onclick="forgeShowTimeline()">View Timeline</button>
-        <button class="forge-action-btn" onclick="forgeArchive()">Archive</button>
-        <span class="forge-printer-chip" id="forge-printer-chip-bar" style="display:none;margin-left:auto;">K2 Pro —</span>
+        </main>
       </div>
-
-      <!-- Design Council modal -->
-      <div id="forge-council-modal" class="forge-modal-overlay hidden">
-        <div class="forge-modal" style="max-width:680px;">
-          <div class="forge-modal-title">⚡ Forge Design Council</div>
-          <div style="font-size:11px;color:var(--text-3);margin-bottom:12px;">
-            Tony · Forge · AntMan · Rocket — four agents review your brief, debate the design, then generate a model.
-          </div>
-          <div id="forge-council-status" style="display:none;font-size:12px;color:var(--hue);margin-bottom:10px;font-family:var(--font-mono);">
-            Council in session...
-          </div>
-          <div id="forge-council-roundtable" style="display:none;margin-bottom:14px;"></div>
-          <div id="forge-council-spec" style="display:none;margin-bottom:14px;background:var(--surface-hi);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;font-family:var(--font-mono);color:var(--text-2);white-space:pre-wrap;max-height:160px;overflow-y:auto;"></div>
-          <div id="forge-council-result" style="display:none;margin-bottom:14px;font-size:12px;color:var(--text-2);"></div>
-          <textarea id="forge-council-brief" placeholder="Describe what you want to build in plain English. Include purpose, rough dimensions, materials, and any special requirements."
-            style="width:100%;height:80px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--surface-hi);font-size:12px;color:var(--text-1);font-family:var(--font-mono);resize:vertical;outline:none;box-sizing:border-box;"></textarea>
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="forge-action-btn primary" onclick="forgeSubmitDesignCouncil()" id="forge-council-submit-btn">Convene Council</button>
-            <button class="forge-action-btn" onclick="document.getElementById('forge-council-modal').classList.add('hidden');_forgeCouncilRunning=false;">Close</button>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- .forge-workspace -->
-  </div><!-- #view-forge -->
+    </div>
+  </div>
 
   <!-- Camera capture modal -->
   <div id="forge-camera-modal" class="forge-modal-overlay hidden">
@@ -22431,9 +23351,183 @@ let _forgeRenderer = null;
 let _forgeControls = null;
 let _forgeMesh = null;
 let _forgeCameraStream = null;
+let forgeStoryboardPage = 1;
+let _forgeProjectCache = [];
+
+const FORGE_STORYBOARD_TITLES = {{
+  1: {{
+    title: '1. Capture & Understand',
+    label: 'Capture Lab',
+    subtitle: 'See the physical world, turn it into a design brief, and gather enough measurements, views, and constraints to make the project buildable.',
+  }},
+  2: {{
+    title: '2. Design Studio',
+    label: 'Design Studio',
+    subtitle: 'Use the live 3D viewer, sketch intake, and JARVIS design chat to move from raw signal into a credible part geometry.',
+  }},
+  3: {{
+    title: '3. Design Council',
+    label: 'Council',
+    subtitle: 'Bring multiple design perspectives into the loop, compare options, and let the part withstand challenge before it reaches fabrication.',
+  }},
+  4: {{
+    title: '4. Build Pipeline',
+    label: 'Build Pipeline',
+    subtitle: 'Inspect the artifact, stage the slice, and read the manufacturing posture before you commit machine time or approval.',
+  }},
+  5: {{
+    title: '5. Project & Part Memory',
+    label: 'Part Memory',
+    subtitle: 'Track revisions, generated models, capture history, and learned constraints so every new iteration starts from retained knowledge.',
+  }},
+  6: {{
+    title: '6. Manufacture & Sourcing',
+    label: 'Sourcing',
+    subtitle: 'Compare in-house fabrication, machining, and sourcing lanes while keeping the active project context and constraints visible.',
+  }},
+  7: {{
+    title: '7. Environments & Systems Design',
+    label: 'Systems',
+    subtitle: 'Treat Forge as the physical systems layer for your garage, home, office, rigs, and repeatable products, not just one isolated part.',
+  }},
+}};
+
+function syncForgeStoryboard() {{
+  const panels = Array.from(document.querySelectorAll('#view-forge .forge-page'));
+  if (!panels.length) return;
+  const pageCount = panels.length;
+  forgeStoryboardPage = Math.max(1, Math.min(forgeStoryboardPage, pageCount));
+  panels.forEach((panel, idx) => panel.classList.toggle('active', idx + 1 === forgeStoryboardPage));
+  const meta = FORGE_STORYBOARD_TITLES[forgeStoryboardPage];
+  const title = document.getElementById('forge-nav-title');
+  const subtitle = document.getElementById('forge-nav-subtitle');
+  const count = document.getElementById('forge-page-count');
+  const label = document.getElementById('forge-page-label');
+  const prev = document.getElementById('forge-nav-prev');
+  const next = document.getElementById('forge-nav-next');
+  if (title) title.textContent = meta?.title || `Page ${{forgeStoryboardPage}}`;
+  if (subtitle) subtitle.textContent = meta?.subtitle || '';
+  if (count) count.textContent = `Page ${{forgeStoryboardPage}} of ${{pageCount}}`;
+  if (label) label.textContent = meta?.label || `Page ${{forgeStoryboardPage}}`;
+  if (prev) prev.disabled = forgeStoryboardPage === 1;
+  if (next) next.disabled = forgeStoryboardPage === pageCount;
+  if (forgeStoryboardPage === 2) setTimeout(forgeResizeViewer, 80);
+}}
+
+function advanceForgePage(delta) {{
+  forgeStoryboardPage += delta;
+  syncForgeStoryboard();
+}}
+
+function forgeResizeViewer() {{
+  const container = document.getElementById('forge-viewer-container');
+  if (!container || !_forgeRenderer || !_forgeCamera) return;
+  const ww = Math.max(container.clientWidth || 0, 320);
+  const hh = Math.max(container.clientHeight || 0, 320);
+  _forgeCamera.aspect = ww / hh;
+  _forgeCamera.updateProjectionMatrix();
+  _forgeRenderer.setSize(ww, hh);
+  if (_forgeScene) _forgeRenderer.render(_forgeScene, _forgeCamera);
+}}
+
+function forgeFormatDate(value) {{
+  if (!value) return 'Recently';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toLocaleDateString([], {{ month:'short', day:'numeric', year:'numeric' }});
+}}
+
+function forgeSummarizeMeasurement(measurements) {{
+  if (!measurements || !measurements.length) return 'Need confirmed dimensions';
+  return measurements.slice(0, 3).map(m => `${{m.label}} ${{m.value}}${{m.unit}}`).join(' · ');
+}}
+
+function forgeRenderProjectStrip(projects) {{
+  _forgeProjectCache = projects || [];
+  const host = document.getElementById('forge-recent-projects');
+  const count = document.getElementById('forge-sidebar-count');
+  if (count) count.textContent = String(_forgeProjectCache.length || 0);
+  if (!host) return;
+  if (!_forgeProjectCache.length) {{
+    host.innerHTML = '<div class="forge-project-chip"><strong>No Forge projects yet</strong><span>Create one to begin the object-to-reality pipeline.</span></div>';
+    return;
+  }}
+  host.innerHTML = _forgeProjectCache.slice(0, 6).map(project => {{
+    const status = (project.status || 'idea').replace(/_/g, ' ');
+    const active = project.id === _forgeCurrentProjectId ? ' style="border-color:rgba(243,167,79,0.42);background:rgba(243,167,79,0.08);"' : '';
+    return '<div class="forge-project-chip"' + active + ' onclick="forgeLoadProject(\\'' + escHtml(project.id) + '\\')" style="cursor:pointer;">'
+      + '<strong>' + escHtml(project.title || 'Untitled project') + '</strong>'
+      + '<span>Status: ' + escHtml(status) + '</span>'
+      + '</div>';
+  }}).join('');
+}}
+
+function forgeRenderDesktopMeta(project) {{
+  const measurements = project.measurements || [];
+  const captures = project.capture_sessions || [];
+  const models = project.generated_models || [];
+  const latestCapture = captures.length ? captures[captures.length - 1] : null;
+  const latestModel = models.length ? models[models.length - 1] : null;
+  const confidence = latestCapture?.confidence || {{}};
+  const confidenceSummary = [confidence.geometry, confidence.scale, confidence.print_readiness].filter(Boolean).join(' / ') || 'Not ready';
+  const setText = (id, value) => {{
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }};
+
+  setText('forge-sidebar-project', project.title || 'Unnamed project');
+  setText('forge-sidebar-health', latestModel ? 'Model loaded' : 'Awaiting geometry');
+  setText('forge-brief-title', project.title || 'Untitled project');
+  setText('forge-brief-purpose', project.description || 'Use captures, dimensions, and chat guidance to shape the part into something you can build.');
+  setText('forge-brief-priority', latestModel ? 'Refine the active design toward fabrication' : 'Get enough signal to build the first model');
+  setText('forge-brief-priority-copy', latestModel ? 'Current geometry exists. Focus on fit, tolerance, and the fastest path to trustworthy iteration.' : 'Once the capture and measurement layers are solid, Forge can move confidently into generation and review.');
+  setText('forge-brief-purpose-row', project.description || 'Active design brief is forming');
+  setText('forge-brief-environment', project.environment || 'Garage / home / workshop');
+  setText('forge-brief-load', project.load_requirement || (measurements.length ? forgeSummarizeMeasurement(measurements) : 'Unknown'));
+  setText('forge-brief-constraints', measurements.length ? forgeSummarizeMeasurement(measurements) : 'Need fit, clearance, and mounting constraints');
+  setText('forge-brief-material', latestModel?.material || 'PETG / ASA / Aluminum');
+  setText('forge-brief-priority-row', latestModel ? 'Strength, tolerance, clean install' : 'Capture enough for a confident first pass');
+  setText('forge-metric-measurements', String(measurements.length));
+  setText('forge-metric-measurements-sub', measurements.length ? 'Confirmed dimensions recorded' : 'No dimensions yet');
+  setText('forge-metric-captures', String((latestCapture?.frames || []).length || 0));
+  setText('forge-metric-captures-sub', latestCapture ? 'Latest session captured' : 'Need multiple angles');
+  setText('forge-metric-models', String(models.length));
+  setText('forge-metric-models-sub', latestModel ? latestModel.filename || 'Latest model ready' : 'Nothing built yet');
+  setText('forge-metric-confidence', confidenceSummary);
+  setText('forge-metric-confidence-sub', 'Geometry / scale / print');
+  setText('forge-printer-setup', latestModel?.filename ? 'Current artifact: ' + latestModel.filename : 'Waiting for active model and slice report.');
+  setText('forge-material-posture', latestModel?.material || 'PETG for durability, ASA when heat and weather matter, aluminum when production economics justify it.');
+  setText('forge-success-probability', latestModel ? 'You have enough geometry to inspect, repair, and stage the next fabrication step.' : 'Clear constraints and enough capture data keep the reprint loop small.');
+  setText('forge-stress-copy-top', latestModel ? 'Current model: ' + latestModel.filename : 'Use the Council when you want the review to feed directly into model generation.');
+  setText('forge-stress-copy', latestModel ? 'The loaded artifact becomes the thing the council can challenge for stress, fit, failure points, and install logic.' : 'Bring a design brief or uploaded model here and let the Council reason about the tradeoffs before fabrication.');
+
+  const memoryList = document.getElementById('forge-memory-list');
+  if (memoryList) {{
+    const memoryRows = [];
+    models.slice().reverse().slice(0, 4).forEach((model, idx) => {{
+      memoryRows.push('<div class="forge-memory-row"><strong>v' + (models.length - idx) + ' · ' + escHtml(model.filename || 'Generated model') + '</strong><span>' + escHtml(model.export_engine || 'Generated in Forge') + ' · ' + escHtml(forgeFormatDate(model.created_at || model.ts)) + '</span></div>');
+    }});
+    captures.slice().reverse().slice(0, 2).forEach((session, idx) => {{
+      memoryRows.push('<div class="forge-memory-row"><strong>Capture session ' + (captures.length - idx) + '</strong><span>' + ((session.frames || []).length || 0) + ' frames · ' + escHtml(forgeFormatDate(session.created_at || session.ts)) + '</span></div>');
+    }});
+    if (!memoryRows.length) memoryRows.push('<div class="forge-memory-row"><strong>No revisions yet</strong><span>Once a project starts generating captures, models, and inspections, they will appear here.</span></div>');
+    memoryList.innerHTML = memoryRows.join('');
+  }}
+
+  const learnList = document.getElementById('forge-learning-list');
+  if (learnList) {{
+    const learnRows = [];
+    if (measurements.length) learnRows.push('<div class="forge-memory-row"><strong>Confirmed dimensions are accumulating</strong><span>' + escHtml(forgeSummarizeMeasurement(measurements)) + '</span></div>');
+    if (latestCapture) learnRows.push('<div class="forge-memory-row"><strong>Capture posture improved</strong><span>' + ((latestCapture.frames || []).length || 0) + ' frames are attached to the latest session, which sharpens geometry and scale reasoning.</span></div>');
+    if (latestModel?.print_readiness) learnRows.push('<div class="forge-memory-row"><strong>Inspection memory retained</strong><span>Latest model already carries print readiness data, so the next build step starts with evidence instead of guesswork.</span></div>');
+    if (!learnRows.length) learnRows.push('<div class="forge-memory-row"><strong>Wait for active project</strong><span>Measurements, council outputs, repairs, and approvals will summarize here once the project is loaded.</span></div>');
+    learnList.innerHTML = learnRows.join('');
+  }}
+}}
 
 // ── Init ──────────────────────────────────────────────────────
 async function forgeInit() {{
+  syncForgeStoryboard();
   await forgeEnsureThree();
   await forgeLoadProjectList();
 }}
@@ -22520,6 +23614,7 @@ async function forgeLoadProjectList() {{
     if (!res.ok) return;
     const data = await res.json();
     const projects = data.projects || [];
+    forgeRenderProjectStrip(projects);
     const sel = document.getElementById('forge-project-select');
     if (!sel) return;
     const cur = _forgeCurrentProjectId;
@@ -22561,6 +23656,7 @@ async function forgeLoadProject(projectId) {{
 }}
 
 function forgeRenderProject(project) {{
+  forgeRenderDesktopMeta(project);
   // Status badge
   const badge = document.getElementById('forge-project-status');
   if (badge) {{
