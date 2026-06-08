@@ -7032,7 +7032,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         db = _get_home_db()
         if db is None:
             return _json({"available": False, "error": "Home DB not initialised"})
-        result = await asyncio.to_thread(db.get_dashboard_data)
+        try:
+            result = await asyncio.to_thread(db.get_dashboard_data)
+        except Exception as exc:
+            return _json({"available": False, "error": f"Home dashboard unavailable: {exc}"})
         result["available"] = True
         return _json(result)
 
@@ -9642,7 +9645,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         db = _get_home_db()
         if db is None:
             return _json({"available": False, "error": "Home DB not initialised"})
-        result = await asyncio.to_thread(db.get_dashboard_data)
+        try:
+            result = await asyncio.to_thread(db.get_dashboard_data)
+        except Exception as exc:
+            return _json({"available": False, "error": f"Home dashboard unavailable: {exc}"})
         result["available"] = True
         return _json(result)
 

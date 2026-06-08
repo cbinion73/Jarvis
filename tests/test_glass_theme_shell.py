@@ -22,10 +22,28 @@ class GlassThemeShellTests(unittest.TestCase):
     def test_render_glass_shell_exposes_health_desktop_launcher(self) -> None:
         html = render_glass_shell(self.runtime)
 
-        self.assertIn("Open Desktop Experience", html)
+        self.assertIn("Open full desktop page", html)
         self.assertIn("onclick=\"openHealthDesktopExperience()\"", html)
         self.assertIn("function openHealthDesktopExperience()", html)
         self.assertIn("window.open('/health-desktop', '_blank', 'noopener');", html)
+
+    def test_render_glass_shell_wires_daily_brief_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn("id=\"dailybrief-actor-select\"", html)
+        self.assertIn("id=\"dailybrief-refresh-button\"", html)
+        self.assertIn("id=\"dailybrief-livebrief-button\"", html)
+        self.assertIn("id=\"dailybrief-runtime-note\"", html)
+        self.assertIn("function refreshDailyBriefDesktop(", html)
+        self.assertIn("function refreshDailyBriefLivePacket(", html)
+        self.assertIn("function dailyBriefApplyOpenLoopAction(", html)
+        self.assertIn("function dailyBriefApplyApprovalAction(", html)
+        self.assertIn("function dailyBriefCompleteTask(", html)
+        self.assertIn("/api/briefing/module?actor=", html)
+        self.assertIn("/api/briefing/live?actor=", html)
+        self.assertIn("/api/open-loops/action", html)
+        self.assertIn("/api/apple/health/summary", html)
+        self.assertIn("/api/activity/operator-action", html)
 
 
 if __name__ == "__main__":

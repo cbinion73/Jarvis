@@ -4454,6 +4454,40 @@ body::after {{
   color: rgba(244,236,223,0.64);
   font-size: 12px;
 }}
+.dailybrief-runtime-bar {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(214,161,76,0.16);
+  background: linear-gradient(180deg, rgba(10,15,24,0.92), rgba(7,10,17,0.88));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}}
+.dailybrief-runtime-controls {{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}}
+.dailybrief-runtime-note {{
+  flex: 1;
+  min-width: 220px;
+  color: rgba(244,236,223,0.68);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+}}
+.dailybrief-select {{
+  min-width: 140px;
+  border-radius: 12px;
+  border: 1px solid rgba(214,161,76,0.18);
+  background: rgba(255,255,255,0.04);
+  color: #f7f3ea;
+  padding: 10px 12px;
+  font-size: 12px;
+}}
 .dailybrief-profile-card {{
   display: flex;
   align-items: center;
@@ -4678,11 +4712,56 @@ body::after {{
   cursor: pointer;
   white-space: nowrap;
 }}
+.dailybrief-button.secondary {{
+  border-color: rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: rgba(244,236,223,0.82);
+}}
+.dailybrief-button.good {{
+  border-color: rgba(92,206,139,0.26);
+  background: linear-gradient(180deg, rgba(28,97,58,0.22), rgba(17,63,37,0.18));
+  color: #90efb8;
+}}
+.dailybrief-button.warn {{
+  border-color: rgba(242,170,68,0.26);
+  background: linear-gradient(180deg, rgba(148,94,27,0.22), rgba(84,52,13,0.18));
+  color: #f5c77a;
+}}
+.dailybrief-button.danger {{
+  border-color: rgba(209,86,73,0.26);
+  background: linear-gradient(180deg, rgba(113,32,25,0.24), rgba(67,20,18,0.18));
+  color: #f4a494;
+}}
 .dailybrief-row {{
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}}
+.dailybrief-row-body {{
+  flex: 1;
+  min-width: 0;
+}}
+.dailybrief-row-stack {{
+  flex-direction: column;
+  align-items: stretch;
+}}
+.dailybrief-row-status {{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}}
+.dailybrief-row-note {{
+  color: rgba(244,236,223,0.58);
+  font-size: 12px;
+  line-height: 1.45;
+}}
+.dailybrief-row-actions {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
 }}
 .dailybrief-row-meta {{
   font-family: var(--font-mono);
@@ -4705,6 +4784,9 @@ body::after {{
 }}
 .dailybrief-tag.high {{ color: #f6b25f; border-color: rgba(242,170,68,0.28); }}
 .dailybrief-tag.good {{ color: #6ed89c; border-color: rgba(92,206,139,0.22); }}
+.dailybrief-tag.low {{ color: #93b7ff; border-color: rgba(102,145,255,0.22); }}
+.dailybrief-tag.danger {{ color: #f4a494; border-color: rgba(209,86,73,0.24); }}
+.dailybrief-tag.medium {{ color: rgba(244,236,223,0.76); }}
 .dailybrief-route-card {{
   height: 100%;
   min-height: 230px;
@@ -4857,6 +4939,13 @@ body::after {{
   }}
 }}
 @media (max-width: 1120px) {{
+  .dailybrief-runtime-bar {{
+    flex-direction: column;
+    align-items: stretch;
+  }}
+  .dailybrief-runtime-note {{
+    text-align: left;
+  }}
   .dailybrief-masthead,
   .dailybrief-board,
   .dailybrief-top-metrics,
@@ -19310,6 +19399,15 @@ body::after {{
         <span class="mode-clock" id="mode-clock">—</span>
       </div>
 
+      <div class="dailybrief-runtime-bar">
+        <div class="dailybrief-runtime-controls">
+          <select id="dailybrief-actor-select" class="dailybrief-select" aria-label="Daily brief actor" onchange="refreshDailyBriefDesktop(this.value)"></select>
+          <button class="dailybrief-button secondary" id="dailybrief-refresh-button" onclick="refreshDailyBriefDesktop()">Refresh Brief</button>
+          <button class="dailybrief-button secondary" id="dailybrief-livebrief-button" onclick="refreshDailyBriefLivePacket()">Refresh Live Brief</button>
+        </div>
+        <div class="dailybrief-runtime-note" id="dailybrief-runtime-note">Loading the live Daily Brief systems…</div>
+      </div>
+
       <div class="overview-alert-banner" id="overview-alert-banner" style="display:none;">
         <span id="alert-banner-icon">⚠️</span>
         <span class="alert-banner-msg" id="alert-banner-msg"></span>
@@ -25865,6 +25963,8 @@ let _socialState = {{
   metrics: {{}},
 }};
 let _dailyBriefData = null;
+let _dailyBriefActor = 'Chris';
+let _dailyBriefRequestSerial = 0;
 
 /* ═══════════════════════════════════════════════════════════════
    INIT
@@ -29795,7 +29895,7 @@ function dailyBriefSummaryFromBriefing(data) {{
     const joined = bits.filter(Boolean).join(' ').replace(/\\s+/g, ' ').trim();
     return joined || 'JARVIS is gathering the signal for today.';
   }}
-  const raw = data.briefing || data.content || data.text || '';
+  const raw = data.briefing_text || data.briefing || data.content || data.text || '';
   return typeof raw === 'string' ? raw : (Array.isArray(raw) ? raw.join(' ') : 'JARVIS is gathering the signal for today.');
 }}
 
@@ -30046,201 +30146,507 @@ async function loadCommandDesktop() {{
 // Core functions
 // ---------------------------------------------------------------------------
 
+function dailyBriefText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}}
+
+function dailyBriefHtml(id, html) {{
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}}
+
+function dailyBriefRuntimeNote(text) {{
+  dailyBriefText('dailybrief-runtime-note', text || 'Daily Brief is live.');
+}}
+
+function dailyBriefNormalizeApprovals(payload) {{
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.pending)) return payload.pending;
+  return [];
+}}
+
+function dailyBriefNormalizeHealthSummary(payload) {{
+  const source = payload?.data || payload || {{}};
+  const dailyScore = source.daily_score || {{}};
+  const watchlist = Array.isArray(source.watchlist) ? source.watchlist : [];
+  return {{
+    available: !!Object.keys(source || {{}}).length,
+    estimated: !!dailyScore.estimated,
+    readiness: {{
+      score: Number.isFinite(Number(dailyScore.value)) ? Number(dailyScore.value) : null,
+      grade: dailyScore.grade || source.readiness || '',
+      message: dailyScore.message || '',
+    }},
+    metrics: {{
+      sleep_hours: Number(source.sleep_hours || 0) || 0,
+      hrv: Number.isFinite(Number(source.hrv)) && Number(source.hrv) > 0 ? Number(source.hrv) : null,
+      resting_hr: Number.isFinite(Number(source.heart_rate_avg)) && Number(source.heart_rate_avg) > 0 ? Number(source.heart_rate_avg) : null,
+      steps_today: Number(source.steps_today || 0) || 0,
+      active_calories: Number(source.active_calories || 0) || 0,
+      stand_hours: Number(source.stand_hours || 0) || 0,
+    }},
+    thor_note: source.thor_note || '',
+    completeness: source.completeness || {{}},
+    watchlist,
+  }};
+}}
+
+function dailyBriefTagTone(value) {{
+  const raw = String(value || '').toLowerCase();
+  if (['high', 'urgent', 'critical', 'blocked', 'pending-approval'].includes(raw)) return 'high';
+  if (['approved', 'complete', 'completed', 'healthy', 'good', 'online', 'clear'].includes(raw)) return 'good';
+  if (['low', 'quiet', 'fyi', 'watch'].includes(raw)) return 'low';
+  if (['rejected', 'error', 'failed'].includes(raw)) return 'danger';
+  return 'medium';
+}}
+
+function dailyBriefActorOptionsMarkup(items, selected) {{
+  const options = Array.isArray(items) && items.length ? items : [{{ id: selected || 'Chris', label: selected || 'Chris' }}];
+  return options.map(item => `<option value="${{escHtml(item.id || item.label || 'Chris')}}"
+    ${{String(item.id || item.label || 'Chris') === String(selected || 'Chris') ? 'selected' : ''}}>
+    ${{escHtml(item.label || item.id || 'Chris')}}
+  </option>`).join('');
+}}
+
+function dailyBriefOpenLoopButtons(item) {{
+  const actions = Array.isArray(item?.available_actions) ? item.available_actions.slice(0, 3) : [];
+  return actions.map(action => {{
+    const tone = dailyBriefTagTone(action.id || action.label);
+    return `<button class="dailybrief-button ${{tone === 'high' ? 'warn' : tone === 'danger' ? 'danger' : tone === 'good' ? 'good' : 'secondary'}}"
+      onclick='dailyBriefApplyOpenLoopAction(${{JSON.stringify(item.item_id || "")}}, ${{JSON.stringify(item.domain || "")}}, ${{JSON.stringify(action.id || "")}}, ${{JSON.stringify(item.title || "Open loop")}})'>${{escHtml(action.label || action.id || 'Act')}}</button>`;
+  }}).join('');
+}}
+
+function dailyBriefApprovalButtons(item) {{
+  const requestId = String(item?.request_id || item?.id || '');
+  if (!requestId) return '';
+  const status = String(item?.status || '').toLowerCase();
+  const buttons = [];
+  if (status === 'approved') {{
+    buttons.push(`<button class="dailybrief-button good" onclick='dailyBriefApplyApprovalAction(${{JSON.stringify(requestId)}}, "execute", ${{JSON.stringify(item.title || "Approval")}})'>Execute</button>`);
+  }} else {{
+    buttons.push(`<button class="dailybrief-button good" onclick='dailyBriefApplyApprovalAction(${{JSON.stringify(requestId)}}, "approve", ${{JSON.stringify(item.title || "Approval")}})'>Approve</button>`);
+    buttons.push(`<button class="dailybrief-button danger" onclick='dailyBriefApplyApprovalAction(${{JSON.stringify(requestId)}}, "reject", ${{JSON.stringify(item.title || "Approval")}})'>Reject</button>`);
+  }}
+  return buttons.join('');
+}}
+
+function dailyBriefTaskButtons(task) {{
+  if (!task?.id) return '';
+  return `<button class="dailybrief-button good" onclick='dailyBriefCompleteTask(${{JSON.stringify(task.id)}}, ${{JSON.stringify(task.title || "Task")}})'>Complete</button>`;
+}}
+
+async function dailyBriefReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_) {{
+    return null;
+  }}
+}}
+
+async function dailyBriefRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: _dailyBriefActor || 'Chris',
+        domain: 'briefing',
+        route: '/briefing-center',
+        route_label: 'Open Daily Brief',
+        ...payload,
+      }}),
+    }});
+  }} catch (_) {{}}
+}}
+
+async function dailyBriefApplyOpenLoopAction(itemId, domain, action, title) {{
+  dailyBriefRuntimeNote(`Applying ${{action}} to ${{title}}…`);
+  try {{
+    const response = await fetch('/api/open-loops/action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: _dailyBriefActor || 'Chris',
+        domain,
+        item_id: itemId,
+        action,
+        item_title: title,
+        route: '/briefing-center',
+        route_label: 'Open Daily Brief',
+        activity_domain: 'briefing',
+        why_now: 'Daily Brief moved an open loop forward from the shell experience.',
+        result_summary: `Daily Brief applied ${{action}} to ${{title}}.`,
+        related_kind: 'daily-brief-open-loop',
+        related_label: title,
+      }}),
+    }});
+    const payload = await dailyBriefReadJson(response);
+    if (!response.ok) {{
+      throw new Error(payload?.detail || `HTTP ${{response.status}}`);
+    }}
+    dailyBriefRuntimeNote(`Applied ${{action}} to ${{title}}.`);
+    await refreshDailyBriefDesktop();
+  }} catch (error) {{
+    dailyBriefRuntimeNote(`Open-loop action failed: ${{String(error)}}`);
+  }}
+}}
+
+async function dailyBriefApplyApprovalAction(requestId, action, title) {{
+  dailyBriefRuntimeNote(`${{action}} ${{title}}…`);
+  try {{
+    const payload = action === 'approve'
+      ? {{ approved_by: 'chris' }}
+      : action === 'reject'
+        ? {{ rejected_by: 'chris', reason: 'Rejected from Daily Brief.' }}
+        : {{}};
+    const response = await fetch(`/api/approvals/${{encodeURIComponent(requestId)}}/${{action}}`, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify(payload),
+    }});
+    const result = await dailyBriefReadJson(response);
+    if (!response.ok) {{
+      throw new Error(result?.detail || `HTTP ${{response.status}}`);
+    }}
+    await dailyBriefRecordAction({{
+      action: `${{action.replace(/-/g, ' ')}} approval`,
+      title,
+      detail: `Daily Brief ${{action.replace(/-/g, ' ')}} for ${{title}}.`,
+      why_now: 'A live decision gate was resolved from the Daily Brief.',
+      result_summary: `Approval action completed: ${{action}}.`,
+      related_kind: 'approval',
+      related_label: title,
+    }});
+    dailyBriefRuntimeNote(`${{title}} ${{action}}d successfully.`);
+    await refreshDailyBriefDesktop();
+  }} catch (error) {{
+    dailyBriefRuntimeNote(`Approval action failed: ${{String(error)}}`);
+  }}
+}}
+
+async function dailyBriefCompleteTask(taskId, title) {{
+  dailyBriefRuntimeNote(`Completing ${{title}}…`);
+  try {{
+    const response = await fetch(`/api/tasks/${{encodeURIComponent(taskId)}}/complete`, {{ method: 'POST' }});
+    const result = await dailyBriefReadJson(response);
+    if (!response.ok || !result?.ok) {{
+      throw new Error(result?.detail || 'Task completion was not accepted.');
+    }}
+    await dailyBriefRecordAction({{
+      action: 'Complete Task',
+      title,
+      detail: `Daily Brief completed task "${{title}}".`,
+      why_now: 'A follow-through item was closed from the Daily Brief.',
+      result_summary: 'Task completed from Daily Brief.',
+      related_kind: 'task',
+      related_label: title,
+    }});
+    dailyBriefRuntimeNote(`Completed ${{title}}.`);
+    await refreshDailyBriefDesktop();
+  }} catch (error) {{
+    dailyBriefRuntimeNote(`Task completion failed: ${{String(error)}}`);
+  }}
+}}
+
+async function refreshDailyBriefLivePacket() {{
+  const actor = _dailyBriefActor || document.getElementById('dailybrief-actor-select')?.value || 'Chris';
+  dailyBriefRuntimeNote(`Refreshing live brief packet for ${{actor}}…`);
+  try {{
+    const response = await fetch(`/api/briefing/live?actor=${{encodeURIComponent(actor)}}`);
+    const payload = await dailyBriefReadJson(response);
+    if (!response.ok) {{
+      const detail = payload?.detail || `HTTP ${{response.status}}`;
+      _dailyBriefData = {{ ...(_dailyBriefData || {{}}), liveBriefing: null, liveBriefUnavailable: detail }};
+      renderDailyBriefDesktop(_dailyBriefData);
+      dailyBriefRuntimeNote(`Live brief unavailable: ${{detail}}`);
+      return;
+    }}
+    _dailyBriefData = {{ ...(_dailyBriefData || {{}}), liveBriefing: payload, liveBriefUnavailable: '' }};
+    renderDailyBriefDesktop(_dailyBriefData);
+    dailyBriefRuntimeNote(`Live brief refreshed for ${{actor}}.`);
+  }} catch (error) {{
+    dailyBriefRuntimeNote(`Live brief refresh failed: ${{String(error)}}`);
+  }}
+}}
+
+async function refreshDailyBriefDesktop(actorOverride = '') {{
+  await loadDailyBriefDesktop(_layoutState, actorOverride || _dailyBriefActor);
+}}
+
 function renderDailyBriefDesktop(data) {{
   _dailyBriefData = data;
-  const name = dailyBriefName();
-  const greeting = `${{dailyBriefSalute()}}, ${{name}}.`;
-  const topGreeting = document.getElementById('dailybrief-top-greeting');
-  if (topGreeting) topGreeting.textContent = greeting;
-  const greetEl = document.getElementById('overview-greeting');
-  if (greetEl) greetEl.textContent = greeting;
-  const dateEl = document.getElementById('brief-date');
-  if (dateEl) dateEl.textContent = dailyBriefFormatDateLong();
-  const subtitleEl = document.getElementById('overview-subtitle');
-  if (subtitleEl) subtitleEl.textContent = 'Daily Brief · Executive Morning Console';
-  const profileEl = document.getElementById('dailybrief-profile-name');
-  if (profileEl) profileEl.textContent = name;
-  const profileRoleEl = document.getElementById('dailybrief-profile-role');
-  if (profileRoleEl) profileRoleEl.textContent = data.projects?.length ? 'Builder of things. Steward of momentum. Keeper of the household.' : 'Builder. Father. Executive. Steward.';
-
-  const faithWord = data.faithWord || {{}};
-  const scriptureCopy = document.getElementById('dailybrief-scripture-copy');
-  if (scriptureCopy) scriptureCopy.textContent = faithWord.word || 'Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.';
-  const scriptureRef = document.getElementById('dailybrief-scripture-ref');
-  if (scriptureRef) scriptureRef.textContent = faithWord.passage || 'Joshua 1:9';
-
+  const modulePayload = data.module || {{}};
+  const board = modulePayload.today_board || {{}};
+  const openLoopPayload = modulePayload.open_loops || {{}};
+  const openLoops = Array.isArray(openLoopPayload.items) ? openLoopPayload.items : [];
+  const tasks = Array.isArray(data.tasks) ? data.tasks : [];
+  const approvals = dailyBriefNormalizeApprovals(data.approvals);
+  const reminders = Array.isArray(data.remindersState?.open_items) ? data.remindersState.open_items : [];
+  const projects = Array.isArray(data.projects) ? data.projects : [];
   const health = data.health || {{}};
   const readiness = health.readiness || {{}};
   const metrics = health.metrics || {{}};
+  const faithWord = data.faithWord || {{}};
+  const agentsPayload = data.agents || {{}};
+  const agents = agentsPayload.agents || {{}};
+  const boardCalendar = Array.isArray(board.calendar) ? board.calendar : [];
+  const homeCalendar = Array.isArray(data.home?.calendar?.upcoming_3_days) ? data.home.calendar.upcoming_3_days : [];
+  const upcomingEvents = boardCalendar.length ? boardCalendar : homeCalendar;
+  const priorities = Array.isArray(board.priorities) ? board.priorities : [];
+  const notifications = Array.isArray(board.assistant_notifications) ? board.assistant_notifications : [];
+  const recentActivity = Array.isArray(modulePayload.recent_activity) ? modulePayload.recent_activity : [];
+  const carry = Array.isArray(board.carry) ? board.carry : [];
+  const growthGuidance = board.growth_guidance || {{}};
+  const firstLight = board.first_light || {{}};
+  const cognition = board.cognition || {{}};
+  const actorName = modulePayload.actor || _dailyBriefActor || dailyBriefName();
+  _dailyBriefActor = actorName;
+
+  const actorSelect = document.getElementById('dailybrief-actor-select');
+  if (actorSelect) actorSelect.innerHTML = dailyBriefActorOptionsMarkup(modulePayload.actor_options, actorName);
+
+  const greeting = `${{dailyBriefSalute()}}, ${{actorName}}.`;
+  dailyBriefText('dailybrief-top-greeting', greeting);
+  dailyBriefText('overview-greeting', greeting);
+  dailyBriefText('brief-date', dailyBriefFormatDateLong());
+  dailyBriefText('overview-subtitle', 'Daily Brief · Live executive morning console');
+  dailyBriefText('dailybrief-profile-name', actorName);
+  dailyBriefText('dailybrief-profile-role', projects.length ? 'Builder of things. Steward of momentum. Keeper of the household.' : 'Builder. Father. Executive. Steward.');
+
+  dailyBriefText('dailybrief-scripture-copy', faithWord.word || 'Daily Scripture is not connected yet.');
+  dailyBriefText('dailybrief-scripture-ref', faithWord.passage || 'Faith source unavailable');
+
   const sleepHours = Number(metrics.sleep_hours || 0);
+  const readinessScore = Number.isFinite(Number(readiness.score)) ? Number(readiness.score) : null;
   const sleepLabel = sleepHours ? `${{sleepHours.toFixed(1)}}h` : '—';
-  const sleepCopy = sleepHours >= 7 ? 'Restored' : sleepHours >= 6 ? 'Good' : sleepHours ? 'Needs recovery' : 'Loading';
-  const readinessScore = readiness.score != null ? readiness.score : '—';
-  const readinessCopy = readiness.grade || (readiness.score >= 80 ? 'Good to go' : readiness.score >= 60 ? 'On track' : 'Recovery posture');
-  const stressValue = metrics.stress_load != null ? metrics.stress_load : (metrics.hrv != null ? Math.max(8, 100 - Math.round(metrics.hrv)) : '—');
-  const stressCopy = Number.isFinite(Number(stressValue))
-    ? (Number(stressValue) <= 35 ? 'Low' : Number(stressValue) <= 60 ? 'Manageable' : 'Needs caution')
-    : 'Loading';
+  const sleepCopy = !health.available ? 'Health source unavailable' : sleepHours >= 7 ? 'Restored' : sleepHours >= 6 ? 'Good' : sleepHours ? 'Needs recovery' : 'Missing';
+  const readinessCopy = readiness.grade || readiness.message || (health.available ? 'Estimated posture' : 'Unavailable');
+  const focusEvent = upcomingEvents.find(ev => /deep work|focus|write|writing|chapter|study/i.test(String(ev.title || ev.summary || '').toLowerCase())) || upcomingEvents[0] || null;
+  const focusWindow = focusEvent ? dailyBriefFormatDayTime(focusEvent.start_time || focusEvent.start || '') : (growthGuidance.phase ? `${{growthGuidance.phase[0].toUpperCase() + growthGuidance.phase.slice(1)}} window` : 'Open');
+  const focusCopy = focusEvent ? (focusEvent.title || focusEvent.summary || 'Focused work window') : (growthGuidance.summary || 'Protect the highest leverage block.');
+  const stressValue = metrics.hrv != null ? Math.max(8, 100 - Math.round(metrics.hrv)) : '—';
+  const stressCopy = metrics.hrv != null ? (metrics.hrv >= 45 ? 'Low' : metrics.hrv >= 30 ? 'Manageable' : 'Watch load') : (health.available ? 'Signal missing' : 'Unavailable');
 
-  const calendar = (data.home && data.home.calendar) || {{}};
-  const upcomingEvents = Array.isArray(calendar.upcoming_3_days) ? calendar.upcoming_3_days : [];
-  const focusEvent = upcomingEvents.find(ev => /deep work|focus|write|writing|chapter|study/i.test((ev.title || '').toLowerCase())) || upcomingEvents[0] || null;
-  const focusWindow = focusEvent ? dailyBriefFormatDayTime(focusEvent.start_time) : '90 min';
-  const focusCopy = focusEvent ? (focusEvent.title || 'Focused work window') : 'Protect the highest leverage block';
-
-  const topMetrics = [
+  [
     ['dailybrief-top-sleep', sleepLabel],
     ['dailybrief-top-sleep-copy', sleepCopy],
-    ['dailybrief-top-readiness', readinessScore],
+    ['dailybrief-top-readiness', readinessScore != null ? readinessScore : '—'],
     ['dailybrief-top-readiness-copy', readinessCopy],
     ['dailybrief-top-focus', focusWindow],
     ['dailybrief-top-focus-copy', focusCopy],
     ['dailybrief-top-stress', stressValue],
     ['dailybrief-top-stress-copy', stressCopy],
-  ];
-  topMetrics.forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+  ].forEach(([id, value]) => dailyBriefText(id, value));
 
-  const projects = Array.isArray(data.projects) ? data.projects : [];
-  const tasks = Array.isArray(data.tasks) ? data.tasks : [];
-  const approvals = Array.isArray(data.approvals?.items) ? data.approvals.items : [];
-  const reminders = Array.isArray(data.remindersState?.open_items) ? data.remindersState.open_items : [];
   const leadProject = projects[0] || null;
   const leadTask = tasks[0] || null;
+  const decisionLoop = openLoops.find(item => Array.isArray(item.available_actions) && item.available_actions.some(action => ['approve', 'reject', 'execute'].includes(String(action.id || '').toLowerCase()))) || openLoops[0] || null;
+  const blockedAgentName = Object.keys(agents).find(name => String(agents[name]?.state || '').toLowerCase() === 'blocked');
   const blockedTask = tasks.find(task => task.blocked_reason);
 
-  const firstLight = [
-    ['dailybrief-firstlight-orientation', leadProject ? `Lead with clarity, speak with grace, and build what lasts. The clearest momentum is around "${{leadProject.title || 'your active project'}}", and today is shaped by your willingness to finish what matters most.` : dailyBriefSnippet(dailyBriefSummaryFromBriefing(data.briefing), 230)],
-    ['dailybrief-firstlight-direction', leadProject ? `Move ${{leadProject.title || 'the flagship asset'}} across the next real threshold.` : 'Stay with the most meaningful work until it becomes tangible.'],
-    ['dailybrief-firstlight-focus', leadTask ? (leadTask.title || 'Protect the highest-value commitment.') : 'Protect the morning window and keep decisions scarce.'],
-    ['dailybrief-firstlight-scene', leadProject ? `Today’s focus is orbiting ${{leadProject.title || 'the flagship asset'}}.` : 'Build something durable before the noise arrives.'],
-    ['dailybrief-pillar-calling', leadProject ? `${{leadProject.title || 'Lead project'}} is the clearest place to convert calling into structure.` : 'Your calling focus is to protect the work that compounds.'],
-    ['dailybrief-pillar-character', approvals[0] ? `Integrity means facing "${{approvals[0].title || 'the first approval'}}" without delay.` : 'Keep your word in the small decisions so the larger ones stay clean.'],
-    ['dailybrief-pillar-rhythm', faithWord.passage ? `Abide. Pray. Listen. Let ${{faithWord.passage}} set the pace, not urgency.` : 'Abide. Pray. Listen. Let God set the pace, not urgency.'],
+  const firstLightOpening = firstLight.opening || dailyBriefSummaryFromBriefing(modulePayload);
+  const firstLightWatch = firstLight.watch_line || growthGuidance.summary || 'Choose one leverage-bearing move before the day fragments.';
+  const firstLightCue = firstLight.formation_cue || (priorities[0]?.next_action ? `Next move: ${{priorities[0].next_action}}.` : 'Keep the morning simple and honest.');
+  [
+    ['dailybrief-firstlight-orientation', dailyBriefSnippet(firstLightOpening, 260)],
+    ['dailybrief-firstlight-direction', dailyBriefSnippet(firstLightWatch, 150)],
+    ['dailybrief-firstlight-focus', priorities[0]?.title || leadTask?.title || leadProject?.title || 'Protect the cleanest block on the board.'],
+    ['dailybrief-firstlight-scene', growthGuidance.label || 'The day is opening in front of you.'],
+    ['dailybrief-pillar-calling', dailyBriefSnippet(growthGuidance.summary || leadProject?.title || 'Your clearest calling is the work that compounds when protected.', 150)],
+    ['dailybrief-pillar-character', decisionLoop ? `Honor the next real yes or no: "${{decisionLoop.title || 'the surfaced decision'}}".` : blockedTask?.blocked_reason || 'Keep your word in the small decisions so the larger ones stay clean.'],
+    ['dailybrief-pillar-rhythm', dailyBriefSnippet(firstLightCue || faithWord.passage || 'Abide. Pray. Listen. Let God set the pace, not urgency.', 150)],
+  ].forEach(([id, value]) => dailyBriefText(id, value));
+
+  const matterCards = [
+    {{
+      tone: 'key',
+      label: 'Key Mission',
+      title: priorities[0]?.title || leadProject?.title || 'Protect the morning window',
+      copy: priorities[0]?.next_action || leadProject?.category || 'Choose the highest leverage move and keep it protected.',
+    }},
+    {{
+      tone: 'risk',
+      label: 'Key Risk',
+      title: decisionLoop?.title || blockedTask?.title || blockedAgentName?.replace(/-/g, ' ') || 'No major risk surfaced',
+      copy: decisionLoop?.summary || blockedTask?.blocked_reason || (blockedAgentName ? 'An agent lane is blocked and may need judgment or repair.' : 'No major risk is currently crossing the threshold.'),
+    }},
+    {{
+      tone: 'opportunity',
+      label: 'Key Opportunity',
+      title: growthGuidance.label || projects[1]?.title || 'Compounding creative output',
+      copy: growthGuidance.summary || projects[1]?.category || 'Momentum is highest when one asset lane stays simple long enough to ship.',
+    }},
+    {{
+      tone: 'people',
+      label: 'Key People',
+      title: data.onlineUsers?.length ? data.onlineUsers.map(user => user.name).slice(0, 2).join(' · ') : 'Family cadence',
+      copy: data.onlineUsers?.length ? `${{data.onlineUsers.length}} people are active right now.` : (notifications[0]?.summary || 'Presence is a leadership decision, not an afterthought.'),
+    }},
+    {{
+      tone: 'stewardship',
+      label: 'Key Stewardship',
+      title: carry[0] || reminders[0]?.title || 'Protect your margin',
+      copy: carry[1] || reminders[0]?.list || 'Guard attention, energy, and the household calendar.',
+    }},
   ];
-  firstLight.forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+  dailyBriefHtml('dailybrief-whatmatters-list', matterCards.map(item => `<div class="dailybrief-matter-card ${{item.tone}}"><div class="dailybrief-matter-label">${{escHtml(item.label)}}</div><strong>${{escHtml(item.title || '—')}}</strong><span>${{escHtml(item.copy || '')}}</span></div>`).join(''));
+  dailyBriefText('dailybrief-one-thing-copy', priorities[0]?.title || leadTask?.title || leadProject?.title || 'Choose the one movement that will make the day feel honest.');
 
-  const whatMatters = [
-    {{ tone: 'key', label: 'Key Mission', title: leadProject?.title || leadTask?.title || 'Protect the morning window', copy: leadProject?.category || leadTask?.status || 'Highest leverage work for this day' }},
-    {{ tone: 'risk', label: 'Key Risk', title: approvals[0]?.title || blockedTask?.title || 'Schedule overload', copy: approvals[0]?.summary || blockedTask?.blocked_reason || 'Too many low-value decisions can fracture the day.' }},
-    {{ tone: 'opportunity', label: 'Key Opportunity', title: projects[1]?.title || 'Compounding creative output', copy: projects[1]?.category || 'Momentum is high if you protect one meaningful asset lane.' }},
-    {{ tone: 'people', label: 'Key People', title: data.onlineUsers?.length ? data.onlineUsers.map(u => u.name).slice(0, 2).join(' · ') : 'Family cadence', copy: data.onlineUsers?.length ? `${{data.onlineUsers.length}} people are active right now.` : 'Presence is a leadership decision, not an afterthought.' }},
-    {{ tone: 'stewardship', label: 'Key Stewardship', title: reminders[0]?.title || 'Protect your margin', copy: reminders[0]?.list || 'Guard attention, energy, and the household calendar.' }},
-  ];
-  const mattersEl = document.getElementById('dailybrief-whatmatters-list');
-  if (mattersEl) mattersEl.innerHTML = whatMatters.map(item => `<div class="dailybrief-matter-card ${{item.tone}}"><div class="dailybrief-matter-label">${{escHtml(item.label)}}</div><strong>${{escHtml(item.title || '—')}}</strong><span>${{escHtml(item.copy || '')}}</span></div>`).join('');
-  const oneThingEl = document.getElementById('dailybrief-one-thing-copy');
-  if (oneThingEl) oneThingEl.textContent = leadTask?.title || leadProject?.title || 'Choose the one movement that will make the day feel honest.';
+  const awayItems = recentActivity.length
+    ? recentActivity.slice(0, 5).map(item => ({{
+        title: item.title || 'Recent brief action',
+        copy: item.detail || item.subtitle || 'Operator continuity event.',
+        meta: item.timestamp ? dailyBriefFormatDayTime(item.timestamp) : 'Recent',
+      }}))
+    : notifications.slice(0, 5).map(item => ({{
+        title: item.title || item.summary || 'Assistant notification',
+        copy: item.detail || item.summary || 'New signal from the assistant layer.',
+        meta: item.urgency || item.channel || 'Live',
+      }}));
+  dailyBriefHtml('dailybrief-away-list', awayItems.length ? awayItems.map(item => `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(item.title)}}</strong><span>${{escHtml(item.copy)}}</span></div><div class="dailybrief-row-meta">${{escHtml(item.meta)}}</div></div>`).join('') : '<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>No overnight updates are live</strong><span>Recent continuity and assistant notifications will appear here when they exist.</span></div><div class="dailybrief-row-meta">Quiet</div></div>');
 
-  const agents = data.agents?.agents || {{}};
-  const agentNames = Object.keys(agents);
-  const awayEl = document.getElementById('dailybrief-away-list');
-  if (awayEl) {{
-    awayEl.innerHTML = agentNames.length ? agentNames.slice(0, 6).map(name => {{
-      const agent = agents[name] || {{}};
-      const state = String(agent.state || 'idle').toLowerCase();
-      const prettyName = name.replace(/-/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase());
-      const summary = state === 'awake' ? 'Working live and ready to contribute.' : state === 'blocked' ? 'Waiting on a decision, fix, or missing context.' : 'Standing by with no urgent escalation.';
-      return `<div class="dailybrief-row"><div><strong>${{escHtml(prettyName)}}</strong><span>${{summary}}</span></div><div class="dailybrief-row-meta">${{escHtml(state.toUpperCase())}}</div></div>`;
-    }}).join('') : '<div class="dailybrief-row"><div><strong>No active overnight updates</strong><span>Agent summaries will appear here as work accumulates.</span></div><div class="dailybrief-row-meta">Quiet</div></div>';
-  }}
+  const decisionItems = approvals.length
+    ? approvals.slice(0, 4).map(item => ({{
+        title: item.title || 'Approval item',
+        copy: item.summary || item.detail || item.description || 'Decision needed.',
+        meta: item.requested_by || item.agent_label || item.action_type || 'Approval',
+        tone: dailyBriefTagTone(item.priority || item.status),
+        actions: dailyBriefApprovalButtons(item),
+      }}))
+    : openLoops.filter(item => Array.isArray(item.available_actions) && item.available_actions.some(action => ['approve', 'reject', 'execute'].includes(String(action.id || '').toLowerCase()))).slice(0, 4).map(item => ({{
+        title: item.title || 'Decision gate',
+        copy: item.summary || item.next_action || 'Decision needed.',
+        meta: item.owner_agent || item.domain || 'Open loop',
+        tone: dailyBriefTagTone(item.status || item.priority),
+        actions: dailyBriefOpenLoopButtons(item),
+      }}));
+  dailyBriefHtml('dailybrief-decision-list', decisionItems.length ? decisionItems.map(item => `<div class="dailybrief-row dailybrief-row-stack"><div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(item.title)}}</strong><span>${{escHtml(item.copy)}}</span></div><div class="dailybrief-tag ${{item.tone}}">${{escHtml(String(item.meta || 'Review'))}}</div></div>${{item.actions ? `<div class="dailybrief-row-actions">${{item.actions}}</div>` : ''}}</div>`).join('') : '<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>No decision gates are live</strong><span>Your approval queue is clear right now.</span></div><div class="dailybrief-tag good">Clear</div></div>');
 
-  const decisionEl = document.getElementById('dailybrief-decision-list');
-  if (decisionEl) {{
-    decisionEl.innerHTML = approvals.length ? approvals.slice(0, 4).map(item => `<div class="dailybrief-row"><div><strong>${{escHtml(item.title || 'Approval item')}}</strong><span>${{escHtml(item.summary || item.detail || 'Decision needed.')}}</span></div><div class="dailybrief-tag ${{dailyBriefPriorityTag(item.priority)}}">${{escHtml(String(item.priority || 'medium').toUpperCase())}}</div></div>`).join('') : '<div class="dailybrief-row"><div><strong>No decision gates are live</strong><span>Your approval queue is clear right now.</span></div><div class="dailybrief-tag good">Clear</div></div>';
-  }}
-
-  const routeScheduleEl = document.getElementById('dailybrief-route-schedule');
-  if (routeScheduleEl) {{
-    routeScheduleEl.innerHTML = upcomingEvents.slice(0, 5).map(ev => `<div class="dailybrief-row"><div><strong>${{escHtml(ev.title || 'Upcoming event')}}</strong><span>${{escHtml(ev.location || 'Location pending')}}${{ev.source ? ' · ' + escHtml(ev.source) : ''}}</span></div><div class="dailybrief-row-meta">${{escHtml(dailyBriefFormatDayTime(ev.start_time))}}</div></div>`).join('') || '<div class="dailybrief-row"><div><strong>No route-sensitive events loaded</strong><span>Your day currently has no location-bound commitments.</span></div><div class="dailybrief-row-meta">Calm</div></div>';
-  }}
+  dailyBriefHtml('dailybrief-route-schedule', upcomingEvents.length ? upcomingEvents.slice(0, 5).map(ev => `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(ev.title || ev.summary || 'Upcoming event')}}</strong><span>${{escHtml(ev.location || ev.source || 'Location pending')}}</span></div><div class="dailybrief-row-meta">${{escHtml(dailyBriefFormatDayTime(ev.start_time || ev.start || ''))}}</div></div>`).join('') : `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(data.home?.available === false ? 'Home calendar is not connected' : 'No route-sensitive events loaded')}}</strong><span>${{escHtml(data.home?.error || 'Your day currently has no location-bound commitments.')}}</span></div><div class="dailybrief-row-meta">${{escHtml(data.home?.available === false ? 'Unavailable' : 'Calm')}}</div></div>`);
   const routeFocus = focusEvent || upcomingEvents.find(ev => ev.location) || null;
-  const routeFields = [
-    ['dailybrief-route-time', routeFocus ? dailyBriefFormatDayTime(routeFocus.start_time) : 'Open'],
-    ['dailybrief-route-destination', routeFocus ? (routeFocus.location || routeFocus.title || 'Next commitment') : 'No route pressure'],
-    ['dailybrief-route-copy', routeFocus ? `Your next movement revolves around "${{routeFocus.title || 'the next event'}}". Protect margin, not just the meeting.` : 'The day is currently flexible enough to stay local and protect the work window.'],
+  dailyBriefText('dailybrief-route-time', routeFocus ? dailyBriefFormatDayTime(routeFocus.start_time || routeFocus.start || '') : 'Open');
+  dailyBriefText('dailybrief-route-destination', routeFocus ? (routeFocus.location || routeFocus.title || routeFocus.summary || 'Next commitment') : 'No route pressure');
+  dailyBriefText('dailybrief-route-copy', routeFocus ? `Your next movement revolves around "${{routeFocus.title || routeFocus.summary || 'the next event'}}". Protect margin, not just the meeting.` : (data.home?.available === false ? 'Home routing and calendar context are not connected right now, so JARVIS is not fabricating a route.' : 'The day is currently flexible enough to stay local and protect the work window.'));
+
+  const familyLoops = openLoops.filter(item => /family|home/i.test(String(item.domain || ''))).slice(0, 4);
+  const familyRows = (data.onlineUsers || []).map(person => `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(person.name)}}</strong><span>${{escHtml(person.detail || 'Active on a connected device right now.')}}</span></div><div class="dailybrief-tag good">Online</div></div>`);
+  const familyLoopRows = familyLoops.map(item => `<div class="dailybrief-row dailybrief-row-stack"><div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(item.title || 'Family item')}}</strong><span>${{escHtml(item.summary || item.next_action || 'Family coordination item.')}}</span></div><div class="dailybrief-tag ${{dailyBriefTagTone(item.status)}}">${{escHtml(item.owner_agent || item.status || 'Family')}}</div></div><div class="dailybrief-row-actions">${{dailyBriefOpenLoopButtons(item)}}</div></div>`);
+  const reminderRows = reminders.filter(item => /family|home|household|school|soccer|emma|liam|girls|kids/i.test(`${{item.title || ''}} ${{item.list || ''}}`)).slice(0, 4).map(item => `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(item.title || 'Household reminder')}}</strong><span>${{escHtml(item.list || 'Family coordination item')}}</span></div><div class="dailybrief-row-meta">${{escHtml(item.minutes_away != null ? (item.minutes_away < 0 ? 'Overdue' : item.minutes_away + ' min') : 'Open')}}</div></div>`);
+  dailyBriefHtml('dailybrief-family-list', (familyRows.length ? familyRows : (familyLoopRows.length ? familyLoopRows : reminderRows)).join('') || `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(data.home?.available === false ? 'Home systems are not connected' : 'Family systems are quiet')}}</strong><span>${{escHtml(data.home?.error || 'No immediate household posture shifts are active.')}}</span></div><div class="dailybrief-row-meta">${{escHtml(data.home?.available === false ? 'Unavailable' : 'Stable')}}</div></div>`);
+  const checklist = familyLoops.length ? familyLoops : reminders.filter(item => /family|home|household|school|soccer|emma|liam|girls|kids/i.test(`${{item.title || ''}} ${{item.list || ''}}`)).slice(0, 4);
+  dailyBriefHtml('dailybrief-family-checklist', checklist.length ? checklist.map((item, idx) => `<label class="dailybrief-checkitem"><input type="checkbox" ${{idx === 0 ? 'checked' : ''}} disabled><span>${{escHtml(item.title || 'Household coordination')}}</span></label>`).join('') : `<label class="dailybrief-checkitem"><input type="checkbox" ${{data.home?.available === false ? '' : 'checked'}} disabled><span>${{escHtml(data.home?.available === false ? 'Household systems are unavailable to Daily Brief right now.' : 'Household systems are running quietly.')}}</span></label><label class="dailybrief-checkitem"><input type="checkbox" disabled><span>${{escHtml(data.home?.available === false ? 'Reconnect home data to restore posture-aware coordination.' : 'Use the next family window for presence instead of triage.')}}</span></label>`);
+
+  dailyBriefHtml('dailybrief-foundry-list', projects.length ? projects.slice(0, 4).map(project => {{
+    const pct = project.progress_pct != null ? project.progress_pct : (project.projected_value ? Math.min(92, 26 + Math.round(project.projected_value / 1000)) : 42);
+    return `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(project.title || 'Active project')}}</strong><span>${{escHtml(project.category || project.status || 'In motion')}} · ${{escHtml((project.track || 'ops').toUpperCase())}}</span></div><div class="dailybrief-row-meta">${{pct}}%</div></div>`;
+  }}).join('') : '<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>No active Workshop projects</strong><span>Once projects are live, creative momentum will surface here.</span></div><div class="dailybrief-row-meta">Idle</div></div>');
+  dailyBriefText('dailybrief-foundry-focus', growthGuidance.summary || (leadProject ? `Deep work is open around "${{leadProject.title || 'your lead project'}}". Protect this window before the day fragments.` : 'Use the next protected window to turn one idea into a real asset, not more notes about the asset.'));
+
+  const healthRows = health.available ? [
+    {{ label: 'Sleep Quality', value: sleepLabel, note: sleepCopy }},
+    {{ label: 'HRV', value: metrics.hrv != null ? `${{metrics.hrv}} ms` : '—', note: metrics.hrv != null ? (metrics.hrv >= 45 ? 'Balanced' : 'Watch recovery load') : 'Missing' }},
+    {{ label: 'Resting HR', value: metrics.resting_hr != null ? `${{metrics.resting_hr}} bpm` : '—', note: metrics.resting_hr != null ? 'Baseline posture' : 'Missing' }},
+    {{ label: 'Energy Level', value: readinessScore != null ? `${{Math.max(1, Math.min(10, Math.round(readinessScore / 10)))}}/10` : '—', note: readinessCopy }},
+  ] : [
+    {{ label: 'Health Signals', value: 'Unavailable', note: 'Apple health summary is not reachable from Daily Brief right now.' }},
+    {{ label: 'Why', value: 'Not Connected', note: 'No live health telemetry is available, so JARVIS is not fabricating recovery posture.' }},
   ];
-  routeFields.forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+  dailyBriefHtml('dailybrief-health-metrics', healthRows.map(row => `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(row.label)}}</strong><span>${{escHtml(row.note)}}</span></div><div class="dailybrief-row-meta">${{escHtml(row.value)}}</div></div>`).join(''));
+  dailyBriefText('dailybrief-health-recommendation', health.thor_note || readiness.message || 'Hydrate, keep the lunch light, and use movement to stabilize the afternoon.');
 
-  const familyListEl = document.getElementById('dailybrief-family-list');
-  if (familyListEl) {{
-    const familyRows = (data.onlineUsers || []).map(person => `<div class="dailybrief-row"><div><strong>${{escHtml(person.name)}}</strong><span>${{escHtml(person.detail || 'Active on a connected device right now.')}}</span></div><div class="dailybrief-tag good">Online</div></div>`);
-    const fallbackRows = reminders.filter(item => /family|home|household|school|soccer|emma|liam|girls|kids/i.test(`${{item.title || ''}} ${{item.list || ''}}`)).slice(0, 4).map(item => `<div class="dailybrief-row"><div><strong>${{escHtml(item.title || 'Household reminder')}}</strong><span>${{escHtml(item.list || 'Family coordination item')}}</span></div><div class="dailybrief-row-meta">${{escHtml(item.minutes_away != null ? (item.minutes_away < 0 ? 'Overdue' : item.minutes_away + ' min') : 'Open')}}</div></div>`);
-    familyListEl.innerHTML = (familyRows.length ? familyRows : fallbackRows).join('') || '<div class="dailybrief-row"><div><strong>Family systems are quiet</strong><span>No immediate household posture shifts are active.</span></div><div class="dailybrief-row-meta">Stable</div></div>';
-  }}
-  const familyChecklistEl = document.getElementById('dailybrief-family-checklist');
-  if (familyChecklistEl) {{
-    const checklist = reminders.filter(item => /family|home|household|school|soccer|emma|liam|girls|kids/i.test(`${{item.title || ''}} ${{item.list || ''}}`)).slice(0, 4);
-    familyChecklistEl.innerHTML = checklist.length ? checklist.map((item, idx) => `<label class="dailybrief-checkitem"><input type="checkbox" ${{idx === 0 ? 'checked' : ''}} disabled><span>${{escHtml(item.title || 'Household coordination')}}</span></label>`).join('') : '<label class="dailybrief-checkitem"><input type="checkbox" checked disabled><span>Household systems are running quietly.</span></label><label class="dailybrief-checkitem"><input type="checkbox" disabled><span>Use the next family window for presence instead of triage.</span></label>';
-  }}
+  const followItems = [
+    ...openLoops.slice(0, 4).map(item => ({{
+      title: item.title || 'Open loop',
+      copy: item.summary || item.next_action || 'Needs follow-through.',
+      meta: item.owner_agent || item.domain || 'Open loop',
+      tone: dailyBriefTagTone(item.status || item.priority),
+      actions: dailyBriefOpenLoopButtons(item),
+    }})),
+    ...tasks.slice(0, 2).map(task => ({{
+      title: task.title || 'Open task',
+      copy: `${{task.status || 'open'}}${{task.due ? ' · due ' + task.due : ''}}`,
+      meta: task.domain || task.actor || 'Task',
+      tone: dailyBriefPriorityTag(task.priority),
+      actions: dailyBriefTaskButtons(task),
+    }})),
+  ].slice(0, 5);
+  dailyBriefHtml('dailybrief-followthrough-list', followItems.length ? followItems.map(item => `<div class="dailybrief-row dailybrief-row-stack"><div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(item.title)}}</strong><span>${{escHtml(item.copy)}}</span></div><div class="dailybrief-tag ${{item.tone}}">${{escHtml(String(item.meta || 'Open'))}}</div></div>${{item.actions ? `<div class="dailybrief-row-actions">${{item.actions}}</div>` : ''}}</div>`).join('') : '<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>No open loops are loaded</strong><span>The follow-through lane is clear right now.</span></div><div class="dailybrief-tag good">Clear</div></div>');
+  const highCount = openLoops.filter(item => dailyBriefTagTone(item.status || item.priority) === 'high').length + tasks.filter(task => dailyBriefPriorityTag(task.priority) === 'high').length;
+  const lowCount = openLoops.filter(item => dailyBriefTagTone(item.status || item.priority) === 'low').length + tasks.filter(task => dailyBriefPriorityTag(task.priority) === 'low').length;
+  const totalOpen = (openLoopPayload.summary?.total || openLoops.length || 0) + tasks.length;
+  const mediumCount = Math.max(0, totalOpen - highCount - lowCount);
+  [['dailybrief-openloops-total', String(totalOpen || 0)], ['dailybrief-loop-high', String(highCount)], ['dailybrief-loop-medium', String(mediumCount)], ['dailybrief-loop-low', String(lowCount)]].forEach(([id, value]) => dailyBriefText(id, value));
 
-  const foundryListEl = document.getElementById('dailybrief-foundry-list');
-  if (foundryListEl) {{
-    foundryListEl.innerHTML = projects.length ? projects.slice(0, 4).map(project => {{
-      const pct = project.progress_pct != null ? project.progress_pct : (project.projected_value ? Math.min(92, 26 + Math.round(project.projected_value / 1000)) : 42);
-      return `<div class="dailybrief-row"><div><strong>${{escHtml(project.title || 'Active project')}}</strong><span>${{escHtml(project.category || project.status || 'In motion')}} · ${{escHtml((project.track || 'ops').toUpperCase())}}</span></div><div class="dailybrief-row-meta">${{pct}}%</div></div>`;
-    }}).join('') : '<div class="dailybrief-row"><div><strong>No active Workshop projects</strong><span>Once projects are live, creative momentum will surface here.</span></div><div class="dailybrief-row-meta">Idle</div></div>';
-  }}
-  const foundryFocusEl = document.getElementById('dailybrief-foundry-focus');
-  if (foundryFocusEl) foundryFocusEl.textContent = leadProject ? `Deep work is open around "${{leadProject.title || 'your lead project'}}". Protect this window before the day fragments.` : 'Use the next protected window to turn one idea into a real asset, not more notes about the asset.';
+  const timelineItems = upcomingEvents.length
+    ? upcomingEvents.slice(0, 8).map(ev => `<div class="dailybrief-timepoint"><strong>${{escHtml(dailyBriefFormatDayTime(ev.start_time || ev.start || ''))}}</strong><span>${{escHtml(ev.title || ev.summary || 'Open block')}}</span></div>`)
+    : carry.slice(0, 4).map((line, index) => `<div class="dailybrief-timepoint"><strong>${{index === 0 ? 'Now' : 'Later'}}</strong><span>${{escHtml(line)}}</span></div>`);
+  dailyBriefHtml('dailybrief-timeline', timelineItems.join('') || '<div class="dailybrief-timepoint"><strong>Open</strong><span>The day is still unscripted.</span></div>');
 
-  const healthListEl = document.getElementById('dailybrief-health-metrics');
-  if (healthListEl) {{
-    const healthRows = [
-      {{ label: 'Sleep Quality', value: sleepLabel, note: sleepCopy }},
-      {{ label: 'HRV', value: metrics.hrv != null ? `${{metrics.hrv}} ms` : '—', note: metrics.hrv != null ? (metrics.hrv >= 45 ? 'Balanced' : 'Watch recovery load') : 'Waiting for signal' }},
-      {{ label: 'Resting HR', value: metrics.resting_hr != null ? `${{metrics.resting_hr}} bpm` : '—', note: metrics.resting_hr != null ? 'Baseline posture' : 'Waiting for signal' }},
-      {{ label: 'Energy Level', value: readiness.score != null ? `${{Math.max(1, Math.min(10, Math.round(readiness.score / 10)))}}/10` : '—', note: readinessCopy }},
-    ];
-    healthListEl.innerHTML = healthRows.map(row => `<div class="dailybrief-row"><div><strong>${{escHtml(row.label)}}</strong><span>${{escHtml(row.note)}}</span></div><div class="dailybrief-row-meta">${{escHtml(row.value)}}</div></div>`).join('');
-  }}
-  const samProtocol = data.samDaily?.protocol || {{}};
-  const healthRecEl = document.getElementById('dailybrief-health-recommendation');
-  if (healthRecEl) healthRecEl.textContent = samProtocol.movement?.primary || samProtocol.greeting || 'Hydrate, keep the lunch light, and use movement to stabilize the afternoon.';
+  const summaryLines = [
+    modulePayload.summary || '',
+    modulePayload.headline || '',
+    data.liveBriefUnavailable ? `Live brief unavailable: ${{data.liveBriefUnavailable}}` : '',
+    modulePayload.errors?.length ? `Partial sources: ${{modulePayload.errors.join(' · ')}}` : '',
+  ].filter(Boolean);
+  dailyBriefText('dailybrief-summary-copy', dailyBriefSnippet(summaryLines.join(' '), 440));
+  const score = Math.max(52, Math.min(94, Math.round(((Number(readinessScore || 68)) + (projects.length ? 8 : 0) + (priorities.length ? 6 : 0) + (health.available ? 4 : -6) + (data.home?.available === false ? -4 : 2) + (highCount ? -4 : 6)) / 1.05)));
+  dailyBriefText('dailybrief-overall-score', `${{score}}%`);
+  dailyBriefText('dailybrief-overall-copy', score >= 85 ? 'Excellent' : score >= 75 ? 'Strong' : score >= 65 ? 'Manageable' : 'Guarded');
 
-  const followListEl = document.getElementById('dailybrief-followthrough-list');
-  const openTasks = tasks.slice(0, 5);
-  if (followListEl) {{
-    followListEl.innerHTML = openTasks.length ? openTasks.map(task => `<div class="dailybrief-row"><div><strong>${{escHtml(task.title || 'Open task')}}</strong><span>${{escHtml(task.status || 'open')}}${{task.due ? ' · due ' + escHtml(task.due) : ''}}</span></div><div class="dailybrief-tag ${{dailyBriefPriorityTag(task.priority)}}">${{escHtml(String(task.priority || 'medium').toUpperCase())}}</div></div>`).join('') : '<div class="dailybrief-row"><div><strong>No open loops are loaded</strong><span>The task lane is clear right now.</span></div><div class="dailybrief-tag good">Clear</div></div>';
-  }}
-  const highCount = tasks.filter(task => dailyBriefPriorityTag(task.priority) === 'high').length;
-  const lowCount = tasks.filter(task => dailyBriefPriorityTag(task.priority) === 'low').length;
-  const mediumCount = Math.max(0, tasks.length - highCount - lowCount);
-  [['dailybrief-openloops-total', String(tasks.length || 0)], ['dailybrief-loop-high', String(highCount)], ['dailybrief-loop-medium', String(mediumCount)], ['dailybrief-loop-low', String(lowCount)]].forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
-
-  const timelineEl = document.getElementById('dailybrief-timeline');
-  if (timelineEl) timelineEl.innerHTML = (upcomingEvents.slice(0, 8).map(ev => `<div class="dailybrief-timepoint"><strong>${{escHtml(dailyBriefFormatDayTime(ev.start_time))}}</strong><span>${{escHtml(ev.title || 'Open block')}}</span></div>`).join('') || '<div class="dailybrief-timepoint"><strong>Open</strong><span>The day is still unscripted.</span></div>');
-
-  const summaryText = dailyBriefSummaryFromBriefing(data.briefing);
-  const summaryCopyEl = document.getElementById('dailybrief-summary-copy');
-  if (summaryCopyEl) summaryCopyEl.textContent = dailyBriefSnippet(summaryText, 420);
-  const score = Math.max(58, Math.min(94, Math.round(((Number(readiness.score || 72)) + (projects.length ? 8 : 0) + (approvals.length ? -6 : 6) + (sleepHours >= 7 ? 8 : 0) + (highCount ? -4 : 6)) / 1.05)));
-  [['dailybrief-overall-score', `${{score}}%`], ['dailybrief-overall-copy', score >= 85 ? 'Excellent' : score >= 75 ? 'Strong' : 'Manageable']].forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
-
-  const nextGateEl = document.getElementById('dailybrief-nextgate-list');
-  if (nextGateEl) {{
-    const nextGate = approvals[0] || leadTask || leadProject || null;
-    nextGateEl.innerHTML = nextGate ? `<div class="dailybrief-row"><div><strong>${{escHtml(nextGate.title || 'Next gate')}}</strong><span>${{escHtml(nextGate.summary || nextGate.status || nextGate.category || 'This is the next movement that deserves a real yes or no.')}}</span></div><div class="dailybrief-tag ${{dailyBriefPriorityTag(nextGate.priority || 'high')}}">Review</div></div><div class="dailybrief-row"><div><strong>JARVIS Reminder</strong><span>Faithful in little, faithful in much. Protect the smallest right next step and the larger day will usually follow.</span></div><div class="dailybrief-row-meta">${{escHtml(faithWord.passage || 'Luke 16:10')}}</div></div>` : '<div class="dailybrief-row"><div><strong>No decision gate is active</strong><span>Use the open space to choose the next right build step before noise chooses for you.</span></div><div class="dailybrief-row-meta">Open</div></div>';
-  }}
+  const nextGate = decisionItems[0] || (decisionLoop ? {{
+    title: decisionLoop.title || 'Next gate',
+    copy: decisionLoop.summary || decisionLoop.next_action || 'Needs review.',
+    actions: dailyBriefOpenLoopButtons(decisionLoop),
+  }} : null);
+  dailyBriefHtml('dailybrief-nextgate-list', nextGate ? `<div class="dailybrief-row dailybrief-row-stack"><div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(nextGate.title || 'Next gate')}}</strong><span>${{escHtml(nextGate.copy || 'This is the next movement that deserves a real yes or no.')}}</span></div><div class="dailybrief-tag high">Review</div></div>${{nextGate.actions ? `<div class="dailybrief-row-actions">${{nextGate.actions}}</div>` : ''}}</div><div class="dailybrief-row"><div class="dailybrief-row-body"><strong>JARVIS Reminder</strong><span>Faithful in little, faithful in much. Protect the smallest right next step and the larger day will usually follow.</span></div><div class="dailybrief-row-meta">${{escHtml(faithWord.passage || 'Luke 16:10')}}</div></div>` : '<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>No decision gate is active</strong><span>Use the open space to choose the next right build step before noise chooses for you.</span></div><div class="dailybrief-row-meta">Open</div></div>');
 
   const chronicleTotal = data.chronicle?.total || data.chronicle?.entries?.length || 0;
-  [['stat-agents', String(agentNames.filter(name => agents[name]?.state === 'awake').length || 0)], ['stat-missions', String(projects.length || tasks.length || 0)], ['stat-approvals', String(approvals.length || 0)], ['stat-memory', String(chronicleTotal)]].forEach(([id, value]) => {{ const el = document.getElementById(id); if (el) el.textContent = value; }});
+  const runningAgents = Object.keys(agents).filter(name => ['awake', 'running'].includes(String(agents[name]?.state || '').toLowerCase())).length;
+  [['stat-agents', String(runningAgents || 0)], ['stat-missions', String(projects.length || tasks.length || 0)], ['stat-approvals', String(approvals.length || openLoopPayload.summary?.waiting_on_you || 0)], ['stat-memory', String(chronicleTotal)]].forEach(([id, value]) => dailyBriefText(id, value));
+
+  const availabilityNotes = Array.isArray(data.availabilityNotes) ? data.availabilityNotes.filter(Boolean) : [];
+  dailyBriefRuntimeNote(availabilityNotes.length ? availabilityNotes.join(' • ') : (modulePayload.summary || 'Daily Brief is live and connected.'));
 }}
 
-async function loadDailyBriefDesktop(layoutState = _layoutState) {{
-  const [briefing, faithWord, home, approvals, agents, tasksPayload, health, samDaily, projectsPayload, remindersPayload, chronicle, connectedDevices] = await Promise.all([
-    _fetchJsonSafe('/api/briefing'),
+async function loadDailyBriefDesktop(layoutState = _layoutState, actorOverride = '') {{
+  const actor = actorOverride || _dailyBriefActor || document.getElementById('dailybrief-actor-select')?.value || 'Chris';
+  const requestSerial = ++_dailyBriefRequestSerial;
+  _dailyBriefActor = actor;
+  dailyBriefRuntimeNote(`Loading Daily Brief for ${{actor}}…`);
+  const liveBriefPromise = fetch(`/api/briefing/live?actor=${{encodeURIComponent(actor)}}`).catch(() => null);
+  const [modulePayload, faithWord, home, approvalsPayload, agents, tasksPayload, healthPayload, projectsPayload, remindersPayload, chronicle, connectedDevices, liveBriefResponse] = await Promise.all([
+    _fetchJsonSafe(`/api/briefing/module?actor=${{encodeURIComponent(actor)}}`),
     _fetchJsonSafe('/api/faith/daily-word'),
     _fetchJsonSafe('/api/home/dashboard'),
     _fetchJsonSafe('/api/approvals'),
     _fetchJsonSafe('/api/agents'),
     _fetchJsonSafe('/api/tasks'),
-    _fetchJsonSafe('/api/health/summary'),
-    _fetchJsonSafe('/api/health/sam/daily'),
+    _fetchJsonSafe('/api/apple/health/summary'),
     _fetchJsonSafe('/api/home/projects?status=active'),
     _fetchJsonSafe('/api/apple/reminders/state'),
     _fetchJsonSafe('/api/chronicle/recent'),
     _fetchJsonSafe('/api/connected-devices'),
+    liveBriefPromise,
   ]);
+
+  if (requestSerial !== _dailyBriefRequestSerial) return;
+
+  let liveBriefing = modulePayload?.live_briefing || null;
+  let liveBriefUnavailable = '';
+  if (!liveBriefing || !Object.keys(liveBriefing).length) {{
+    if (liveBriefResponse && liveBriefResponse.ok) {{
+      liveBriefing = await dailyBriefReadJson(liveBriefResponse);
+    }} else if (liveBriefResponse) {{
+      const err = await dailyBriefReadJson(liveBriefResponse);
+      liveBriefUnavailable = err?.detail || `HTTP ${{liveBriefResponse.status}}`;
+    }} else {{
+      liveBriefUnavailable = 'Live briefing service unavailable';
+    }}
+  }}
+
   const devices = Array.isArray(connectedDevices?.devices) ? connectedDevices.devices : [];
   const now = Date.now();
   const familyLookup = {{ chris: {{ name: 'Chris' }}, rebekah: {{ name: 'Rebekah' }}, caleb: {{ name: 'Caleb' }}, anna: {{ name: 'Anna' }} }};
@@ -30248,20 +30654,34 @@ async function loadDailyBriefDesktop(layoutState = _layoutState) {{
     const info = familyLookup[uid] || {{ name: uid }};
     return {{ name: info.name, detail: 'Connected and active in the last ten minutes.' }};
   }});
+
+  const normalizedHealth = dailyBriefNormalizeHealthSummary(healthPayload);
+  const availabilityNotes = [];
+  if (modulePayload?.errors?.length) availabilityNotes.push(`Partial briefing hydration: ${{modulePayload.errors.join(' · ')}}`);
+  if (liveBriefUnavailable) availabilityNotes.push(`Live brief unavailable: ${{liveBriefUnavailable}}`);
+  if (home?.available === false) availabilityNotes.push(`Home unavailable: ${{home.error || 'Home DB not initialised'}}`);
+  if (!normalizedHealth.available) availabilityNotes.push('Health unavailable: Apple health summary is not connected.');
+  else if (normalizedHealth.estimated) availabilityNotes.push('Health readiness is estimated because key signals are missing.');
+  if (!(faithWord?.word || faithWord?.passage)) availabilityNotes.push('Faith word unavailable.');
+
   renderDailyBriefDesktop({{
     layoutState,
-    briefing,
-    faithWord,
-    home,
-    approvals,
-    agents,
+    actor,
+    module: modulePayload || {{}},
+    briefing: modulePayload || {{}},
+    liveBriefing,
+    liveBriefUnavailable,
+    faithWord: faithWord || {{}},
+    home: home || {{}},
+    approvals: dailyBriefNormalizeApprovals(approvalsPayload),
+    agents: agents || {{}},
     tasks: tasksPayload?.tasks || [],
-    health,
-    samDaily,
+    health: normalizedHealth,
     projects: projectsPayload?.projects || [],
     remindersState: remindersPayload?.data || {{}},
-    chronicle,
+    chronicle: chronicle || {{}},
     onlineUsers,
+    availabilityNotes,
   }});
 }}
 

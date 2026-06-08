@@ -195,6 +195,11 @@ class _StubSupervisionSupport:
         }
 
 
+class _FailingHomeDashboardDB:
+    def get_dashboard_data(self) -> dict:
+        raise RuntimeError("postgres unavailable")
+
+
 class _StubRuntime:
     def __init__(self) -> None:
         self.config = SimpleNamespace(
@@ -909,6 +914,18 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(health_snapshot["proof_paths"]["module_api"], "/api/health/module")
         self.assertEqual(health_snapshot["proof_paths"]["checkins_api"], "/api/health/checkins")
         self.assertEqual(health_snapshot["proof_paths"]["checkin_review_api"], "/api/health/checkins/{checkin_id}/review")
+
+    def test_home_dashboard_returns_honest_unavailable_payload_when_db_errors(self) -> None:
+        route = self._route("/api/home/dashboard", "GET")
+
+        with patch.object(service_module, "_get_home_db", return_value=_FailingHomeDashboardDB()):
+            response = asyncio.run(route())
+
+        payload = self._json_body(response)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(payload["available"])
+        self.assertIn("Home dashboard unavailable", payload["error"])
+        self.assertIn("postgres unavailable", payload["error"])
 
     def test_home_action_events_persist_into_shared_activity_surfaces(self) -> None:
         record_response = asyncio.run(
