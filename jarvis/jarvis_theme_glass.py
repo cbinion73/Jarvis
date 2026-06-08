@@ -14425,7 +14425,7 @@ async function saveFaithConversationToChronicle() {{
     showToast('Start a faith conversation first', 'warning');
     return;
   }}
-  const note = _faithMessages.map(m => `${{m.role === 'user' ? 'You' : _faithActiveAgent.name}}: ${{m.content}}`).join('\n\n');
+  const note = _faithMessages.map(m => `${{m.role === 'user' ? 'You' : _faithActiveAgent.name}}: ${{m.content}}`).join('\\n\\n');
   try {{
     await sendFaithToChronicle({{
       capability: 'record_spiritual_event',
