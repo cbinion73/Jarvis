@@ -661,9 +661,21 @@ async def daily_word(runtime) -> dict:
         if gw is None:
             return {"ok": False, "error": "LLM gateway not available"}
 
+        month = now.month
+        if month in (12, 1, 2):
+            _season = "winter"
+        elif month in (3, 4, 5):
+            _season = "spring"
+        elif month in (6, 7, 8):
+            _season = "summer"
+        else:
+            _season = "autumn"
+
         prompt = (
-            "Give a brief (3-4 sentence) spiritual reflection or encouragement for today. "
-            "Include one Scripture reference. Speak in your own voice."
+            f"Give a brief (3-4 sentence) spiritual reflection or encouragement for today, "
+            f"in the season of {_season}. "
+            "Include one Scripture reference that speaks to this time of year. "
+            "Speak in your own voice."
         )
 
         def _run() -> str:
@@ -688,6 +700,7 @@ async def daily_word(runtime) -> dict:
             "domain": agent["domain"],
             "passage": "",
             "word": word_text,
+            "season": _season,
             "generated_at": now.isoformat(),
         }
 

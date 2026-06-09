@@ -55,6 +55,18 @@ Top goals: A1c <7% | LDL management without statins | BP control | Weight mainte
 Current LDL: 156 mg/dL (elevated, no lipid therapy)
 """.strip()
 
+def _current_season() -> str:
+    """Return current Northern Hemisphere season by calendar month."""
+    month = date.today().month
+    if month in (12, 1, 2):
+        return "winter"
+    if month in (3, 4, 5):
+        return "spring"
+    if month in (6, 7, 8):
+        return "summer"
+    return "autumn"
+
+
 # ---------------------------------------------------------------------------
 # Signal retrieval
 # ---------------------------------------------------------------------------
@@ -221,7 +233,7 @@ async def classify_day_type(signals: dict, oracle_pathway: str) -> dict:
 # Three Moves generation
 # ---------------------------------------------------------------------------
 
-async def generate_three_moves(day_type: str, signals: dict, health_state: dict) -> list[dict]:
+async def generate_three_moves(day_type: str, signals: dict, health_state: dict, season: str = "") -> list[dict]:
     """
     Use LLM (via Oracle's gateway) to generate Today's Three Moves.
     Each move: {move, why, effort_level (low/medium/high), domain (glucose/bp/sleep/nutrition/movement/mindset)}
@@ -235,7 +247,7 @@ async def generate_three_moves(day_type: str, signals: dict, health_state: dict)
         gw = get_gateway()
         if gw is None:
             log.warning("LLM gateway unavailable — using fallback Three Moves")
-            return _fallback_three_moves(day_type, signals)
+            return _fallback_three_moves(day_type, signals, season=season)
 
         today = date.today().isoformat()
         signal_lines = []
@@ -257,8 +269,10 @@ Each move must be specific, actionable, and matched to the day type and current 
 Respond ONLY with valid JSON — an array of exactly 3 move objects.
 Each object: {"move": "<action>", "why": "<one sentence reason>", "effort_level": "<low|medium|high>", "domain": "<glucose|bp|sleep|nutrition|movement|mindset>"}"""
 
+        season_line = f"Season: {season.capitalize()}" if season else ""
         user_prompt = f"""Today: {today}
 Day Type: {day_type}
+{season_line}
 
 Chris's profile:
 {_CHRIS_PROFILE}
@@ -266,13 +280,14 @@ Chris's profile:
 Today's readiness signals:
 {chr(10).join(signal_lines) if signal_lines else '  No wearable data available today.'}
 
-Generate Today's Three Moves — exactly 3 specific health actions matched to this day type.
+Generate Today's Three Moves — exactly 3 specific health actions matched to this day type and season.
 For {day_type} day:
 - Recovery: gentle movement only, protein focus, sleep hygiene
 - Push: resistance training, time-restricted eating, bonus activity
 - Maintain: standard habit stack, glucose management, consistent routine
 - Medical Attention: minimum exertion, prepare for clinical contact
 - Constraint: adapted moves that work around external limits
+{f"Season context ({season}): tailor movement suggestions to seasonal conditions (indoor/outdoor, temperature, daylight)." if season else ""}
 
 Return ONLY a JSON array of exactly 3 move objects."""
 
@@ -312,28 +327,51 @@ Return ONLY a JSON array of exactly 3 move objects."""
                     pass
 
         log.warning("Could not parse Three Moves from LLM — using fallback")
-        return _fallback_three_moves(day_type, signals)
+        return _fallback_three_moves(day_type, signals, season=season)
 
     except Exception as exc:
         log.error("generate_three_moves failed: %s", exc)
-        return _fallback_three_moves(day_type, signals)
+        return _fallback_three_moves(day_type, signals, season=season)
 
 
-def _fallback_three_moves(day_type: str, signals: dict) -> list[dict]:
+def _fallback_three_moves(day_type: str, signals: dict, season: str = "") -> list[dict]:
     """Hardcoded fallback moves when LLM is unavailable."""
     glucose = signals.get("latest_glucose", 150)
+    _s = (season or "").lower()
+
+    # Season-appropriate movement suggestions
+    _recovery_move = {
+        "winter": "20-minute indoor walk or light yoga — no more",
+        "spring": "20-minute gentle outdoor walk in the fresh air — no more",
+        "summer": "20-minute morning walk before the heat builds — no more",
+        "autumn": "20-minute outdoor walk while the weather holds — no more",
+    }.get(_s, "20-minute gentle walk — no more")
+
+    _push_move = {
+        "winter": "Resistance training session — 30-45 min, full body (indoor gym or home)",
+        "spring": "Resistance training or outdoor circuit — 30-45 min, full body",
+        "summer": "Early-morning resistance training (before heat) — 30-45 min, full body",
+        "autumn": "Resistance training session — 30-45 min, full body",
+    }.get(_s, "Resistance training session — 30-45 min, full body")
+
+    _push_bonus = {
+        "winter": "Short post-dinner indoor walk (15-20 min) — blunts glucose spike without cold exposure",
+        "spring": "Evening walk after dinner (20-30 min) — great weather for it",
+        "summer": "Short post-dinner indoor walk or light stretching — skip outdoor heat after 6pm",
+        "autumn": "Evening walk after dinner (20-30 min) — crisp air, ideal glucose-blunting conditions",
+    }.get(_s, "Evening walk after dinner (20-30 min)")
 
     if day_type == "Recovery":
         return [
-            {"move": "20-minute gentle walk — no more", "why": "Light movement aids recovery without taxing a fatigued system.", "effort_level": "low", "domain": "movement"},
+            {"move": _recovery_move, "why": "Light movement aids recovery without taxing a fatigued system.", "effort_level": "low", "domain": "movement"},
             {"move": "High-protein breakfast — eggs, Greek yogurt, or cottage cheese", "why": "Protein stabilises glucose and supports muscle recovery.", "effort_level": "low", "domain": "nutrition"},
             {"move": "Lights out by 9:30pm tonight", "why": "Sleep debt compounds — an early night is the single best recovery move.", "effort_level": "medium", "domain": "sleep"},
         ]
     elif day_type == "Push":
         return [
-            {"move": "Resistance training session — 30-45 min, full body", "why": "High readiness is the window for strength work that preserves muscle on semaglutide.", "effort_level": "high", "domain": "movement"},
+            {"move": _push_move, "why": "High readiness is the window for strength work that preserves muscle on semaglutide.", "effort_level": "high", "domain": "movement"},
             {"move": "Time-restricted eating: first meal after 12pm, last meal by 7pm", "why": "Metabolic fasting window improves insulin sensitivity and supports A1c goal.", "effort_level": "medium", "domain": "nutrition"},
-            {"move": "Evening walk after dinner (20-30 min)", "why": "Post-meal walk blunts the glucose spike and adds to step count.", "effort_level": "low", "domain": "glucose"},
+            {"move": _push_bonus, "why": "Post-meal walk blunts the glucose spike and adds to step count.", "effort_level": "low", "domain": "glucose"},
         ]
     elif day_type == "Medical Attention":
         return [
@@ -427,6 +465,7 @@ async def run_morning_checkin(context: str = "") -> dict:
     """
     today = date.today().isoformat()
     generated_at = datetime.utcnow().isoformat()
+    season = _current_season()
 
     # 1. Signals
     signals = await get_morning_signals()
@@ -449,7 +488,7 @@ async def run_morning_checkin(context: str = "") -> dict:
         health_state = {}
 
     # 5. Generate Three Moves
-    three_moves = await generate_three_moves(day_type, signals, health_state)
+    three_moves = await generate_three_moves(day_type, signals, health_state, season=season)
 
     # 6. If-then rule
     if_then_rule = _generate_if_then_rule(day_type, signals)
@@ -472,6 +511,7 @@ async def run_morning_checkin(context: str = "") -> dict:
         "three_moves": three_moves,
         "if_then_rule": if_then_rule,
         "context": context or None,
+        "season": season,
         "generated_at": generated_at,
     }
 
