@@ -375,6 +375,23 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("Refresh Email", html)
         self.assertIn("Email is live and connected.", html)
 
+    def test_render_glass_shell_wires_news_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="news-refresh-button"', html)
+        self.assertIn('id="news-runtime-note"', html)
+        self.assertIn("function newsRuntimeNote(", html)
+        self.assertIn("function newsFetchJson(", html)
+        self.assertIn("function newsHandleAction(", html)
+        self.assertIn("function refreshNewsDesktop(", html)
+        self.assertIn("function newsOpenRoute(", html)
+        self.assertIn("/api/news/module?actor=Chris", html)
+        self.assertIn("/api/news/module/action", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("/news-center", html)
+        self.assertIn("Refresh News", html)
+        self.assertIn("News is live and connected.", html)
+
     def test_render_glass_shell_wires_publishing_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

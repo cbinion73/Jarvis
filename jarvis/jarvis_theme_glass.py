@@ -25543,6 +25543,10 @@ body::after {{
           <div class="news-kicker">Real news. Filtered. Contextualized. Actionable.</div>
           <h1>JARVIS <span>NEWS</span></h1>
           <p>Your personalized news intelligence engine. Understand the top stories, what matters to your world, where the risk sits, and what deserves attention instead of doom-scrolling.</p>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+            <span id="news-runtime-note" style="font-size:12px;color:var(--news-copy-muted);">News is live and connected.</span>
+            <button class="news-link-chip" type="button" id="news-refresh-button" onclick="refreshNewsDesktop(true)">Refresh News</button>
+          </div>
         </div>
         <div class="news-quote">“Stay informed, not overwhelmed. Understand. Discern. Act.”</div>
         <div class="news-profile-card">
@@ -25569,7 +25573,7 @@ body::after {{
         <section class="news-panel news-col-4">
           <div class="news-panel-header">
             <div><h3>1. Top Stories</h3><p>The most important stories right now.</p></div>
-            <div class="news-link-chip">View All</div>
+            <button class="news-link-chip" type="button" onclick="newsHandleAction('open-top-stories')">View All</button>
           </div>
           <div class="news-story-hero" id="news-top-story"></div>
           <div class="news-list" id="news-top-story-list" style="margin-top:12px;"></div>
@@ -25580,13 +25584,13 @@ body::after {{
             <div><h3>2. News Briefing</h3><p>Your 2-minute intelligence brief.</p></div>
           </div>
           <div class="news-briefing-grid" id="news-briefing-grid"></div>
-          <div class="news-link-chip" style="margin-top:12px; display:inline-flex;">Read Full Briefing</div>
+          <button class="news-link-chip" type="button" style="margin-top:12px; display:inline-flex;" onclick="newsHandleAction('open-briefing')">Read Full Briefing</button>
         </section>
 
         <section class="news-panel news-col-3">
           <div class="news-panel-header">
             <div><h3>3. Watchlist</h3><p>Stories and topics you’re tracking.</p></div>
-            <div class="news-link-chip">Manage</div>
+            <button class="news-link-chip" type="button" onclick="newsHandleAction('manage-watchlist')">Manage</button>
           </div>
           <div class="news-watch-list" id="news-watch-list"></div>
         </section>
@@ -25610,7 +25614,7 @@ body::after {{
         <section class="news-panel news-col-4">
           <div class="news-panel-header">
             <div><h3>5. News By Category</h3><p>Browse the news that matters to you.</p></div>
-            <div class="news-link-chip">Customize</div>
+            <button class="news-link-chip" type="button" onclick="newsHandleAction('customize-feed')">Customize</button>
           </div>
           <div class="news-category-grid" id="news-category-grid"></div>
         </section>
@@ -25618,7 +25622,7 @@ body::after {{
         <section class="news-panel news-col-3">
           <div class="news-panel-header">
             <div><h3>6. Personalized Insights</h3><p>News insights tailored to your world.</p></div>
-            <div class="news-link-chip">View All</div>
+            <button class="news-link-chip" type="button" onclick="newsHandleAction('open-insights')">View All</button>
           </div>
           <div class="news-insight-list" id="news-insight-list"></div>
         </section>
@@ -25626,7 +25630,7 @@ body::after {{
         <section class="news-panel news-col-3">
           <div class="news-panel-header">
             <div><h3>7. Source Quality</h3><p>The sources behind your news.</p></div>
-            <div class="news-link-chip">Manage Sources</div>
+            <button class="news-link-chip" type="button" onclick="newsHandleAction('manage-sources')">Manage Sources</button>
           </div>
           <div class="news-source-list" id="news-source-list"></div>
         </section>
@@ -25634,7 +25638,7 @@ body::after {{
         <section class="news-panel news-col-2">
           <div class="news-panel-header">
             <div><h3>8. Local &amp; Weather</h3><p>What’s happening near you.</p></div>
-            <div class="news-link-chip">View Details</div>
+            <button class="news-link-chip" type="button" onclick="newsHandleAction('open-weather')">View Details</button>
           </div>
           <div class="news-weather-list" id="news-weather-list"></div>
         </section>
@@ -34403,39 +34407,10 @@ function _sourceMeta(name) {{
   return {{ color: '#6B7280', bg: '#f3f4f6', icon: (name||'?')[0].toUpperCase() }};
 }}
 
-let _newsCache = null;
-let _newsWeatherCache = null;
+let _newsLastPayload = null;
 
 function newsEsc(value) {{
   return escHtml(String(value ?? ''));
-}}
-
-function newsKeywordBucket(text) {{
-  const hay = String(text || '').toLowerCase();
-  if (/econom|inflation|market|oil|fed|stocks|rates|tariff|trade/.test(hay)) return 'Economy';
-  if (/ai|technology|tech|regulation|chip|software/.test(hay)) return 'Technology';
-  if (/faith|church|religion|spiritual/.test(hay)) return 'Faith & Culture';
-  if (/health|research|disease|medical|clinical/.test(hay)) return 'Health';
-  if (/storm|weather|climate|rain|hurricane/.test(hay)) return 'Environment';
-  if (/senate|election|government|policy|trump|congress|war|iran|israel/.test(hay)) return 'Politics';
-  return 'World';
-}}
-
-function newsToneScore(articles) {{
-  let score = 0;
-  articles.forEach((item) => {{
-    const text = `${{item.title || ''}} ${{item.summary || ''}}`.toLowerCase();
-    if (/surge|gain|growth|win|breakthrough|positive|opportunity|ready|recovery/.test(text)) score += 1;
-    if (/war|conflict|risk|slump|drop|decline|crisis|failure|attack|strike/.test(text)) score -= 1;
-  }});
-  return articles.length ? score / articles.length : 0;
-}}
-
-function newsSourceQuality(source) {{
-  const key = String(source || '').toUpperCase();
-  if (['REUTERS', 'AP', 'BBC', 'NYT', 'BLOOMBERG'].includes(key)) return 92;
-  if (['CNBC', 'MARKETWATCH', 'ALJAZEERA'].includes(key)) return 84;
-  return 76;
 }}
 
 function newsRelativeMinutes(ts) {{
@@ -34448,158 +34423,312 @@ function newsRelativeMinutes(ts) {{
   return `${{hrs}} hr ago`;
 }}
 
-function newsWeatherSummary(weather) {{
-  const current = weather?.current || {{}};
-  const alerts = Array.isArray(weather?.alerts) ? weather.alerts : [];
-  return {{
-    temp: current.temperature_f != null ? `${{current.temperature_f}}°F` : '72°F',
-    condition: current.condition || weather?.summary || 'Local conditions unavailable',
-    high: current.high_f != null ? `${{current.high_f}}°` : '74°',
-    low: current.low_f != null ? `${{current.low_f}}°` : '61°',
-    humidity: current.humidity != null ? `${{current.humidity}}%` : '—',
-    wind: current.wind || '—',
-    alert: alerts[0] || null,
+function newsRuntimeNote(text) {{
+  _setTextIfPresent('news-runtime-note', text || 'News is live and connected.');
+}}
+
+async function newsFetchJson(url, options = undefined) {{
+  const response = await fetch(url, options);
+  if (!response.ok) {{
+    let detail = `${{response.status}} ${{response.statusText}}`.trim();
+    try {{
+      const payload = await response.json();
+      detail = payload?.detail || payload?.error || payload?.message || detail;
+    }} catch (_) {{}}
+    throw new Error(detail || 'News request failed.');
+  }}
+  return response.json();
+}}
+
+async function newsRecordAction(action, detail, extra = {{}}) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        domain: 'news',
+        action,
+        detail,
+        route: '/news-center',
+        route_label: 'Open News',
+        related_kind: extra.relatedKind || 'news',
+        related_label: extra.relatedLabel || action,
+        result_summary: extra.resultSummary || detail || action,
+        why_now: extra.whyNow || detail || 'News operator action updated shared continuity.',
+      }}),
+    }});
+  }} catch (_) {{}}
+}}
+
+async function newsOpenRoute(route, fallbackView, action, detail) {{
+  await newsRecordAction(action, detail, {{
+    relatedKind: 'route',
+    relatedLabel: action,
+    resultSummary: detail || `Opened ${{route}} from News.`,
+  }});
+  if (route) {{
+    window.location.href = route;
+    return;
+  }}
+  if (fallbackView && typeof switchView === 'function') switchView(fallbackView);
+}}
+
+async function newsHandleAction(actionId) {{
+  const modulePayload = _newsLastPayload || {{}};
+  const trusted = Array.isArray(modulePayload.trusted_actions) ? modulePayload.trusted_actions : [];
+  const quickActions = Array.isArray(modulePayload.quick_actions) ? modulePayload.quick_actions : [];
+  const trustedItem = trusted.find((entry) => String(entry.id || '') === String(actionId || ''));
+  const quickItem = quickActions.find((entry) => String(entry.id || '') === String(actionId || ''));
+  const featured = modulePayload.featured_article || {{}};
+
+  if (trustedItem) {{
+    if (trustedItem.available === false) {{
+      const reason = trustedItem.unavailable_reason || 'This News action is not available in the current runtime.';
+      newsRuntimeNote(reason);
+      showToast(reason, 'info');
+      return;
+    }}
+    if (trustedItem.action_type === 'refresh') {{
+      await refreshNewsDesktop(true, true);
+      return;
+    }}
+    try {{
+      const payload = await newsFetchJson('/api/news/module/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          action: trustedItem.action_type,
+          title: trustedItem.title || 'News action',
+          article_title: trustedItem.article_title || featured?.title || '',
+          article_link: trustedItem.article_link || featured?.link || '',
+          detail: trustedItem.note || 'News action completed.',
+          route: '/news-center',
+          route_label: 'Open News',
+          related_kind: 'news',
+          related_label: trustedItem.article_title || trustedItem.title || 'News action',
+        }}),
+      }});
+      newsRuntimeNote(payload.message || trustedItem.note || 'News action completed.');
+      showToast(payload.message || 'News action completed.', 'success');
+      await refreshNewsDesktop(false);
+    }} catch (error) {{
+      const detail = error?.message || 'News action failed.';
+      newsRuntimeNote(detail);
+      showToast(detail, 'error');
+    }}
+    return;
+  }}
+
+  if (quickItem) {{
+    if (quickItem.available === false) {{
+      const reason = quickItem.unavailable_reason || 'This News action is not available in the current runtime.';
+      newsRuntimeNote(reason);
+      showToast(reason, 'info');
+      return;
+    }}
+    if (quickItem.id === 'open-weather') {{
+      newsRuntimeNote(quickItem.detail || 'Opening weather context.');
+      showToast(quickItem.detail || 'Opening weather context.', 'info');
+      openWeatherModal();
+      return;
+    }}
+    if (quickItem.id === 'refresh-news') {{
+      await refreshNewsDesktop(true, true);
+      return;
+    }}
+    if (quickItem.route) {{
+      newsRuntimeNote(quickItem.detail || 'Opening related News surface.');
+      showToast(quickItem.detail || 'Opening related News surface.', 'info');
+      await newsOpenRoute(quickItem.route, 'overview', quickItem.title || 'Open News Route', quickItem.detail || 'News routed into a related surface.');
+      return;
+    }}
+    try {{
+      const payload = await newsFetchJson('/api/news/module/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          action: quickItem.id,
+          title: quickItem.title || 'News action',
+          article_title: quickItem.article_title || featured?.title || '',
+          article_link: quickItem.article_link || featured?.link || '',
+          detail: quickItem.detail || 'News action recorded.',
+          route: '/news-center',
+          route_label: 'Open News',
+          related_kind: 'news',
+          related_label: quickItem.article_title || quickItem.title || 'News action',
+        }}),
+      }});
+      newsRuntimeNote(payload.message || quickItem.detail || 'News action recorded.');
+      showToast(payload.message || 'News action recorded.', 'success');
+      await refreshNewsDesktop(false);
+    }} catch (error) {{
+      const detail = error?.message || 'News action failed.';
+      newsRuntimeNote(detail);
+      showToast(detail, 'error');
+    }}
+    return;
+  }}
+
+  const routeActions = {{
+    'open-top-stories': ['/news-center', 'news', 'Top stories stay in the News surface; open article links from the live feed cards.'],
+    'open-briefing': ['/briefing-center', 'overview', 'Opening the full briefing with live news context.'],
+    'manage-watchlist': ['/command-center', 'chat', 'News watchlist management is currently routed into Command until a dedicated backend exists.'],
+    'customize-feed': ['/settings-center', 'overview', 'News source and preference tuning is currently routed into Settings.'],
+    'open-insights': ['/activity-center', 'journey', 'Opening the continuity and insight surface linked from News.'],
+    'manage-sources': ['/settings-center', 'overview', 'News source management is currently routed into Settings.'],
+    'open-weather': [null, 'overview', 'Opening live weather context from News.'],
   }};
+  const routeAction = routeActions[actionId];
+  if (routeAction) {{
+    if (actionId === 'open-weather') {{
+      newsRuntimeNote(routeAction[2]);
+      showToast(routeAction[2], 'info');
+      openWeatherModal();
+      return;
+    }}
+    await newsOpenRoute(routeAction[0], routeAction[1], `Open ${{actionId}}`, routeAction[2]);
+    return;
+  }}
+
+  newsRuntimeNote('That News action is not available right now.');
+  showToast('That News action is not available right now.', 'info');
+}}
+
+async function refreshNewsDesktop(showToastOnSuccess = false, force = false) {{
+  try {{
+    const payload = await newsFetchJson(force ? '/api/news/module?actor=Chris&force=1' : '/api/news/module?actor=Chris');
+    _newsLastPayload = payload || {{}};
+    renderNewsView(_newsLastPayload);
+    if (showToastOnSuccess) showToast(force ? 'News refreshed.' : 'News loaded.', 'success');
+  }} catch (e) {{
+    console.error('loadNews failed', e);
+    const detail = e?.message || 'News could not load.';
+    _newsLastPayload = {{
+      available: false,
+      runtime_note: `News could not load: ${{detail}}`,
+      availability_notes: [`News could not load: ${{detail}}`],
+      counts: {{}},
+      balance: {{ label: 'Unavailable', note: 'Unavailable' }},
+      sentiment: {{ score: 0, label: 'Unavailable', positive_pct: 0, neutral_pct: 0, negative_pct: 0 }},
+      featured_article: null,
+      top_story_list: [],
+      briefing_cards: [],
+      watchlist_rows: [],
+      category_rows: [],
+      insight_rows: [],
+      source_rows: [],
+      weather_rows: [],
+      deep_dive_rows: [],
+      quick_actions: [],
+      trusted_actions: [],
+      recent_activity: [],
+      news_payload: {{ world: [], finance: [], sources_hit: [], fetched_at: '', live: false }},
+    }};
+    renderNewsView(_newsLastPayload);
+    if (showToastOnSuccess) showToast(detail, 'error');
+  }}
 }}
 
 async function loadNews(force) {{
-  try {{
-    if (!force && _newsCache) {{
-      renderNewsView(_newsCache, _newsWeatherCache || {{}});
-      return;
-    }}
-    const [newsRes, weatherRes] = await Promise.allSettled([
-      fetch(force ? '/api/news?force=1' : '/api/news', {{ cache: 'no-store' }}),
-      fetch('/api/storm-weather', {{ cache: 'no-store' }}),
-    ]);
-    const news = newsRes.status === 'fulfilled' && newsRes.value.ok ? await newsRes.value.json() : {{}};
-    const weather = weatherRes.status === 'fulfilled' && weatherRes.value.ok ? await weatherRes.value.json() : {{}};
-    _newsCache = news || {{}};
-    _newsWeatherCache = weather || {{}};
-    renderNewsView(_newsCache, _newsWeatherCache);
-  }} catch (e) {{
-    console.error('loadNews failed', e);
-    renderNewsView(_newsCache || {{}}, _newsWeatherCache || {{}});
-  }}
+  await refreshNewsDesktop(false, Boolean(force));
 }}
 
 function filterNews() {{
-  if (_newsCache) renderNewsView(_newsCache, _newsWeatherCache || {{}});
+  if (_newsLastPayload) renderNewsView(_newsLastPayload);
 }}
 
-function renderNewsView(data, weather) {{
-  const world = Array.isArray(data?.world) ? data.world.map((item) => ({{ ...item, _cat: 'world' }})) : [];
-  const finance = Array.isArray(data?.finance) ? data.finance.map((item) => ({{ ...item, _cat: 'finance' }})) : [];
-  const articles = [...world, ...finance];
-  const topArticles = articles.slice(0, 12);
-  const toneScore = newsToneScore(topArticles);
-  const positive = Math.round((topArticles.filter((item) => /gain|growth|breakthrough|recovery|win|opportunity/i.test(`${{item.title}} ${{item.summary}}`)).length / Math.max(1, topArticles.length)) * 100);
-  const negative = Math.round((topArticles.filter((item) => /war|risk|slump|drop|decline|attack|crisis|strike/i.test(`${{item.title}} ${{item.summary}}`)).length / Math.max(1, topArticles.length)) * 100);
-  const neutral = Math.max(0, 100 - positive - negative);
-  const categories = new Map();
-  topArticles.forEach((item) => {{
-    const bucket = newsKeywordBucket(`${{item.title}} ${{item.summary}}`);
-    categories.set(bucket, (categories.get(bucket) || 0) + 1);
-  }});
-  const categoryList = Array.from(categories.entries()).sort((a, b) => b[1] - a[1]);
-  const sourceScores = Array.from(new Set(topArticles.map((item) => item.source).filter(Boolean)))
-    .map((source) => [source, newsSourceQuality(source)])
-    .sort((a, b) => b[1] - a[1]);
-  const fetchedAt = data?.fetched_at || '';
-  const weatherSummary = newsWeatherSummary(weather);
-  const featured = topArticles[0] || {{
-    source: 'JARVIS',
-    title: 'No headlines available right now.',
-    summary: data?.error || 'The live news feeds did not return any items.',
-    link: '',
-    _cat: 'world',
-  }};
-  const headlineText = `${{featured.title || ''}} ${{featured.summary || ''}}`;
-  const breakingCount = topArticles.filter((item) => /breaking|urgent|alert|attack|strike|war|crisis/i.test(`${{item.title}} ${{item.summary}}`)).length;
-  const qualityScore = sourceScores.length ? Math.round(sourceScores.reduce((sum, [, score]) => sum + score, 0) / sourceScores.length) : 78;
+function renderNewsView(payload) {{
+  const modulePayload = payload || {{}};
+  const counts = modulePayload.counts || {{}};
+  const balance = modulePayload.balance || {{}};
+  const sentiment = modulePayload.sentiment || {{}};
+  const featured = modulePayload.featured_article || null;
+  const topStoryList = Array.isArray(modulePayload.top_story_list) ? modulePayload.top_story_list : [];
+  const briefingCards = Array.isArray(modulePayload.briefing_cards) ? modulePayload.briefing_cards : [];
+  const watchlistRows = Array.isArray(modulePayload.watchlist_rows) ? modulePayload.watchlist_rows : [];
+  const categoryRows = Array.isArray(modulePayload.category_rows) ? modulePayload.category_rows : [];
+  const insightRows = Array.isArray(modulePayload.insight_rows) ? modulePayload.insight_rows : [];
+  const sourceRows = Array.isArray(modulePayload.source_rows) ? modulePayload.source_rows : [];
+  const weatherRows = Array.isArray(modulePayload.weather_rows) ? modulePayload.weather_rows : [];
+  const deepDiveRows = Array.isArray(modulePayload.deep_dive_rows) ? modulePayload.deep_dive_rows : [];
+  const quickActions = Array.isArray(modulePayload.quick_actions) ? modulePayload.quick_actions : [];
+  const newsPayload = modulePayload.news_payload || {{}};
+  const availability = Array.isArray(modulePayload.availability_notes) ? modulePayload.availability_notes.filter(Boolean) : [];
+  const fetchedAt = String(newsPayload.fetched_at || '').trim();
 
-  const setText = (id, value) => {{
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-  }};
-  setText('news-stat-top-stories', String(topArticles.length || 0));
-  setText('news-stat-top-note', fetchedAt ? `${{newsRelativeMinutes(fetchedAt)}}` : 'Fresh headlines');
-  setText('news-stat-breaking', String(breakingCount));
-  setText('news-stat-breaking-note', breakingCount ? `${{breakingCount}} needs context` : 'No hard breaks');
-  setText('news-stat-watching', String(Math.max(4, categoryList.length + 2)));
-  setText('news-stat-watching-note', `${{categoryList.slice(0, 3).map(([name]) => name).join(' · ') || 'Tracked themes'}}`);
-  setText('news-stat-sentiment', toneScore.toFixed(2));
-  setText('news-stat-sentiment-note', toneScore < -0.1 ? 'Slightly negative' : toneScore > 0.12 ? 'Constructive' : 'Mixed');
-  setText('news-stat-quality', `${{qualityScore}}%`);
-  setText('news-stat-quality-note', qualityScore >= 85 ? 'High' : 'Good');
-  setText('news-stat-time-saved', `${{1 + Math.floor(topArticles.length / 6)}}h ${{String((topArticles.length * 4) % 60).padStart(2, '0')}}m`);
-  setText('news-stat-time-note', 'vs unfiltered news');
-  setText('news-stat-balance', qualityScore >= 84 ? 'Well Balanced' : 'Needs More Balance');
-  setText('news-stat-balance-note', sourceScores.length >= 4 ? 'On target' : 'Expand sources');
-  setText('news-profile-balance', sourceScores.length >= 4 ? 'Well balanced' : 'Needs more breadth');
-  setText('news-sentiment-score', toneScore.toFixed(2));
-  setText('news-sentiment-label', toneScore < -0.1 ? 'Slightly Negative' : toneScore > 0.12 ? 'Constructive' : 'Mixed');
-  setText('news-footer-status', data?.live ? `Live feeds from ${{(data.sources_hit || []).length}} sources` : 'Feed in fallback posture');
+  newsRuntimeNote(modulePayload.runtime_note || availability[0] || 'News is live and connected.');
+  _setTextIfPresent('news-stat-top-stories', String(counts.top_stories || 0));
+  _setTextIfPresent('news-stat-top-note', fetchedAt ? newsRelativeMinutes(fetchedAt) : 'Fresh headlines');
+  _setTextIfPresent('news-stat-breaking', String(counts.breaking || 0));
+  _setTextIfPresent('news-stat-breaking-note', counts.breaking ? `${{counts.breaking}} needs context` : 'No hard breaks');
+  _setTextIfPresent('news-stat-watching', String(counts.watching || 0));
+  _setTextIfPresent('news-stat-watching-note', watchlistRows[0] ? String(watchlistRows[0].title || 'Tracked themes') : 'Tracked themes');
+  _setTextIfPresent('news-stat-sentiment', Number(sentiment.score || 0).toFixed(2));
+  _setTextIfPresent('news-stat-sentiment-note', sentiment.label || 'Mixed');
+  _setTextIfPresent('news-stat-quality', counts.quality_score ? `${{counts.quality_score}}%` : '—');
+  _setTextIfPresent('news-stat-quality-note', counts.quality_score ? (counts.quality_score >= 85 ? 'High' : 'Good') : 'Unavailable');
+  _setTextIfPresent('news-stat-time-saved', '—');
+  _setTextIfPresent('news-stat-time-note', 'Unavailable');
+  _setTextIfPresent('news-stat-balance', balance.label || 'Unavailable');
+  _setTextIfPresent('news-stat-balance-note', balance.note || 'Unavailable');
+  _setTextIfPresent('news-profile-balance', balance.label ? String(balance.label).toLowerCase() : 'partial');
+  _setTextIfPresent('news-sentiment-score', Number(sentiment.score || 0).toFixed(2));
+  _setTextIfPresent('news-sentiment-label', sentiment.label || 'Mixed');
+  _setTextIfPresent('news-footer-status', modulePayload.available === false ? (availability[0] || 'Feed in fallback posture') : `Live feeds from ${{(newsPayload.sources_hit || []).length}} source${{(newsPayload.sources_hit || []).length === 1 ? '' : 's'}}`);
 
   const topStoryEl = document.getElementById('news-top-story');
   if (topStoryEl) {{
-    topStoryEl.innerHTML = `
-      <div class="news-story-badge">${{newsEsc(featured._cat === 'finance' ? 'Market Impact' : 'Top Story')}}</div>
-      <div class="news-story-title">${{newsEsc(featured.title)}}</div>
-      <div class="news-story-summary">${{newsEsc((featured.summary || '').slice(0, 220) || 'Open the article for the full context.')}}</div>
-      <div class="news-story-meta">
-        <span>${{newsEsc(featured.source || 'Wire')}}</span>
-        <span>${{newsEsc(newsKeywordBucket(headlineText))}}</span>
-        <span>${{featured.link ? 'Open source →' : 'Live feed item'}}</span>
-      </div>
-    `;
-    if (featured.link) topStoryEl.onclick = () => window.open(featured.link, '_blank', 'noopener');
-    else topStoryEl.onclick = null;
-    topStoryEl.style.cursor = featured.link ? 'pointer' : 'default';
+    if (featured) {{
+      topStoryEl.innerHTML = `
+        <div class="news-story-badge">${{newsEsc(featured._cat === 'finance' ? 'Market Impact' : 'Top Story')}}</div>
+        <div class="news-story-title">${{newsEsc(featured.title || 'No live headline available')}}</div>
+        <div class="news-story-summary">${{newsEsc(String(featured.summary || 'Open the article for the full context.').slice(0, 220) || 'Open the article for the full context.')}}</div>
+        <div class="news-story-meta">
+          <span>${{newsEsc(featured.source || 'Wire')}}</span>
+          <span>${{newsEsc(featured.category || 'Live feed')}}</span>
+          <span>${{featured.link ? 'Open source →' : 'Live feed item'}}</span>
+        </div>
+      `;
+      if (featured.link) topStoryEl.onclick = () => window.open(featured.link, '_blank', 'noopener');
+      else topStoryEl.onclick = null;
+      topStoryEl.style.cursor = featured.link ? 'pointer' : 'default';
+    }} else {{
+      topStoryEl.innerHTML = '<div class="news-story-title">No live headline available</div><div class="news-story-summary">Refresh the feed in a moment.</div>';
+      topStoryEl.onclick = null;
+      topStoryEl.style.cursor = 'default';
+    }}
   }}
 
-  const topStoryList = document.getElementById('news-top-story-list');
-  if (topStoryList) {{
-    topStoryList.innerHTML = topArticles.slice(1, 6).map((item) => `
+  const topStoryListEl = document.getElementById('news-top-story-list');
+  if (topStoryListEl) {{
+    topStoryListEl.innerHTML = topStoryList.map((item) => `
       <div class="news-mini-story">
         <div class="news-mini-copy">
-          <strong>${{newsEsc(item.title)}}</strong>
-          <span>${{newsEsc(item.source || 'Wire')}} · ${{newsEsc(newsKeywordBucket(`${{item.title}} ${{item.summary}}`))}}</span>
+          <strong>${{newsEsc(item.title || '(No title)')}}</strong>
+          <span>${{newsEsc(item.source || 'Wire')}} · ${{newsEsc(item.category || 'Live feed')}}</span>
         </div>
-        <div class="news-mini-meta">${{item.link ? `<a class="news-read-link" href="${{newsEsc(item.link)}}" target="_blank">Read →</a>` : newsEsc(item._cat)}}</div>
+        <div class="news-mini-meta">${{item.link ? `<a class="news-read-link" href="${{newsEsc(item.link)}}" target="_blank">Read →</a>` : 'Live'}}</div>
       </div>
     `).join('') || '<div class="news-mini-story"><div class="news-mini-copy"><strong>No additional stories yet.</strong><span>Refresh the feed in a moment.</span></div><div class="news-mini-meta">—</div></div>';
   }}
 
   const briefingEl = document.getElementById('news-briefing-grid');
   if (briefingEl) {{
-    const briefCards = [
-      ['What Happened', featured.title || 'No top story loaded yet.'],
-      ['Why It Matters', featured.summary || 'The main item will be summarized here once the feed loads.'],
-      ['What To Watch', categoryList[0] ? `${{categoryList[0][0]}} pressure is running highest in the current mix.` : 'Watch the next market and world updates.'],
-      ['What You Can Do', weatherSummary.alert ? 'Check schedule and travel plans against the active weather watch.' : 'Stay on the top themes only and avoid noisy feed hopping.'],
-    ];
-    briefingEl.innerHTML = briefCards.map(([title, copy]) => `
+    briefingEl.innerHTML = briefingCards.map((item) => `
       <div class="news-brief-card">
-        <strong>${{newsEsc(title)}}</strong>
-        <span>${{newsEsc(copy)}}</span>
+        <strong>${{newsEsc(item.title || 'Briefing')}}</strong>
+        <span>${{newsEsc(item.copy || 'No live briefing detail available.')}}</span>
       </div>
-    `).join('');
+    `).join('') || '<div class="news-brief-card"><strong>Briefing unavailable</strong><span>No live briefing detail available.</span></div>';
   }}
 
   const watchListEl = document.getElementById('news-watch-list');
   if (watchListEl) {{
-    const watchRows = [
-      ['AI Regulation Developments', topArticles.filter((item) => /ai|regulation|policy|chip|technology/i.test(`${{item.title}} ${{item.summary}}`)).length, 'high'],
-      ['Economy & Inflation', topArticles.filter((item) => /econom|inflation|fed|market|rates|tariff|stocks|oil/i.test(`${{item.title}} ${{item.summary}}`)).length, 'high'],
-      ['Publishing Industry Trends', topArticles.filter((item) => /publish|media|content|audience|creator/i.test(`${{item.title}} ${{item.summary}}`)).length, 'medium'],
-      ['Health Policy Changes', topArticles.filter((item) => /health|medical|policy|research/i.test(`${{item.title}} ${{item.summary}}`)).length, 'medium'],
-      ['Energy & Markets', topArticles.filter((item) => /oil|energy|gas|market|supply/i.test(`${{item.title}} ${{item.summary}}`)).length, 'low'],
-    ];
-    watchListEl.innerHTML = watchRows.map(([title, count, tone]) => `
+    watchListEl.innerHTML = watchlistRows.map((item) => `
       <div class="news-watch-item">
-        <div class="news-watch-copy"><strong>${{newsEsc(title)}}</strong><span>${{count}} new update${{count === 1 ? '' : 's'}}</span></div>
-        <div class="news-pill ${{tone}}">${{tone}}</div>
+        <div class="news-watch-copy"><strong>${{newsEsc(item.title || 'Theme')}}</strong><span>${{Number(item.count || 0)}} active stor${{Number(item.count || 0) === 1 ? 'y' : 'ies'}}</span></div>
+        <div class="news-pill ${{newsEsc(item.tone || 'low')}}">${{newsEsc(item.tone || 'low')}}</div>
       </div>
     `).join('');
   }}
@@ -34607,9 +34736,9 @@ function renderNewsView(data, weather) {{
   const sentimentSplit = document.getElementById('news-sentiment-split');
   if (sentimentSplit) {{
     sentimentSplit.innerHTML = [
-      ['Positive', positive],
-      ['Neutral', neutral],
-      ['Negative', negative],
+      ['Positive', Number(sentiment.positive_pct || 0)],
+      ['Neutral', Number(sentiment.neutral_pct || 0)],
+      ['Negative', Number(sentiment.negative_pct || 0)],
     ].map(([label, value]) => `
       <div class="news-mini-stat">
         <span style="display:block;color:var(--news-copy-muted);font-size:12px;margin-bottom:6px;">${{newsEsc(label)}}</span>
@@ -34620,74 +34749,56 @@ function renderNewsView(data, weather) {{
 
   const categoryGrid = document.getElementById('news-category-grid');
   if (categoryGrid) {{
-    categoryGrid.innerHTML = categoryList.slice(0, 8).map(([name, count]) => `
+    categoryGrid.innerHTML = categoryRows.map((item) => `
       <div class="news-category-card">
-        <strong>${{newsEsc(name)}}</strong>
-        <span>${{count}} stor${{count === 1 ? 'y' : 'ies'}}</span>
+        <strong>${{newsEsc(item.title || 'Category')}}</strong>
+        <span>${{Number(item.value || 0)}} stor${{Number(item.value || 0) === 1 ? 'y' : 'ies'}}</span>
       </div>
     `).join('') || '<div class="news-category-card"><strong>Awaiting feed</strong><span>Categories will appear here.</span></div>';
   }}
 
   const insightEl = document.getElementById('news-insight-list');
   if (insightEl) {{
-    const insights = [
-      ['Your Business', topArticles.find((item) => /econom|tariff|market|rates|policy/i.test(`${{item.title}} ${{item.summary}}`))?.summary || 'A market or policy shift may affect operations and pricing.'],
-      ['Your Calendar', weatherSummary.alert ? 'Weather or disruption could affect travel and meeting confidence.' : 'Current news mix does not appear to threaten the next movement block.'],
-      ['Your Investments', topArticles.find((item) => /market|stocks|oil|fed|econom/i.test(`${{item.title}} ${{item.summary}}`))?.title || 'Watch volatility and second-order effects rather than reacting to every headline.'],
-      ['Your Health', weatherSummary.condition || 'Local conditions are stable.'],
-    ];
-    insightEl.innerHTML = insights.map(([title, copy]) => `
+    insightEl.innerHTML = insightRows.map((item) => `
       <div class="news-insight-item">
-        <div class="news-insight-copy"><strong>${{newsEsc(title)}}</strong><span>${{newsEsc(copy)}}</span></div>
+        <div class="news-insight-copy"><strong>${{newsEsc(item.title || 'Insight')}}</strong><span>${{newsEsc(item.detail || 'No live insight available.')}}</span></div>
         <div class="news-mini-meta">›</div>
       </div>
-    `).join('');
+    `).join('') || '<div class="news-insight-item"><div class="news-insight-copy"><strong>No live insight</strong><span>Refresh the feed for updated context.</span></div><div class="news-mini-meta">—</div></div>';
   }}
 
   const sourceEl = document.getElementById('news-source-list');
   if (sourceEl) {{
-    sourceEl.innerHTML = sourceScores.slice(0, 5).map(([source, score]) => `
+    sourceEl.innerHTML = sourceRows.map((item) => `
       <div class="news-source-item">
-        <div class="news-source-copy"><strong>${{newsEsc(source)}}</strong><span>${{score >= 88 ? 'High quality' : score >= 80 ? 'Good quality' : 'Context source'}}</span></div>
-        <div class="news-mini-meta">${{score}}%</div>
+        <div class="news-source-copy"><strong>${{newsEsc(item.source || 'Source')}}</strong><span>${{newsEsc(item.detail || 'Live source detail unavailable.')}}</span></div>
+        <div class="news-mini-meta">${{item.score ? `${{item.score}}%` : '—'}}</div>
       </div>
     `).join('') || '<div class="news-source-item"><div class="news-source-copy"><strong>No sources loaded</strong><span>Refresh the feed.</span></div><div class="news-mini-meta">—</div></div>';
   }}
 
   const weatherEl = document.getElementById('news-weather-list');
   if (weatherEl) {{
-    weatherEl.innerHTML = `
+    weatherEl.innerHTML = weatherRows.map((item) => `
       <div class="news-weather-item">
-        <div class="news-weather-copy"><strong>${{newsEsc(weatherSummary.temp)}}</strong><span>${{newsEsc(weatherSummary.condition)}}</span></div>
-        <div class="news-mini-meta">Now</div>
+        <div class="news-weather-copy"><strong>${{newsEsc(item.title || 'Weather')}}</strong><span>${{newsEsc(item.detail || 'Weather detail unavailable.')}}</span></div>
+        <div class="news-mini-meta">Live</div>
       </div>
-      <div class="news-weather-item">
-        <div class="news-weather-copy"><strong>High / Low</strong><span>${{newsEsc(weatherSummary.high)}} · ${{newsEsc(weatherSummary.low)}}</span></div>
-        <div class="news-mini-meta">Today</div>
-      </div>
-      <div class="news-weather-item">
-        <div class="news-weather-copy"><strong>Humidity / Wind</strong><span>${{newsEsc(weatherSummary.humidity)}} · ${{newsEsc(weatherSummary.wind)}}</span></div>
-        <div class="news-mini-meta">Local</div>
-      </div>
-      <div class="news-weather-item">
-        <div class="news-weather-copy"><strong>${{newsEsc(weatherSummary.alert?.headline || 'No severe watch active')}}</strong><span>${{newsEsc(weatherSummary.alert?.event || 'Weather posture is steady.')}}</span></div>
-        <div class="news-mini-meta">${{weatherSummary.alert ? 'Monitor' : 'Clear'}}</div>
-      </div>
-    `;
+    `).join('') || '<div class="news-weather-item"><div class="news-weather-copy"><strong>Weather unavailable</strong><span>Live weather detail is not available.</span></div><div class="news-mini-meta">—</div></div>';
   }}
 
   const deepDiveEl = document.getElementById('news-deep-dive-grid');
   if (deepDiveEl) {{
-    deepDiveEl.innerHTML = topArticles.slice(0, 4).map((item, idx) => `
+    deepDiveEl.innerHTML = deepDiveRows.map((item, idx) => `
       <div class="news-deep-card">
         <div class="news-deep-art" style="background:
           linear-gradient(180deg, rgba(4,7,12,0.12), rgba(4,7,12,0.65)),
           radial-gradient(circle at ${{70 - idx * 8}}% 22%, rgba(93,184,255,0.16), transparent 22%),
           linear-gradient(135deg, rgba(38,56,72,0.96), rgba(10,15,21,0.96) 58%, rgba(86,58,31,0.78));"></div>
         <div class="news-deep-body">
-          <strong>${{newsEsc(item.title)}}</strong>
+          <strong>${{newsEsc(item.title || '(No title)')}}</strong>
           <span>${{newsEsc(item.summary || 'Open the source for the full story.')}}</span>
-          <span style="display:block;margin-top:8px;">${{newsEsc(item.source || 'Wire')}} · ${{newsEsc(newsKeywordBucket(`${{item.title}} ${{item.summary}}`))}}</span>
+          <span style="display:block;margin-top:8px;">${{newsEsc(item.source || 'Wire')}} · ${{newsEsc(item.category || 'Live feed')}}</span>
         </div>
       </div>
     `).join('') || '<div class="news-deep-card"><div class="news-deep-body"><strong>No deep-dive stories loaded.</strong><span>Refresh in a moment.</span></div></div>';
@@ -34695,20 +34806,12 @@ function renderNewsView(data, weather) {{
 
   const actionsEl = document.getElementById('news-actions-grid');
   if (actionsEl) {{
-    const actions = [
-      ['Customize Feed', 'Refocus on your real priorities.', `showToast('News feed customization coming next.', 'info')`],
-      ['Set Alerts', 'Pin a watchlist theme or escalation.', `showToast('Alert controls are the next wiring step.', 'info')`],
-      ['Save Article', 'Hold a story for later review.', `showToast('Saved to reading queue.', 'success')`],
-      ['Share Brief', 'Send the distilled brief onward.', `showToast('Brief sharing flow staged.', 'info')`],
-      ['Mark As Read', 'Clear low-value noise quickly.', `showToast('Noise suppressed for this session.', 'success')`],
-      ['Open Weather', 'Jump into local forecast context.', `openWeatherModal()`],
-    ];
-    actionsEl.innerHTML = actions.map(([title, copy, action]) => `
-      <button class="news-action-btn" onclick="${{action}}">
-        <strong>${{newsEsc(title)}}</strong>
-        <span>${{newsEsc(copy)}}</span>
+    actionsEl.innerHTML = quickActions.map((item) => `
+      <button class="news-action-btn" type="button" onclick="newsHandleAction('${{newsEsc(item.id || '')}}')">
+        <strong>${{newsEsc(item.title || 'News Action')}}</strong>
+        <span>${{newsEsc(item.detail || 'No detail available.')}}</span>
       </button>
-    `).join('');
+    `).join('') || '<button class="news-action-btn" type="button" onclick="refreshNewsDesktop(true)"><strong>Refresh News</strong><span>Reload the live feed.</span></button>';
   }}
 }}
 

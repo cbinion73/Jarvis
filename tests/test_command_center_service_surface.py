@@ -273,6 +273,21 @@ class _StubRuntime:
             "status": "staged",
         }
 
+    def storm_weather_snapshot(self, force: bool = False) -> dict:
+        return {
+            "summary": "Partly cloudy with a low chance of rain.",
+            "current": {
+                "temperature_f": 74,
+                "condition": "Partly cloudy",
+                "high_f": 79,
+                "low_f": 63,
+                "humidity": 42,
+                "wind": "6 mph NW",
+            },
+            "alerts": [],
+            "forced": force,
+        }
+
     def execute_sandbox_job(self, *, actor_name: str, job_id: str, triggered_by: str) -> dict:
         return {"ok": True, "accepted": True, "job": {"job_id": job_id, "status": "sandbox-queued"}}
 
@@ -2558,6 +2573,75 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(action_payload["mode"], "review-draft")
         self.assertEqual(action_payload["message"], "Email draft staged for review.")
         self.assertIn("Mailbox-native reply staging", action_payload["boundary_note"])
+
+    def test_news_routes_expose_module_and_safe_action_boundary(self) -> None:
+        world_rows = [
+            {
+                "source": "BBC",
+                "title": "AI policy talks intensify across Europe",
+                "summary": "Governments are weighing new technology and safety rules this week.",
+                "link": "https://example.com/world-1",
+            },
+            {
+                "source": "AP",
+                "title": "Storm watch remains active for the region",
+                "summary": "Local leaders are tracking weather risk and school timing.",
+                "link": "https://example.com/world-2",
+            },
+        ]
+        finance_rows = [
+            {
+                "source": "BLOOMBERG",
+                "title": "Markets steady as inflation cools",
+                "summary": "Investors are watching rates, trade, and earnings guidance.",
+                "link": "https://example.com/finance-1",
+            }
+        ]
+
+        with (
+            patch("jarvis.rss_briefing.fetch_world_news", return_value=world_rows),
+            patch("jarvis.rss_briefing.fetch_finance_news", return_value=finance_rows),
+        ):
+            module_payload = self._json_body(asyncio.run(self._route("/api/news/module", "GET")()))
+            action_payload = self._json_body(
+                asyncio.run(
+                    self._route("/api/news/module/action", "POST")(
+                        payload={
+                            "action": "save-article",
+                            "title": "Save Top Story",
+                            "article_title": "AI policy talks intensify across Europe",
+                            "detail": "Record this story for later review.",
+                        }
+                    )
+                )
+            )
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("balance", module_payload)
+        self.assertIn("sentiment", module_payload)
+        self.assertIn("featured_article", module_payload)
+        self.assertIn("top_story_list", module_payload)
+        self.assertIn("briefing_cards", module_payload)
+        self.assertIn("watchlist_rows", module_payload)
+        self.assertIn("category_rows", module_payload)
+        self.assertIn("insight_rows", module_payload)
+        self.assertIn("source_rows", module_payload)
+        self.assertIn("weather_rows", module_payload)
+        self.assertIn("deep_dive_rows", module_payload)
+        self.assertIn("quick_actions", module_payload)
+        self.assertIn("trusted_actions", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_route"], "/news-center")
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/news/module")
+        self.assertEqual(module_payload["proof_paths"]["news_api"], "/api/news")
+        self.assertEqual(module_payload["proof_paths"]["weather_api"], "/api/storm-weather")
+        self.assertEqual(module_payload["proof_paths"]["action_api"], "/api/news/module/action")
+        self.assertEqual(module_payload["counts"]["top_stories"], 3)
+        self.assertEqual(module_payload["featured_article"]["title"], "AI policy talks intensify across Europe")
+        self.assertTrue(action_payload["ok"])
+        self.assertEqual(action_payload["action"], "save-article")
+        self.assertEqual(action_payload["message"], "Article saved to shared continuity.")
 
     def test_calendar_routes_expose_module_and_safe_action_boundary(self) -> None:
         module_payload = self._json_body(asyncio.run(self._route("/api/calendar/module", "GET")()))

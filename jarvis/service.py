@@ -1049,6 +1049,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             html = html.replace("</body>", injection, 1)
         return HTMLResponse(html)
 
+    @app.get("/news-center", response_class=HTMLResponse)
+    async def news_center() -> HTMLResponse:
+        html = _render_glass_shell(runtime)
+        injection = (
+            "<script>(function(){"
+            "function openNews(){ try { switchView('news'); } catch (_) { setTimeout(openNews, 60); } }"
+            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openNews, 0); }"
+            "else { window.addEventListener('load', openNews); }"
+            "})();</script></body>"
+        )
+        if "</body>" in html:
+            html = html.replace("</body>", injection, 1)
+        return HTMLResponse(html)
+
     @app.get("/chronicle-center", response_class=HTMLResponse)
     async def chronicle_center() -> HTMLResponse:
         return HTMLResponse(render_chronicle_module_page(await _build_chronicle_module_payload()))
@@ -3905,6 +3919,406 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                     "error": str(exc),
                 }
             )
+
+    def _news_keyword_bucket(text: str) -> str:
+        lowered = str(text or "").lower()
+        if re.search(r"\b(ai|chip|technology|policy|regulation|software|cyber|data)\b", lowered):
+            return "Technology"
+        if re.search(r"\b(market|fed|stocks|rates|econom|tariff|inflation|trade|earnings)\b", lowered):
+            return "Economy"
+        if re.search(r"\b(war|attack|defense|conflict|security|crisis|election|government|diplom)\b", lowered):
+            return "World"
+        if re.search(r"\b(health|medical|research|disease|hospital|wellness)\b", lowered):
+            return "Health"
+        if re.search(r"\b(climate|storm|weather|energy|oil|gas|power)\b", lowered):
+            return "Environment"
+        if re.search(r"\b(media|creator|publish|audience|storytelling|content)\b", lowered):
+            return "Publishing"
+        return "General"
+
+    def _news_source_quality(source: str) -> int:
+        source_map = {
+            "BBC": 91,
+            "NYT": 90,
+            "ALJAZEERA": 86,
+            "AP": 92,
+            "CNBC": 84,
+            "MARKETWATCH": 82,
+            "BLOOMBERG": 91,
+            "JARVIS": 75,
+        }
+        return int(source_map.get(str(source or "").strip().upper(), 78))
+
+    def _news_sentiment_score(articles: list[dict[str, Any]]) -> float:
+        if not articles:
+            return 0.0
+        positive_re = re.compile(r"\b(gain|growth|breakthrough|recovery|win|opportunity|upside|progress)\b", re.IGNORECASE)
+        negative_re = re.compile(r"\b(war|risk|slump|drop|decline|attack|crisis|strike|loss)\b", re.IGNORECASE)
+        score = 0
+        for item in articles:
+            text = f"{item.get('title', '')} {item.get('summary', '')}"
+            if positive_re.search(text):
+                score += 1
+            if negative_re.search(text):
+                score -= 1
+        return round(score / max(1, len(articles)), 2)
+
+    async def _build_news_module_payload(actor_name: str = "Chris", force: bool = False) -> dict[str, Any]:
+        from datetime import datetime, timezone
+        from .rss_briefing import fetch_finance_news, fetch_world_news
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        availability_notes: list[str] = []
+        errors: list[str] = []
+
+        try:
+            world, finance = await asyncio.gather(
+                asyncio.to_thread(fetch_world_news, 12),
+                asyncio.to_thread(fetch_finance_news, 12),
+            )
+        except Exception as exc:
+            world, finance = [], []
+            errors.append(f"Live news feeds could not be hydrated: {exc}")
+
+        world_rows = [dict(item or {}) for item in list(world or [])]
+        finance_rows = [dict(item or {}) for item in list(finance or [])]
+        articles: list[dict[str, Any]] = []
+        for item in world_rows:
+            row = dict(item)
+            row["_cat"] = "world"
+            articles.append(row)
+        for item in finance_rows:
+            row = dict(item)
+            row["_cat"] = "finance"
+            articles.append(row)
+
+        sources_hit = sorted(
+            {
+                str(item.get("source", "")).strip()
+                for item in articles
+                if str(item.get("source", "")).strip()
+            }
+        )
+
+        storm_weather = {}
+        storm_lookup = getattr(runtime, "storm_weather_snapshot", None)
+        if callable(storm_lookup):
+            try:
+                storm_weather = storm_lookup(force=force)
+            except Exception as exc:
+                errors.append(f"Weather context could not be hydrated: {exc}")
+        else:
+            availability_notes.append("Storm weather context is not exposed in this runtime.")
+
+        weather_current = storm_weather.get("current") if isinstance(storm_weather, dict) and isinstance(storm_weather.get("current"), dict) else {}
+        weather_alerts = storm_weather.get("alerts") if isinstance(storm_weather, dict) and isinstance(storm_weather.get("alerts"), list) else []
+        weather_summary = {
+            "temp": f"{weather_current.get('temperature_f')}°F" if weather_current and weather_current.get("temperature_f") is not None else "—",
+            "condition": str(weather_current.get("condition") or storm_weather.get("summary") or "Local conditions unavailable").strip(),
+            "high": f"{weather_current.get('high_f')}°" if weather_current and weather_current.get("high_f") is not None else "—",
+            "low": f"{weather_current.get('low_f')}°" if weather_current and weather_current.get("low_f") is not None else "—",
+            "humidity": f"{weather_current.get('humidity')}%" if weather_current and weather_current.get("humidity") is not None else "—",
+            "wind": str(weather_current.get("wind") or "—").strip(),
+            "alert": weather_alerts[0] if isinstance(weather_alerts, list) and weather_alerts else None,
+        }
+
+        featured = articles[0] if articles else {
+            "source": "JARVIS",
+            "title": "No live headlines are available right now.",
+            "summary": errors[0] if errors else "The live news feeds did not return any items.",
+            "link": "",
+            "_cat": "world",
+        }
+
+        top_articles = articles[:12]
+        tone_score = _news_sentiment_score(top_articles)
+        positive = sum(
+            1 for item in top_articles
+            if re.search(r"\b(gain|growth|breakthrough|recovery|win|opportunity|upside|progress)\b", f"{item.get('title', '')} {item.get('summary', '')}", re.IGNORECASE)
+        )
+        negative = sum(
+            1 for item in top_articles
+            if re.search(r"\b(war|risk|slump|drop|decline|attack|crisis|strike|loss)\b", f"{item.get('title', '')} {item.get('summary', '')}", re.IGNORECASE)
+        )
+        total_top = max(1, len(top_articles))
+        positive_pct = round((positive / total_top) * 100)
+        negative_pct = round((negative / total_top) * 100)
+        neutral_pct = max(0, 100 - positive_pct - negative_pct)
+        tone_label = "Slightly Negative" if tone_score < -0.10 else "Constructive" if tone_score > 0.12 else "Mixed"
+
+        category_counter: dict[str, int] = {}
+        for item in top_articles:
+            bucket = _news_keyword_bucket(f"{item.get('title', '')} {item.get('summary', '')}")
+            category_counter[bucket] = category_counter.get(bucket, 0) + 1
+        category_rows = [
+            {"title": name, "value": count, "detail": f"{count} live stor{'y' if count == 1 else 'ies'} in the current feed."}
+            for name, count in sorted(category_counter.items(), key=lambda item: (-item[1], item[0]))
+        ]
+
+        source_counter: dict[str, int] = {}
+        for item in top_articles:
+            source = str(item.get("source") or "Unknown").strip() or "Unknown"
+            source_counter[source] = source_counter.get(source, 0) + 1
+        source_rows = [
+            {
+                "source": source,
+                "score": _news_source_quality(source),
+                "count": count,
+                "detail": f"{count} live stor{'y' if count == 1 else 'ies'} from {source}.",
+            }
+            for source, count in sorted(source_counter.items(), key=lambda item: (-_news_source_quality(item[0]), -item[1], item[0]))
+        ]
+
+        quality_score = round(
+            sum(_news_source_quality(source) * count for source, count in source_counter.items()) / max(1, sum(source_counter.values()))
+        ) if source_counter else 0
+
+        watch_themes = sorted(category_counter.items(), key=lambda item: (-item[1], item[0]))[:5]
+        watchlist_rows = [
+            {
+                "title": theme,
+                "count": count,
+                "tone": "high" if idx < 2 else "medium" if count > 1 else "low",
+                "detail": "Derived from the current live feed because a persisted News watchlist backend is not exposed yet.",
+            }
+            for idx, (theme, count) in enumerate(watch_themes)
+        ]
+        if not watchlist_rows:
+            watchlist_rows = [
+                {
+                    "title": "No active live themes",
+                    "count": 0,
+                    "tone": "low",
+                    "detail": "Persisted News watchlist storage is not exposed yet in this runtime.",
+                }
+            ]
+
+        insights = []
+        if featured.get("summary"):
+            insights.append({
+                "title": "Top Story",
+                "detail": str(featured.get("summary") or "").strip()[:220] or "Open the top story for full context.",
+            })
+        economy_story = next(
+            (item for item in top_articles if _news_keyword_bucket(f"{item.get('title', '')} {item.get('summary', '')}") == "Economy"),
+            None,
+        )
+        if economy_story:
+            insights.append({
+                "title": "Your Business",
+                "detail": str(economy_story.get("title") or economy_story.get("summary") or "Economic pressure is rising in the current feed.").strip(),
+            })
+        if weather_summary["alert"]:
+            insights.append({
+                "title": "Your Calendar",
+                "detail": "Weather posture is active, so route and schedule confidence deserve an extra check today.",
+            })
+        elif weather_summary["condition"]:
+            insights.append({
+                "title": "Local Conditions",
+                "detail": weather_summary["condition"],
+            })
+        if not insights:
+            insights.append({
+                "title": "No personalized insight yet",
+                "detail": "Live news loaded, but there is not enough signal to build a stronger personalized brief.",
+            })
+
+        briefing_cards = [
+            {"title": "What Happened", "copy": str(featured.get("title") or "No top story loaded yet.").strip() or "No top story loaded yet."},
+            {"title": "Why It Matters", "copy": str(featured.get("summary") or "The main item will be summarized here once the feed loads.").strip() or "The main item will be summarized here once the feed loads."},
+            {"title": "What To Watch", "copy": f"{watch_themes[0][0]} pressure is currently strongest in the live feed." if watch_themes else "Watch the next world and market refresh."},
+            {"title": "What You Can Do", "copy": "Check schedule and travel plans against the active weather watch." if weather_summary["alert"] else "Stay on the top themes only and avoid noisy feed hopping."},
+        ]
+
+        weather_rows = [
+            {"title": "Now", "detail": f"{weather_summary['temp']} · {weather_summary['condition']}"},
+            {"title": "High / Low", "detail": f"{weather_summary['high']} · {weather_summary['low']}"},
+            {"title": "Humidity / Wind", "detail": f"{weather_summary['humidity']} · {weather_summary['wind']}"},
+            {"title": "Weather Watch", "detail": str((weather_summary["alert"] or {}).get("headline") or "No severe watch active").strip() or "No severe watch active"},
+        ]
+
+        deep_dive_rows = [
+            {
+                "title": str(item.get("title") or "(No title)").strip() or "(No title)",
+                "summary": str(item.get("summary") or "Open the source for the full story.").strip() or "Open the source for the full story.",
+                "source": str(item.get("source") or "Wire").strip() or "Wire",
+                "category": _news_keyword_bucket(f"{item.get('title', '')} {item.get('summary', '')}"),
+                "link": str(item.get("link") or "").strip(),
+            }
+            for item in top_articles[:4]
+        ]
+
+        recent_activity = _module_recent_activity(route="/news-center", domain="news", limit=8)
+        if not recent_activity:
+            recent_activity = _module_recent_activity(route="/command-center", domain="news", limit=6)
+
+        quick_actions = [
+            {
+                "id": "refresh-news",
+                "title": "Refresh Feed",
+                "detail": "Reload the live RSS news and local weather context.",
+                "available": True,
+            },
+            {
+                "id": "open-briefing",
+                "title": "Read Full Briefing",
+                "detail": "Open the full daily briefing with live news context.",
+                "route": "/briefing-center",
+                "available": True,
+            },
+            {
+                "id": "save-top-story",
+                "title": "Save Top Story",
+                "detail": "Record the top story for later review in shared continuity.",
+                "available": bool(str(featured.get("title") or "").strip()),
+                "article_title": str(featured.get("title") or "").strip(),
+                "article_link": str(featured.get("link") or "").strip(),
+            },
+            {
+                "id": "share-brief",
+                "title": "Share Brief",
+                "detail": "Stage a handoff into Email or Command without pretending the brief was already sent.",
+                "route": "/email-center",
+                "available": True,
+            },
+            {
+                "id": "set-alert",
+                "title": "Set Alert",
+                "detail": "Persist a watch preference once a real News alert backend exists; for now it records continuity honestly.",
+                "available": True,
+            },
+            {
+                "id": "open-weather",
+                "title": "Open Weather",
+                "detail": "Jump into the live local weather surface.",
+                "available": True,
+            },
+        ]
+
+        trusted_actions = [
+            {
+                "id": "refresh-news",
+                "title": "Refresh News",
+                "action_type": "refresh",
+                "note": "Refreshes live RSS headlines and local weather context.",
+                "available": True,
+            },
+            {
+                "id": "save-top-story",
+                "title": "Save Top Story",
+                "action_type": "save-article",
+                "note": "Records the current top story into shared operator continuity for follow-up.",
+                "available": bool(str(featured.get("title") or "").strip()),
+                "unavailable_reason": "No top story is currently loaded." if not str(featured.get("title") or "").strip() else "",
+                "article_title": str(featured.get("title") or "").strip(),
+                "article_link": str(featured.get("link") or "").strip(),
+            },
+            {
+                "id": "mark-top-reviewed",
+                "title": "Mark Top Story Reviewed",
+                "action_type": "mark-reviewed",
+                "note": "Acknowledges the top story in shared continuity without pretending there is a durable News read-state backend.",
+                "available": bool(str(featured.get("title") or "").strip()),
+                "unavailable_reason": "No top story is currently loaded." if not str(featured.get("title") or "").strip() else "",
+                "article_title": str(featured.get("title") or "").strip(),
+            },
+        ]
+
+        if not watch_themes:
+            availability_notes.append("Persisted News watchlist storage is not exposed yet, so watch themes are derived from the current live feed.")
+        if not articles:
+            availability_notes.append("Live RSS sources returned no articles in this runtime, so News is showing an honest empty state.")
+        if not weather_summary["alert"] and weather_summary["condition"] == "Local conditions unavailable":
+            availability_notes.append("Local weather context is partial or unavailable in this runtime.")
+        if errors and not availability_notes:
+            availability_notes.extend(errors[:4])
+
+        top_story_list = [
+            {
+                "title": str(item.get("title") or "(No title)").strip() or "(No title)",
+                "source": str(item.get("source") or "Wire").strip() or "Wire",
+                "category": _news_keyword_bucket(f"{item.get('title', '')} {item.get('summary', '')}"),
+                "link": str(item.get("link") or "").strip(),
+            }
+            for item in top_articles[1:6]
+        ]
+
+        balance_label = "Well Balanced" if len(source_counter) >= 4 else "Needs More Balance"
+        balance_note = "On target" if len(source_counter) >= 4 else "Expand sources"
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": f"News loaded {len(top_articles)} live story slot(s), {len(source_rows)} source row(s), {len(watchlist_rows)} active theme row(s), and {len(recent_activity)} continuity event(s).",
+            "what_became_real": "News now hydrates from live RSS world and finance feeds, local weather context, and shared operator continuity instead of browser-generated news math and dead action toasts.",
+            "remains_partial": "Persisted watchlists, article save state, alerts, and richer per-source preference controls still need dedicated backend contracts.",
+            "runtime_note": "News is live and connected.",
+            "availability_notes": availability_notes[:10],
+            "counts": {
+                "top_stories": len(top_articles),
+                "breaking": sum(1 for item in top_articles if re.search(r"\b(breaking|urgent|alert|attack|strike|war|crisis)\b", f"{item.get('title', '')} {item.get('summary', '')}", re.IGNORECASE)),
+                "watching": len(watchlist_rows),
+                "sentiment_score": tone_score,
+                "quality_score": quality_score,
+                "source_count": len(source_rows),
+                "recent_activity": len(recent_activity),
+            },
+            "balance": {
+                "label": balance_label,
+                "note": balance_note,
+            },
+            "sentiment": {
+                "score": tone_score,
+                "label": tone_label,
+                "positive_pct": positive_pct,
+                "neutral_pct": neutral_pct,
+                "negative_pct": negative_pct,
+            },
+            "featured_article": featured,
+            "top_story_list": top_story_list,
+            "briefing_cards": briefing_cards,
+            "watchlist_rows": watchlist_rows,
+            "category_rows": category_rows[:8],
+            "insight_rows": insights[:6],
+            "source_rows": source_rows[:6],
+            "weather_rows": weather_rows,
+            "deep_dive_rows": deep_dive_rows,
+            "quick_actions": quick_actions,
+            "trusted_actions": trusted_actions,
+            "recent_activity": recent_activity,
+            "news_payload": {
+                "world": world_rows,
+                "finance": finance_rows,
+                "sources_hit": sources_hit,
+                "fetched_at": generated_at,
+                "live": bool(articles),
+                "forced": bool(force),
+            },
+            "weather_payload": storm_weather,
+            "proof_paths": {
+                "module_route": "/news-center",
+                "module_api": "/api/news/module",
+                "news_api": "/api/news",
+                "weather_api": "/api/storm-weather",
+                "briefing_route": "/briefing-center",
+                "email_route": "/email-center",
+                "activity_api": "/api/activity/operator-action",
+                "action_api": "/api/news/module/action",
+            },
+            "errors": errors,
+        }
+
+        if not articles and errors:
+            payload["available"] = False
+            payload["status"] = "Wired"
+            payload["runtime_note"] = "News is wired, but live RSS sources did not hydrate enough signal in this runtime."
+        elif not articles:
+            payload["runtime_note"] = "News is live, but the RSS sources returned no current headlines in this runtime."
+        elif errors:
+            payload["runtime_note"] = "News is live, but some source or weather context is partially unavailable."
+        return payload
 
     async def _build_daily_brief_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
         from datetime import datetime, timezone
@@ -10477,6 +10891,64 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }, status_code=201)
 
         raise HTTPException(status_code=400, detail=f"Unsupported email module action: {action}")
+
+    @app.get("/api/news/module")
+    async def api_news_module(actor: str = "Chris", force: bool = False) -> JSONResponse:
+        return _json(await _build_news_module_payload(actor, force=force))
+
+    @app.post("/api/news/module/action")
+    async def api_news_module_action(payload: dict[str, Any]) -> JSONResponse:
+        action = str(payload.get("action") or "").strip().lower()
+        if not action:
+            raise HTTPException(status_code=400, detail="Action is required.")
+
+        if action == "refresh":
+            module_payload = await _build_news_module_payload(str(payload.get("actor") or "Chris").strip() or "Chris", force=True)
+            return _json({
+                "ok": True,
+                "action": action,
+                "message": "News refreshed.",
+                "module": module_payload,
+            })
+
+        audit = AuditLog(DEFAULT_AUDIT_ROOT)
+        action_title = str(payload.get("title") or payload.get("action_label") or action or "News action").strip() or "News action"
+        detail = str(payload.get("detail") or "").strip()
+        related_label = str(payload.get("article_title") or payload.get("related_label") or action_title).strip() or action_title
+        route = str(payload.get("route") or "/news-center").strip() or "/news-center"
+        route_label = str(payload.get("route_label") or "Open News").strip() or "Open News"
+        result_summary = str(payload.get("result_summary") or "News action recorded.").strip() or "News action recorded."
+        why_now = str(payload.get("why_now") or detail or "News recorded an operator action for later continuity.").strip()
+
+        if action in {"save-article", "mark-reviewed", "set-alert", "share-brief"}:
+            message_map = {
+                "save-article": "Article saved to shared continuity.",
+                "mark-reviewed": "Story marked reviewed in shared continuity.",
+                "set-alert": "News alert intent recorded for follow-up.",
+                "share-brief": "Brief handoff recorded for follow-up.",
+            }
+            message = message_map[action]
+            audit.log_event(
+                "operator-action",
+                {
+                    "actor": str(payload.get("actor") or "Chris").strip() or "Chris",
+                    "domain": "news",
+                    "action": action_title,
+                    "title": action_title,
+                    "detail": detail or message,
+                    "why_now": why_now,
+                    "result_summary": result_summary or message,
+                    "related_route": route,
+                    "route_label": route_label,
+                    "related_kind": str(payload.get("related_kind") or "news").strip() or "news",
+                    "related_label": related_label,
+                    "succeeded": True,
+                    "source_kind": "operator-action",
+                },
+            )
+            return _json({"ok": True, "action": action, "message": message})
+
+        raise HTTPException(status_code=400, detail=f"Unsupported news module action: {action}")
 
     async def _build_home_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
         from datetime import datetime, timezone
