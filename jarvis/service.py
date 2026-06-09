@@ -8874,6 +8874,71 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_stewardship_lanes() -> JSONResponse:
         return _json({"lanes": runtime.list_stewardship_lanes()})
 
+    # ------------------------------------------------------------------
+    # GET /api/stewardship/daily  — today's day card + season
+    # POST /api/stewardship/daily/morning — trigger morning check-in
+    # POST /api/stewardship/daily/complete — record evening review
+    # ------------------------------------------------------------------
+
+    def _current_season() -> str:
+        """Derive season from current calendar month (Northern Hemisphere)."""
+        month = __import__("datetime").datetime.now().month
+        if month in (12, 1, 2):
+            return "winter"
+        if month in (3, 4, 5):
+            return "spring"
+        if month in (6, 7, 8):
+            return "summer"
+        return "autumn"
+
+    @app.get("/api/stewardship/daily")
+    async def api_stewardship_daily() -> JSONResponse:
+        try:
+            from .daily_stewardship import get_cached_day_card
+        except ImportError:
+            from daily_stewardship import get_cached_day_card  # type: ignore
+        card = get_cached_day_card()
+        season = _current_season()
+        if card is None:
+            return _json({
+                "status": "unavailable",
+                "reason": "No day card for today yet — trigger /api/stewardship/daily/morning to generate one.",
+                "season": season,
+            })
+        return _json({**card, "season": season, "status": "ok"})
+
+    @app.post("/api/stewardship/daily/morning")
+    async def api_stewardship_morning(payload: dict[str, Any] = {}) -> JSONResponse:
+        try:
+            from .daily_stewardship import run_morning_checkin
+        except ImportError:
+            from daily_stewardship import run_morning_checkin  # type: ignore
+        context = str(payload.get("context") or "")
+        try:
+            card = await run_morning_checkin(context=context)
+            season = _current_season()
+            return _json({**card, "season": season, "status": "ok"})
+        except Exception as exc:
+            import logging as _lg; _lg.getLogger("jarvis.service").warning("stewardship/daily/morning failed: %s", exc)
+            raise HTTPException(status_code=500, detail=f"Morning check-in failed: {exc}") from exc
+
+    @app.post("/api/stewardship/daily/complete")
+    async def api_stewardship_complete(payload: dict[str, Any] = {}) -> JSONResponse:
+        try:
+            from .daily_stewardship import run_evening_review
+        except ImportError:
+            from daily_stewardship import run_evening_review  # type: ignore
+        wins = str(payload.get("wins") or "")
+        struggles = str(payload.get("struggles") or "")
+        energy_raw = payload.get("energy")
+        energy = int(energy_raw) if energy_raw is not None else None
+        try:
+            review = await run_evening_review(wins=wins, struggles=struggles, energy=energy)
+            return _json({**review, "status": "ok"})
+        except Exception as exc:
+            import logging as _lg; _lg.getLogger("jarvis.service").warning("stewardship/daily/complete failed: %s", exc)
+            raise HTTPException(status_code=500, detail=f"Evening review failed: {exc}") from exc
+
     @app.get("/api/agent-supervision/contracts")
     async def api_agent_supervision_contracts() -> JSONResponse:
         return _json({"contracts": runtime.list_agent_supervision_contracts()})
