@@ -26649,7 +26649,8 @@ async function init() {{
 
   await loadCfIdentity();
   try {{
-    switchView('overview');
+    const startupView = String(window.__JARVIS_START_VIEW || 'overview');
+    switchView(startupView);
   }} catch(e) {{ _showDbg('switchView', e); }}
   try {{
     renderAgents('all');

@@ -2643,6 +2643,32 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(action_payload["action"], "save-article")
         self.assertEqual(action_payload["message"], "Article saved to shared continuity.")
 
+    def test_shell_backed_experiences_expose_direct_entry_routes(self) -> None:
+        routes = {
+            "/home-center": "window.__JARVIS_START_VIEW = 'home'",
+            "/calendar-center": "window.__JARVIS_START_VIEW = 'calendar'",
+            "/email-center": "window.__JARVIS_START_VIEW = 'email'",
+            "/news-center": "window.__JARVIS_START_VIEW = 'news'",
+            "/social-center": "window.__JARVIS_START_VIEW = 'social'",
+            "/legacy-center": "window.__JARVIS_START_VIEW = 'chronicle'",
+            "/faith-center": "window.__JARVIS_START_VIEW = 'faith'",
+            "/agents-center": "window.__JARVIS_START_VIEW = 'agents'",
+            "/intel-center": "window.__JARVIS_START_VIEW = 'intelligence'",
+            "/forge-center": "window.__JARVIS_START_VIEW = 'forge'",
+            "/catalyst-center": "window.__JARVIS_START_VIEW = 'catalyst'",
+            "/foundry-center": "window.__JARVIS_START_VIEW = 'foundry'",
+            "/workshop-center": "window.__JARVIS_START_VIEW = 'workshop'",
+            "/vision-center": "window.__JARVIS_START_VIEW = 'vision'",
+            "/journey-center": "window.__JARVIS_START_VIEW = 'journey'",
+            "/needs-you-center": "window.__JARVIS_START_VIEW = 'notifications'",
+        }
+
+        for path, marker in routes.items():
+            response = asyncio.run(self._route(path, "GET")())
+            html = self._text_body(response)
+            self.assertIn(marker, html, msg=path)
+            self.assertIn("JARVIS", html, msg=path)
+
     def test_social_routes_expose_module_and_safe_action_boundary(self) -> None:
         module_payload = self._json_body(asyncio.run(self._route("/api/social/module", "GET")()))
 

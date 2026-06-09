@@ -1007,75 +1007,80 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def health_center() -> HTMLResponse:
         return HTMLResponse(render_health_module_page(await _build_health_module_payload()))
 
-    @app.get("/home-center", response_class=HTMLResponse)
-    async def home_center() -> HTMLResponse:
+    def _render_glass_view_route(view_name: str) -> HTMLResponse:
         html = _render_glass_shell(runtime)
         injection = (
             "<script>(function(){"
-            "function openHome(){ try { switchView('home'); } catch (_) { setTimeout(openHome, 60); } }"
-            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openHome, 0); }"
-            "else { window.addEventListener('load', openHome); }"
+            f"window.__JARVIS_START_VIEW = '{view_name}';"
             "})();</script></body>"
         )
         if "</body>" in html:
             html = html.replace("</body>", injection, 1)
         return HTMLResponse(html)
+
+    @app.get("/home-center", response_class=HTMLResponse)
+    async def home_center() -> HTMLResponse:
+        return _render_glass_view_route("home")
 
     @app.get("/calendar-center", response_class=HTMLResponse)
     async def calendar_center() -> HTMLResponse:
-        html = _render_glass_shell(runtime)
-        injection = (
-            "<script>(function(){"
-            "function openCalendar(){ try { switchView('calendar'); } catch (_) { setTimeout(openCalendar, 60); } }"
-            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openCalendar, 0); }"
-            "else { window.addEventListener('load', openCalendar); }"
-            "})();</script></body>"
-        )
-        if "</body>" in html:
-            html = html.replace("</body>", injection, 1)
-        return HTMLResponse(html)
+        return _render_glass_view_route("calendar")
 
     @app.get("/email-center", response_class=HTMLResponse)
     async def email_center() -> HTMLResponse:
-        html = _render_glass_shell(runtime)
-        injection = (
-            "<script>(function(){"
-            "function openEmail(){ try { switchView('email'); } catch (_) { setTimeout(openEmail, 60); } }"
-            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openEmail, 0); }"
-            "else { window.addEventListener('load', openEmail); }"
-            "})();</script></body>"
-        )
-        if "</body>" in html:
-            html = html.replace("</body>", injection, 1)
-        return HTMLResponse(html)
+        return _render_glass_view_route("email")
 
     @app.get("/news-center", response_class=HTMLResponse)
     async def news_center() -> HTMLResponse:
-        html = _render_glass_shell(runtime)
-        injection = (
-            "<script>(function(){"
-            "function openNews(){ try { switchView('news'); } catch (_) { setTimeout(openNews, 60); } }"
-            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openNews, 0); }"
-            "else { window.addEventListener('load', openNews); }"
-            "})();</script></body>"
-        )
-        if "</body>" in html:
-            html = html.replace("</body>", injection, 1)
-        return HTMLResponse(html)
+        return _render_glass_view_route("news")
 
     @app.get("/social-center", response_class=HTMLResponse)
     async def social_center() -> HTMLResponse:
-        html = _render_glass_shell(runtime)
-        injection = (
-            "<script>(function(){"
-            "function openSocial(){ try { switchView('social'); } catch (_) { setTimeout(openSocial, 60); } }"
-            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openSocial, 0); }"
-            "else { window.addEventListener('load', openSocial); }"
-            "})();</script></body>"
-        )
-        if "</body>" in html:
-            html = html.replace("</body>", injection, 1)
-        return HTMLResponse(html)
+        return _render_glass_view_route("social")
+
+    @app.get("/legacy-center", response_class=HTMLResponse)
+    async def legacy_center() -> HTMLResponse:
+        return _render_glass_view_route("chronicle")
+
+    @app.get("/faith-center", response_class=HTMLResponse)
+    async def faith_center() -> HTMLResponse:
+        return _render_glass_view_route("faith")
+
+    @app.get("/agents-center", response_class=HTMLResponse)
+    async def agents_center() -> HTMLResponse:
+        return _render_glass_view_route("agents")
+
+    @app.get("/intel-center", response_class=HTMLResponse)
+    async def intel_center() -> HTMLResponse:
+        return _render_glass_view_route("intelligence")
+
+    @app.get("/forge-center", response_class=HTMLResponse)
+    async def forge_center() -> HTMLResponse:
+        return _render_glass_view_route("forge")
+
+    @app.get("/catalyst-center", response_class=HTMLResponse)
+    async def catalyst_center() -> HTMLResponse:
+        return _render_glass_view_route("catalyst")
+
+    @app.get("/foundry-center", response_class=HTMLResponse)
+    async def foundry_center() -> HTMLResponse:
+        return _render_glass_view_route("foundry")
+
+    @app.get("/workshop-center", response_class=HTMLResponse)
+    async def workshop_center() -> HTMLResponse:
+        return _render_glass_view_route("workshop")
+
+    @app.get("/vision-center", response_class=HTMLResponse)
+    async def vision_center() -> HTMLResponse:
+        return _render_glass_view_route("vision")
+
+    @app.get("/journey-center", response_class=HTMLResponse)
+    async def journey_center() -> HTMLResponse:
+        return _render_glass_view_route("journey")
+
+    @app.get("/needs-you-center", response_class=HTMLResponse)
+    async def needs_you_center() -> HTMLResponse:
+        return _render_glass_view_route("notifications")
 
     @app.get("/chronicle-center", response_class=HTMLResponse)
     async def chronicle_center() -> HTMLResponse:
