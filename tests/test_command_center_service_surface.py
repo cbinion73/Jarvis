@@ -2399,12 +2399,68 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
             return SimpleNamespace(returncode=1, stdout="", stderr="unhandled")
 
         with patch("jarvis.faith_agents.daily_word", _missing_daily_word), patch(
-            "jarvis.service.subprocess.run", _fake_subprocess_run
-        ):
+            "jarvis.service._get_chronicle_bridge", return_value=None
+        ), patch("jarvis.service.subprocess.run", _fake_subprocess_run):
             module_payload = self._json_body(asyncio.run(self._route("/api/faith/module", "GET")()))
 
         self.assertTrue(module_payload["ok"])
-        self.assertEqual(module_payload["chronicle_context"]["study"]["passage"], "James 1:5")
+        self.assertTrue(module_payload["daily_word"]["available"])
+        self.assertEqual(module_payload["daily_word"]["passage"], "James 1:5")
+        self.assertIn("Ask God for wisdom", module_payload["daily_word"]["word"])
+
+    def test_faith_module_prefers_local_chronicle_bridge_context(self) -> None:
+        async def _missing_daily_word(_runtime):
+            return {
+                "ok": False,
+                "available": False,
+                "agent_name": "JARVIS",
+                "passage": "",
+                "word": "",
+                "message": "Daily word unavailable",
+            }
+
+        class _FakeBridge:
+            def get_pending_entries(self):
+                return []
+
+            def get_morning_spiritual_context(self, actor_id: str = "chris"):
+                return {
+                    "reflection_prompt": "Scripture: James 1:5\n\nAsk God for wisdom before acting.",
+                    "scripture_of_day": {
+                        "ref": "James 1:5",
+                        "text": "If any of you lacks wisdom, you should ask God.",
+                    },
+                }
+
+        def _fake_subprocess_run(cmd, capture_output=False, text=False, timeout=None, check=False):
+            joined = " ".join(str(part) for part in cmd)
+            if "/api/chronicle/recent" in joined:
+                return SimpleNamespace(
+                    returncode=0,
+                    stdout=json.dumps(
+                        {
+                            "ok": True,
+                            "entries": [],
+                            "total": 0,
+                            "tags": [],
+                            "prayer_items": [],
+                            "active_prayers": 0,
+                            "answered_prayers": 0,
+                            "formation_rhythms": [],
+                            "owned_books": [],
+                            "chronicle_available": True,
+                        }
+                    ),
+                    stderr="",
+                )
+            return SimpleNamespace(returncode=1, stdout="", stderr="unhandled")
+
+        with patch("jarvis.faith_agents.daily_word", _missing_daily_word), patch(
+            "jarvis.service._get_chronicle_bridge", return_value=_FakeBridge()
+        ), patch("jarvis.service.subprocess.run", _fake_subprocess_run):
+            module_payload = self._json_body(asyncio.run(self._route("/api/faith/module", "GET")()))
+
+        self.assertTrue(module_payload["ok"])
         self.assertTrue(module_payload["daily_word"]["available"])
         self.assertEqual(module_payload["daily_word"]["passage"], "James 1:5")
         self.assertIn("Ask God for wisdom", module_payload["daily_word"]["word"])

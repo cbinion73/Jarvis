@@ -13779,6 +13779,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             _build_chronicle_recent_payload(),
         )
         remote_morning_context: dict[str, Any] | None = None
+        bridge = _get_chronicle_bridge()
+        if bridge is not None:
+            with suppress(Exception):
+                remote_morning_context = await asyncio.to_thread(bridge.get_morning_spiritual_context, "chris")
         with suppress(Exception):
             identity = runtime.identity_overview() if hasattr(runtime, "identity_overview") else {}
             service_plan = dict(identity.get("service") or {}) if isinstance(identity, dict) else {}
@@ -13786,7 +13790,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             remote_admin_user = str(os.environ.get("JARVIS_REMOTE_ADMIN_USER") or service_plan.get("remote_admin_user") or "root").strip() or "root"
             hosted_base_url = str(os.environ.get("JARVIS_HOSTED_BASE_URL") or service_plan.get("hosted_base_url") or "").strip()
             host_header = re.sub(r"^https?://", "", hosted_base_url).split("/", 1)[0].strip()
-            if remote_admin_host and host_header:
+            if remote_morning_context is None and remote_admin_host and host_header:
                 ssh_target = f"{remote_admin_user}@{remote_admin_host}"
                 remote_command = (
                     "curl -sS --max-time 10 "
