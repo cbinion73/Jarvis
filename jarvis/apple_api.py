@@ -5691,6 +5691,28 @@ def _record_navigation_route_history(
         ),
         matched_entry,
     )
+    _event_log.record(
+        domain="navigation",
+        kind="route_previewed",
+        title=f"{origin} → {destination}",
+        detail=f"Navigation route previewed: {origin} to {destination}",
+        severity="low",
+        actor="chris",
+        surface="apple_api",
+        source="navigation.route_history",
+        source_id=route_id,
+        navigation_target="navigation",
+        trust_zone="household_operations",
+        authority_stage="live",
+        why_now="A navigation route was previewed or updated.",
+        metadata={
+            "origin": origin,
+            "destination": destination,
+            "origin_mode": origin_mode,
+            "route_id": route_id,
+            "preview_count": int(normalized_saved.get("preview_count") or 1),
+        },
+    )
     return saved, normalized_saved
 
 

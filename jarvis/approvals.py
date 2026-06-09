@@ -32,6 +32,50 @@ from .persistence import append_jsonl, atomic_write_jsonl
 
 logger = logging.getLogger("jarvis.approvals")
 
+_EVENT_LOG_PATH = Path("data/state/event_log.jsonl")
+
+
+def _write_approval_event(
+    *,
+    kind: str,
+    title: str,
+    detail: str = "",
+    severity: str = "medium",
+    actor: str = "jarvis",
+    source_id: str = "",
+    action_type: str = "",
+    trust_zone_id: str = "",
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    event = {
+        "id": f"evt_{uuid.uuid4().hex}",
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "actor": str(actor or "jarvis"),
+        "surface": "approvals",
+        "domain": "approvals",
+        "kind": str(kind or "info"),
+        "severity": str(severity or "medium"),
+        "title": str(title or "Approval event"),
+        "detail": str(detail or ""),
+        "status": "new",
+        "source": "approval_guard",
+        "source_id": str(source_id or ""),
+        "thread_id": "",
+        "navigation_target": "needs",
+        "actions": ["open"],
+        "trust_zone": str(trust_zone_id or "household_operations"),
+        "authority_stage": "live",
+        "why_now": "",
+        "metadata": {
+            **(metadata or {}),
+            "action_type": str(action_type or ""),
+        },
+    }
+    try:
+        append_jsonl(_EVENT_LOG_PATH, event)
+    except Exception as exc:
+        logger.debug("approval event log write failed: %s", exc)
+
 
 # ---------------------------------------------------------------------------
 # Risk tier enum
@@ -983,7 +1027,23 @@ class ApprovalGuard:
             supervision_context=supervision_context,
             supervision_decision=supervision_decision,
         )
-        return self._queue.submit(request)
+        submitted_id = self._queue.submit(request)
+        _write_approval_event(
+            kind="approval_staged",
+            title=title,
+            detail=f"Action staged for approval: {description or title}",
+            severity="medium" if tier in (RiskTier.MEDIUM, RiskTier.HIGH) else "low",
+            actor=actor_id,
+            source_id=submitted_id,
+            action_type=action_type,
+            trust_zone_id=trust_zone_id,
+            metadata={
+                "request_id": submitted_id,
+                "agent_id": agent_id,
+                "risk_tier": str(tier.value) if hasattr(tier, "value") else str(tier),
+            },
+        )
+        return submitted_id
 
     def execute_approved(self, request_id: str) -> dict:
         """
@@ -1045,6 +1105,22 @@ class ApprovalGuard:
             result = {"status": "failed", "error": str(exc)}
 
         self._queue.mark_executed(request_id)
+
+        _write_approval_event(
+            kind="approval_executed",
+            title=item.title,
+            detail=f"Approved action executed: {item.description or item.title}",
+            severity="medium",
+            actor=item.approved_by or item.actor_id or "jarvis",
+            source_id=request_id,
+            action_type=item.action_type,
+            trust_zone_id=item.trust_zone_id,
+            metadata={
+                "request_id": request_id,
+                "agent_id": item.agent_id,
+                "result_status": str(result.get("status") or ""),
+            },
+        )
 
         # Best-effort audit log
         self._write_audit(item, result)
