@@ -4,14 +4,14 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (GAP-6 resolved; all 6 delivery postures now live)
+Last updated: 2026-06-09 (Phase 3 Slice 1 complete; event log wired into approvals + navigation)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
 - Level 2 (Unified Command Product): COMPLETE
-- Level 3 (Household OS): ~80% — all 23 experiences live-backed or honestly
-  unavailable (audit of 2026-06-09, commit 6934a70); always-on operation is
-  BROKEN on this machine (see GAP-1)
+- Level 3 (Household OS): ~85% — all 23 experiences live-backed or honestly
+  unavailable; event log now written on approval staging/execution and navigation
+  route preview; stewardship HTTP route still missing (GAP-9)
 - Level 4 (Governed Intelligence): ~70% BUILT — far ahead of what
   JARVIS-MATURITY-MODEL.md claims. Trust zones, supervision plane,
   promotion engine, sandbox execution, email draft staging, agent registry
@@ -64,11 +64,13 @@ Fixed approvals.py two sites:
   block dict (resolution=forbidden, degraded=True).
 5 new tests in tests/test_approval_guard_fail_closed.py (all pass).
 
-### GAP-4 — Enforcement is choke-point, not universal [P3]
-Supervision/boundary gating happens in ApprovalManager.execute_approved and
-~10 assess_action_boundary sites in apple_api.py. Other runtime code paths
-are not wrapped. Also enqueue_self_improvement_sandbox_job does not
-re-check arena pause status at enqueue time.
+### GAP-4 — Enforcement is choke-point, not universal [PARTIALLY RESOLVED 2026-06-09]
+enqueue_self_improvement_sandbox_job now checks arena status at enqueue time.
+Reads job.arena_id (falls back to "system.agent-sandbox"). If arena is paused
+or suspended: returns accepted=False with arena_id, arena_status, message.
+system.agent-sandbox arena bootstrapped in TrustSupport. 9 new tests (all pass).
+REMAINING: broader assess_action_boundary coverage across non-apple_api paths
+is a separate audit — deferred to Phase B work.
 
 ### GAP-5 — Governance endpoints lack authn [RESOLVED 2026-06-09]
 Fixed three sites:
@@ -166,6 +168,6 @@ writers or multi-process contention on persistence.py.
 
 ## Next 3 Work Items
 
-1. GAP-4: enqueue_self_improvement_sandbox_job must re-check arena pause status at enqueue time; refuse if arena is paused.
-2. Phase 3 Slice 1: wire _event_log.record() into major action handlers (ApprovalGuard.request_approval, execute_approved, /api/apple/home/command, _record_navigation_route_history).
-3. GAP-9: add GET /api/stewardship/daily and POST /api/stewardship/daily/complete; derive season from current month; wire daily_stewardship.py to HTTP.
+1. GAP-9: add GET /api/stewardship/daily and POST /api/stewardship/daily/complete; derive season from current month; wire daily_stewardship.py to HTTP.
+2. GAP-11: add concurrency tests for jarvis/persistence.py — concurrent writers, read+write contention, recovery after interrupted write.
+3. Phase 3 Slice 2: verify notification escalation action exists (POST /api/apple/notifications/{id}/escalate); add reminders defer/stage endpoints if missing.
