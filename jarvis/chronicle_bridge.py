@@ -35,6 +35,8 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
 
+from .data_hygiene import filter_records
+
 logger = logging.getLogger("jarvis.chronicle_bridge")
 
 # ---------------------------------------------------------------------------
@@ -449,7 +451,7 @@ class ChronicleSnapshotReader:
             return self._cache
 
     def get_entries(self, limit: int = 20) -> list[dict]:
-        entries = self._state().get("chronicleEntries", [])
+        entries = filter_records([dict(item) for item in self._state().get("chronicleEntries", []) if isinstance(item, dict)])
         # Sort by date descending
         try:
             entries = sorted(entries, key=lambda e: e.get("date", ""), reverse=True)
@@ -458,7 +460,7 @@ class ChronicleSnapshotReader:
         return entries[:limit]
 
     def get_prayer_items(self) -> list[dict]:
-        return self._state().get("prayerItems", [])
+        return filter_records([dict(item) for item in self._state().get("prayerItems", []) if isinstance(item, dict)])
 
     def get_formation_rhythms(self) -> list[dict]:
         return self._state().get("formationRhythms", [])
@@ -468,7 +470,7 @@ class ChronicleSnapshotReader:
 
     def search_entries(self, query: str, limit: int = 20) -> list[dict]:
         q = query.lower()
-        entries = self._state().get("chronicleEntries", [])
+        entries = self.get_entries(limit=1000)
         results = []
         for e in entries:
             text = " ".join([

@@ -44,6 +44,7 @@ from fastapi import FastAPI, HTTPException
 
 from .audit import AuditLog, ProgressFocusStore, RecoveryActionStore
 from .chronicle_reviews import ChronicleReviewStore
+from .data_hygiene import filter_records
 from .health_checkins import HealthCheckInStore
 from .nav_bridge import NavBridge, haversine, min_distance_to_route, sample_route_points
 from .persistence import append_jsonl as persistence_append_jsonl, atomic_write_json
@@ -2600,6 +2601,8 @@ def _safe_read_jsonl_tail(path: Path, limit: int = 1) -> list[dict[str, Any]]:
     except Exception as exc:
         logger.warning("apple_api.safe_read_jsonl_tail %s: %s", path, exc)
         return []
+    if path == Path("data/chronicle/entries.jsonl"):
+        rows = filter_records(rows)
     if limit <= 0:
         return rows
     return rows[-limit:]

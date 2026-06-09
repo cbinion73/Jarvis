@@ -17,6 +17,8 @@ from typing import Any
 import psycopg2
 import psycopg2.extras
 
+from .data_hygiene import filter_records
+
 log = logging.getLogger(__name__)
 
 
@@ -663,34 +665,24 @@ class HomeDB:
             with self._connect() as conn:
                 with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                     cur.execute(sql, params)
-                    return _rows(cur)
+                    return filter_records(_rows(cur))
         except Exception:
             log.exception("list_emails failed source=%s unread_only=%s", source, unread_only)
             raise
 
     def get_email_stats(self) -> dict:
         """Return {gmail: {total, unread, flagged}, outlook: {total, unread, flagged}}."""
-        sql = """
-            SELECT
-                source,
-                COUNT(*) AS total,
-                SUM(CASE WHEN is_read = FALSE THEN 1 ELSE 0 END) AS unread,
-                SUM(CASE WHEN is_flagged = TRUE THEN 1 ELSE 0 END) AS flagged
-            FROM email_cache
-            GROUP BY source
-        """
         try:
-            with self._connect() as conn:
-                with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                    cur.execute(sql)
-                    rows = _rows(cur)
+            rows = self.list_emails(limit=1000)
             result: dict[str, dict] = {}
             for r in rows:
-                result[r["source"]] = {
-                    "total": int(r["total"] or 0),
-                    "unread": int(r["unread"] or 0),
-                    "flagged": int(r["flagged"] or 0),
-                }
+                source = str(r.get("source") or "").strip() or "unknown"
+                bucket = result.setdefault(source, {"total": 0, "unread": 0, "flagged": 0})
+                bucket["total"] += 1
+                if not bool(r.get("is_read")):
+                    bucket["unread"] += 1
+                if bool(r.get("is_flagged")):
+                    bucket["flagged"] += 1
             # Ensure both sources are present even with no data
             for src in ("gmail", "outlook"):
                 result.setdefault(src, {"total": 0, "unread": 0, "flagged": 0})

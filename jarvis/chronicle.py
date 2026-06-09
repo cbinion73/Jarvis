@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import AppConfig
+from .data_hygiene import filter_records
 from .openai_tasks import JarvisOpenAIClient
 from .persona import build_specialist_prompt
 
@@ -33,7 +34,7 @@ class ChronicleStore:
         if not self.entries_path.exists():
             return []
         lines = self.entries_path.read_text(encoding="utf-8").splitlines()
-        records = [json.loads(line) for line in lines if line.strip()]
+        records = filter_records([json.loads(line) for line in lines if line.strip()])
         return list(reversed(records[-limit:]))
 
 

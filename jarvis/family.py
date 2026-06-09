@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import AppConfig
+from .data_hygiene import filter_records
 from .models import MessageDraft, ModeState, VoiceNoteTask
 from .openai_tasks import JarvisOpenAIClient
 from .persona import build_specialist_prompt
@@ -172,7 +173,11 @@ class FamilyStore:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return self._load_records_from_log(path)
-        return [dict(item) for item in payload if isinstance(item, dict)] if isinstance(payload, list) else self._load_records_from_log(path)
+        return (
+            filter_records([dict(item) for item in payload if isinstance(item, dict)])
+            if isinstance(payload, list)
+            else self._load_records_from_log(path)
+        )
 
     def _save_records(self, path: Path, records: list[dict]) -> None:
         atomic_write_json(path, records)
@@ -198,7 +203,7 @@ class FamilyStore:
                 payload = json.loads(line)
                 records = payload.get("records")
                 if isinstance(records, list):
-                    latest = [dict(item) for item in records if isinstance(item, dict)]
+                    latest = filter_records([dict(item) for item in records if isinstance(item, dict)])
         except (OSError, json.JSONDecodeError):
             return []
         return latest

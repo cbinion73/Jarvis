@@ -5,6 +5,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .data_hygiene import filter_records
 from .models import ApprovalRequest, RequestPlan
 from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
 
@@ -24,7 +25,7 @@ class AuditLog:
             records = [json.loads(line) for line in lines if line.strip()]
         except (OSError, json.JSONDecodeError):
             return self._load_actions_from_state_log()
-        return [dict(item) for item in records if isinstance(item, dict)] or self._load_actions_from_state_log()
+        return filter_records([dict(item) for item in records if isinstance(item, dict)]) or self._load_actions_from_state_log()
 
     def _load_actions_from_state_log(self) -> list[dict]:
         if not self.actions_state_log_path.exists():
@@ -37,7 +38,7 @@ class AuditLog:
                 payload = json.loads(line)
                 records = payload.get("records")
                 if isinstance(records, list):
-                    latest = [dict(item) for item in records if isinstance(item, dict)]
+                    latest = filter_records([dict(item) for item in records if isinstance(item, dict)])
         except (OSError, json.JSONDecodeError):
             return []
         return latest
@@ -589,9 +590,10 @@ class ApprovalStore:
         if not self.pending_path.exists():
             return self._load_from_log()
         try:
-            return json.loads(self.pending_path.read_text())
+            payload = json.loads(self.pending_path.read_text())
         except Exception:
             return self._load_from_log()
+        return filter_records([dict(item) for item in payload if isinstance(item, dict)]) if isinstance(payload, list) else self._load_from_log()
 
     def _load_from_log(self) -> list[dict]:
         if not self.pending_log_path.exists():
@@ -604,7 +606,7 @@ class ApprovalStore:
                 payload = json.loads(line)
                 records = payload.get("records")
                 if isinstance(records, list):
-                    latest = [dict(item) for item in records if isinstance(item, dict)]
+                    latest = filter_records([dict(item) for item in records if isinstance(item, dict)])
             return latest
         except Exception:
             return []

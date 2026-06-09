@@ -14,6 +14,17 @@ _TEST_VALUE_PATTERNS = [
     re.compile(r"\bqa learning\b", re.IGNORECASE),
     re.compile(r"\btroop families qa\b", re.IGNORECASE),
     re.compile(r"\bqa bracket\b", re.IGNORECASE),
+    re.compile(r"\btroop parents\b", re.IGNORECASE),
+    re.compile(r"\btroop meeting\b", re.IGNORECASE),
+    re.compile(r"\btroop arrival\b", re.IGNORECASE),
+    re.compile(r"\bindoor backup update\b", re.IGNORECASE),
+    re.compile(r"\bparent-facing troop note\b", re.IGNORECASE),
+    re.compile(r"\bstewardship under pressure\b", re.IGNORECASE),
+    re.compile(r"\btoday felt noisy\b", re.IGNORECASE),
+    re.compile(r"\bgrace in restraint\b", re.IGNORECASE),
+    re.compile(r"\blow-friction lane\b", re.IGNORECASE),
+    re.compile(r"\bpray(?:er|ers)?\s+(?:for|over)\s+sarah\b", re.IGNORECASE),
+    re.compile(r"\bprayer(?:\s+request)?\s+for\s+sarah\b", re.IGNORECASE),
 ]
 
 
