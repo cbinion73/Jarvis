@@ -2511,6 +2511,38 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertGreaterEqual(roster_payload["count"], 1)
         self.assertGreaterEqual(len(roster_payload["agents"]), 1)
 
+    def test_navigation_and_health_support_routes_return_honest_json_when_unavailable(self) -> None:
+        maps_payload = self._json_body(asyncio.run(self._route("/api/nav/maps-key", "GET")()))
+        usage_payload = self._json_body(asyncio.run(self._route("/api/google/maps-usage", "GET")()))
+
+        self.assertTrue(maps_payload["ok"])
+        self.assertIn("available", maps_payload)
+        self.assertIn("key_configured", maps_payload)
+        self.assertTrue(usage_payload["ok"])
+        self.assertIn("available", usage_payload)
+        self.assertIn("usage", usage_payload)
+
+        original_import = __import__
+
+        def _fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name.endswith("health_db") or (name == "" and "health_db" in fromlist):
+                raise ImportError("health_db unavailable in test")
+            return original_import(name, globals, locals, fromlist, level)
+
+        with patch("builtins.__import__", side_effect=_fake_import):
+            ecg_payload = self._json_body(asyncio.run(self._route("/api/health/ecg", "GET")()))
+            summary_payload = self._json_body(asyncio.run(self._route("/api/health/db/summary", "GET")()))
+
+        self.assertFalse(ecg_payload["ok"])
+        self.assertFalse(ecg_payload["available"])
+        self.assertEqual(ecg_payload["readings"], [])
+        self.assertIn("unavailable", ecg_payload["error"].lower())
+        self.assertFalse(summary_payload["ok"])
+        self.assertFalse(summary_payload["available"])
+        self.assertEqual(summary_payload["today"], {})
+        self.assertEqual(summary_payload["recent"], [])
+        self.assertIn("unavailable", summary_payload["error"].lower())
+
     def test_catalyst_routes_expose_module_and_live_ops_surfaces(self) -> None:
         module_payload = self._json_body(asyncio.run(self._route("/api/catalyst/module", "GET")()))
 
@@ -2793,6 +2825,34 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(action_payload["action"], "save-article")
         self.assertEqual(action_payload["message"], "Article saved to shared continuity.")
 
+    def test_legacy_needs_you_and_publishing_alias_module_routes_are_exposed(self) -> None:
+        route_expectations = {
+            "/api/legacy/module": "/api/chronicle/module",
+            "/api/needs-you/module": "/api/progress/module",
+            "/api/publishing/module": "/api/publish/module",
+        }
+
+        for route, canonical in route_expectations.items():
+            payload = self._json_body(asyncio.run(self._route(route, "GET")()))
+            self.assertIn("available", payload, msg=route)
+            self.assertIn("status", payload, msg=route)
+            self.assertIn("proof_paths", payload, msg=route)
+            self.assertEqual(payload["proof_paths"]["module_api"], canonical, msg=route)
+
+    def test_faith_module_exposes_standard_surface_metadata(self) -> None:
+        payload = self._json_body(asyncio.run(self._route("/api/faith/module", "GET")()))
+
+        self.assertTrue(payload["ok"])
+        self.assertIn("available", payload)
+        self.assertIn("status", payload)
+        self.assertIn("summary", payload)
+        self.assertIn("runtime_note", payload)
+        self.assertIn("what_became_real", payload)
+        self.assertIn("remains_partial", payload)
+        self.assertIn("daily_word", payload)
+        self.assertIn("agents", payload)
+        self.assertIn("continuity", payload)
+
     def test_shell_backed_experiences_expose_direct_entry_routes(self) -> None:
         routes = {
             "/home-center": "window.__JARVIS_START_VIEW = 'home'",
@@ -2811,6 +2871,22 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
             "/vision-center": "window.__JARVIS_START_VIEW = 'vision'",
             "/journey-center": "window.__JARVIS_START_VIEW = 'journey'",
             "/needs-you-center": "window.__JARVIS_START_VIEW = 'notifications'",
+        }
+
+        for path, marker in routes.items():
+            response = asyncio.run(self._route(path, "GET")())
+            html = self._text_body(response)
+            self.assertIn(marker, html, msg=path)
+            self.assertIn("JARVIS", html, msg=path)
+
+    def test_shell_backed_experiences_expose_alias_entry_routes(self) -> None:
+        routes = {
+            "/agents": "window.__JARVIS_START_VIEW = 'agents'",
+            "/forge": "window.__JARVIS_START_VIEW = 'forge'",
+            "/foundry": "window.__JARVIS_START_VIEW = 'foundry'",
+            "/workshop": "window.__JARVIS_START_VIEW = 'workshop'",
+            "/vision": "window.__JARVIS_START_VIEW = 'vision'",
+            "/journey": "window.__JARVIS_START_VIEW = 'journey'",
         }
 
         for path, marker in routes.items():

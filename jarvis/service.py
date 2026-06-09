@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
+from dataclasses import asdict
 from datetime import datetime, timezone
 import json
 import math
@@ -1052,12 +1053,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def agents_center() -> HTMLResponse:
         return _render_glass_view_route("agents")
 
+    @app.get("/agents", response_class=HTMLResponse)
+    async def agents_center_alias() -> HTMLResponse:
+        return _render_glass_view_route("agents")
+
     @app.get("/intel-center", response_class=HTMLResponse)
     async def intel_center() -> HTMLResponse:
         return _render_glass_view_route("intelligence")
 
     @app.get("/forge-center", response_class=HTMLResponse)
     async def forge_center() -> HTMLResponse:
+        return _render_glass_view_route("forge")
+
+    @app.get("/forge", response_class=HTMLResponse)
+    async def forge_center_alias() -> HTMLResponse:
         return _render_glass_view_route("forge")
 
     @app.get("/catalyst-center", response_class=HTMLResponse)
@@ -1068,16 +1077,32 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def foundry_center() -> HTMLResponse:
         return _render_glass_view_route("foundry")
 
+    @app.get("/foundry", response_class=HTMLResponse)
+    async def foundry_center_alias() -> HTMLResponse:
+        return _render_glass_view_route("foundry")
+
     @app.get("/workshop-center", response_class=HTMLResponse)
     async def workshop_center() -> HTMLResponse:
+        return _render_glass_view_route("workshop")
+
+    @app.get("/workshop", response_class=HTMLResponse)
+    async def workshop_center_alias() -> HTMLResponse:
         return _render_glass_view_route("workshop")
 
     @app.get("/vision-center", response_class=HTMLResponse)
     async def vision_center() -> HTMLResponse:
         return _render_glass_view_route("vision")
 
+    @app.get("/vision", response_class=HTMLResponse)
+    async def vision_center_alias() -> HTMLResponse:
+        return _render_glass_view_route("vision")
+
     @app.get("/journey-center", response_class=HTMLResponse)
     async def journey_center() -> HTMLResponse:
+        return _render_glass_view_route("journey")
+
+    @app.get("/journey", response_class=HTMLResponse)
+    async def journey_center_alias() -> HTMLResponse:
         return _render_glass_view_route("journey")
 
     @app.get("/needs-you-center", response_class=HTMLResponse)
@@ -2149,7 +2174,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "recent_activity_count": 0,
             },
             "proof_paths": {
-                "module_route": "/",
+                "module_route": "/intel-center",
                 "shell_view": "intelligence",
                 "module_api": "/api/intel/module",
                 "status_api": "/api/status",
@@ -5226,6 +5251,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/api/progress/module")
     async def api_progress_module() -> JSONResponse:
+        return _json(await _build_progress_module_payload())
+
+    @app.get("/api/needs-you/module")
+    async def api_needs_you_module_alias() -> JSONResponse:
         return _json(await _build_progress_module_payload())
 
     @app.post("/api/progress/focus")
@@ -13849,7 +13878,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             health_summary = runtime.apple_health_daily_summary() or {}
         except Exception as exc:
             health_summary = {"available": False, "detail": str(exc)}
-            availability_notes.append(f"Health summary unavailable: {exc}")
+            availability_notes.append("Health summary is unavailable in this runtime.")
 
         if daily_word_payload.get("available") is False:
             availability_notes.append(str(daily_word_payload.get("message") or "Daily word unavailable"))
@@ -13867,14 +13896,26 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             chronicle_patterns=chronicle_patterns,
             agents=agents,
         )
+        prayer_items = list(chronicle_recent.get("prayer_items") or [])
+        recent_entries = list(chronicle_recent.get("entries") or [])[:10]
+        runtime_note = availability_notes[0] if availability_notes else "Faith is live and connected."
         return {
             "ok": True,
+            "available": True,
+            "status": "Useful",
+            "summary": (
+                f"Faith loaded {len(agents)} faith guide(s), {len(prayer_items)} prayer item(s), "
+                f"and {len(recent_entries)} recent Chronicle entry row(s)."
+            ),
+            "runtime_note": runtime_note,
+            "what_became_real": "Faith now hydrates from live daily-word, Chronicle context, prayer continuity, hosted Chronicle bridge context, and capability handoff state.",
+            "remains_partial": "Health-linked faith readiness and deeper Chronicle study surfaces remain partially dependent on optional integrations in this runtime.",
             "daily_word": daily_word_payload,
             "agents": agents,
             "chronicle_context": chronicle_context,
             "chronicle_patterns": chronicle_patterns,
-            "prayer_items": list(chronicle_recent.get("prayer_items") or []),
-            "recent_entries": list(chronicle_recent.get("entries") or [])[:10],
+            "prayer_items": prayer_items,
+            "recent_entries": recent_entries,
             "chronicle_capabilities": capabilities,
             "formation_prompts": [
                 prompt
@@ -14119,6 +14160,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/api/chronicle/module")
     async def api_chronicle_module() -> JSONResponse:
+        return _json(await _build_chronicle_module_payload())
+
+    @app.get("/api/legacy/module")
+    async def api_legacy_module_alias() -> JSONResponse:
         return _json(await _build_chronicle_module_payload())
 
     @app.post("/api/chronicle/entries/{entry_id}/review")
@@ -15671,6 +15716,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/api/publish/module")
     async def api_publish_module() -> JSONResponse:
+        return _json(_build_publish_module_payload())
+
+    @app.get("/api/publishing/module")
+    async def api_publishing_module_alias() -> JSONResponse:
         return _json(_build_publish_module_payload())
 
     @app.get("/api/foundry/module")
@@ -18514,32 +18563,33 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         """ECG readings from health_db."""
         try:
             from . import health_db
-        except ImportError:
-            import health_db  # type: ignore[no-redef]
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": f"Health ECG is unavailable: {exc}", "readings": []})
         try:
             readings = await health_db.get_ecg_readings(limit=10)
-            return _json({"ok": True, "readings": readings, "count": len(readings)})
+            return _json({"ok": True, "available": True, "readings": readings, "count": len(readings)})
         except Exception as exc:
-            return _json({"ok": False, "error": str(exc), "readings": []})
+            return _json({"ok": False, "available": False, "error": str(exc), "readings": []})
 
     @app.get("/api/health/db/summary")
     async def api_health_db_summary() -> JSONResponse:
         """Health database summary: latest metrics and mychart pages."""
         try:
             from . import health_db
-        except ImportError:
-            import health_db  # type: ignore[no-redef]
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": f"Health database summary is unavailable: {exc}", "today": {}, "recent": []})
         try:
             today_metrics = await health_db.get_today_metrics()
             recent_metrics = await health_db.get_latest_metrics(days=7)
             return _json({
                 "ok": True,
+                "available": True,
                 "today": today_metrics or {},
                 "recent": recent_metrics,
                 "count": len(recent_metrics),
             })
         except Exception as exc:
-            return _json({"ok": False, "error": str(exc), "today": {}, "recent": []})
+            return _json({"ok": False, "available": False, "error": str(exc), "today": {}, "recent": []})
 
     @app.get("/api/health/sam/history")
     async def api_health_sam_history() -> JSONResponse:
@@ -18825,7 +18875,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/nav/maps-key")
     async def api_nav_maps_key() -> JSONResponse:
         """Return Google Maps API key availability (key itself is never exposed)."""
-        maps_key = str(runtime.config.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
+        maps_key = str(os.environ.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
         return _json({"ok": True, "available": bool(maps_key), "key_configured": bool(maps_key)})
 
     @app.get("/api/nav/pois")
@@ -18867,7 +18917,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/google/maps-usage")
     async def api_google_maps_usage() -> JSONResponse:
         """Google Maps API usage summary."""
-        maps_key = str(runtime.config.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
+        maps_key = str(os.environ.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
         return _json({
             "ok": True,
             "available": bool(maps_key),

@@ -50525,9 +50525,13 @@ var _navMapsKey = '';
 
 function loadGoogleMapsScript() {{
     fetch('/api/nav/maps-key').then(function(r) {{ return r.json(); }}).then(function(d) {{
-        _navMapsKey = d.key || '';
+        _navMapsKey = '';
+        if (!d || !d.key_configured) {{
+            navigationRuntimeNote('Google Maps is not configured in this runtime, so live map rendering is unavailable.');
+            return;
+        }}
         var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key=' + d.key + '&libraries=places&callback=onGoogleMapsReady';
+        s.src = 'https://maps.googleapis.com/maps/api/js?key=' + _navMapsKey + '&libraries=places&callback=onGoogleMapsReady&loading=async';
         s.async = true;
         document.head.appendChild(s);
     }});
