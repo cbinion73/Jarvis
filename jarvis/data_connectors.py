@@ -5,7 +5,7 @@ Unified data-fetching layer for real-time household signals.
 
 All connectors:
   - Return structured dicts (not raw API objects)
-  - Degrade gracefully (return empty/mock data on failure, log the error)
+  - Degrade gracefully (return honest unavailable or empty data on failure, log the error)
   - Cache aggressively (most data is stale after 5-30 min, not 5 seconds)
   - Never block the scheduler (all calls have timeouts)
 
@@ -150,6 +150,17 @@ def _safe_http_get(url: str, headers: dict | None = None, timeout: int = 5) -> b
         return None
 
 
+def _unavailable_payload(*, source: str, error_message: str, **payload: Any) -> dict:
+    result = {
+        "available": False,
+        "source": source,
+        "error": error_message,
+        "fetched_at": _now_iso(),
+    }
+    result.update(payload)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Google Calendar Connector
 # ---------------------------------------------------------------------------
@@ -204,50 +215,15 @@ class GoogleCalendarConnector:
             "description": (item.get("description", "") or "")[:200],
         }
 
-    def _mock_today_events(self) -> dict:
-        today = _local_date_str()
-        return {
-            "events": [
-                {
-                    "id": "mock-001",
-                    "title": "Team Standup",
-                    "start": f"{today}T09:00:00",
-                    "end": f"{today}T09:30:00",
-                    "location": "",
-                    "attendees": ["team@example.com"],
-                    "is_meeting": True,
-                    "calendar": "primary",
-                    "description": "Daily sync",
-                },
-                {
-                    "id": "mock-002",
-                    "title": "Client Check-In",
-                    "start": f"{today}T14:00:00",
-                    "end": f"{today}T15:00:00",
-                    "location": "Zoom",
-                    "attendees": ["client@example.com"],
-                    "is_meeting": True,
-                    "calendar": "primary",
-                    "description": "Monthly review",
-                },
-                {
-                    "id": "mock-003",
-                    "title": "School Pickup",
-                    "start": f"{today}T15:45:00",
-                    "end": f"{today}T16:15:00",
-                    "location": "Elementary School",
-                    "attendees": [],
-                    "is_meeting": False,
-                    "calendar": "family",
-                    "description": "",
-                },
-            ],
-            "count": 3,
-            "next_event": None,
-            "has_conflict": False,
-            "fetched_at": _now_iso(),
-            "source": "mock",
-        }
+    def _unavailable_events(self, reason: str) -> dict:
+        return _unavailable_payload(
+            source="unavailable",
+            error_message=reason,
+            events=[],
+            count=0,
+            next_event=None,
+            has_conflict=False,
+        )
 
     def get_today_events(self, actor_id: str = "chris") -> dict:
         cache_key = f"calendar_today_{actor_id}"
@@ -257,8 +233,8 @@ class GoogleCalendarConnector:
 
         service = self._build_service()
         if service is None:
-            logger.warning("GoogleCalendarConnector: no service available, returning mock data")
-            result = self._mock_today_events()
+            logger.warning("GoogleCalendarConnector: no service available")
+            result = self._unavailable_events("Google Calendar is not configured or credentials are unavailable.")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -310,7 +286,7 @@ class GoogleCalendarConnector:
 
         except Exception as exc:
             logger.warning("GoogleCalendarConnector.get_today_events failed: %s", exc)
-            result = self._mock_today_events()
+            result = self._unavailable_events(f"Google Calendar could not be loaded: {exc}")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -322,40 +298,8 @@ class GoogleCalendarConnector:
 
         service = self._build_service()
         if service is None:
-            logger.warning("GoogleCalendarConnector: no service available for upcoming events, returning mock data")
-            # Return mock with a few more events spread across the week
-            today = _local_date_str()
-            result = {
-                "events": [
-                    {
-                        "id": "mock-week-001",
-                        "title": "Weekly Planning",
-                        "start": f"{today}T10:00:00",
-                        "end": f"{today}T11:00:00",
-                        "location": "",
-                        "attendees": [],
-                        "is_meeting": False,
-                        "calendar": "primary",
-                        "description": "",
-                    },
-                    {
-                        "id": "mock-week-002",
-                        "title": "Family Dinner",
-                        "start": f"{today}T18:30:00",
-                        "end": f"{today}T20:00:00",
-                        "location": "Home",
-                        "attendees": [],
-                        "is_meeting": False,
-                        "calendar": "family",
-                        "description": "",
-                    },
-                ],
-                "count": 2,
-                "next_event": None,
-                "has_conflict": False,
-                "fetched_at": _now_iso(),
-                "source": "mock",
-            }
+            logger.warning("GoogleCalendarConnector: no service available for upcoming events")
+            result = self._unavailable_events("Google Calendar is not configured or credentials are unavailable.")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -391,14 +335,7 @@ class GoogleCalendarConnector:
 
         except Exception as exc:
             logger.warning("GoogleCalendarConnector.get_upcoming_events failed: %s", exc)
-            result = {
-                "events": [],
-                "count": 0,
-                "next_event": None,
-                "has_conflict": False,
-                "fetched_at": _now_iso(),
-                "source": "mock",
-            }
+            result = self._unavailable_events(f"Upcoming Google Calendar events could not be loaded: {exc}")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -474,32 +411,15 @@ class GmailConnector:
 
         service = self._build_service()
         if service is None:
-            logger.warning("GmailConnector: no service available, returning mock data")
-            result = {
-                "unread_count": 14,
-                "flagged_count": 2,
-                "action_items": [
-                    {
-                        "id": "mock-email-001",
-                        "from": "vendor@example.com",
-                        "subject": "Invoice #1042 — Please Approve",
-                        "snippet": "Attached is the invoice for services rendered. Please approve by EOD.",
-                        "received_at": _now_iso(),
-                        "priority": "high",
-                    },
-                    {
-                        "id": "mock-email-002",
-                        "from": "dr.patel@clinic.com",
-                        "subject": "Appointment Confirmation Needed",
-                        "snippet": "Please confirm your appointment for next Tuesday at 2pm.",
-                        "received_at": _now_iso(),
-                        "priority": "medium",
-                    },
-                ],
-                "newsletters": 3,
-                "source": "mock",
-                "fetched_at": _now_iso(),
-            }
+            logger.warning("GmailConnector: no service available")
+            result = _unavailable_payload(
+                source="unavailable",
+                error_message="Gmail is not configured or credentials are unavailable.",
+                unread_count=0,
+                flagged_count=0,
+                action_items=[],
+                newsletters=0,
+            )
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -575,14 +495,14 @@ class GmailConnector:
 
         except Exception as exc:
             logger.warning("GmailConnector.get_inbox_summary failed: %s", exc)
-            result = {
-                "unread_count": 0,
-                "flagged_count": 0,
-                "action_items": [],
-                "newsletters": 0,
-                "source": "mock",
-                "fetched_at": _now_iso(),
-            }
+            result = _unavailable_payload(
+                source="unavailable",
+                error_message=f"Gmail could not be loaded: {exc}",
+                unread_count=0,
+                flagged_count=0,
+                action_items=[],
+                newsletters=0,
+            )
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -647,18 +567,18 @@ class HomeAssistantConnector:
             logger.warning("HomeAssistantConnector: POST failed for %s: %s", path, exc)
             return None
 
-    def _mock_house_state(self) -> dict:
-        return {
-            "present_members": ["Chris"],
-            "doors": {"front": "locked", "garage": "closed", "back": "locked"},
-            "garage": {"door": "closed", "last_change": _now_iso()},
-            "temperature": {"inside": 71.0, "target": 70.0, "mode": "cool"},
-            "lights_on": ["office"],
-            "alerts": [],
-            "devices_offline": [],
-            "source": "mock",
-            "fetched_at": _now_iso(),
-        }
+    def _unavailable_house_state(self, reason: str) -> dict:
+        return _unavailable_payload(
+            source="unavailable",
+            error_message=reason,
+            present_members=[],
+            doors={},
+            garage={"door": "unknown", "last_change": ""},
+            temperature={"inside": 0.0, "target": 0.0, "mode": "unknown"},
+            lights_on=[],
+            alerts=[],
+            devices_offline=[],
+        )
 
     def get_house_state(self) -> dict:
         cache_key = "ha_house_state"
@@ -667,15 +587,15 @@ class HomeAssistantConnector:
             return cached
 
         if not self._is_configured():
-            logger.warning("HomeAssistantConnector: not configured (HA_URL or HA_TOKEN missing), returning mock")
-            result = self._mock_house_state()
+            logger.warning("HomeAssistantConnector: not configured (HA_URL or HA_TOKEN missing)")
+            result = self._unavailable_house_state("Home Assistant is not configured in this runtime.")
             _cache.set(cache_key, result, self.TTL)
             return result
 
         states = self._ha_get("/states")
         if not isinstance(states, list):
-            logger.warning("HomeAssistantConnector: could not fetch states, returning mock")
-            result = self._mock_house_state()
+            logger.warning("HomeAssistantConnector: could not fetch states")
+            result = self._unavailable_house_state("Home Assistant state could not be loaded.")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -791,11 +711,23 @@ class HomeAssistantConnector:
             return cached
 
         if not self._is_configured():
-            return {"entity_id": entity_id, "state": "unknown", "attributes": {}, "source": "mock"}
+            return _unavailable_payload(
+                source="unavailable",
+                error_message="Home Assistant is not configured in this runtime.",
+                entity_id=entity_id,
+                state="unknown",
+                attributes={},
+            )
 
         data = self._ha_get(f"/states/{entity_id}")
         if not isinstance(data, dict):
-            return {"entity_id": entity_id, "state": "unknown", "attributes": {}, "source": "mock"}
+            return _unavailable_payload(
+                source="unavailable",
+                error_message=f"Home Assistant state for {entity_id} could not be loaded.",
+                entity_id=entity_id,
+                state="unknown",
+                attributes={},
+            )
 
         result = {
             "entity_id": entity_id,
@@ -871,20 +803,20 @@ class WeatherConnector:
             return True
         return bool(self._api_key)
 
-    def _mock_current(self) -> dict:
-        return {
-            "temp_f": 74.0,
-            "feels_like_f": 72.0,
-            "condition": "Partly Cloudy",
-            "humidity": 55,
-            "wind_mph": 8.5,
-            "wind_dir": "SW",
-            "visibility_miles": 10.0,
-            "alerts": [],
-            "icon": "⛅",
-            "source": "mock",
-            "fetched_at": _now_iso(),
-        }
+    def _unavailable_current(self, reason: str) -> dict:
+        return _unavailable_payload(
+            source="unavailable",
+            error_message=reason,
+            temp_f=0.0,
+            feels_like_f=0.0,
+            condition="Unavailable",
+            humidity=0,
+            wind_mph=0.0,
+            wind_dir="",
+            visibility_miles=0.0,
+            alerts=[],
+            icon="—",
+        )
 
     def get_current(self) -> dict:
         cache_key = "weather_current"
@@ -893,8 +825,8 @@ class WeatherConnector:
             return cached
 
         if not self._is_configured():
-            logger.warning("WeatherConnector: no weather API configured, returning mock data")
-            result = self._mock_current()
+            logger.warning("WeatherConnector: no weather API configured")
+            result = self._unavailable_current("Weather is not configured in this runtime.")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -921,8 +853,8 @@ class WeatherConnector:
         raw = _safe_http_get(url, timeout=5)
 
         if raw is None:
-            logger.warning("WeatherConnector: API call failed, returning mock data")
-            result = self._mock_current()
+            logger.warning("WeatherConnector: API call failed")
+            result = self._unavailable_current("Weather could not be loaded from the configured provider.")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -958,7 +890,7 @@ class WeatherConnector:
 
         except Exception as exc:
             logger.warning("WeatherConnector: failed to parse response: %s", exc)
-            result = self._mock_current()
+            result = self._unavailable_current(f"Weather response could not be parsed: {exc}")
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -969,16 +901,13 @@ class WeatherConnector:
             return cached
 
         if not self._is_configured():
-            result = {
-                "hourly": [
-                    {"hour": f"{h:02d}:00", "temp_f": 72.0 + h * 0.5, "condition": "Partly Cloudy", "icon": "⛅"}
-                    for h in range(min(hours, 12))
-                ],
-                "daily_high_f": 78.0,
-                "daily_low_f": 62.0,
-                "source": "mock",
-                "fetched_at": _now_iso(),
-            }
+            result = _unavailable_payload(
+                source="unavailable",
+                error_message="Weather forecast is not configured in this runtime.",
+                hourly=[],
+                daily_high_f=0.0,
+                daily_low_f=0.0,
+            )
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -1007,13 +936,13 @@ class WeatherConnector:
         raw = _safe_http_get(url, timeout=5)
 
         if raw is None:
-            result = {
-                "hourly": [],
-                "daily_high_f": 0.0,
-                "daily_low_f": 0.0,
-                "source": "mock",
-                "fetched_at": _now_iso(),
-            }
+            result = _unavailable_payload(
+                source="unavailable",
+                error_message="Weather forecast could not be loaded from the configured provider.",
+                hourly=[],
+                daily_high_f=0.0,
+                daily_low_f=0.0,
+            )
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -1050,13 +979,13 @@ class WeatherConnector:
 
         except Exception as exc:
             logger.warning("WeatherConnector.get_forecast failed: %s", exc)
-            result = {
-                "hourly": [],
-                "daily_high_f": 0.0,
-                "daily_low_f": 0.0,
-                "source": "mock",
-                "fetched_at": _now_iso(),
-            }
+            result = _unavailable_payload(
+                source="unavailable",
+                error_message=f"Weather forecast could not be parsed: {exc}",
+                hourly=[],
+                daily_high_f=0.0,
+                daily_low_f=0.0,
+            )
             _cache.set(cache_key, result, self.TTL)
             return result
 
@@ -1146,32 +1075,13 @@ class NewsConnector:
                 any_real = True
 
         if not any_real:
-            logger.warning("NewsConnector: all feeds failed, returning mock headlines")
-            result = {
-                "headlines": [
-                    {
-                        "title": "Top Story: Community Leaders Meet to Address Local Concerns",
-                        "source": "AP Top News",
-                        "url": "https://apnews.com",
-                        "published": _now_iso(),
-                    },
-                    {
-                        "title": "Faith in Action: How Local Churches Are Serving Their Communities",
-                        "source": "Christianity Today",
-                        "url": "https://www.christianitytoday.com",
-                        "published": _now_iso(),
-                    },
-                    {
-                        "title": "New 3D Printing Materials Expand Design Possibilities",
-                        "source": "3D Printing Industry",
-                        "url": "https://3dprintingindustry.com",
-                        "published": _now_iso(),
-                    },
-                ],
-                "total": 3,
-                "fetched_at": _now_iso(),
-                "source": "mock",
-            }
+            logger.warning("NewsConnector: all feeds failed")
+            result = _unavailable_payload(
+                source="unavailable",
+                error_message="News feeds could not be loaded in this runtime.",
+                headlines=[],
+                total=0,
+            )
             _cache.set(cache_key, result, self.TTL)
             return result
 
