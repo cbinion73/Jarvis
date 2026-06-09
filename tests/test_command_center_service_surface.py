@@ -2463,6 +2463,33 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIsInstance(module_payload["incubator"]["ideas"], list)
         self.assertIsInstance(module_payload["launch"]["checklist"], list)
 
+    def test_home_routes_expose_module_and_live_household_surfaces(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/home/module", "GET")()))
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("overview", module_payload)
+        self.assertIn("agenda", module_payload)
+        self.assertIn("environment", module_payload)
+        self.assertIn("people", module_payload)
+        self.assertIn("queue", module_payload)
+        self.assertIn("trusted_actions", module_payload)
+        self.assertIn("health", module_payload)
+        self.assertIn("modes", module_payload)
+        self.assertIn("spaces", module_payload)
+        self.assertIn("return_prep", module_payload)
+        self.assertIn("insights", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/home/module")
+        self.assertEqual(module_payload["proof_paths"]["overview_api"], "/api/home-overview")
+        self.assertEqual(module_payload["proof_paths"]["dashboard_api"], "/api/home/dashboard")
+        self.assertEqual(module_payload["proof_paths"]["tasks_today_api"], "/api/home/tasks/today")
+        self.assertEqual(module_payload["proof_paths"]["sync_api"], "/api/home/sync")
+        self.assertEqual(module_payload["proof_paths"]["operator_activity_api"], "/api/activity/operator-action")
+        self.assertIsInstance(module_payload["people"], list)
+        self.assertIsInstance(module_payload["queue"], list)
+        self.assertIsInstance(module_payload["trusted_actions"], list)
+
     def test_dining_routes_expose_module_and_live_search_surfaces(self) -> None:
         nearby_rows = [
             {

@@ -1007,6 +1007,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def health_center() -> HTMLResponse:
         return HTMLResponse(render_health_module_page(await _build_health_module_payload()))
 
+    @app.get("/home-center", response_class=HTMLResponse)
+    async def home_center() -> HTMLResponse:
+        html = _render_glass_shell(runtime)
+        injection = (
+            "<script>(function(){"
+            "function openHome(){ try { switchView('home'); } catch (_) { setTimeout(openHome, 60); } }"
+            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openHome, 0); }"
+            "else { window.addEventListener('load', openHome); }"
+            "})();</script></body>"
+        )
+        if "</body>" in html:
+            html = html.replace("</body>", injection, 1)
+        return HTMLResponse(html)
+
     @app.get("/chronicle-center", response_class=HTMLResponse)
     async def chronicle_center() -> HTMLResponse:
         return HTMLResponse(render_chronicle_module_page(await _build_chronicle_module_payload()))
@@ -9623,6 +9637,486 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=503, detail="Home DB not initialised")
         summary = await asyncio.to_thread(db.get_value_summary, project_id or None)
         return _json(summary)
+
+    async def _build_home_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        availability_notes: list[str] = []
+        errors: list[str] = []
+
+        overview: dict[str, Any] = {}
+        environment: dict[str, Any] = {}
+        agenda: dict[str, Any] = {"events": [], "total": 0}
+        perception: dict[str, Any] = {}
+
+        try:
+            overview = await asyncio.to_thread(runtime.home_overview)
+        except Exception as exc:
+            errors.append(f"home_overview: {exc}")
+            availability_notes.append(f"Home overview could not be loaded: {exc}")
+
+        try:
+            environment = await asyncio.to_thread(runtime.environment_status_snapshot, actor_name)
+        except Exception as exc:
+            errors.append(f"environment_status: {exc}")
+            availability_notes.append(f"Environment status could not be loaded: {exc}")
+
+        try:
+            perception = await asyncio.to_thread(runtime.perception_overview)
+        except Exception as exc:
+            errors.append(f"perception_overview: {exc}")
+            availability_notes.append(f"Perception overview could not be loaded: {exc}")
+
+        inbox = _get_unified_inbox()
+        if inbox is None:
+            db = _get_home_db()
+            if db is None:
+                availability_notes.append("Calendar and household inbox sources are not initialised in this runtime.")
+            else:
+                try:
+                    events = list(await asyncio.to_thread(db.get_todays_events))
+                    agenda = {"events": events, "total": len(events)}
+                except Exception as exc:
+                    errors.append(f"agenda: {exc}")
+                    availability_notes.append(f"Today's home calendar could not be loaded: {exc}")
+        else:
+            try:
+                agenda = dict(await asyncio.to_thread(inbox.get_todays_agenda) or {"events": [], "total": 0})
+            except Exception as exc:
+                errors.append(f"agenda: {exc}")
+                availability_notes.append(f"Today's home calendar could not be loaded: {exc}")
+
+        dashboard: dict[str, Any] = {}
+        active_projects: list[dict[str, Any]] = []
+        open_tasks: list[dict[str, Any]] = []
+        today_tasks: list[dict[str, Any]] = []
+        overdue_tasks: list[dict[str, Any]] = []
+        sync_status: dict[str, Any] = {}
+        value_summary: dict[str, Any] = {"totals": {}, "by_project": {}}
+        home_db = _get_home_db()
+        if home_db is None:
+            availability_notes.append("Home project and task storage are not initialised, so household work queues are partial.")
+        else:
+            try:
+                dashboard = dict(await asyncio.to_thread(home_db.get_dashboard_data) or {})
+            except Exception as exc:
+                errors.append(f"dashboard: {exc}")
+                availability_notes.append(f"Home dashboard summary could not be loaded: {exc}")
+            try:
+                active_projects = list(await asyncio.to_thread(home_db.list_projects, "active"))
+            except Exception as exc:
+                errors.append(f"projects: {exc}")
+                availability_notes.append(f"Active home projects could not be loaded: {exc}")
+            try:
+                open_tasks = list(await asyncio.to_thread(home_db.list_tasks, None, "open"))
+            except Exception as exc:
+                errors.append(f"tasks_open: {exc}")
+                availability_notes.append(f"Open home tasks could not be loaded: {exc}")
+            try:
+                today_tasks = list(await asyncio.to_thread(home_db.get_tasks_due_today))
+            except Exception as exc:
+                errors.append(f"tasks_today: {exc}")
+                availability_notes.append(f"Today's home tasks could not be loaded: {exc}")
+            try:
+                overdue_tasks = list(await asyncio.to_thread(home_db.get_overdue_tasks))
+            except Exception as exc:
+                errors.append(f"tasks_overdue: {exc}")
+                availability_notes.append(f"Overdue home tasks could not be loaded: {exc}")
+            try:
+                sync_status = {"sources": list(await asyncio.to_thread(home_db.get_all_sync_states))}
+            except Exception as exc:
+                errors.append(f"sync_status: {exc}")
+                availability_notes.append(f"Home sync status could not be loaded: {exc}")
+            try:
+                value_summary = dict(await asyncio.to_thread(home_db.get_value_summary) or {"totals": {}, "by_project": {}})
+            except Exception as exc:
+                errors.append(f"value_summary: {exc}")
+                availability_notes.append(f"Home value summary could not be loaded: {exc}")
+
+        counts = dict(overview.get("counts") or {})
+        lights = list(overview.get("lights") or [])
+        switches = list(overview.get("switches") or [])
+        locks = list(overview.get("locks") or [])
+        garage = list(overview.get("garage") or [])
+        climate = list(overview.get("climate") or [])
+        recent_actions = list(overview.get("recent_actions") or [])
+        energy_windows = list(overview.get("energy_windows") or [])
+        provider_notes = dict(overview.get("provider_notes") or {})
+        anomalies = list(perception.get("anomalies") or [])
+        camera_events = list(perception.get("camera_events") or [])
+        phone_presence = list(perception.get("phone_presence") or [])
+        actor_presence = {
+            str(key).strip().lower(): str(value).strip().lower()
+            for key, value in dict(perception.get("actor_presence") or {}).items()
+        }
+
+        household = getattr(runtime, "household", None)
+        household_users = list((getattr(household, "users", {}) or {}).values()) if household is not None else []
+        role_space = {
+            "director": "Office",
+            "household-coordinator": "Kitchen",
+            "student": "Study",
+        }
+        role_label = {
+            "director": "Director",
+            "household-coordinator": "Household Coordinator",
+            "student": "Student",
+        }
+        people: list[dict[str, Any]] = []
+        for user in household_users[:6]:
+            name = str(getattr(user, "display_name", "Household Member") or "Household Member").strip() or "Household Member"
+            role = str(getattr(user, "role", "") or "").strip().lower()
+            state = actor_presence.get(name.lower(), "")
+            latest_phone = next((item for item in phone_presence if str(item.get("actor", "")).strip().lower() == name.lower()), {})
+            if state in {"home", "arrived", "present", "inside"}:
+                status = "Home"
+                tone = "good"
+            elif state in {"away", "departed", "outside"}:
+                status = "Away"
+                tone = "low"
+            else:
+                status = "Profile"
+                tone = "low"
+            people.append(
+                {
+                    "name": name,
+                    "status": status,
+                    "detail": str(latest_phone.get("zone") or role_space.get(role, "Household")).strip() or "Household",
+                    "timing": str(latest_phone.get("timestamp") or "Profile-backed").strip() or "Profile-backed",
+                    "tone": tone,
+                    "role": role_label.get(role, "Household"),
+                    "source": "presence" if state else "profile",
+                }
+            )
+        if not people:
+            availability_notes.append("No household roster is configured yet, so people-at-home is limited to runtime presence evidence.")
+            for item in phone_presence[:4]:
+                actor = str(item.get("actor") or item.get("device") or "Presence source").strip() or "Presence source"
+                state = str(item.get("state") or "unknown").strip().lower()
+                people.append(
+                    {
+                        "name": actor,
+                        "status": "Home" if state in {"home", "arrived", "present", "inside"} else "Away" if state in {"away", "departed", "outside"} else "Unknown",
+                        "detail": str(item.get("zone") or "Presence lane").strip() or "Presence lane",
+                        "timing": str(item.get("timestamp") or "Recently").strip() or "Recently",
+                        "tone": "good" if state in {"home", "arrived", "present", "inside"} else "low",
+                        "role": "Presence",
+                        "source": "presence",
+                    }
+                )
+
+        total_due_today = int(((dashboard.get("tasks") or {}).get("due_today")) or len(today_tasks))
+        total_overdue = int(((dashboard.get("tasks") or {}).get("overdue")) or len(overdue_tasks))
+        open_locks = int(counts.get("open_locks") or 0)
+        garage_not_closed = int(counts.get("garage_not_closed") or 0)
+        active_leaks = int(counts.get("active_leaks") or 0)
+        cold_variances = int(counts.get("cold_storage_variances") or 0)
+        active_alert_count = int(((environment.get("status_summary") or {}).get("active_alert_count")) or 0)
+        watch_count = int(((environment.get("status_summary") or {}).get("watch_count")) or 0)
+        review_count = open_locks + garage_not_closed + active_leaks + cold_variances + total_due_today + total_overdue + active_alert_count
+
+        queue_rows: list[dict[str, Any]] = []
+        for task in overdue_tasks[:3]:
+            queue_rows.append(
+                {
+                    "title": str(task.get("title") or "Overdue home task").strip() or "Overdue home task",
+                    "detail": str(task.get("next_step") or task.get("description") or "This task is overdue and needs follow-through.").strip() or "This task is overdue and needs follow-through.",
+                    "zone": str(task.get("project_id") or "Operations").strip() or "Operations",
+                    "priority": "High",
+                    "tone": "warn",
+                    "task_id": str(task.get("id") or "").strip(),
+                    "action_type": "complete-task",
+                }
+            )
+        for task in today_tasks[:3]:
+            queue_rows.append(
+                {
+                    "title": str(task.get("title") or "Home task due today").strip() or "Home task due today",
+                    "detail": str(task.get("next_step") or task.get("description") or "This task is due today.").strip() or "This task is due today.",
+                    "zone": "Today",
+                    "priority": str(task.get("priority") or "Medium").strip().title() or "Medium",
+                    "tone": "warn" if str(task.get("priority") or "").strip().lower() == "high" else "low",
+                    "task_id": str(task.get("id") or "").strip(),
+                    "action_type": "complete-task",
+                }
+            )
+        for item in list((overview.get("cold_storage") or {}).get("active_sensors") or [])[:2]:
+            queue_rows.append(
+                {
+                    "title": f"{str(item.get('name') or 'Cold storage').strip() or 'Cold storage'} variance",
+                    "detail": str(item.get("recommended_action") or "Cold-storage variance needs review.").strip() or "Cold-storage variance needs review.",
+                    "zone": str(item.get("location") or "Cold Storage").strip() or "Cold Storage",
+                    "priority": "Medium",
+                    "tone": "warn",
+                }
+            )
+        if not queue_rows:
+            queue_rows.append(
+                {
+                    "title": "Household queue is clear",
+                    "detail": "No high-friction household task, alert, or signal is currently asking for authority.",
+                    "zone": "Household",
+                    "priority": "Low",
+                    "tone": "good",
+                }
+            )
+
+        today_rows: list[dict[str, Any]] = []
+        for event in list(agenda.get("events") or [])[:5]:
+            today_rows.append(
+                {
+                    "time": str(event.get("start_time") or event.get("start") or event.get("time") or "").strip(),
+                    "title": str(event.get("summary") or event.get("title") or event.get("name") or "Household event").strip() or "Household event",
+                    "status": str(event.get("location") or event.get("source") or "Today").strip() or "Today",
+                    "tone": "low",
+                }
+            )
+        if not today_rows:
+            for task in today_tasks[:3]:
+                today_rows.append(
+                    {
+                        "time": str(task.get("due_date") or "").strip(),
+                        "title": str(task.get("title") or "Home task due today").strip() or "Home task due today",
+                        "status": str(task.get("priority") or "Today").strip().title() or "Today",
+                        "tone": "warn" if str(task.get("priority") or "").strip().lower() == "high" else "low",
+                    }
+                )
+
+        away_rows: list[dict[str, Any]] = []
+        combined_away = [*recent_actions[:4]]
+        for item in camera_events[:3]:
+            combined_away.append(
+                {
+                    "timestamp": item.get("timestamp"),
+                    "target": item.get("camera") or item.get("zone") or "Camera",
+                    "action": item.get("event_type") or "camera-event",
+                    "detail": item.get("detail") or item.get("detected_object") or "Recent camera event",
+                    "outcome": item.get("confidence") or "Recorded",
+                }
+            )
+        for item in combined_away[:6]:
+            away_rows.append(
+                {
+                    "time": str(item.get("timestamp") or "").strip(),
+                    "title": str(item.get("target") or item.get("action") or "Home action").strip() or "Home action",
+                    "detail": str(item.get("detail") or item.get("outcome") or "Recent home activity").strip() or "Recent home activity",
+                    "status": str(item.get("outcome") or "Recorded").strip() or "Recorded",
+                }
+            )
+
+        room_map: dict[str, dict[str, Any]] = {}
+        for item in [*lights, *switches, *locks, *garage]:
+            room = str(item.get("room") or item.get("location") or "Home").strip() or "Home"
+            key = room.lower()
+            bucket = room_map.setdefault(
+                key,
+                {"room": room, "devices": 0, "active": 0, "locked": 0},
+            )
+            bucket["devices"] += 1
+            state = str(item.get("state") or "").strip().lower()
+            if state in {"on", "open", "unlocked"}:
+                bucket["active"] += 1
+            if state in {"locked", "closed", "off"}:
+                bucket["locked"] += 1
+        spaces = [
+            {
+                "title": value["room"].replace("-", " ").replace("_", " ").title(),
+                "note": f"{int(value['devices'])} tracked device(s) · {int(value['active'])} active",
+                "status": "Active" if int(value["active"]) else "Calm",
+            }
+            for value in list(room_map.values())[:6]
+        ]
+        if not spaces:
+            spaces = [{"title": "Home", "note": "No room-level device state is currently available.", "status": "Partial"}]
+
+        insights: list[dict[str, Any]] = []
+        for item in list(overview.get("summary") or [])[:3]:
+            insights.append({"title": str(item).strip() or "Household summary", "detail": "Live household summary"})
+        for item in anomalies[:2]:
+            insights.append(
+                {
+                    "title": str(item.get("source") or item.get("category") or "Environment anomaly").strip() or "Environment anomaly",
+                    "detail": str(item.get("recommendation") or item.get("detail") or "Perception surfaced an environmental anomaly.").strip() or "Perception surfaced an environmental anomaly.",
+                }
+            )
+        for key, value in list(provider_notes.items())[:2]:
+            insights.append(
+                {
+                    "title": str(key).replace("_", " ").replace("-", " ").title(),
+                    "detail": str(value).strip() or "Provider note",
+                }
+            )
+        if not insights:
+            insights.append({"title": "No live home insights yet", "detail": "Home is wired, but the current runtime has not surfaced higher-order household insights yet."})
+
+        recent_activity = _module_recent_activity(route="/home-center", domain="home", limit=10)
+        if not recent_activity:
+            recent_activity = _module_recent_activity(route="/command-center", domain="home", limit=6)
+
+        trusted_actions = [
+            {
+                "id": "sync-home",
+                "title": "Refresh Home Sources",
+                "note": "Runs the live Home inbox and calendar sync boundary.",
+                "action_type": "sync-home",
+                "primary": True,
+                "available": bool(inbox is not None),
+                "unavailable_reason": "Unified inbox is not initialised in this runtime." if inbox is None else "",
+            },
+            {
+                "id": "create-task",
+                "title": "Create Follow-up Task",
+                "note": "Writes a real task into the Home task store for anything this board surfaced.",
+                "action_type": "create-task",
+                "primary": False,
+                "available": bool(home_db is not None),
+                "unavailable_reason": "Home task storage is not initialised in this runtime." if home_db is None else "",
+            },
+            {
+                "id": "complete-top-task",
+                "title": "Complete Top Due Task",
+                "note": "Closes the first overdue or due-today home task and rehydrates the board.",
+                "action_type": "complete-top-task",
+                "primary": False,
+                "available": bool(overdue_tasks or today_tasks),
+                "unavailable_reason": "No due or overdue home task is available to complete." if not (overdue_tasks or today_tasks) else "",
+                "task_id": str(((overdue_tasks[:1] or today_tasks[:1] or [{}])[0].get("id") or "")).strip(),
+            },
+            {
+                "id": "energy-window",
+                "title": "Check Energy Window",
+                "note": "Runs the live energy-window planner for the first staged appliance lane.",
+                "action_type": "energy-window",
+                "primary": False,
+                "available": bool(energy_windows),
+                "unavailable_reason": "No staged appliance energy window is configured yet." if not energy_windows else "",
+                "appliance": str((energy_windows[:1] or [{}])[0].get("appliance") or "").strip(),
+            },
+        ]
+
+        mode_status = "live" if str(overview.get("mode") or "").strip().lower() == "live" else "profile-backed"
+        modes = [
+            {"title": "Home", "note": "Normal daily flow", "active": review_count <= 2},
+            {"title": "Away", "note": "Security and energy focus", "active": False},
+            {"title": "Night", "note": "Quiet-hour posture", "active": False},
+            {"title": "Hosting", "note": "Guest-ready routines", "active": False},
+            {"title": "Recovery", "note": "Low-friction calm", "active": False},
+            {"title": "Storm", "note": "Outage and prep posture", "active": bool((overview.get("outage_plan") or {}).get("minimumRuntimeMinutes"))},
+        ]
+
+        health_score = max(
+            58,
+            96
+            - (open_locks * 12)
+            - (garage_not_closed * 10)
+            - (active_leaks * 18)
+            - (cold_variances * 6)
+            - (total_overdue * 5)
+            - (active_alert_count * 7),
+        )
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": (
+                f"Home loaded {len(active_projects)} active project(s), {len(today_tasks)} due-today task(s), "
+                f"{len(people)} household presence/profile row(s), and {len(recent_activity)} recent continuity event(s)."
+            ),
+            "what_became_real": "Home now hydrates from live household posture, perception, environment, task, calendar, sync, and continuity sources instead of browser-seeded family-presence and household-story defaults.",
+            "remains_partial": "Physical occupancy, mode switching, and richer family presence are still limited by which live home and perception integrations are actually configured in this runtime.",
+            "runtime_note": "Home is live and connected.",
+            "availability_notes": availability_notes[:10],
+            "counts": {
+                "projects": len(active_projects),
+                "tasks_open": len(open_tasks),
+                "tasks_today": len(today_tasks),
+                "tasks_overdue": len(overdue_tasks),
+                "events_today": int(agenda.get("total") or len(list(agenda.get("events") or []))),
+                "people": len(people),
+                "home_count": len([item for item in people if str(item.get("status")).lower() == "home"]),
+                "review_items": review_count,
+                "anomalies": len(anomalies),
+                "recent_activity": len(recent_activity),
+                "active_alerts": active_alert_count,
+                "watch_items": watch_count,
+                "projected_value": float(((value_summary.get("totals") or {}).get("savings") or 0.0) + ((value_summary.get("totals") or {}).get("revenue") or 0.0)),
+            },
+            "overview": overview,
+            "agenda": agenda,
+            "dashboard": dashboard,
+            "environment": environment,
+            "people": people,
+            "today_rows": today_rows,
+            "queue": queue_rows[:6],
+            "away_rows": away_rows[:6],
+            "trusted_actions": trusted_actions,
+            "health": {
+                "score": health_score,
+                "label": "Healthy" if health_score >= 88 else "Stable" if health_score >= 76 else "Watch",
+                "components": [
+                    {"label": "Safety", "value": max(55, 96 - (open_locks * 16) - (garage_not_closed * 12) - (active_leaks * 22))},
+                    {"label": "Comfort", "value": max(60, 86 - (cold_variances * 8))},
+                    {"label": "Readiness", "value": max(56, 92 - (review_count * 6))},
+                    {"label": "Continuity", "value": max(60, 88 - (max(0, len(recent_actions) - 4) * 2))},
+                ],
+            },
+            "modes": {
+                "status": mode_status,
+                "items": modes,
+            },
+            "spaces": spaces,
+            "return_prep": [
+                {
+                    "title": f"Check {str(item.get('appliance') or 'energy lane').strip() or 'energy lane'}",
+                    "detail": str(item.get("reason") or "Window prepared.").strip() or "Window prepared.",
+                    "time": str(item.get("preferredWindow") or "Next window").strip() or "Next window",
+                }
+                for item in energy_windows[:4]
+            ] or [
+                {
+                    "title": "No live return-home prep queued",
+                    "detail": "No energy-window or arrival staging lane is active in this runtime.",
+                    "time": "Unavailable",
+                }
+            ],
+            "insights": insights[:6],
+            "active_projects": active_projects[:6],
+            "recent_activity": recent_activity,
+            "sync_status": sync_status,
+            "value_summary": value_summary,
+            "proof_paths": {
+                "module_route": "/home-center",
+                "module_api": "/api/home/module",
+                "overview_api": "/api/home-overview",
+                "dashboard_api": "/api/home/dashboard",
+                "calendar_today_api": "/api/home/calendar/today",
+                "projects_api": "/api/home/projects?status=active",
+                "tasks_today_api": "/api/home/tasks/today",
+                "tasks_overdue_api": "/api/home/tasks/overdue",
+                "sync_api": "/api/home/sync",
+                "energy_window_api": "/api/energy-window",
+                "operator_activity_api": "/api/activity/operator-action",
+            },
+            "errors": errors,
+        }
+
+        if errors and not (overview or dashboard or agenda.get("events") or people):
+            payload["available"] = False
+            payload["status"] = "Wired"
+            payload["summary"] = "Home route is wired, but the runtime could not hydrate enough live household data to make the surface fully useful."
+            payload["runtime_note"] = "Home is partially connected. Live household sources did not fully hydrate."
+            payload["remains_partial"] = "Home needs more live household, task, calendar, or perception data in this runtime to become richly informative."
+        elif errors:
+            payload["runtime_note"] = "Home is live, but some household sources are partially unavailable."
+        if not payload["availability_notes"]:
+            payload["availability_notes"].append("All currently available Home sources hydrated successfully.")
+        return payload
+
+    @app.get("/api/home/module")
+    async def api_home_module(actor: str = "Chris") -> JSONResponse:
+        return _json(await _build_home_module_payload(actor))
 
     # ------------------------------------------------------------------
     # Agent Work System — GET routes (work items, standup, huddle)

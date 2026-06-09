@@ -321,6 +321,21 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/workshop/materials", html)
         self.assertIn("/api/activity/operator-action", html)
 
+    def test_render_glass_shell_wires_home_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="home-refresh-button"', html)
+        self.assertIn('id="home-runtime-note"', html)
+        self.assertIn("function refreshHomeView(", html)
+        self.assertIn("function homeHandleAction(", html)
+        self.assertIn("function homeOpenRoute(", html)
+        self.assertIn("function homeRecordAction(", html)
+        self.assertIn("/api/home/module", html)
+        self.assertIn("/api/home/tasks", html)
+        self.assertIn("/api/home/sync", html)
+        self.assertIn("/api/energy-window", html)
+        self.assertIn("/api/activity/operator-action", html)
+
     def test_render_glass_shell_wires_publishing_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

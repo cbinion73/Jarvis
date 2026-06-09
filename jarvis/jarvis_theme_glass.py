@@ -9030,6 +9030,8 @@ body::after {{
   font-size: 12px;
   color: var(--home-copy);
   background: rgba(255,255,255,0.03);
+  cursor:pointer;
+  font-family:inherit;
 }}
 .home-col-4 {{ grid-column: span 4; }}
 .home-col-5 {{ grid-column: span 5; }}
@@ -24955,7 +24957,7 @@ body::after {{
               <h3>1. Household Posture</h3>
               <p>The current state of your home.</p>
             </div>
-            <div class="home-action-link" id="home-page-count">Page 1 of 1</div>
+            <button type="button" class="home-action-link" id="home-refresh-button" onclick="refreshHomeView(true)">Refresh Home</button>
           </div>
           <div class="home-lifestyle-hero">
             <div class="home-lifestyle-overlay">
@@ -24976,7 +24978,7 @@ body::after {{
               <h3>2. Home Nervous System</h3>
               <p>Live status of critical systems.</p>
             </div>
-            <div class="home-action-link">View All Systems</div>
+            <button type="button" class="home-action-link" onclick="homeOpenRoute('/vision-center', 'vision', 'Opening live home system detail.')">View All Systems</button>
           </div>
           <div class="home-nerve-grid" id="home-system-grid"></div>
         </section>
@@ -24987,7 +24989,7 @@ body::after {{
               <h3>3. People At Home</h3>
               <p>Who’s home, away, and when.</p>
             </div>
-            <div class="home-action-link">View All</div>
+            <button type="button" class="home-action-link" onclick="homeOpenRoute('/activity-center', 'activity', 'Opening shared continuity and presence activity.')">View All</button>
           </div>
           <div class="home-people-list" id="home-people-list"></div>
         </section>
@@ -25012,7 +25014,7 @@ body::after {{
               <h3>5. Attention &amp; Household Queue</h3>
               <p>What needs review or action.</p>
             </div>
-            <div class="home-action-link">Review All</div>
+            <button type="button" class="home-action-link" onclick="homeOpenRoute('/workshop', 'workshop', 'Opening the shared task and execution lane.')">Review All</button>
           </div>
           <div class="home-queue-list" id="home-queue-list"></div>
         </section>
@@ -25023,7 +25025,7 @@ body::after {{
               <h3>6. While You Were Away</h3>
               <p>What happened while you were away.</p>
             </div>
-            <div class="home-action-link">Since Yesterday</div>
+            <button type="button" class="home-action-link" onclick="homeOpenRoute('/activity-center', 'activity', 'Opening the recent household continuity lane.')">Since Yesterday</button>
           </div>
           <div class="home-away-list" id="home-away-list"></div>
         </section>
@@ -25034,7 +25036,7 @@ body::after {{
               <h3>7. Trusted Home Actions</h3>
               <p>What JARVIS can do for your home.</p>
             </div>
-            <div class="home-action-link">Manage Trust</div>
+            <button type="button" class="home-action-link" onclick="homeOpenRoute('/settings-center', 'settings', 'Opening settings for boundary and trust review.')">Manage Trust</button>
           </div>
           <div class="home-trusted-grid" id="home-trusted-grid"></div>
         </section>
@@ -25063,7 +25065,7 @@ body::after {{
               <h3>9. Home Modes</h3>
               <p>One tap to set the right atmosphere.</p>
             </div>
-            <div class="home-action-link">Customize Modes</div>
+            <button type="button" class="home-action-link" onclick="homeModeBoundaryNotice()">Customize Modes</button>
           </div>
           <div class="home-modes-grid" id="home-modes-grid"></div>
         </section>
@@ -25074,7 +25076,7 @@ body::after {{
               <h3>10. Spaces Overview</h3>
               <p>The state of key spaces in your home.</p>
             </div>
-            <div class="home-action-link">View All Spaces</div>
+            <button type="button" class="home-action-link" onclick="homeOpenRoute('/vision-center', 'vision', 'Opening the vision and perception surface for space detail.')">View All Spaces</button>
           </div>
           <div class="home-spaces-grid" id="home-spaces-grid"></div>
         </section>
@@ -25095,7 +25097,7 @@ body::after {{
               <h3>12. Home Insights</h3>
               <p>Insights to keep your home running well.</p>
             </div>
-            <div class="home-action-link">See All Insights</div>
+            <button type="button" class="home-action-link" onclick="homeOpenRoute('/command-center', 'chat', 'Opening command for broader household follow-through.')">See All Insights</button>
           </div>
           <div class="home-insight-list" id="home-insight-list"></div>
         </section>
@@ -25112,6 +25114,7 @@ body::after {{
           <div>
             <strong>Home Engine Online</strong>
             <span id="home-footer-status">All systems operational</span>
+            <span id="home-runtime-note">Home is loading live household posture.</span>
           </div>
           <div class="home-live-dot"></div>
         </div>
@@ -28293,16 +28296,15 @@ function _deviceIcon(type) {{
   }}
 }}
 
-let _homeOverviewData = null;
-let _homeAgendaData = null;
-let _homeDashboardData = null;
+let _homeModuleData = null;
+let _homeRequestSerial = 0;
 
 function homeEsc(value) {{
   return escHtml(String(value ?? ''));
 }}
 
 function homeFormatClock(value) {{
-  if (!value) return 'Today';
+  if (!value) return 'Unavailable';
   const raw = String(value);
   if (/^\d{{1,2}}:\d{{2}}$/.test(raw)) return raw;
   const dt = new Date(raw);
@@ -28310,116 +28312,17 @@ function homeFormatClock(value) {{
   return dt.toLocaleTimeString([], {{ hour: 'numeric', minute: '2-digit' }});
 }}
 
-function homeCurrentMode() {{
-  const hour = new Date().getHours();
-  if (hour < 6) return {{ title: 'Quiet Hours', note: `Quiet hours active until ${{HOME_QUIET_END}}.` }};
-  if (hour < 9) return {{ title: 'First Light', note: 'Morning ramp with low-noise coordination.' }};
-  if (hour < 12) return {{ title: 'Focused Morning', note: 'Protect deep work and reduce household friction.' }};
-  if (hour < 17) return {{ title: 'Dayflow', note: 'Coordinate pickups, deliveries, and household cadence.' }};
-  if (hour < 21) return {{ title: 'Evening Wind-Down', note: `Quiet hours begin at ${{HOME_QUIET_START}}.` }};
-  return {{ title: 'Quiet Hours', note: `Quiet hours active until ${{HOME_QUIET_END}}.` }};
-}}
-
-function homeMetricTone(value, high = 3) {{
-  if (value <= 0) return 'good';
-  if (value >= high) return 'warn';
-  return 'low';
-}}
-
-function homeBuildQueue(overview, dashboard, agenda) {{
-  const queue = [];
-  const cold = overview?.cold_storage || {{}};
-  const coldSensors = Array.isArray(cold.active_sensors) ? cold.active_sensors : [];
-  coldSensors.forEach((sensor) => {{
-    queue.push({{
-      title: `${{sensor.name || 'Cold storage'}} variance`,
-      detail: sensor.recommended_action || 'Cold-storage sensor needs review.',
-      zone: sensor.location || 'Cold Storage',
-      priority: 'Medium',
-      tone: 'warn',
-    }});
-  }});
-  (overview?.locks || []).filter((item) => String(item.state || '').toLowerCase() !== 'locked').forEach((lock) => {{
-    queue.push({{
-      title: `${{lock.name || 'Lock'}} not secured`,
-      detail: 'Security boundary needs review before the evening posture locks in.',
-      zone: lock.location || 'Security',
-      priority: 'High',
-      tone: 'warn',
-    }});
-  }});
-  (overview?.garage || []).filter((item) => String(item.state || '').toLowerCase() !== 'closed').forEach((door) => {{
-    queue.push({{
-      title: `${{door.name || 'Garage'}} open`,
-      detail: 'Close the garage before the household transitions into quiet mode.',
-      zone: door.location || 'Garage',
-      priority: 'High',
-      tone: 'warn',
-    }});
-  }});
-  const tasks = Number(dashboard?.tasks?.due_today || 0);
-  if (tasks > 0) {{
-    queue.push({{
-      title: `${{tasks}} household task${{tasks === 1 ? '' : 's'}} due today`,
-      detail: 'A few home-system or family operations tasks are still open.',
-      zone: 'Operations',
-      priority: tasks > 2 ? 'High' : 'Low',
-      tone: tasks > 2 ? 'warn' : 'low',
-    }});
+async function homeFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, options);
+    let payload = null;
+    try {{
+      payload = await response.json();
+    }} catch (_) {{}}
+    return {{ ok: response.ok, status: response.status, payload }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, error }};
   }}
-  const eventTotal = Array.isArray(agenda?.events) ? agenda.events.length : 0;
-  if (eventTotal > 4) {{
-    queue.push({{
-      title: 'Dense household cadence',
-      detail: `Today carries ${{eventTotal}} calendar events. Preserve transitions and travel slack.`,
-      zone: 'Calendar',
-      priority: 'Medium',
-      tone: 'low',
-    }});
-  }}
-  if (!queue.length) {{
-    queue.push({{
-      title: 'Home queue is clear',
-      detail: 'No high-friction household signals are asking for authority right now.',
-      zone: 'Household',
-      priority: 'Low',
-      tone: 'good',
-    }});
-  }}
-  return queue.slice(0, 4);
-}}
-
-function homeBuildPeople() {{
-  const seed = Array.isArray(HOME_PEOPLE_SEED) && HOME_PEOPLE_SEED.length
-    ? HOME_PEOPLE_SEED
-    : [
-      {{ name: USER_NAME, status: 'Home', detail: 'Office', timing: 'Now' }},
-      {{ name: 'Household', status: 'Home', detail: HOME_LOCATION_LABEL, timing: 'Now' }},
-    ];
-  return seed.map((person, index) => ({{
-    ...person,
-    tone: index === 0 ? 'good' : 'low',
-  }}));
-}}
-
-function homeBuildTodayRows(agenda) {{
-  const events = Array.isArray(agenda?.events) ? agenda.events : [];
-  if (!events.length) {{
-    return [
-      {{ time: '6:15 AM', title: 'Morning Routine Complete', status: 'Done', tone: 'good' }},
-      {{ time: '8:30 AM', title: 'Everyone Left for Day', status: 'Done', tone: 'good' }},
-      {{ time: '8:30 PM', title: 'Wind-Down Begins', status: 'Today', tone: 'warn' }},
-    ];
-  }}
-  return events.slice(0, 5).map((event) => {{
-    const title = event.summary || event.title || event.name || 'Household event';
-    return {{
-      time: homeFormatClock(event.start_time || event.start || event.time || ''),
-      title,
-      status: event.location || event.source || 'Today',
-      tone: 'low',
-    }};
-  }});
 }}
 
 function homeRenderRows(id, rows, renderer) {{
@@ -28433,221 +28336,363 @@ function homeSetText(id, value) {{
   if (el) el.textContent = value;
 }}
 
-function renderHomeView(overview = {{}}, agenda = {{}}, dashboard = {{}}) {{
-  const counts = overview.counts || {{}};
-  const modeMeta = homeCurrentMode();
-  const lightsOn = Number(counts.lights_on || 0);
-  const outletsOn = Number(counts.outlets_on || 0);
-  const openLocks = Number(counts.open_locks || 0);
-  const garageOpen = Number(counts.garage_not_closed || 0);
-  const leaks = Number(counts.active_leaks || 0);
-  const coldAlerts = Number(counts.cold_storage_variances || 0);
-  const reviewCount = openLocks + garageOpen + leaks + coldAlerts + Number(dashboard?.tasks?.due_today || 0);
-  const score = Math.max(62, 96 - (openLocks * 10) - (garageOpen * 9) - (leaks * 14) - (coldAlerts * 6) - (Number(dashboard?.signals?.unclassified_count || 0) * 2));
-  const posture = reviewCount <= 1 ? 'Calm & Focused' : reviewCount <= 3 ? 'Watchful & Ready' : 'Needs Attention';
-  const postureNote = reviewCount <= 1 ? 'Normal mode · low load' : reviewCount <= 3 ? 'A few systems or tasks need review' : 'Household needs tighter attention before it compounds';
-  const climate = Array.isArray(overview.climate) ? overview.climate[0] : null;
-  const temperature = climate?.attributes?.currentTemperature ?? 72;
-  const safety = openLocks || garageOpen || leaks ? 'Review Needed' : 'Secure';
-  const safetyNote = openLocks || garageOpen || leaks ? `${{openLocks + garageOpen + leaks}} boundary item${{openLocks + garageOpen + leaks === 1 ? '' : 's'}} to clear` : 'All clear';
-  const loadLabel = reviewCount >= 4 ? 'High' : reviewCount >= 2 ? 'Moderate' : 'Light';
-  const people = homeBuildPeople();
-  const todayRows = homeBuildTodayRows(agenda);
-  const queueRows = homeBuildQueue(overview, dashboard, agenda);
-  const recentActions = Array.isArray(overview.recent_actions) ? overview.recent_actions : [];
-  const summary = Array.isArray(overview.summary) ? overview.summary : [];
-  const energy = Array.isArray(overview.energy_windows) ? overview.energy_windows : [];
-  const providerNotes = overview.provider_notes || {{}};
+function homeRuntimeNote(message) {{
+  homeSetText('home-runtime-note', message || 'Home is live and connected.');
+}}
+
+function homeOpenRoute(route, fallbackView = '', note = '') {{
+  const raw = String(route || '').trim();
+  const routeMap = {{
+    '/home-center': 'home',
+    '/command-center': 'chat',
+    '/activity-center': 'activity',
+    '/vision-center': 'vision',
+    '/settings-center': 'settings',
+    '/health-center': 'health',
+    '/navigation-center': 'navigate',
+    '/publish': 'publishing',
+  }};
+  if (note) homeRuntimeNote(note);
+  if (!raw) {{
+    if (fallbackView) switchView(fallbackView);
+    return;
+  }}
+  if (routeMap[raw]) {{
+    switchView(routeMap[raw]);
+    return;
+  }}
+  if (fallbackView) {{
+    switchView(fallbackView);
+    return;
+  }}
+  if (raw.startsWith('/') && !raw.startsWith('/api/')) window.location.href = raw;
+}}
+
+async function homeRecordAction(payload = {{}}) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: USER_NAME || 'Chris',
+        domain: 'home',
+        route: '/home-center',
+        route_label: 'Open Home',
+        related_kind: 'home-action',
+        ...payload,
+      }}),
+    }});
+  }} catch (_) {{}}
+}}
+
+function homeModeBoundaryNotice() {{
+  const status = String(_homeModuleData?.modes?.status || 'profile-backed').trim() || 'profile-backed';
+  const note = status === 'live'
+    ? 'Home modes are represented from live posture, but direct mode mutation is not yet exposed from this desktop.'
+    : 'Home modes are currently profile-backed. Live mode mutation is not connected in this runtime.';
+  homeRuntimeNote(note);
+  showToast(note, 'info');
+}}
+
+async function homeHandleAction(actionId) {{
+  const actions = Array.isArray(_homeModuleData?.trusted_actions) ? _homeModuleData.trusted_actions : [];
+  const item = actions.find((entry) => String(entry.id || '') === String(actionId || ''));
+  if (!item) {{
+    showToast('Home action is not available.', 'error');
+    return;
+  }}
+  if (item.available === false) {{
+    const reason = item.unavailable_reason || 'This home action is not available in the current runtime.';
+    homeRuntimeNote(reason);
+    showToast(reason, 'info');
+    return;
+  }}
+  const label = item.title || 'Home action';
+  homeRuntimeNote(`Running "${{label}}"…`);
+  try {{
+    if (item.action_type === 'sync-home') {{
+      const response = await homeFetchJson('/api/home/sync', {{ method: 'POST' }});
+      if (!response.ok) throw new Error(response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`);
+      await homeRecordAction({{
+        action: label,
+        title: label,
+        detail: item.note || 'Triggered a Home sync from the Home desktop.',
+        why_now: item.note || 'The Home desktop requested a live source refresh.',
+        result_summary: 'Home sync completed from the desktop experience.',
+        succeeded: true,
+      }});
+      showToast('Home sync completed.', 'success');
+    }} else if (item.action_type === 'create-task') {{
+      const queueLead = (_homeModuleData?.queue || [])[0] || {{}};
+      const response = await homeFetchJson('/api/home/tasks', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          title: queueLead.title || 'Home follow-up',
+          description: queueLead.detail || 'Follow-up created from the Home desktop.',
+          status: 'open',
+          priority: String(queueLead.priority || 'medium').toLowerCase(),
+          next_step: queueLead.detail || 'Review from Home desktop',
+          source: 'home-desktop',
+        }}),
+      }});
+      if (!response.ok) throw new Error(response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`);
+      await homeRecordAction({{
+        action: label,
+        title: label,
+        detail: `Created home task "${{response.payload?.title || queueLead.title || 'Home follow-up'}}".`,
+        why_now: 'The Home desktop turned a surfaced queue item into a persisted task.',
+        result_summary: 'Home follow-up task was created successfully.',
+        related_label: response.payload?.title || queueLead.title || 'Home follow-up',
+        succeeded: true,
+      }});
+      showToast('Home task created.', 'success');
+    }} else if (item.action_type === 'complete-top-task') {{
+      const taskId = String(item.task_id || '').trim();
+      if (!taskId) throw new Error('No due or overdue task is available.');
+      const response = await homeFetchJson(`/api/home/tasks/${{encodeURIComponent(taskId)}}/complete`, {{ method: 'POST' }});
+      if (!response.ok) throw new Error(response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`);
+      await homeRecordAction({{
+        action: label,
+        title: label,
+        detail: `Completed home task "${{response.payload?.title || 'Home task'}}".`,
+        why_now: 'The Home desktop cleared the highest-friction task directly from the household board.',
+        result_summary: 'Top due home task was completed successfully.',
+        related_label: response.payload?.title || 'Home task',
+        succeeded: true,
+      }});
+      showToast('Top home task completed.', 'success');
+    }} else if (item.action_type === 'energy-window') {{
+      const appliance = String(item.appliance || '').trim();
+      if (!appliance) throw new Error('No appliance lane is configured for an energy-window check.');
+      const response = await homeFetchJson('/api/energy-window', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          actor: USER_NAME || 'Chris',
+          appliance,
+          request: `Review the best operating window for ${{appliance}}.`,
+        }}),
+      }});
+      if (!response.ok) throw new Error(response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`);
+      const recommendation = response.payload?.recommended_window || response.payload?.summary || response.payload?.reason || `Energy window checked for ${{appliance}}.`;
+      await homeRecordAction({{
+        action: label,
+        title: label,
+        detail: String(recommendation || '').trim() || `Energy window checked for ${{appliance}}.`,
+        why_now: 'The Home desktop asked for a safe planning recommendation instead of performing a physical actuation.',
+        result_summary: `Energy window reviewed for ${{appliance}}.`,
+        related_label: appliance,
+        succeeded: true,
+      }});
+      homeRuntimeNote(String(recommendation || '').trim() || `Energy window checked for ${{appliance}}.`);
+      showToast(`Energy window reviewed for ${{appliance}}.`, 'success');
+    }} else {{
+      throw new Error('This Home action type is not implemented.');
+    }}
+    await refreshHomeView(false);
+  }} catch (error) {{
+    const detail = error?.message || 'Home action failed.';
+    homeRuntimeNote(detail);
+    showToast(detail, 'error');
+  }}
+}}
+
+function renderHomeView(modulePayload = {{}}) {{
+  _homeModuleData = modulePayload || {{}};
+  const overview = modulePayload?.overview || {{}};
+  const counts = modulePayload?.counts || {{}};
+  const health = modulePayload?.health || {{}};
+  const environment = modulePayload?.environment || {{}};
+  const climate = Array.isArray(overview?.climate) ? overview.climate[0] : null;
+  const systems = [
+    {{
+      label: 'Climate',
+      value: climate?.attributes?.currentTemperature != null ? `${{climate.attributes.currentTemperature}}°F` : 'Unavailable',
+      note: climate?.attributes?.hvacMode ? String(climate.attributes.hvacMode).replace('_', ' ') : 'No HVAC posture',
+      tone: climate ? 'good' : 'low',
+    }},
+    {{
+      label: 'Lights',
+      value: `${{Number((overview?.counts || {{}}).lights_on || 0)}} On`,
+      note: Number((overview?.counts || {{}}).lights_on || 0) ? 'Active fixtures visible' : 'No active fixtures',
+      tone: Number((overview?.counts || {{}}).lights_on || 0) > 5 ? 'warn' : 'good',
+    }},
+    {{
+      label: 'Locks',
+      value: Number((overview?.counts || {{}}).open_locks || 0) ? `${{Number((overview?.counts || {{}}).open_locks || 0)}} Open` : 'All Locked',
+      note: Number((overview?.counts || {{}}).open_locks || 0) ? 'Security boundary needs review' : 'Secure boundary',
+      tone: Number((overview?.counts || {{}}).open_locks || 0) ? 'warn' : 'good',
+    }},
+    {{
+      label: 'Garage',
+      value: Number((overview?.counts || {{}}).garage_not_closed || 0) ? 'Open' : 'Closed',
+      note: Number((overview?.counts || {{}}).garage_not_closed || 0) ? 'Close before quiet posture' : 'Secure',
+      tone: Number((overview?.counts || {{}}).garage_not_closed || 0) ? 'warn' : 'good',
+    }},
+    {{
+      label: 'Water',
+      value: Number((overview?.counts || {{}}).active_leaks || 0) ? `${{Number((overview?.counts || {{}}).active_leaks || 0)}} Active` : 'No Leaks',
+      note: Number((overview?.counts || {{}}).active_leaks || 0) ? 'Immediate review needed' : 'Dry',
+      tone: Number((overview?.counts || {{}}).active_leaks || 0) ? 'warn' : 'good',
+    }},
+    {{
+      label: 'Power',
+      value: overview?.outage_plan?.minimumRuntimeMinutes ? `${{overview.outage_plan.minimumRuntimeMinutes}} min` : 'Ready',
+      note: overview?.outage_plan?.recommended_actions?.[0] || 'Protected runtime posture',
+      tone: 'low',
+    }},
+    {{
+      label: 'Alerts',
+      value: `${{Number(counts.active_alerts || 0)}} active`,
+      note: `${{Number(counts.watch_items || 0)}} watch item(s)`,
+      tone: Number(counts.active_alerts || 0) ? 'warn' : Number(counts.watch_items || 0) ? 'low' : 'good',
+    }},
+    {{
+      label: 'Projects',
+      value: `${{Number(counts.projects || 0)}} Active`,
+      note: `${{Number(counts.tasks_today || 0)}} due today · ${{Number(counts.tasks_overdue || 0)}} overdue`,
+      tone: Number(counts.tasks_overdue || 0) ? 'warn' : 'low',
+    }},
+  ];
+
+  const posture = Number(counts.review_items || 0) <= 1 ? 'Calm & Focused' : Number(counts.review_items || 0) <= 4 ? 'Watchful & Ready' : 'Needs Attention';
+  const postureNote = String(modulePayload?.summary || '').trim() || 'Home is live and connected.';
+  const environmentStatus = String((environment?.status_summary || {{}}).status || overview?.mode || 'steady').trim();
+  const people = Array.isArray(modulePayload?.people) ? modulePayload.people : [];
+  const todayRows = Array.isArray(modulePayload?.today_rows) ? modulePayload.today_rows : [];
+  const queueRows = Array.isArray(modulePayload?.queue) ? modulePayload.queue : [];
+  const awayRows = Array.isArray(modulePayload?.away_rows) ? modulePayload.away_rows : [];
+  const returnRows = Array.isArray(modulePayload?.return_prep) ? modulePayload.return_prep : [];
+  const insights = Array.isArray(modulePayload?.insights) ? modulePayload.insights : [];
+  const spaceRows = Array.isArray(modulePayload?.spaces) ? modulePayload.spaces : [];
+  const modeRows = Array.isArray(modulePayload?.modes?.items) ? modulePayload.modes.items : [];
+  const availabilityNotes = Array.isArray(modulePayload?.availability_notes) ? modulePayload.availability_notes : [];
 
   homeSetText('home-stat-posture', posture);
-  homeSetText('home-stat-posture-note', postureNote);
-  homeSetText('home-stat-occupancy', `${{people.filter((p) => p.status === 'Home').length}} Home`);
-  homeSetText('home-stat-occupancy-note', `${{people.filter((p) => p.status !== 'Home').length}} away · 0 arriving`);
-  homeSetText('home-stat-mode', modeMeta.title);
-  homeSetText('home-stat-mode-note', modeMeta.note);
-  homeSetText('home-stat-environment', `${{temperature}}°F`);
-  homeSetText('home-stat-environment-note', climate?.attributes?.hvacMode ? String(climate.attributes.hvacMode).replace('_', ' ') : 'Comfort');
-  homeSetText('home-stat-safety', safety);
-  homeSetText('home-stat-safety-note', safetyNote);
-  homeSetText('home-stat-load', loadLabel);
-  homeSetText('home-stat-load-note', `${{reviewCount}} item${{reviewCount === 1 ? '' : 's'}} to review`);
-  homeSetText('home-tag-mode', modeMeta.title);
-  homeSetText('home-posture-note', summary[0] || 'House is stable and operating within expected household boundaries.');
-  homeSetText('home-attention-title', `Attention Load: ${{loadLabel}}`);
-  homeSetText('home-attention-copy', `${{reviewCount}} household item${{reviewCount === 1 ? '' : 's'}} awaiting review.`);
-  homeSetText('home-health-score', `${{score}}%`);
-  homeSetText('home-health-score-note', score >= 88 ? 'Healthy' : score >= 76 ? 'Stable' : 'Watch');
-  homeSetText('home-footer-status', overview.mode === 'live' ? 'Live home systems connected' : 'Profile-backed home intelligence online');
+  homeSetText('home-stat-posture-note', environmentStatus ? `Environment is ${{environmentStatus}}.` : 'Home posture is updating from live sources.');
+  homeSetText('home-stat-occupancy', `${{Number(counts.home_count || 0)}} Home`);
+  homeSetText('home-stat-occupancy-note', `${{Math.max(0, Number(counts.people || 0) - Number(counts.home_count || 0))}} away/profile-backed`);
+  homeSetText('home-stat-mode', String(modeRows.find((item) => item.active)?.title || 'Home').trim() || 'Home');
+  homeSetText('home-stat-mode-note', String(modulePayload?.modes?.status || 'profile-backed').trim() === 'live' ? 'Mode posture is live-backed' : 'Mode posture is profile-backed');
+  homeSetText('home-stat-environment', climate?.attributes?.currentTemperature != null ? `${{climate.attributes.currentTemperature}}°F` : 'Unavailable');
+  homeSetText('home-stat-environment-note', climate?.attributes?.hvacMode ? String(climate.attributes.hvacMode).replace('_', ' ') : 'No live climate telemetry');
+  homeSetText('home-stat-safety', Number(counts.active_alerts || 0) || Number((overview?.counts || {{}}).open_locks || 0) || Number((overview?.counts || {{}}).garage_not_closed || 0) || Number((overview?.counts || {{}}).active_leaks || 0) ? 'Review Needed' : 'Secure');
+  homeSetText('home-stat-safety-note', Number(counts.active_alerts || 0) ? `${{Number(counts.active_alerts || 0)}} alert(s) active` : 'No active escalation signal');
+  homeSetText('home-stat-load', Number(counts.review_items || 0) >= 5 ? 'High' : Number(counts.review_items || 0) >= 2 ? 'Moderate' : 'Light');
+  homeSetText('home-stat-load-note', `${{Number(counts.review_items || 0)}} review item${{Number(counts.review_items || 0) === 1 ? '' : 's'}} surfaced`);
+  homeSetText('home-tag-mode', String(modeRows.find((item) => item.active)?.title || 'Home').trim() || 'Home');
+  homeSetText('home-tag-focus', String(modulePayload?.runtime_note || 'Home is live and connected.').trim() || 'Home is live and connected.');
+  homeSetText('home-posture-note', postureNote);
+  homeSetText('home-attention-title', `Attention Load: ${{Number(counts.review_items || 0) >= 5 ? 'High' : Number(counts.review_items || 0) >= 2 ? 'Moderate' : 'Light'}}`);
+  homeSetText('home-attention-copy', queueRows[0]?.detail || availabilityNotes[0] || 'Home is live and connected.');
+  homeSetText('home-health-score', `${{Math.round(Number(health.score || 0))}}%`);
+  homeSetText('home-health-score-note', String(health.label || 'Watch').trim() || 'Watch');
+  homeSetText('home-footer-status', modulePayload?.available === false ? 'Home sources partially unavailable' : (overview?.mode === 'live' ? 'Live home systems connected' : 'Profile-backed home intelligence online'));
+  homeRuntimeNote(String(modulePayload?.runtime_note || 'Home is live and connected.').trim() || 'Home is live and connected.');
 
   const postureMetrics = [
-    ['Energy', leaks ? 'Attention' : 'Normal'],
-    ['Noise Level', modeMeta.title === 'Quiet Hours' ? 'Low' : 'Live'],
-    ['Clutter Drift', coldAlerts ? 'Watch' : 'Low'],
-    ['Air Quality', 'Good'],
-    ['Stress Signals', reviewCount > 2 ? 'Moderate' : 'Low'],
+    ['Projects', Number(counts.projects || 0)],
+    ['Due Today', Number(counts.tasks_today || 0)],
+    ['Overdue', Number(counts.tasks_overdue || 0)],
+    ['Events Today', Number(counts.events_today || 0)],
+    ['Anomalies', Number(counts.anomalies || 0)],
   ];
   homeRenderRows('home-posture-metrics', postureMetrics, ([label, value]) => `
-    <div class="home-chip-card"><strong>${{homeEsc(label)}}</strong><span>${{homeEsc(value)}}</span></div>
+    <div class="home-chip-card"><strong>${{homeEsc(label)}}</strong><span>${{homeEsc(String(value))}}</span></div>
   `);
 
-  const systems = [
-    ['Climate', `${{temperature}}°F`, climate?.attributes?.hvacMode ? String(climate.attributes.hvacMode).replace('_', ' ') : 'Comfort', 'good'],
-    ['Lights', `${{lightsOn}} On`, lightsOn ? 'Normal' : 'Resting', lightsOn > 5 ? 'warn' : 'good'],
-    ['Locks', openLocks ? `${{openLocks}} Open` : 'All Locked', openLocks ? 'Review' : 'Secure', openLocks ? 'warn' : 'good'],
-    ['Garage', garageOpen ? 'Open' : 'Closed', garageOpen ? 'Needs close' : 'Secure', garageOpen ? 'warn' : 'good'],
-    ['Security', leaks ? 'Needs review' : 'All Clear', overview.mode === 'live' ? 'Armed / aware' : 'Profile-backed', leaks ? 'warn' : 'good'],
-    ['Water', leaks ? `${{leaks}} Active` : 'No Leaks', leaks ? 'Needs action' : 'Dry', leaks ? 'warn' : 'good'],
-    ['Power', overview.outage_plan?.minimumRuntimeMinutes ? `${{overview.outage_plan.minimumRuntimeMinutes}} min` : 'Ready', 'Protected runtime', 'low'],
-    ['Devices', `${{lightsOn + outletsOn + (Array.isArray(overview.locks) ? overview.locks.length : 0)}} Online`, 'Up to date', 'low'],
-  ];
-  homeRenderRows('home-system-grid', systems, ([label, value, note, tone]) => `
+  homeRenderRows('home-system-grid', systems, (item) => `
     <div class="home-system-card">
-      <strong>${{homeEsc(label)}}</strong>
-      <div style="font-size:24px; font-weight:700; margin-bottom:4px;">${{homeEsc(value)}}</div>
-      <span>${{homeEsc(note)}}</span>
-      <div class="home-system-pill ${{tone}}">${{tone === 'warn' ? 'Needs review' : tone === 'good' ? 'Stable' : 'Observed'}}</div>
+      <strong>${{homeEsc(item.label)}}</strong>
+      <div style="font-size:24px; font-weight:700; margin-bottom:4px;">${{homeEsc(item.value)}}</div>
+      <span>${{homeEsc(item.note)}}</span>
+      <div class="home-system-pill ${{item.tone}}">${{item.tone === 'warn' ? 'Needs review' : item.tone === 'good' ? 'Stable' : 'Observed'}}</div>
     </div>
   `);
 
-  homeRenderRows('home-people-list', people, (person) => `
+  homeRenderRows('home-people-list', people.length ? people : [{{ name: 'Household roster unavailable', status: 'Partial', detail: availabilityNotes[0] || 'No roster or presence source is connected yet.', timing: 'Unavailable', tone: 'low' }}], (person) => `
     <div class="home-person-row">
-      <div class="home-person-avatar">${{homeEsc(String(person.name).slice(0,1))}}</div>
+      <div class="home-person-avatar">${{homeEsc(String(person.name || '?').slice(0,1))}}</div>
       <div class="home-row-copy">
         <strong>${{homeEsc(person.name)}}</strong>
         <span>${{homeEsc(person.status)}} · ${{homeEsc(person.detail)}}</span>
       </div>
-      <div class="home-row-meta">${{homeEsc(person.timing)}}<div class="home-person-pill ${{person.tone}}">${{person.status}}</div></div>
+      <div class="home-row-meta">${{homeEsc(homeFormatClock(person.timing))}}<div class="home-person-pill ${{person.tone || 'low'}}">${{homeEsc(person.role || person.status)}}</div></div>
     </div>
   `);
 
-  homeRenderRows('home-today-list', todayRows, (row) => `
+  homeRenderRows('home-today-list', todayRows.length ? todayRows : [{{ time: '', title: 'No household events loaded today', status: 'Partial', tone: 'low' }}], (row) => `
     <div class="home-today-row">
-      <div style="color:var(--home-copy-muted); font-size:12px;">${{homeEsc(row.time)}}</div>
+      <div style="color:var(--home-copy-muted); font-size:12px;">${{homeEsc(homeFormatClock(row.time))}}</div>
       <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong></div>
-      <div class="home-row-meta"><div class="home-priority-pill ${{row.tone}}">${{homeEsc(row.status)}}</div></div>
+      <div class="home-row-meta"><div class="home-priority-pill ${{row.tone || 'low'}}">${{homeEsc(row.status || 'Today')}}</div></div>
     </div>
   `);
 
-  homeRenderRows('home-queue-list', queueRows, (row) => `
+  homeRenderRows('home-queue-list', queueRows.length ? queueRows : [{{ title: 'No household queue items', detail: 'Nothing is currently asking for operator attention.', zone: 'Household', priority: 'Low', tone: 'good' }}], (row) => `
     <div class="home-queue-row">
       <div style="width:12px;height:12px;border-radius:50%;background:${{row.tone === 'warn' ? '#f0a64b' : row.tone === 'good' ? '#55d27d' : '#5db8ff'}};"></div>
       <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
-      <div class="home-row-meta">${{homeEsc(row.zone)}}<div class="home-priority-pill ${{row.tone}}">${{homeEsc(row.priority)}}</div></div>
+      <div class="home-row-meta">${{homeEsc(row.zone || 'Household')}}<div class="home-priority-pill ${{row.tone || 'low'}}">${{homeEsc(row.priority || 'Low')}}</div></div>
     </div>
   `);
 
-  const awayRows = recentActions.length ? recentActions.slice(0, 5).map((item) => ({{
-    time: homeFormatClock(item.timestamp),
-    title: item.target || item.action || 'Home action',
-    detail: item.detail || item.outcome || 'Recent home activity',
-    status: item.outcome || 'Recorded',
-  }})) : [
-    {{ time: '6:02 PM', title: 'Package delivered (Front Door)', detail: 'Captured by doorbell and routed to queue.', status: 'Handled' }},
-    {{ time: '6:16 PM', title: 'Kitchen light left on', detail: 'Auto-off routine ran.', status: 'Resolved' }},
-  ];
-  homeRenderRows('home-away-list', awayRows, (row) => `
+  homeRenderRows('home-away-list', awayRows.length ? awayRows : [{{ time: '', title: 'No recent household continuity events', detail: 'Recent away-from-home continuity has not been recorded yet.', status: 'Quiet' }}], (row) => `
     <div class="home-away-row">
-      <div style="color:var(--home-copy-muted); font-size:12px;">${{homeEsc(row.time)}}</div>
+      <div style="color:var(--home-copy-muted); font-size:12px;">${{homeEsc(homeFormatClock(row.time))}}</div>
       <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
-      <div class="home-row-meta">${{homeEsc(row.status)}}</div>
+      <div class="home-row-meta">${{homeEsc(row.status || 'Recorded')}}</div>
     </div>
   `);
 
-  const trusted = [
-    {{ title: 'JARVIS Can Act', note: 'Adjust climate, comfort ranges, and schedules.', primary: true }},
-    {{ title: 'Requires Your Approval', note: 'Guest access, rule changes, and override security.' }},
-    {{ title: 'Monitor & Protect', note: 'Sensors, leaks, power, and garage boundary.' }},
-    {{ title: 'Prepare & Stage', note: 'Departure, arrival, and household routines.' }},
-  ];
-  homeRenderRows('home-trusted-grid', trusted, (item) => `
-    <div class="home-action-card ${{item.primary ? 'primary' : ''}}">
+  const trusted = Array.isArray(modulePayload?.trusted_actions) ? modulePayload.trusted_actions : [];
+  homeRenderRows('home-trusted-grid', trusted.length ? trusted : [{{ title: 'No trusted Home actions available', note: 'No safe Home desktop action is available in the current runtime.', primary: false, available: false }}], (item) => `
+    <button type="button" class="home-action-card ${{item.primary ? 'primary' : ''}}" onclick="homeHandleAction('${{homeEsc(String(item.id || ''))}}')" ${{item.available === false ? 'disabled' : ''}}>
       <strong>${{homeEsc(item.title)}}</strong>
-      <span>${{homeEsc(item.note)}}</span>
-    </div>
+      <span>${{homeEsc(item.available === false ? (item.unavailable_reason || item.note || 'Unavailable') : (item.note || ''))}}</span>
+    </button>
   `);
 
-  const scoreRows = [
-    ['Safety', Math.max(60, 96 - (openLocks * 16) - (garageOpen * 12) - (leaks * 22))],
-    ['Comfort', Math.max(62, 84 - (coldAlerts * 8) + (lightsOn ? 2 : 0))],
-    ['Efficiency', Math.max(64, 78 + Math.min(10, energy.length * 2))],
-    ['Readiness', Math.max(58, 90 - (reviewCount * 7))],
-    ['Stability', Math.max(60, 91 - Math.max(0, recentActions.length - 3) * 2)],
-  ];
+  const scoreRows = Array.isArray(health.components) && health.components.length ? health.components : [{{ label: 'Continuity', value: 0 }}];
   const scoreEl = document.getElementById('home-score-list');
   if (scoreEl) {{
-    scoreEl.innerHTML = scoreRows.map(([label, value]) => `
+    scoreEl.innerHTML = scoreRows.map((row) => `
       <div class="home-score-row">
-        <span>${{homeEsc(label)}}</span>
-        <em style="--score-width:${{Math.max(8, Number(value))}}%;"></em>
-        <strong>${{Math.round(Number(value))}}%</strong>
+        <span>${{homeEsc(row.label || 'Score')}}</span>
+        <em style="--score-width:${{Math.max(8, Number(row.value || 0))}}%;"></em>
+        <strong>${{Math.round(Number(row.value || 0))}}%</strong>
       </div>
     `).join('');
   }}
   const ringEl = document.getElementById('home-health-ring');
-  if (ringEl) ringEl.style.setProperty('--ring-angle', `${{Math.round(score * 3.6)}}deg`);
+  if (ringEl) ringEl.style.setProperty('--ring-angle', `${{Math.round(Number(health.score || 0) * 3.6)}}deg`);
 
-  const modes = [
-    ['Home', 'Normal daily flow', true],
-    ['Away', 'Energy + security focus', false],
-    ['Night', 'Quiet & secure', false],
-    ['Hosting', 'Guests and gathering', false],
-    ['Recovery', 'Low noise + calm', false],
-    ['Storm', 'Power and prep', false],
-  ];
-  homeRenderRows('home-modes-grid', modes, ([title, note, active]) => `
-    <div class="home-mode-card ${{active ? 'active' : ''}}">
-      <div style="font-size:24px;">${{active ? '⌂' : '◌'}}</div>
-      <div><strong>${{homeEsc(title)}}</strong><span>${{homeEsc(note)}}</span></div>
+  homeRenderRows('home-modes-grid', modeRows.length ? modeRows : [{{ title: 'Home', note: 'Mode posture unavailable', active: true }}], (item) => `
+    <div class="home-mode-card ${{item.active ? 'active' : ''}}" onclick="homeModeBoundaryNotice()">
+      <div style="font-size:24px;">${{item.active ? '⌂' : '◌'}}</div>
+      <div><strong>${{homeEsc(item.title)}}</strong><span>${{homeEsc(item.note)}}</span></div>
     </div>
   `);
 
-  const roomMap = new Map();
-  [...(overview.lights || []), ...(overview.switches || [])].forEach((item) => {{
-    const room = String(item.room || item.location || 'home').trim() || 'home';
-    if (!roomMap.has(room)) roomMap.set(room, []);
-    roomMap.get(room).push(item);
-  }});
-  const spaces = Array.from(roomMap.entries()).slice(0, 5);
-  homeRenderRows('home-spaces-grid', spaces.length ? spaces : [['home', []]], ([room, items]) => {{
-    const active = Array.isArray(items) ? items.filter((item) => String(item.state || '').toLowerCase() === 'on').length : 0;
-    const tempLabel = room === 'kitchen' ? `${{temperature + 3}}°F` : room === 'office' ? `${{temperature - 1}}°F` : `${{temperature}}°F`;
-    return `
-      <div class="home-space-card">
-        <div class="home-space-image"></div>
-        <strong>${{homeEsc(String(room).replace(/(^|[-_\\s])\\w/g, (m) => m.toUpperCase()).replace(/[-_]/g, ' '))}}</strong>
-        <span>${{tempLabel}} · ${{active}} active</span>
-        <small>${{active ? 'Live activity' : 'All good'}}</small>
-      </div>
-    `;
-  }});
+  homeRenderRows('home-spaces-grid', spaceRows.length ? spaceRows : [{{ title: 'Home', note: 'No room-level state is available.', status: 'Partial' }}], (row) => `
+    <div class="home-space-card">
+      <div class="home-space-image"></div>
+      <strong>${{homeEsc(row.title)}}</strong>
+      <span>${{homeEsc(row.note)}}</span>
+      <small>${{homeEsc(row.status || 'Observed')}}</small>
+    </div>
+  `);
 
-  const returnRows = energy.length ? energy.slice(0, 4).map((window) => ({{
-    title: `Check ${{window.appliance}}`,
-    detail: window.reason || 'Window prepared.',
-    time: window.preferredWindow || 'Next window',
-  }})) : [
-    {{ title: 'Unlock entry & set lights', detail: 'At arrival', time: 'Before return' }},
-    {{ title: 'Resume active routines', detail: 'Evening mode ready', time: 'On arrival' }},
-  ];
-  homeRenderRows('home-return-list', returnRows, (row) => `
+  homeRenderRows('home-return-list', returnRows.length ? returnRows : [{{ title: 'No return-home prep queued', detail: 'Arrival staging is not configured in this runtime.', time: 'Unavailable' }}], (row) => `
     <div class="home-return-row">
       <div style="width:10px;height:10px;border-radius:50%;background:#f0a64b;"></div>
       <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
-      <div class="home-row-meta">${{homeEsc(row.time)}}</div>
+      <div class="home-row-meta">${{homeEsc(row.time || 'Unavailable')}}</div>
     </div>
   `);
 
-  const insights = [
-    ...summary.map((item) => ({{
-      title: item,
-      detail: 'Live household summary',
-    }})),
-    ...Object.entries(providerNotes).slice(0, 3).map(([key, value]) => ({{
-      title: key.replace(/([A-Z])/g, ' $1').replace(/^./, (m) => m.toUpperCase()),
-      detail: value,
-    }})),
-  ].slice(0, 5);
-  homeRenderRows('home-insight-list', insights.length ? insights : [{{ title: 'No insights yet', detail: 'Home intelligence will surface insights here.' }}], (row) => `
+  homeRenderRows('home-insight-list', insights.length ? insights : [{{ title: 'No live home insights yet', detail: 'The Home module is wired, but the current runtime is still sparse.' }}], (row) => `
     <div class="home-insight-row">
       <div style="width:10px;height:10px;border-radius:50%;background:#55d27d;"></div>
       <div class="home-row-copy"><strong>${{homeEsc(row.title)}}</strong><span>${{homeEsc(row.detail)}}</span></div>
@@ -28656,30 +28701,39 @@ function renderHomeView(overview = {{}}, agenda = {{}}, dashboard = {{}}) {{
   `);
 }}
 
-async function loadHomeView() {{
-  try {{
-    const [overviewRes, agendaRes, dashboardRes] = await Promise.allSettled([
-      fetch('/api/home-overview', {{ cache: 'no-store' }}),
-      fetch('/api/home/calendar/today', {{ cache: 'no-store' }}),
-      fetch('/api/home/dashboard', {{ cache: 'no-store' }}),
-    ]);
-
-    let overview = _homeOverviewData || {{}};
-    let agenda = _homeAgendaData || {{}};
-    let dashboard = _homeDashboardData || {{}};
-
-    if (overviewRes.status === 'fulfilled' && overviewRes.value.ok) overview = await overviewRes.value.json();
-    if (agendaRes.status === 'fulfilled' && agendaRes.value.ok) agenda = await agendaRes.value.json();
-    if (dashboardRes.status === 'fulfilled' && dashboardRes.value.ok) dashboard = await dashboardRes.value.json();
-
-    _homeOverviewData = overview;
-    _homeAgendaData = agenda;
-    _homeDashboardData = dashboard;
-    renderHomeView(overview, agenda, dashboard);
-  }} catch (e) {{
-    console.error('home view failed', e);
-    renderHomeView(_homeOverviewData || {{}}, _homeAgendaData || {{}}, _homeDashboardData || {{}});
+async function refreshHomeView(forceLive = false) {{
+  const requestSerial = ++_homeRequestSerial;
+  homeRuntimeNote(forceLive ? 'Refreshing live Home sources…' : 'Loading Home surface…');
+  const response = await homeFetchJson('/api/home/module');
+  if (requestSerial !== _homeRequestSerial) return;
+  if (!response.ok || !response.payload) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    homeRuntimeNote(`Home surface unavailable: ${{detail}}`);
+    renderHomeView(_homeModuleData || {{
+      available: false,
+      runtime_note: `Home surface unavailable: ${{detail}}`,
+      availability_notes: [`Home surface unavailable: ${{detail}}`],
+      counts: {{}},
+      overview: {{}},
+      health: {{ score: 0, label: 'Watch', components: [] }},
+      people: [],
+      today_rows: [],
+      queue: [],
+      away_rows: [],
+      trusted_actions: [],
+      modes: {{ status: 'profile-backed', items: [] }},
+      spaces: [],
+      return_prep: [],
+      insights: [],
+    }});
+    return;
   }}
+  renderHomeView(response.payload);
+  if (forceLive) showToast('Home refreshed.', 'success');
+}}
+
+async function loadHomeView() {{
+  await refreshHomeView(false);
 }}
 
 function renderKasaView(data) {{
