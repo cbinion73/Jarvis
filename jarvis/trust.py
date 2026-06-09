@@ -552,6 +552,43 @@ class TrustSupport:
                 )
             )
             self.store.save_trust_zones(zone_records)
+        if "system_agent" not in zone_ids:
+            now = _now_iso()
+            zone_records.append(
+                asdict(
+                    TrustZone(
+                        zone_id="system_agent",
+                        name="System Agent Operations",
+                        description="Governed zone for JARVIS self-improvement and foundry proposal operations.",
+                        zone_type="system_operations",
+                        authority_stage="stage_alert",
+                        resource_scope={
+                            "systems": ["foundry", "sandbox"],
+                            "data_classes": ["proposals", "self_improvement_jobs"],
+                            "account_ids": [],
+                            "connector_ids": [],
+                        },
+                        allowed_actions=["observe", "classify", "draft", "stage", "foundry_proposal_review"],
+                        approval_mode="stage_and_alert",
+                        audit_mode="standard",
+                        promotion_rules={
+                            "eligible_next_stages": ["sandbox_live"],
+                            "minimum_success_rate": 0.99,
+                            "minimum_review_count": 10,
+                            "required_signals": ["proposal_accuracy", "no_boundary_violations"],
+                        },
+                        demotion_rules={
+                            "triggers": ["boundary_violation", "principal_override"],
+                            "fallback_stage": "observe",
+                        },
+                        status="active",
+                        reporting_cadence="event_driven",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+            )
+            self.store.save_trust_zones(zone_records)
         if not self.store.list_resource_arenas():
             now = _now_iso()
             arena = ResourceArena(

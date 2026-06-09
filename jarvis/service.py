@@ -52,7 +52,7 @@ from .health_checkins import HealthCheckInStore
 from . import layout_engine as _layout_engine
 from .publish_history import PublishHistoryStore
 from .recovery_cases import RecoveryCaseStore
-from .persistence import atomic_write_json
+from .persistence import atomic_write_json, append_jsonl
 
 try:
     from .voice_pipeline import get_friday, get_pipeline, get_time_aware_greeting, init_voice as _init_voice_pipeline, VOICE_TOOL_ALLOWLIST
@@ -15811,6 +15811,124 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/foundry/module")
     async def api_foundry_module() -> JSONResponse:
         return _json(await _build_foundry_module_payload())
+
+    # ------------------------------------------------------------------
+    # Foundry proposal pipeline (GAP-8 partial)
+    # ------------------------------------------------------------------
+
+    _FOUNDRY_PROPOSALS_PATH = Path("data/foundry/proposals.json")
+    _FOUNDRY_PROPOSALS_LOG_PATH = Path("data/foundry/proposals_log.jsonl")
+
+    def _load_foundry_proposals() -> list[dict]:
+        try:
+            if not _FOUNDRY_PROPOSALS_PATH.exists():
+                return []
+            import json as _json
+            data = _json.loads(_FOUNDRY_PROPOSALS_PATH.read_text())
+            return list(data.get("proposals") or []) if isinstance(data, dict) else []
+        except Exception:
+            return []
+
+    def _save_foundry_proposals(proposals: list[dict]) -> None:
+        from datetime import datetime, timezone
+        _FOUNDRY_PROPOSALS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(_FOUNDRY_PROPOSALS_PATH, {
+            "proposals": proposals,
+            "count": len(proposals),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        })
+
+    @app.post("/api/foundry/proposals")
+    async def api_foundry_create_proposal(payload: dict) -> JSONResponse:
+        """Submit a new foundry improvement proposal."""
+        import uuid as _uuid
+        from datetime import datetime, timezone
+        title = str(payload.get("title") or "").strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="title is required")
+        kind = str(payload.get("kind") or "feature").strip()
+        if kind not in {"feature", "bugfix", "refactor", "experiment"}:
+            kind = "feature"
+        proposal = {
+            "id": f"prop_{_uuid.uuid4().hex[:12]}",
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "title": title,
+            "description": str(payload.get("description") or "").strip(),
+            "kind": kind,
+            "target_component": str(payload.get("target_component") or "").strip(),
+            "proposed_by": str(payload.get("proposed_by") or "jarvis").strip(),
+            "status": "pending",
+            "approved_by": None,
+            "approved_at": None,
+            "rejection_reason": None,
+            "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
+        }
+        proposals = _load_foundry_proposals()
+        proposals.append(proposal)
+        _save_foundry_proposals(proposals)
+        try:
+            _FOUNDRY_PROPOSALS_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            append_jsonl(_FOUNDRY_PROPOSALS_LOG_PATH, proposal)
+        except Exception:
+            pass
+        return _json({"proposal": proposal, "status": "accepted"})
+
+    @app.get("/api/foundry/proposals")
+    async def api_foundry_list_proposals(
+        status: str | None = Query(default=None),
+        kind: str | None = Query(default=None),
+    ) -> JSONResponse:
+        """List foundry proposals, optionally filtered by status or kind."""
+        proposals = _load_foundry_proposals()
+        if status:
+            proposals = [p for p in proposals if str(p.get("status") or "") == status]
+        if kind:
+            proposals = [p for p in proposals if str(p.get("kind") or "") == kind]
+        return _json({"proposals": proposals, "count": len(proposals)})
+
+    @app.post("/api/foundry/proposals/{proposal_id}/approve")
+    async def api_foundry_approve_proposal(proposal_id: str, payload: dict = {}) -> JSONResponse:
+        """Approve or reject a foundry proposal — governed by trust boundary."""
+        from datetime import datetime, timezone
+        actor = str(payload.get("actor") or payload.get("approved_by") or "chris").strip()
+        action = str(payload.get("action") or "approve").strip().lower()
+        if action not in {"approve", "reject"}:
+            raise HTTPException(status_code=400, detail="action must be 'approve' or 'reject'")
+        boundary = runtime.assess_action_boundary(
+            zone_id="system_agent",
+            arena_id="system.agent-sandbox",
+            action_type="foundry_proposal_review",
+            requested_stage="sandbox_live",
+        )
+        boundary_decision = str(boundary.get("decision") or "stage")
+        if boundary_decision == "deny":
+            return _json({
+                "proposal_id": proposal_id,
+                "status": "blocked_by_boundary",
+                "boundary_decision": boundary_decision,
+                "boundary_reason": boundary.get("reason", ""),
+            })
+        proposals = _load_foundry_proposals()
+        target = next((p for p in proposals if p.get("id") == proposal_id), None)
+        if target is None:
+            raise HTTPException(status_code=404, detail="Proposal not found")
+        if action == "approve":
+            target["status"] = "approved"
+            target["approved_by"] = actor
+            target["approved_at"] = datetime.now(timezone.utc).isoformat()
+        else:
+            target["status"] = "rejected"
+            target["rejection_reason"] = str(payload.get("reason") or "").strip()
+        _save_foundry_proposals(proposals)
+        try:
+            append_jsonl(_FOUNDRY_PROPOSALS_LOG_PATH, {**target, "_action": action})
+        except Exception:
+            pass
+        return _json({
+            "proposal": target,
+            "status": target["status"],
+            "boundary_decision": boundary_decision,
+        })
 
     @app.get("/api/publishing/projects")
     async def api_publishing_list_projects(
