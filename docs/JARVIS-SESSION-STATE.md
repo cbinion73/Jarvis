@@ -4,14 +4,14 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Phase 3 Slice 1 complete; event log wired into approvals + navigation)
+Last updated: 2026-06-09 (GAP-9 resolved; stewardship HTTP routes live)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
 - Level 2 (Unified Command Product): COMPLETE
-- Level 3 (Household OS): ~85% — all 23 experiences live-backed or honestly
-  unavailable; event log now written on approval staging/execution and navigation
-  route preview; stewardship HTTP route still missing (GAP-9)
+- Level 3 (Household OS): ~90% — all 23 experiences live-backed or honestly
+  unavailable; event log wired; stewardship HTTP routes live (GAP-9 resolved);
+  Phase 3 Slice 2 notification gaps pending before exit gate
 - Level 4 (Governed Intelligence): ~70% BUILT — far ahead of what
   JARVIS-MATURITY-MODEL.md claims. Trust zones, supervision plane,
   promotion engine, sandbox execution, email draft staging, agent registry
@@ -101,10 +101,12 @@ Only GET /api/foundry/module (dashboard payload). No proposal pipeline,
 agent generation, or newborn-agent zone attachment
 (JARVIS-RECURSIVE-GROWTH-ARCHITECTURE.md sections 6, APIs /api/foundry/*).
 
-### GAP-9 — Formation gaps [P5]
-Season detection: missing entirely (one reflective prompt only).
-daily_stewardship.py (morning check-in / evening review / Three Moves) is
-wired only via health_scheduler, no HTTP route.
+### GAP-9 — Formation gaps [RESOLVED 2026-06-09]
+Added GET /api/stewardship/daily (cached day card + season), POST
+/api/stewardship/daily/morning (run_morning_checkin), POST
+/api/stewardship/daily/complete (run_evening_review). Season derived from
+current calendar month via _current_season() — winter/spring/summer/autumn.
+16 new tests (all pass).
 
 ### GAP-10 — SQLite migration not started [P4, optional accelerant]
 data/system/jarvis.db does not exist; all core persistence is JSON/JSONL
@@ -168,6 +170,6 @@ writers or multi-process contention on persistence.py.
 
 ## Next 3 Work Items
 
-1. GAP-9: add GET /api/stewardship/daily and POST /api/stewardship/daily/complete; derive season from current month; wire daily_stewardship.py to HTTP.
-2. GAP-11: add concurrency tests for jarvis/persistence.py — concurrent writers, read+write contention, recovery after interrupted write.
-3. Phase 3 Slice 2: verify notification escalation action exists (POST /api/apple/notifications/{id}/escalate); add reminders defer/stage endpoints if missing.
+1. GAP-11: add concurrency tests for jarvis/persistence.py — concurrent writers, read+write contention, recovery after interrupted write.
+2. Phase 3 Slice 2: verify/add POST /api/apple/notifications/{id}/escalate; verify/add reminders defer and stage endpoints.
+3. Phase B audit: verify all four trust zones enforced in code with negative-path tests; audit assess_action_boundary coverage.
