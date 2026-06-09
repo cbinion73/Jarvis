@@ -4,14 +4,15 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (GAP-11 resolved; 463 tests passing; session complete)
+Last updated: 2026-06-09 (Phase 3 Slice 2 resolved; 485 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
 - Level 2 (Unified Command Product): COMPLETE
-- Level 3 (Household OS): ~90% — all 23 experiences live-backed or honestly
+- Level 3 (Household OS): ~95% — all 23 experiences live-backed or honestly
   unavailable; event log wired; stewardship HTTP routes live (GAP-9 resolved);
-  Phase 3 Slice 2 notification gaps pending before exit gate
+  Phase 3 Slice 2 complete — escalate/defer/stage endpoints all live with
+  governed boundary checks and event fabric wiring
 - Level 4 (Governed Intelligence): ~70% BUILT — far ahead of what
   JARVIS-MATURITY-MODEL.md claims. Trust zones, supervision plane,
   promotion engine, sandbox execution, email draft staging, agent registry
@@ -171,6 +172,6 @@ safety, stray .tmp recovery, lock file creation. All pass.
 
 ## Next 3 Work Items
 
-1. Phase 3 Slice 2: verify/add POST /api/apple/notifications/{id}/escalate; verify/add POST /api/apple/reminders/{id}/defer and /stage endpoints.
-2. Phase B audit: verify all four trust zones enforced in code with negative-path tests; audit assess_action_boundary coverage across non-apple_api paths.
-3. Phase C — GAP-8 partial: add foundry proposal pipeline (POST/GET /api/foundry/proposals, POST /api/foundry/proposals/{id}/approve); no agent generation yet.
+1. Phase B audit: verify all four trust zones (Observe / Draft+Stage / Sandbox Live / Mature Delegated) enforced in code with negative-path tests; audit assess_action_boundary coverage across non-apple_api paths.
+2. Phase C — GAP-8 partial: add foundry proposal pipeline (POST/GET /api/foundry/proposals, POST /api/foundry/proposals/{id}/approve); no agent generation yet (requires architecture session).
+3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session before implementation.
