@@ -205,6 +205,28 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/workshop/materials", html)
         self.assertIn("/api/activity/operator-action", html)
 
+    def test_render_glass_shell_wires_publishing_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="pub-runtime-note"', html)
+        self.assertIn('id="publish-refresh-button"', html)
+        self.assertIn("function refreshPublishingDesktop(", html)
+        self.assertIn("function renderPublishModule(", html)
+        self.assertIn("function publishCreateDraftProject(", html)
+        self.assertIn("function publishCompleteChecklistStep(", html)
+        self.assertIn("function publishCreateCalendarItem(", html)
+        self.assertIn("function publishCreateSocialPost(", html)
+        self.assertIn("function publishGenerateLaunchPlan(", html)
+        self.assertIn("function publishOpenRoute(", html)
+        self.assertIn("/api/publish/module", html)
+        self.assertIn("/api/publishing/projects", html)
+        self.assertIn("/api/publishing/checklist/step", html)
+        self.assertIn("/api/publishing/calendar", html)
+        self.assertIn("/api/publishing/social/posts", html)
+        self.assertIn("/api/publishing/launch-plan", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Quick Draft Project", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

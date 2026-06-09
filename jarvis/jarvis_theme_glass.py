@@ -22062,19 +22062,24 @@ body::after {{
             <span>Ghostwritr handoff</span>
           </div>
           <div class="publish-sidebar-nav">
-            <div class="publish-sidebar-item active">⌂ Handoff Overview</div>
-            <div class="publish-sidebar-item">☑ Validation Report</div>
-            <div class="publish-sidebar-item">◎ Readiness</div>
-            <div class="publish-sidebar-item">☷ Chapter Readiness</div>
-            <div class="publish-sidebar-item">⬚ Assembly &amp; Export</div>
-            <div class="publish-sidebar-item">☰ Format Profiles</div>
-            <div class="publish-sidebar-item">⇢ Launch Ops</div>
-            <div class="publish-sidebar-item">◌ Audit &amp; Provenance</div>
-            <div class="publish-sidebar-item">⚙ Settings</div>
+            <button class="publish-sidebar-item active" type="button" data-publish-nav="1" onclick="setPublishPage(1)">⌂ Handoff Overview</button>
+            <button class="publish-sidebar-item" type="button" data-publish-nav="2" onclick="setPublishPage(2)">☑ Validation Report</button>
+            <button class="publish-sidebar-item" type="button" data-publish-nav="2" onclick="setPublishPage(2)">◎ Readiness</button>
+            <button class="publish-sidebar-item" type="button" data-publish-nav="3" onclick="setPublishPage(3)">☷ Chapter Readiness</button>
+            <button class="publish-sidebar-item" type="button" data-publish-nav="4" onclick="setPublishPage(4)">⬚ Assembly &amp; Export</button>
+            <button class="publish-sidebar-item" type="button" data-publish-nav="5" onclick="setPublishPage(5)">☰ Format Profiles</button>
+            <button class="publish-sidebar-item" type="button" data-publish-nav="6" onclick="setPublishPage(6)">⇢ Launch Ops</button>
+            <button class="publish-sidebar-item" type="button" onclick="publishOpenRoute('/publish', 'publishing', 'Open Publish Module', 'Opened the dedicated Publish module route.')">◌ Audit &amp; Provenance</button>
+            <button class="publish-sidebar-item" type="button" onclick="publishOpenRoute('/settings-center', 'publishing', 'Open Settings', 'Opened the publishing settings and connector boundary.')">⚙ Settings</button>
           </div>
           <div class="publish-sidebar-foot">
             <strong>Ghostwritr Workspace</strong>
             <div id="pub-side-workspace">Waiting for active book…</div>
+            <div id="pub-runtime-note" style="margin-top:10px;font-size:11px;color:var(--text-3);line-height:1.5;">Publishing runtime is loading…</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn btn-sm" type="button" id="publish-refresh-button" style="font-size:10px;" onclick="refreshPublishingDesktop(true)">Refresh Publishing</button>
+              <button class="btn btn-sm" type="button" style="font-size:10px;" onclick="publishCreateDraftProject()">Quick Draft Project</button>
+            </div>
             <a href="http://localhost:3000" target="_blank" class="btn btn-sm" style="font-size:10px;text-decoration:none;margin-top:10px;display:inline-flex;">Open in Ghostwritr ↗</a>
           </div>
         </aside>
@@ -30661,19 +30666,14 @@ async function signalHistoryAction(domain, id, action) {{
 
 async function loadPublishing() {{
   syncPublishStoryboard();
-  try {{
-    const res = await fetch('/api/publishing/dashboard');
-    if (!res.ok) {{ console.warn('loadPublishing', res.status); return; }}
-    const data = await res.json();
-    renderPublishing(data);
-  }} catch(e) {{ console.error('loadPublishing failed', e); }}
-  loadLaunchPanel();
-  loadKdpView();
+  return refreshPublishingDesktop(false);
 }}
 
 let publishStoryboardPage = 1;
 let _publishingDashboard = null;
 let _publishingLaunchScan = null;
+let _publishingModule = null;
+let _publishingRequestSerial = 0;
 const PUBLISH_STORYBOARD_TITLES = {{
   1: {{
     title: '1. Handoff Overview',
@@ -30728,6 +30728,10 @@ function syncPublishStoryboard() {{
   const next = document.getElementById('publish-nav-next');
   if (prev) prev.disabled = publishStoryboardPage === 1;
   if (next) next.disabled = publishStoryboardPage === pageCount;
+  document.querySelectorAll('#view-publishing [data-publish-nav]').forEach((item) => {{
+    const target = Number(item.getAttribute('data-publish-nav') || '0');
+    item.classList.toggle('active', target === publishStoryboardPage);
+  }});
 }}
 
 function advancePublishPage(delta) {{
@@ -30735,76 +30739,485 @@ function advancePublishPage(delta) {{
   syncPublishStoryboard();
 }}
 
-function renderPublishDesktopState(data) {{
-  const books = data.active_books || [];
-  const reviews = data.pending_review_list || [];
-  const book = books[0] || null;
-  const titleEl = document.getElementById('pub-hero-title');
-  if (titleEl) titleEl.textContent = book ? (book.title || book.slug || 'Untitled project') : 'Waiting for Ghostwritr…';
-  const kv = document.getElementById('pub-hero-kv');
-  if (kv) {{
-    const total = book?.total_stages || 0;
-    const complete = book?.stages_complete || 0;
-    const reviewCount = (book?.stages_ready_for_review || []).length;
-    kv.innerHTML = `
-      <div class="publish-kv-row"><span>Author</span><strong>${{escHtml(book?.author_name || 'Chris Binion')}}</strong></div>
-      <div class="publish-kv-row"><span>Workflow</span><strong>${{escHtml(book?.workflow_type || 'Publish')}}</strong></div>
-      <div class="publish-kv-row"><span>Package State</span><strong>${{reviews.length ? 'Prepared, needs editorial revision' : (book ? 'Prepared and staged' : 'No active package')}}</strong></div>
-      <div class="publish-kv-row"><span>Sync State</span><strong>${{data.ghostwritr_available ? 'Connected to Ghostwritr' : 'Refresh required'}}</strong></div>
-      <div class="publish-kv-row"><span>Stage Progress</span><strong>${{total ? `${{complete}} / ${{total}} complete` : '—'}}</strong></div>
-      <div class="publish-kv-row"><span>Current Stage</span><strong>${{escHtml(book?.current_stage ? book.current_stage.replace(/_/g,' ') : '—')}}</strong></div>`;
+function publishSetText(id, value) {{
+  const el = document.getElementById(id);
+  if (el) el.textContent = value == null || value === '' ? '—' : String(value);
+}}
+
+function publishRuntimeNote(text) {{
+  publishSetText('pub-runtime-note', text || 'Publishing is live.');
+}}
+
+function publishTitleCase(value) {{
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\\b\\w/g, (char) => char.toUpperCase())
+    .trim();
+}}
+
+async function publishReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_error) {{
+    return null;
   }}
+}}
+
+async function publishFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    const payload = await publishReadJson(response);
+    return {{ ok: response.ok, status: response.status, payload }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
+
+function publishActionButtonClass(kind) {{
+  const raw = String(kind || '').toLowerCase();
+  if (['complete', 'done', 'ready', 'approved', 'good', 'healthy', 'connected'].includes(raw)) return 'dailybrief-button good';
+  if (['blocked', 'error', 'needs_revision', 'danger', 'warning', 'overdue'].includes(raw)) return 'dailybrief-button warn';
+  return 'dailybrief-button secondary';
+}}
+
+function publishOpenRoute(route = '', fallbackView = 'publishing', actionLabel = 'Open Publishing Surface', detail = '') {{
+  if (route) {{
+    try {{
+      window.open(route, '_blank', 'noopener');
+    }} catch (_error) {{
+      // ignore popup restrictions and still switch in-shell if available
+    }}
+  }}
+  if (fallbackView && typeof switchView === 'function') {{
+    switchView(fallbackView);
+  }}
+  publishRuntimeNote(detail || `${{actionLabel}} ready.`);
+}}
+
+async function publishRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: dailyBriefName(),
+        domain: 'publish',
+        route: '/publish',
+        route_label: 'Open Publish',
+        related_kind: 'publishing',
+        ...payload,
+      }}),
+    }});
+  }} catch (_error) {{
+    // best effort only
+  }}
+}}
+
+function publishProjectTitle(project) {{
+  if (!project || typeof project !== 'object') return 'Untitled project';
+  return String(project.title || project.slug || project.project_id || project.id || 'Untitled project').trim() || 'Untitled project';
+}}
+
+function publishProjectId(project) {{
+  if (!project || typeof project !== 'object') return '';
+  return String(project.project_id || project.id || '').trim();
+}}
+
+function publishWorkspaceProject(payload) {{
+  const workspace = payload?.launch_workspace || null;
+  if (workspace) return workspace;
+  const control = payload?.launch_control?.active_project || null;
+  if (control) return control;
+  const projects = Array.isArray(payload?.projects) ? payload.projects : [];
+  return projects[0] || null;
+}}
+
+function setPublishPage(page) {{
+  publishStoryboardPage = Number(page) || 1;
+  syncPublishStoryboard();
+}}
+
+function renderPublishModule(payload) {{
+  const data = payload || {{}};
+  _publishingModule = data;
+  const counts = data.counts || {{}};
+  const reviews = Array.isArray(data.pending_reviews) ? data.pending_reviews : [];
+  const projects = Array.isArray(data.projects) ? data.projects : [];
+  const workspace = publishWorkspaceProject(data);
+  const workspaceId = publishProjectId(workspace);
+  const workspaceTitle = publishProjectTitle(workspace);
+  const checklist = Array.isArray(data.launch_workspace?.checklist) ? data.launch_workspace.checklist : [];
+  const launchControl = data.launch_control || {{}};
+  const calendar = data.calendar || {{}};
+  const social = data.social || {{}};
+  const revenue = data.revenue || {{}};
+  const history = Array.isArray(data.launch_history?.items) ? data.launch_history.items : [];
+  const notes = Array.isArray(data.availability_notes) ? data.availability_notes.filter(Boolean) : [];
+
+  publishSetText('pub-subtitle', data.summary || 'Ghostwritr publish handoff, chapter readiness, format packaging, and connected launch operations in one supervised desktop workflow.');
+  publishSetText('pub-hero-title', workspaceTitle);
+  publishSetText('pub-gw-status', data.available ? (data.status || 'Useful') : 'Unavailable');
+  publishRuntimeNote(notes[0] || data.runtime_note || 'Publishing is live and connected.');
+
   const side = document.getElementById('pub-side-workspace');
   if (side) {{
-    side.innerHTML = book
-      ? `Book: ${{escHtml(book.title || '—')}}<br>Status: ${{reviews.length ? 'EDITORIALLY BLOCKED' : 'READY'}}<br>Committed Words: ${{book.word_count ? book.word_count.toLocaleString() : '—'}}`
-      : 'Ghostwritr not connected or no active books.';
+    side.innerHTML = workspace
+      ? `Project: ${{escHtml(workspaceTitle)}}<br>Status: ${{escHtml(String(data.status || 'Useful').toUpperCase())}}<br>Checklist: ${{escHtml(data.launch_workspace?.checklist_progress || 'Waiting')}}`
+      : 'Publishing sources are partially connected. Project continuity will appear here when a live publish target is available.';
   }}
+
+  const heroKv = document.getElementById('pub-hero-kv');
+  if (heroKv) {{
+    heroKv.innerHTML = `
+      <div class="publish-kv-row"><span>Actor</span><strong>${{escHtml(dailyBriefName())}}</strong></div>
+      <div class="publish-kv-row"><span>Project Type</span><strong>${{escHtml(publishTitleCase(workspace?.project_type || 'book'))}}</strong></div>
+      <div class="publish-kv-row"><span>Package State</span><strong>${{escHtml(reviews.length ? 'Editorial review pending' : (workspace ? 'Ready for supervised handoff' : 'Awaiting live project'))}}</strong></div>
+      <div class="publish-kv-row"><span>Checklist Progress</span><strong>${{escHtml(data.launch_workspace?.checklist_progress || '—')}}</strong></div>
+      <div class="publish-kv-row"><span>Next Step</span><strong>${{escHtml(data.launch_workspace?.next_checklist_step || launchControl.next_action || 'Refresh publishing state')}}</strong></div>
+      <div class="publish-kv-row"><span>Sync State</span><strong>${{escHtml(data.available ? 'Connected to publishing runtime' : 'Partial / unavailable')}}</strong></div>`;
+  }}
+
   const provenance = document.getElementById('pub-provenance-list');
   if (provenance) {{
     provenance.innerHTML = `
-      <div class="publish-mini-row"><span>Current assembly</span><strong>v${{book?.stages_complete || 0}}</strong></div>
-      <div class="publish-mini-row"><span>Package source</span><strong>${{escHtml(book?.slug || '—')}}</strong></div>
-      <div class="publish-mini-row"><span>Last refreshed</span><strong>${{new Date().toLocaleString()}}</strong></div>`;
+      <div class="publish-mini-row"><span>Current assembly</span><strong>${{escHtml(data.what_became_real || 'Publishing module live')}}</strong></div>
+      <div class="publish-mini-row"><span>Package source</span><strong>${{escHtml(data.proof_paths?.projects_api || '/api/publishing/projects')}}</strong></div>
+      <div class="publish-mini-row"><span>Last refreshed</span><strong>${{escHtml(data.generated_at ? fmtTime(data.generated_at) : new Date().toLocaleTimeString())}}</strong></div>
+      <div class="publish-mini-row"><span>History entries</span><strong>${{escHtml(String(data.history_count || 0))}}</strong></div>`;
   }}
-  const committedEl = document.getElementById('pub-metric-committed');
-  if (committedEl) committedEl.textContent = book ? `${{book.stages_complete || 0}} / ${{book.total_stages || 0}}` : '—';
-  const wordsEl = document.getElementById('pub-metric-words');
-  if (wordsEl) wordsEl.textContent = book?.word_count ? book.word_count.toLocaleString() : '—';
-  const formatsEl = document.getElementById('pub-metric-formats');
-  if (formatsEl) formatsEl.textContent = 'docx, html, markdown';
+
+  publishSetText('homeProjectsBadge', counts.projects ?? data.project_count ?? 0);
+  publishSetText('pub-review-count', counts.reviews ?? data.review_count ?? 0);
+  publishSetText('pub-review-count-badge', counts.reviews ?? data.review_count ?? 0);
+  publishSetText('pub-inprogress-count', counts.active_projects ?? data.active_project_count ?? 0);
+  publishSetText('pub-metric-committed', data.launch_workspace?.checklist_progress || '—');
+  publishSetText('pub-metric-words', revenue.monthly_estimate_total ? '$' + Number(revenue.monthly_estimate_total || 0).toFixed(0) : '—');
+  publishSetText('pub-metric-formats', ['print', 'ebook', (social.posts || []).length ? 'social' : '', _publishingLaunchScan?.books?.length ? 'launch' : ''].filter(Boolean).length || 2);
+
+  const reviewSection = document.getElementById('pub-reviews-section');
+  const reviewEmpty = document.getElementById('pub-validation-empty');
+  const reviewList = document.getElementById('publishing-reviews');
+  if (reviewSection) reviewSection.style.display = reviews.length ? '' : 'none';
+  if (reviewEmpty) {{
+    reviewEmpty.style.display = reviews.length ? 'none' : '';
+    reviewEmpty.innerHTML = reviews.length
+      ? ''
+      : `<div class="publish-panel-shell">No blocking review items are waiting right now.<div style="margin-top:12px;"><button class="dailybrief-button secondary" type="button" onclick="publishCreateDraftProject()">Quick Draft Project</button></div></div>`;
+  }}
+  if (reviewList) {{
+    reviewList.innerHTML = reviews.length ? reviews.map((item) => {{
+      const reviewId = escHtml(String(item.review_id || item.id || '').trim());
+      const title = escHtml(String(item.title || item.request || 'Pending review').trim() || 'Pending review');
+      const stage = escHtml(publishTitleCase(item.stage_key || item.track_type || item.stage_display || 'editorial review'));
+      const preview = escHtml(String(item.content_preview || item.feedback || item.detail || 'Ready for editorial decision.').slice(0, 180));
+      return `
+        <div class="pub-review-item">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;">
+            <div class="pub-review-book">${{title}}</div>
+            <div class="pub-review-stage">${{stage}}</div>
+          </div>
+          <div class="pub-review-preview">${{preview}}</div>
+          <div class="pub-review-actions">
+            <button class="dailybrief-button good" type="button" onclick="approveDraft('${{reviewId}}')">Approve</button>
+            <button class="dailybrief-button warn" type="button" onclick="reviseDraft('${{reviewId}}')">Needs Work</button>
+          </div>
+        </div>`;
+    }}).join('') : '';
+  }}
+
+  const booksEl = document.getElementById('publishing-books');
+  if (booksEl) {{
+    booksEl.innerHTML = projects.length ? projects.slice(0, 6).map((project) => {{
+      const projectId = publishProjectId(project);
+      const status = publishTitleCase(project.status || 'draft');
+      const relatedReviews = reviews.filter((item) => String(item.project_id || '').trim() === projectId);
+      return `
+        <div class="pub-book-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;">
+            <div>
+              <div class="pub-book-title">${{escHtml(publishProjectTitle(project))}}</div>
+              <div class="pub-book-meta">${{escHtml(publishTitleCase(project.project_type || 'book'))}} · ${{escHtml(status)}} · ${{escHtml(project.platform || 'Ghostwritr')}}</div>
+            </div>
+            <span class="publish-chip">${{projectId === workspaceId ? 'ACTIVE' : 'READY'}}</span>
+          </div>
+          <div class="pub-book-progress"><div style="width:${{Math.max(8, projectId === workspaceId ? Number(data.launch_workspace?.checklist_percent || 0) : 34)}}%;"></div></div>
+          <div class="pub-stage-grid">
+            <div class="pub-stage-box"><span>Status</span><strong>${{escHtml(status)}}</strong></div>
+            <div class="pub-stage-box"><span>Reviews</span><strong>${{escHtml(String(relatedReviews.length || 0))}}</strong></div>
+            <div class="pub-stage-box"><span>Checklist</span><strong>${{escHtml(projectId === workspaceId ? (data.launch_workspace?.checklist_progress || '—') : '—')}}</strong></div>
+            <div class="pub-stage-box"><span>Next Step</span><strong>${{escHtml(projectId === workspaceId ? (data.launch_workspace?.next_checklist_step || 'Review package') : 'Open project')}}</strong></div>
+          </div>
+          <div class="pub-review-actions" style="margin-top:14px;">
+            <button class="dailybrief-button secondary" type="button" onclick="publishGenerateLaunchPlan('${{escHtml(projectId)}}')">Generate Launch Plan</button>
+            <button class="dailybrief-button secondary" type="button" onclick="publishCreateCalendarItem('${{escHtml(projectId)}}')">Add Calendar Beat</button>
+            <button class="dailybrief-button secondary" type="button" onclick="publishCreateSocialPost('${{escHtml(projectId)}}')">Stage Social Post</button>
+          </div>
+        </div>`;
+    }}).join('') : `<div class="pub-book-card" style="text-align:center;"><strong>No live publishing projects yet.</strong><div style="margin-top:10px;color:var(--text-3);">Create a draft publishing project to anchor the handoff workflow.</div><div style="margin-top:14px;"><button class="dailybrief-button secondary" type="button" onclick="publishCreateDraftProject()">Quick Draft Project</button></div></div>`;
+  }}
+
   const delivery = document.getElementById('pub-delivery-checklist');
   if (delivery) {{
-    delivery.innerHTML = [
-      ['Manuscript assembled from latest committed draft', book ? 'Complete' : 'Waiting'],
-      ['Front matter mapped and package source identified', book ? 'Complete' : 'Waiting'],
-      ['Editorial reviews cleared', reviews.length ? 'Pending' : 'Complete'],
-      ['Launch asset package refreshed', _publishingLaunchScan?.books?.length ? 'Staged' : 'Pending'],
-      ['Distribution manifest ready for final handoff', data.ghostwritr_available ? 'Pending final clearance' : 'Blocked'],
-    ].map(([label, state]) => `<div class="publish-check-row"><span>${{label}}</span><strong>${{state}}</strong></div>`).join('');
+    delivery.innerHTML = checklist.length ? checklist.map((item) => {{
+      const step = escHtml(String(item.step || '').trim());
+      const label = escHtml(String(item.label || item.step || 'Checklist step').trim());
+      const completed = Boolean(item.completed);
+      return `
+        <div class="publish-check-row">
+          <span>${{label}}</span>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <strong>${{completed ? 'Complete' : 'Waiting'}}</strong>
+            <button class="${{publishActionButtonClass(completed ? 'ready' : 'secondary')}}" type="button" onclick="publishCompleteChecklistStep('${{escHtml(workspaceId)}}','${{step}}',${{completed ? 'false' : 'true'}})">${{completed ? 'Reopen' : 'Complete'}}</button>
+          </div>
+        </div>`;
+    }}).join('') : `<div class="publish-check-row"><span>Publishing checklist is not available yet.</span><button class="dailybrief-button secondary" type="button" onclick="refreshPublishingDesktop(true)">Refresh</button></div>`;
   }}
+
   const assembly = document.getElementById('pub-assembly-notes');
   if (assembly) {{
     assembly.innerHTML = `
-      <div class="publish-mini-row"><span>Assembly</span><strong>${{escHtml(book?.slug || '—')}}</strong></div>
-      <div class="publish-mini-row"><span>Target pages</span><strong>${{book?.word_count ? Math.max(96, Math.round(book.word_count / 320)) : '—'}}</strong></div>
-      <div class="publish-mini-row"><span>Last commit</span><strong>${{escHtml(book?.updated_at || '—')}}</strong></div>`;
+      <div class="publish-mini-row"><span>Assembly</span><strong>${{escHtml(workspaceTitle)}}</strong></div>
+      <div class="publish-mini-row"><span>Launch control</span><strong>${{escHtml(launchControl.next_action || 'Stand by')}}</strong></div>
+      <div class="publish-mini-row"><span>Calendar</span><strong>${{escHtml(String((calendar.upcoming || []).length || 0))}} upcoming</strong></div>
+      <div class="publish-mini-row"><span>Social queue</span><strong>${{escHtml(String((social.posts || []).length || 0))}} staged</strong></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="dailybrief-button secondary" type="button" onclick="publishCreateCalendarItem('${{escHtml(workspaceId)}}')">Add Calendar Beat</button>
+        <button class="dailybrief-button secondary" type="button" onclick="publishCreateSocialPost('${{escHtml(workspaceId)}}')">Create Social Draft</button>
+      </div>`;
   }}
+
   const printEl = document.getElementById('pub-format-print');
   if (printEl) printEl.innerHTML = `
-    <div class="publish-mini-row"><span>Status</span><strong>Ready</strong></div>
-    <div class="publish-mini-row"><span>Interior</span><strong>Trim package prepared</strong></div>
-    <div class="publish-mini-row"><span>Source</span><strong>${{book?.word_count ? book.word_count.toLocaleString() + ' words' : '—'}}</strong></div>`;
+    <div class="publish-mini-row"><span>Status</span><strong>${{escHtml(workspace ? 'Prepared' : 'Waiting')}}</strong></div>
+    <div class="publish-mini-row"><span>Checklist</span><strong>${{escHtml(data.launch_workspace?.checklist_progress || '—')}}</strong></div>
+    <div class="publish-mini-row"><span>Platform</span><strong>${{escHtml(workspace?.platform || 'Print lane pending')}}</strong></div>`;
   const ebookEl = document.getElementById('pub-format-ebook');
   if (ebookEl) ebookEl.innerHTML = `
-    <div class="publish-mini-row"><span>Status</span><strong>Ready</strong></div>
-    <div class="publish-mini-row"><span>Formats</span><strong>HTML + Markdown</strong></div>
-    <div class="publish-mini-row"><span>TOC</span><strong>${{book ? 'Chapter hierarchy intact' : '—'}}</strong></div>`;
+    <div class="publish-mini-row"><span>Status</span><strong>${{escHtml((social.posts || []).length ? 'Ready to support launch' : 'Ready for export')}}</strong></div>
+    <div class="publish-mini-row"><span>Calendar hooks</span><strong>${{escHtml(String((calendar.upcoming || []).length || 0))}} planned</strong></div>
+    <div class="publish-mini-row"><span>Route</span><strong>${{escHtml(data.proof_paths?.calendar_api || '/api/publishing/calendar')}}</strong></div>`;
   const audioEl = document.getElementById('pub-format-audio');
   if (audioEl) audioEl.innerHTML = `
-    <div class="publish-mini-row"><span>Status</span><strong>${{book ? 'Not requested' : 'Standby'}}</strong></div>
-    <div class="publish-mini-row"><span>Runtime</span><strong>${{book?.word_count ? Math.max(4, Math.round(book.word_count / 9300)) + 'h est.' : '—'}}</strong></div>
-    <div class="publish-mini-row"><span>Voice</span><strong>Pending selection</strong></div>`;
+    <div class="publish-mini-row"><span>Status</span><strong>${{escHtml(revenue.active_stream_count ? 'Revenue-connected' : 'Not requested')}}</strong></div>
+    <div class="publish-mini-row"><span>Revenue posture</span><strong>${{revenue.monthly_estimate_total ? '$' + Number(revenue.monthly_estimate_total || 0).toFixed(0) : '—'}}</strong></div>
+    <div class="publish-mini-row"><span>Attention flags</span><strong>${{escHtml(String(revenue.attention_count || 0))}}</strong></div>`;
+
+  const summaryEl = document.getElementById('pub-launch-summary');
+  if (summaryEl) {{
+    summaryEl.innerHTML = [
+      ['Launch Action', launchControl.next_action || 'Refresh launch control'],
+      ['Scheduled Posts', `${{(social.posts || []).length || 0}} staged`],
+      ['Calendar', `${{(calendar.upcoming || []).length || 0}} upcoming / ${{(calendar.overdue || []).length || 0}} overdue`],
+      ['History', `${{history.length || 0}} recent continuity events`],
+      ['Launch Scan', _publishingLaunchScan?.books?.length ? `${{_publishingLaunchScan.books.length}} Ghostwritr book${{_publishingLaunchScan.books.length === 1 ? '' : 's'}} discovered` : 'Run scan to inspect downstream launch surfaces'],
+    ].map(([label, state]) => `<div class="publish-launch-row"><span>${{escHtml(label)}}</span><strong>${{escHtml(state)}}</strong></div>`).join('');
+  }}
+  publishSetText('launch-books-badge', _publishingLaunchScan?.books?.length ? `${{_publishingLaunchScan.books.length}} tracked` : 'standby');
+
+  const strip = document.querySelector('#view-publishing .publish-supervisor-strip');
+  if (strip) {{
+    const cards = [
+      ['JARVIS', data.what_became_real || 'Monitoring package integrity and handoff readiness.'],
+      ['Ghostwritr', workspace ? `Active authority: ${{workspaceTitle}}.` : 'Ghostwritr continuity is waiting on a live publish target.'],
+      ['Launch History', history[0]?.title ? `${{history[0].title}} · ${{history[0].status_label || 'Logged'}}` : 'Recent publish continuity will appear here.'],
+      ['Availability', notes[0] || data.remains_partial || 'Publishing is live and connected.'],
+    ];
+    strip.innerHTML = cards.map(([title, copy]) => `<div class="publish-supervisor-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
+  }}
+}}
+
+async function publishCreateDraftProject() {{
+  const title = `JARVIS Publishing Project ${{new Date().toLocaleDateString()}}`;
+  publishRuntimeNote('Creating a draft publishing project…');
+  const response = await publishFetchJson('/api/publishing/projects', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      title,
+      status: 'draft',
+      project_type: 'book',
+      platform: 'ghostwritr',
+      description: 'Created from the JARVIS Publishing desktop experience.',
+      notes: 'Draft project created to anchor publishing handoff.',
+    }}),
+  }});
+  if (!response.ok) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    publishRuntimeNote(`Create draft project failed: ${{detail}}`);
+    if (typeof showToast === 'function') showToast('Create draft project failed', 'error');
+    return;
+  }}
+  await publishRecordAction({{
+    action: 'Create Draft Project',
+    title,
+    detail: `Created draft publishing project ${{title}} from the Publishing desktop workspace.`,
+    why_now: 'Publishing needed a real handoff target to continue the workflow.',
+    result_summary: 'Draft project created.',
+    related_label: title,
+  }});
+  publishRuntimeNote(`Created ${{title}}.`);
+  if (typeof showToast === 'function') showToast('Draft project created', 'success');
+  await refreshPublishingDesktop(true);
+}}
+
+async function publishCompleteChecklistStep(projectId, step, completed = true) {{
+  if (!projectId || !step) return;
+  publishRuntimeNote(`${{completed ? 'Completing' : 'Reopening'}} publish checklist step…`);
+  const response = await publishFetchJson('/api/publishing/checklist/step', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      actor: dailyBriefName(),
+      project_id: projectId,
+      step,
+      completed: !!completed,
+    }}),
+  }});
+  if (!response.ok) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    publishRuntimeNote(`Checklist update failed: ${{detail}}`);
+    if (typeof showToast === 'function') showToast('Checklist update failed', 'error');
+    return;
+  }}
+  await publishRecordAction({{
+    action: completed ? 'Complete Publish Checklist Step' : 'Reopen Publish Checklist Step',
+    title: response.payload?.label || step,
+    detail: response.payload?.history_entry?.detail || `${{response.payload?.label || step}} updated from Publishing desktop.`,
+    why_now: 'Publishing advanced a live handoff checklist step from the desktop workspace.',
+    result_summary: response.payload?.progress || 'Checklist updated.',
+    related_label: publishProjectTitle(_publishingModule?.launch_workspace || {{ project_id: projectId }}),
+  }});
+  publishRuntimeNote(response.payload?.history_entry?.detail || 'Checklist updated.');
+  if (typeof showToast === 'function') showToast(completed ? 'Checklist completed' : 'Checklist reopened', 'success');
+  await refreshPublishingDesktop(true);
+}}
+
+async function publishCreateCalendarItem(projectId = '') {{
+  const workspace = publishWorkspaceProject(_publishingModule || {{}});
+  const chosenProjectId = String(projectId || publishProjectId(workspace)).trim();
+  const title = workspace ? `Launch beat · ${{publishProjectTitle(workspace)}}` : 'Publishing launch beat';
+  const response = await publishFetchJson('/api/publishing/calendar', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      title,
+      content_type: 'launch_task',
+      platform: 'publishing',
+      planned_date: new Date(Date.now() + 86400000).toISOString(),
+      status: 'idea',
+      project_id: chosenProjectId,
+      notes: 'Created from the JARVIS Publishing desktop workspace.',
+      assigned_agent: 'Veronica',
+    }}),
+  }});
+  if (!response.ok) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    publishRuntimeNote(`Calendar beat failed: ${{detail}}`);
+    if (typeof showToast === 'function') showToast('Calendar beat failed', 'error');
+    return;
+  }}
+  await publishRecordAction({{
+    action: 'Create Publishing Calendar Item',
+    title,
+    detail: `Created publishing calendar item ${{title}} from the desktop workspace.`,
+    why_now: 'Publishing needed a real launch-date placeholder and downstream follow-through.',
+    result_summary: 'Calendar item created.',
+    related_label: publishProjectTitle(workspace),
+  }});
+  publishRuntimeNote(`Calendar beat created for ${{publishProjectTitle(workspace)}}.`);
+  if (typeof showToast === 'function') showToast('Calendar beat created', 'success');
+  await refreshPublishingDesktop(true);
+}}
+
+async function publishCreateSocialPost(projectId = '') {{
+  const workspace = publishWorkspaceProject(_publishingModule || {{}});
+  const chosenProjectId = String(projectId || publishProjectId(workspace)).trim();
+  const title = publishProjectTitle(workspace);
+  const response = await publishFetchJson('/api/publishing/social/posts', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      platform: 'linkedin',
+      content: `Launch update: ${{title}} is moving through the JARVIS publishing workflow.`,
+      status: 'draft',
+      scheduled_at: new Date(Date.now() + 2 * 86400000).toISOString(),
+      project_id: chosenProjectId,
+    }}),
+  }});
+  if (!response.ok) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    publishRuntimeNote(`Social draft failed: ${{detail}}`);
+    if (typeof showToast === 'function') showToast('Social draft failed', 'error');
+    return;
+  }}
+  await publishRecordAction({{
+    action: 'Create Publishing Social Draft',
+    title,
+    detail: `Created a publishing social draft for ${{title}} from the desktop workspace.`,
+    why_now: 'Publishing needs downstream launch support before the package leaves the studio.',
+    result_summary: 'Social post created.',
+    related_label: title,
+  }});
+  publishRuntimeNote(`Social draft created for ${{title}}.`);
+  if (typeof showToast === 'function') showToast('Social draft created', 'success');
+  await refreshPublishingDesktop(true);
+}}
+
+async function publishGenerateLaunchPlan(projectId = '') {{
+  const workspace = publishWorkspaceProject(_publishingModule || {{}});
+  const chosenProjectId = String(projectId || publishProjectId(workspace)).trim();
+  if (!chosenProjectId) {{
+    publishRuntimeNote('No active publishing project is available for launch planning.');
+    if (typeof showToast === 'function') showToast('No active publishing project available', 'warning');
+    return;
+  }}
+  publishRuntimeNote('Generating live launch plan…');
+  const response = await publishFetchJson('/api/publishing/launch-plan', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{ project_id: chosenProjectId }}),
+  }});
+  if (!response.ok) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    publishRuntimeNote(`Launch plan failed: ${{detail}}`);
+    if (typeof showToast === 'function') showToast('Launch plan failed', 'error');
+    return;
+  }}
+  await publishRecordAction({{
+    action: 'Generate Launch Plan',
+    title: publishProjectTitle(workspace),
+    detail: `Generated a live launch plan for ${{publishProjectTitle(workspace)}}.`,
+    why_now: 'Publishing needed a real downstream plan instead of a storyboard placeholder.',
+    result_summary: response.payload?.summary || response.payload?.headline || 'Launch plan generated.',
+    related_label: publishProjectTitle(workspace),
+  }});
+  publishRuntimeNote(response.payload?.summary || response.payload?.headline || 'Launch plan generated.');
+  if (typeof showToast === 'function') showToast('Launch plan generated', 'success');
+  await refreshPublishingDesktop(true);
+}}
+
+async function refreshPublishingDesktop(notifyUser = false) {{
+  syncPublishStoryboard();
+  const requestSerial = ++_publishingRequestSerial;
+  publishRuntimeNote(notifyUser ? 'Refreshing publishing workspace…' : 'Loading publishing workspace…');
+  const response = await publishFetchJson('/api/publish/module');
+  if (requestSerial !== _publishingRequestSerial) return;
+  if (!response.ok || !response.payload) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    publishRuntimeNote(`Publishing could not load: ${{detail}}`);
+    if (notifyUser && typeof showToast === 'function') showToast('Publishing unavailable', 'error');
+    return;
+  }}
+  renderPublishModule(response.payload);
+  await loadLaunchPanel();
+  loadKdpView();
+  const notes = Array.isArray(response.payload.availability_notes) ? response.payload.availability_notes.filter(Boolean) : [];
+  publishRuntimeNote(notes[0] || response.payload.runtime_note || 'Publishing is live and connected.');
+  if (notifyUser && typeof showToast === 'function') showToast('Publishing refreshed', 'success');
 }}
 
 // ── KDP / Amazon Publishing ────────────────────────────────────
@@ -39837,7 +40250,7 @@ async function approveDraft(reviewId) {{
     }});
     if (!res.ok) {{ showToast('Approve failed', 'error'); return; }}
     showToast('Draft approved ✓', 'success');
-    loadPublishing();
+    await refreshPublishingDesktop(true);
   }} catch(e) {{ showToast('No connection', 'error'); }}
 }}
 
@@ -39852,7 +40265,7 @@ async function reviseDraft(reviewId) {{
     }});
     if (!res.ok) {{ showToast('Revise request failed', 'error'); return; }}
     showToast('Revision requested', 'info');
-    loadPublishing();
+    await refreshPublishingDesktop(true);
   }} catch(e) {{ showToast('No connection', 'error'); }}
 }}
 

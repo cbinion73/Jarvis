@@ -11576,12 +11576,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "summary": "Publish now has a dedicated module route, but backend publishing sources are not initialised in this runtime.",
             "what_became_real": "JARVIS now exposes Publish as a dedicated app module route instead of leaving it hidden behind APIs and shared workspaces.",
             "remains_partial": "Broader publishing controls and deeper drill-ins still need follow-on slices.",
+            "runtime_note": "Publishing is wired, but the live publishing backend is not initialised in this runtime.",
+            "availability_notes": [],
             "project_count": 0,
             "active_project_count": 0,
             "review_count": 0,
             "pending_reviews_count": 0,
             "scheduled_post_count": 0,
             "overdue_calendar_count": 0,
+            "counts": {
+                "projects": 0,
+                "active_projects": 0,
+                "reviews": 0,
+                "scheduled_posts": 0,
+                "overdue_calendar": 0,
+                "history": 0,
+            },
             "projects": [],
             "pending_reviews": [],
             "launch_workspace": None,
@@ -11608,6 +11618,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "history_api": "/api/publish/module",
                 "calendar_api": "/api/publishing/calendar",
                 "social_api": "/api/publishing/social/posts",
+                "launch_plan_api": "/api/publishing/launch-plan",
+                "launch_scan_api": "/api/publishing/launch-scan",
+                "launch_asset_get_api_suffix": "/api/publishing/launch/{slug}",
+                "launch_asset_generate_api_suffix": "/api/publishing/launch/{slug}/generate",
+                "activity_api": "/api/activity/operator-action",
             },
             "errors": [],
         }
@@ -11616,36 +11631,47 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             history_summary = PublishHistoryStore().summary(actor_id="chris", limit=6)
             payload["launch_history"] = history_summary
             payload["history_count"] = int(history_summary.get("count") or 0)
+            payload["counts"]["history"] = payload["history_count"]
         except Exception as exc:
             payload["errors"].append(f"publish_history: {exc}")
+            payload["availability_notes"].append(f"Publish history was unavailable: {exc}")
 
         try:
             pending_reviews = _pending_publishing_reviews()
             payload["pending_reviews"] = pending_reviews
             payload["review_count"] = len(pending_reviews)
             payload["pending_reviews_count"] = len(pending_reviews)
+            payload["counts"]["reviews"] = len(pending_reviews)
             if pending_reviews:
                 payload["available"] = True
         except Exception as exc:
             payload["errors"].append(f"publishing_reviews: {exc}")
+            payload["availability_notes"].append(f"Editorial review storage was unavailable: {exc}")
 
         if pub is None:
             if payload["pending_reviews_count"]:
                 payload["status"] = "Useful"
                 payload["summary"] = "Publish route is live with pending editorial reviews, even though broader publishing sources are not fully initialised in this runtime."
+                payload["runtime_note"] = "Publishing is live through editorial review continuity, but Ghostwritr publishing sources are not fully initialised."
+            else:
+                payload["availability_notes"].append("Ghostwritr publishing services are not initialised in this runtime, so Publish is showing only continuity-safe data.")
             payload["recent_activity"] = _module_recent_activity(route="/publish", domain="publish")
             return payload
 
         payload["status"] = "Useful"
         payload["summary"] = "Publish now has a dedicated route with live projects, launch control, calendar, social, and revenue posture."
+        payload["runtime_note"] = "Publishing is live and connected."
 
         try:
             projects = list(pub._store.list_projects())
             payload["projects"] = [project.to_dict() for project in projects[:8]]
             payload["project_count"] = len(projects)
             payload["active_project_count"] = sum(1 for project in projects if str(getattr(project, "status", "")).strip() not in {"", "archived", "completed"})
+            payload["counts"]["projects"] = payload["project_count"]
+            payload["counts"]["active_projects"] = payload["active_project_count"]
         except Exception as exc:
             payload["errors"].append(f"projects: {exc}")
+            payload["availability_notes"].append(f"Publishing projects failed to hydrate: {exc}")
 
         try:
             upcoming = list(pub.calendar.get_upcoming(14))
@@ -11655,15 +11681,19 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "overdue": [item.to_dict() for item in overdue[:4]],
             }
             payload["overdue_calendar_count"] = len(overdue)
+            payload["counts"]["overdue_calendar"] = len(overdue)
         except Exception as exc:
             payload["errors"].append(f"calendar: {exc}")
+            payload["availability_notes"].append(f"Publishing calendar failed to hydrate: {exc}")
 
         try:
             posts = list(pub._store.get_scheduled_posts())
             payload["social"] = {"posts": [post.to_dict() for post in posts[:8]]}
             payload["scheduled_post_count"] = len(posts)
+            payload["counts"]["scheduled_posts"] = len(posts)
         except Exception as exc:
             payload["errors"].append(f"social: {exc}")
+            payload["availability_notes"].append(f"Publishing social queue failed to hydrate: {exc}")
 
         try:
             revenue = dict(pub.sage.get_revenue_summary() or {})
@@ -11676,6 +11706,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }
         except Exception as exc:
             payload["errors"].append(f"revenue: {exc}")
+            payload["availability_notes"].append(f"Publishing revenue posture failed to hydrate: {exc}")
 
         try:
             launch_control = _build_launch_control_payload(None)
@@ -11690,10 +11721,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 payload["what_became_real"] = "Publish now has a dedicated app route backed by live launch-control, project, social, and revenue state."
         except Exception as exc:
             payload["errors"].append(f"launch_control: {exc}")
+            payload["availability_notes"].append(f"Launch control failed to hydrate: {exc}")
 
         payload["recent_activity"] = _module_recent_activity(route="/publish", domain="publish")
         if payload["errors"]:
             payload["remains_partial"] = "Some publishing sources still failed to hydrate; see errors in the payload preview."
+            if payload["runtime_note"] == "Publishing is live and connected.":
+                payload["runtime_note"] = "Publishing is live, but some backend sources are partially unavailable."
         return payload
 
     @app.get("/api/publish/module")
