@@ -175,11 +175,21 @@ JARVIS status:
 
 ## Current Placement
 
-If plotted honestly, JARVIS is here:
+If plotted honestly (code-verified true-up, 2026-06-09 — see
+`docs/JARVIS-SESSION-STATE.md` for evidence and the gap list):
 
 - Level 2 solidly real
-- Level 3 actively emerging
-- Levels 4 through 9 designed in doctrine, not yet fully built
+- Level 3 mostly real; blocked on always-on deployment health, not features
+- Level 4 substantially built: trust zones, supervision plane, promotion
+  engine, sandbox execution, and draft-only email staging exist in code
+  with enforcement and negative-path tests; remaining gaps are fail-closed
+  degradation, universal enforcement coverage, and endpoint authn
+- Level 5 partially built: event fabric and attention routing exist but
+  are poll-driven rather than autonomous
+- Level 6 partially built: partitioned, viewer-enforced memory that is
+  genuinely read in chat and briefing flows; retrieval is keyword-based
+- Levels 7 through 9 early: faith and health loops real, foundry read-only,
+  season detection and legacy systems not yet built
 
 ## What Must Happen Next
 
