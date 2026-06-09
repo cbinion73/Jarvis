@@ -12971,6 +12971,9 @@ body::after {{
   color: var(--dining-muted);
   font-size: 13px;
   background: rgba(255,255,255,.02);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }}
 .dining-side-link.active {{
   border-color: var(--dining-border-strong);
@@ -19981,28 +19984,29 @@ body::after {{
             <span>Dining</span>
           </div>
           <div class="dining-side-nav">
-            <div class="dining-side-link">⌂ Home</div>
-            <div class="dining-side-link">🗺 Map</div>
-            <div class="dining-side-link active">⌕ Search</div>
-            <div class="dining-side-link">🍽 Dining</div>
-            <div class="dining-side-link">🧳 Trips</div>
-            <div class="dining-side-link">◎ Smart Stops</div>
-            <div class="dining-side-link">☁ Weather</div>
-            <div class="dining-side-link">♡ Favorites</div>
-            <div class="dining-side-link">📅 Reservations</div>
-            <div class="dining-side-link">↺ History</div>
-            <div class="dining-side-link">⚙ Preferences</div>
-            <div class="dining-side-link">☰ Settings</div>
+            <button type="button" class="dining-side-link" data-dining-nav="home" onclick="diningSidebarAction('home')">⌂ Home</button>
+            <button type="button" class="dining-side-link" data-dining-nav="map" onclick="diningSidebarAction('map')">🗺 Map</button>
+            <button type="button" class="dining-side-link active" data-dining-nav="search" onclick="diningSidebarAction('search')">⌕ Search</button>
+            <button type="button" class="dining-side-link" data-dining-nav="dining" onclick="diningSidebarAction('dining')">🍽 Dining</button>
+            <button type="button" class="dining-side-link" data-dining-nav="trips" onclick="diningSidebarAction('trips')">🧳 Trips</button>
+            <button type="button" class="dining-side-link" data-dining-nav="stops" onclick="diningSidebarAction('stops')">◎ Smart Stops</button>
+            <button type="button" class="dining-side-link" data-dining-nav="weather" onclick="diningSidebarAction('weather')">☁ Weather</button>
+            <button type="button" class="dining-side-link" data-dining-nav="favorites" onclick="diningSidebarAction('favorites')">♡ Favorites</button>
+            <button type="button" class="dining-side-link" data-dining-nav="reservations" onclick="diningSidebarAction('reservations')">📅 Reservations</button>
+            <button type="button" class="dining-side-link" data-dining-nav="history" onclick="diningSidebarAction('history')">↺ History</button>
+            <button type="button" class="dining-side-link" data-dining-nav="preferences" onclick="diningSidebarAction('preferences')">⚙ Preferences</button>
+            <button type="button" class="dining-side-link" data-dining-nav="settings" onclick="diningSidebarAction('settings')">☰ Settings</button>
           </div>
           <div class="dining-sidebar-foot">
             <div class="dining-status-card">
               <strong>JARVIS Dining Status</strong>
-              <span id="dining-status-copy">Loading dining network…</span>
+              <span id="dining-runtime-note">Loading dining network…</span>
             </div>
             <div class="dining-status-card">
               <strong>Saved Favorites</strong>
               <span id="dining-sidebar-favorites">No favorites loaded yet.</span>
             </div>
+            <button class="dining-action-btn" id="dining-refresh-button" type="button" onclick="refreshDiningDesktop(true)">Refresh Dining</button>
           </div>
         </aside>
 
@@ -46546,10 +46550,101 @@ let _diningOpenNow = false;
 let _diningPrefs = new Set(['view', '4.0+', 'cocktails']);
 let _diningQuickFilter = 'best';
 let _diningSamData = null;
+let _diningModulePayload = null;
 let _diningAllSpots = [];
 let _diningSelectedSpot = null;
 let _diningSelectedDetail = null;
 let _diningFavorites = [];
+let _diningRequestSerial = 0;
+let _diningFavoritesPanelOpen = false;
+
+function diningFetchJson(url, options) {{
+  return fetch(url, options).then(async response => {{
+    const payload = await response.json().catch(() => ({{}}));
+    if (!response.ok) {{
+      throw new Error(payload.detail || payload.error || `HTTP ${{response.status}}`);
+    }}
+    return payload;
+  }});
+}}
+
+function diningRuntimeNote(payload) {{
+  if (!payload) return 'Dining is loading.';
+  const note = String(payload.runtime_note || '').trim();
+  if (note) return note;
+  const availability = Array.isArray(payload.availability_notes) ? payload.availability_notes : [];
+  if (availability.length) return availability[0];
+  if (payload.available === false) return 'Dining is partially connected in this runtime.';
+  return 'Dining is live and connected.';
+}}
+
+function diningRecordAction(action, detail, extra) {{
+  return fetch('/api/activity/operator-action', {{
+    method: 'POST',
+    headers: {{'Content-Type': 'application/json'}},
+    body: JSON.stringify(Object.assign({{
+      actor: 'Chris',
+      domain: 'dining',
+      action,
+      detail,
+      route: '/dining-center',
+    }}, extra || {{}})),
+  }}).catch(() => null);
+}}
+
+function diningSetActiveNav(target) {{
+  document.querySelectorAll('#view-dining [data-dining-nav]').forEach(el => {{
+    el.classList.toggle('active', el.dataset.diningNav === target);
+  }});
+}}
+
+function diningScrollTo(id) {{
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({{behavior: 'smooth', block: 'start'}});
+}}
+
+function diningSidebarAction(target) {{
+  diningSetActiveNav(target);
+  switch (target) {{
+    case 'home':
+      switchView('home');
+      break;
+    case 'map':
+      diningScrollTo('dining-map-board');
+      break;
+    case 'search':
+    case 'dining':
+      diningScrollTo('dining-query');
+      break;
+    case 'trips':
+      switchView('journey');
+      break;
+    case 'stops':
+      switchView('navigate');
+      break;
+    case 'weather':
+      switchView('storm');
+      break;
+    case 'favorites':
+      loadDiningFavorites();
+      break;
+    case 'reservations':
+      diningScrollTo('dining-reservation-panel');
+      break;
+    case 'history':
+      diningScrollTo('dining-recent-searches');
+      break;
+    case 'preferences':
+      diningScrollTo('dining-query');
+      document.getElementById('dining-query')?.focus();
+      break;
+    case 'settings':
+      switchView('settings');
+      break;
+    default:
+      break;
+  }}
+}}
 
 function _diningStarColor(r) {{
   if (r >= 4.5) return '#4ade80';
@@ -46583,12 +46678,9 @@ function _diningCuisineLabel(cuisine) {{
 }}
 
 function _diningSpotTags(spot, idx) {{
-  const tags = [];
-  if (idx === 0) tags.push('Best Match');
-  if (spot.open_now) tags.push('Open Now');
-  if ((_diningSearchQuery || '').toLowerCase().includes('view')) tags.push('Great View');
-  if ((_diningSearchQuery || '').toLowerCase().includes('outdoor')) tags.push('Outdoor Seating');
-  if (_diningPrefs.has('cocktails')) tags.push('Cocktails');
+  const tags = Array.isArray(spot?.highlights) ? spot.highlights.filter(Boolean) : [];
+  if (idx === 0 && !tags.length) tags.push('Top Match');
+  if (spot?.open_now && !tags.includes('Open now')) tags.unshift('Open now');
   return tags.slice(0, 4);
 }}
 
@@ -46657,6 +46749,7 @@ function setDiningQuickFilter(filter) {{
   document.querySelectorAll('#view-dining .dining-chip[data-filter]').forEach(el => {{
     el.classList.toggle('active', el.dataset.filter === filter || (filter === 'best' && el.dataset.filter === 'best'));
   }});
+  if (_diningLoaded) refreshDiningDesktop(false);
 }}
 
 function toggleDiningOpenNow() {{
@@ -46672,6 +46765,7 @@ function toggleDiningPref(pref) {{
   document.querySelectorAll('#view-dining .dining-pref-pill').forEach(el => {{
     if (el.dataset.pref === pref) el.classList.toggle('active', _diningPrefs.has(pref));
   }});
+  if (_diningLoaded) refreshDiningDesktop(false);
 }}
 
 function applyDiningPrompt(prompt) {{
@@ -46683,7 +46777,7 @@ function applyDiningPrompt(prompt) {{
 function runDiningSearch() {{
   const input = document.getElementById('dining-query');
   _diningSearchQuery = input?.value?.trim() || 'Find somewhere great nearby';
-  reloadDiningView();
+  refreshDiningDesktop(true, {{recordSearch: true}});
 }}
 
 function _diningSelectedPhoto(spot) {{
@@ -46742,6 +46836,7 @@ function _diningRenderMap(spots) {{
 function _diningRenderHero(spot) {{
   const hero = document.getElementById('dining-hero-card');
   if (!hero || !spot) return;
+  const match = Number(spot.match_score || _diningModulePayload?.network_metrics?.match_rate || 0);
   hero.innerHTML = `
     ${{_diningSelectedPhoto(spot)}}
     <div class="dining-hero-body">
@@ -46760,7 +46855,7 @@ function _diningRenderHero(spot) {{
         <div class="dining-meta-chip"><strong>${{spot.distance_mi || '—'}} mi</strong><span>Distance</span></div>
         <div class="dining-meta-chip"><strong>${{escHtml(spot.price || '$$')}}</strong><span>${{escHtml(_diningPriceLabel(spot.price || '$$'))}}</span></div>
         <div class="dining-meta-chip"><strong>${{spot.open_now ? 'Open' : 'Status'}}</strong><span>${{spot.open_now ? 'Serving now' : 'View details'}}</span></div>
-        <div class="dining-meta-chip"><strong>92%</strong><span>Match</span></div>
+        <div class="dining-meta-chip"><strong>${{match ? match + '%' : '—'}}</strong><span>Match</span></div>
       </div>
     </div>`;
 }}
@@ -46771,15 +46866,18 @@ function _diningRenderDetails(spot, detail) {{
   const address = detail?.formatted_address || spot.address || '';
   const phone = detail?.formatted_phone_number || 'Call restaurant';
   const site = detail?.website || '';
+  const hours = Array.isArray(detail?.opening_hours?.weekday_text) && detail.opening_hours.weekday_text.length
+    ? detail.opening_hours.weekday_text[0]
+    : 'Hours available in full details';
   el.innerHTML = `
     <div class="dining-detail-layout">
       <div>
         <div class="dining-detail-photo"></div>
         <div class="dining-detail-stats">
-          <div class="dining-meta-chip"><strong>${{spot.distance_mi || '2'}} min</strong><span>Walk</span></div>
-          <div class="dining-meta-chip"><strong>Mon - Sun</strong><span>11:00 AM - 11:00 PM</span></div>
-          <div class="dining-meta-chip"><strong>Valet</strong><span>Parking</span></div>
-          <div class="dining-meta-chip"><strong>Smart Casual</strong><span>Dress code</span></div>
+          <div class="dining-meta-chip"><strong>${{spot.distance_mi || '—'}} mi</strong><span>Distance</span></div>
+          <div class="dining-meta-chip"><strong>${{spot.rating || '—'}} ★</strong><span>${{(spot.review_count || 0).toLocaleString()}} reviews</span></div>
+          <div class="dining-meta-chip"><strong>${{escHtml(spot.price || '$$')}}</strong><span>Price posture</span></div>
+          <div class="dining-meta-chip"><strong>${{spot.open_now ? 'Open now' : 'Check hours'}}</strong><span>${{escHtml(hours)}}</span></div>
         </div>
       </div>
       <div>
@@ -46789,16 +46887,17 @@ function _diningRenderDetails(spot, detail) {{
           <span class="dining-tag">${{spot.rating || '—'}} ★</span>
           <span class="dining-tag">${{escHtml(spot.price || '$$')}}</span>
           <span class="dining-tag">${{spot.open_now ? 'Open now' : 'Hours vary'}}</span>
+          <span class="dining-tag">${{spot.is_favorite ? 'Favorite' : 'Not saved'}}</span>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
           <button class="dining-action-btn" onclick="openDiningDetail('${{escHtml(spot.place_id)}}','${{escHtml((spot.name || '').replace(/'/g, '&#39;'))}}')">View Menu</button>
           <button class="dining-action-btn" onclick="selectDiningReservation()">Reserve Table</button>
           <button class="dining-ghost-btn" onclick="navigateToDining('${{escHtml((spot.name || '').replace(/'/g, '&#39;'))}}','${{escHtml(address.replace(/'/g, '&#39;'))}}')">Navigate</button>
         </div>
-        <p style="margin:16px 0 0;color:var(--dining-muted);font-size:12px;line-height:1.7;">${{escHtml(spot.name)}} is surfacing because it balances rating quality, distance, taste alignment, and the atmosphere signals in your current dining prompt.</p>
+        <p style="margin:16px 0 0;color:var(--dining-muted);font-size:12px;line-height:1.7;">${{escHtml((spot.reasons || [])[0] || ((spot.name || 'This restaurant') + ' is surfacing because it balances rating, distance, and your current dining cues.'))}}</p>
         <div class="dining-mini-card" style="padding:14px;margin-top:14px;">
           <strong>Contact & Access</strong>
-          <span>${{escHtml(phone)}}${{site ? ' · website available' : ''}}</span>
+          <span>${{escHtml(phone)}}${{site ? ' · website available' : ' · website unavailable'}}</span>
         </div>
       </div>
     </div>`;
@@ -46807,18 +46906,26 @@ function _diningRenderDetails(spot, detail) {{
 function _diningRenderMenuInsights(spot) {{
   const el = document.getElementById('dining-menu-insights');
   if (!el || !spot) return;
-  const menu = _diningMenuSuggestions(spot);
-  const why = _diningWhyLove(spot);
+  const detail = _diningSelectedDetail || {{}};
+  const reasons = Array.isArray(spot.reasons) && spot.reasons.length
+    ? spot.reasons
+    : ['Dining result matched the current route filters.'];
+  const hours = Array.isArray(detail?.opening_hours?.weekday_text) && detail.opening_hours.weekday_text.length
+    ? detail.opening_hours.weekday_text.slice(0, 3)
+    : [];
   el.innerHTML = `
     <div class="dining-menu-grid">
       <div class="dining-menu-list">
-        ${{menu.map(([title, copy, price]) => `<div class="dining-menu-item"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span><div style="margin-top:8px;color:var(--dining-gold);font-size:12px;">${{escHtml(price)}}</div></div>`).join('')}}
+        <div class="dining-menu-item"><strong>Match Score</strong><span>${{escHtml(String(spot.match_score || _diningModulePayload?.network_metrics?.match_rate || '—'))}}% dining fit from the live ranking lane.</span><div style="margin-top:8px;color:var(--dining-gold);font-size:12px;">Ranking signal</div></div>
+        <div class="dining-menu-item"><strong>Review Posture</strong><span>${{(spot.review_count || 0).toLocaleString()}} verified review(s) contribute to this recommendation.</span><div style="margin-top:8px;color:var(--dining-gold);font-size:12px;">Crowd signal</div></div>
+        <div class="dining-menu-item"><strong>Partner Coverage</strong><span>${{detail?.website ? 'Website available for menu access.' : 'Structured menu partner is not connected in this runtime.'}}</span><div style="margin-top:8px;color:var(--dining-gold);font-size:12px;">Availability boundary</div></div>
       </div>
       <div class="dining-why-list">
-        ${{why.map(copy => `<div class="dining-why-item"><strong>Why You'll Love It</strong><span>${{escHtml(copy)}}</span></div>`).join('')}}
+        ${{reasons.map(copy => `<div class="dining-why-item"><strong>Why It Surfaced</strong><span>${{escHtml(copy)}}</span></div>`).join('')}}
+        ${{hours.map(copy => `<div class="dining-why-item"><strong>Hours Snapshot</strong><span>${{escHtml(copy)}}</span></div>`).join('')}}
         <div class="dining-mini-card" style="padding:14px;">
-          <strong>Your Dining Profile</strong>
-          <span>Adventurous · ${{escHtml(_diningCuisineLabel(_diningCuisine))}} lover · Fine dining</span>
+          <strong>Dining Boundary</strong>
+          <span>${{escHtml((_diningModulePayload?.reservation_partner?.message) || 'Dining partner availability is still partial in this runtime.')}}</span>
         </div>
       </div>
     </div>`;
@@ -46828,41 +46935,40 @@ function _diningRenderReservation(spot) {{
   const el = document.getElementById('dining-reservation-panel');
   if (!el || !spot) return;
   const slots = ['5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM'];
+  const partner = _diningModulePayload?.reservation_partner || {{}};
+  const recentIntent = (_diningModulePayload?.recent_reservation_intents || [])[0] || null;
   el.innerHTML = `
     <div class="dining-reservation-grid">
       <div>
         <div class="dining-chip-row" style="margin-top:0;">
-          <span class="dining-tag">Today</span>
-          <span class="dining-tag">Tomorrow</span>
-          <span class="dining-tag">Mon</span>
-          <span class="dining-tag">Tue</span>
-          <span class="dining-tag">Wed</span>
+          <span class="dining-tag">Reservation Intent</span>
+          <span class="dining-tag">${{partner.connected ? 'Partner Connected' : 'Partner Unavailable'}}</span>
+          <span class="dining-tag">${{spot.open_now ? 'Open now' : 'Hours vary'}}</span>
         </div>
         <div class="dining-slot-grid">
-          ${{slots.map(slot => `<button class="dining-slot${{slot === '6:00 PM' ? ' active' : ''}}" onclick="selectDiningReservation('${{slot}}')"><strong>${{slot}}</strong><span>${{slot === '6:00 PM' ? 'Available' : '2 tables'}}</span></button>`).join('')}}
+          ${{slots.map(slot => `<button class="dining-slot${{recentIntent?.summary?.includes(slot) ? ' active' : ''}}" onclick="selectDiningReservation('${{slot}}')"><strong>${{slot}}</strong><span>Save preference</span></button>`).join('')}}
         </div>
         <div class="dining-mini-card" style="padding:14px;">
-          <strong>Special Request</strong>
-          <span>Outdoor seating, quiet table</span>
+          <strong>Booking Boundary</strong>
+          <span>${{escHtml(partner.message || 'Live booking is not connected in this runtime.')}}</span>
         </div>
       </div>
       <div>
         <div class="dining-list-card" style="padding:14px;">
-          <strong>Your Reservation</strong>
+          <strong>Your Reservation Intent</strong>
           <span>${{escHtml(spot.name)}} · ${{escHtml(_diningCuisineLabel(_diningCuisine))}}</span>
           <div class="dining-tags" style="margin-top:10px;">
-            <span class="dining-tag">May 24, 2024</span>
-            <span class="dining-tag">6:00 PM</span>
-            <span class="dining-tag">4 Guests</span>
-            <span class="dining-tag">Outdoor Seating</span>
+            <span class="dining-tag">${{recentIntent?.label ? escHtml(recentIntent.label) : 'No saved intent yet'}}</span>
+            <span class="dining-tag">${{recentIntent?.status ? escHtml(recentIntent.status) : 'Not sent to a booking partner'}}</span>
+            <span class="dining-tag">${{spot.open_now ? 'Restaurant open now' : 'Check hours first'}}</span>
           </div>
-          <button class="dining-action-btn" style="margin-top:14px;width:100%;" onclick="openDiningDetail('${{escHtml(spot.place_id)}}','${{escHtml((spot.name || '').replace(/'/g, '&#39;'))}}')">Reserve Now</button>
+          <button class="dining-action-btn" style="margin-top:14px;width:100%;" onclick="selectDiningReservation()">Save Reservation Intent</button>
         </div>
         <div class="dining-mini-card" style="padding:14px;margin-top:12px;">
-          <strong>JARVIS Confidence</strong>
-          <span>This is a great choice based on your preferences.</span>
-          <div class="dining-confidence-bar" style="margin-top:10px;"><div class="dining-confidence-fill" style="width:92%;"></div></div>
-          <div style="margin-top:8px;color:var(--dining-green);font-size:12px;font-weight:700;">92% confidence</div>
+          <strong>Decision Confidence</strong>
+          <span>${{escHtml((spot.reasons || [])[0] || 'This is still one of the strongest live matches for the current dining brief.')}}</span>
+          <div class="dining-confidence-bar" style="margin-top:10px;"><div class="dining-confidence-fill" style="width:${{Math.max(18, Number(spot.match_score || 0))}}%;"></div></div>
+          <div style="margin-top:8px;color:var(--dining-green);font-size:12px;font-weight:700;">${{Number(spot.match_score || 0) ? Number(spot.match_score || 0) + '% match' : 'Match unavailable'}}</div>
         </div>
       </div>
     </div>`;
@@ -46871,17 +46977,22 @@ function _diningRenderReservation(spot) {{
 function _diningRenderFeatures() {{
   const el = document.getElementById('dining-feature-strip');
   if (!el) return;
-  el.innerHTML = _diningFeatureCards().map(([title, copy]) => `
+  const cards = Array.isArray(_diningModulePayload?.feature_cards) && _diningModulePayload.feature_cards.length
+    ? _diningModulePayload.feature_cards.map(item => [item.title, item.copy])
+    : _diningFeatureCards();
+  el.innerHTML = cards.map(([title, copy]) => `
     <div class="dining-mini-card" style="padding:14px;">
       <strong>${{escHtml(title)}}</strong>
       <span>${{escHtml(copy)}}</span>
     </div>`).join('');
 }}
 
-function _diningRenderRecentSearches(spots) {{
+function _diningRenderRecentSearches(entries) {{
   const el = document.getElementById('dining-recent-searches');
   if (!el) return;
-  const cards = _diningRecentCards(spots);
+  const cards = Array.isArray(entries) && entries.length
+    ? entries.map(entry => [entry.label || 'Dining continuity', entry.when || '', entry.summary || ''])
+    : _diningRecentCards(_diningAllSpots);
   el.innerHTML = cards.map(([title, when, copy]) => `
     <div class="dining-recent-card">
       <div class="dining-recent-thumb"></div>
@@ -46903,16 +47014,10 @@ function _diningRenderFavoritesSummary() {{
 }}
 
 async function _diningRefreshFavorites() {{
-  try {{
-    const d = await fetch('/api/dining/favorites').then(r => r.json());
-    _diningFavorites = d.favorites || [];
-    _diningRenderFavoritesSummary();
-    return _diningFavorites;
-  }} catch (e) {{
-    _diningFavorites = [];
-    _diningRenderFavoritesSummary();
-    return [];
-  }}
+  const favorites = Array.isArray(_diningModulePayload?.favorites) ? _diningModulePayload.favorites : _diningFavorites;
+  _diningFavorites = favorites;
+  _diningRenderFavoritesSummary();
+  return favorites;
 }}
 
 async function loadDiningView() {{
@@ -46925,9 +47030,12 @@ async function loadDiningView() {{
   document.querySelectorAll('#view-dining .dining-pref-pill').forEach(el => {{
     el.classList.toggle('active', _diningPrefs.has(el.dataset.pref || ''));
   }});
+  diningSetActiveNav('search');
   document.getElementById('dining-page-count').textContent = 'Page 1 of 1';
   document.getElementById('dining-page-label').textContent = 'Dining Board';
-  await Promise.all([loadDiningSamPicks(), _diningRefreshFavorites(), reloadDiningView()]);
+  document.getElementById('dining-nav-prev').disabled = true;
+  document.getElementById('dining-nav-next').disabled = true;
+  await refreshDiningDesktop(false);
 }}
 
 async function loadDiningSamPicks() {{
@@ -46939,78 +47047,97 @@ async function loadDiningSamPicks() {{
   }}
 }}
 
-async function reloadDiningView() {{
+function renderDiningModule(payload) {{
   const el = document.getElementById('dining-results');
   if (!el) return;
-  el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:var(--dining-muted);">Loading restaurants…</div>';
+  _diningModulePayload = payload || null;
+  _diningSamData = payload?.sam_context ? {{sam_context: payload.sam_context, recommendations: payload.recommendations || []}} : payload?.recommendations ? {{recommendations: payload.recommendations || []}} : null;
+  _diningFavorites = Array.isArray(payload?.favorites) ? payload.favorites : [];
+  _diningAllSpots = Array.isArray(payload?.results) ? payload.results : [];
+  _diningRenderFavoritesSummary();
 
-  const cuisine = _diningCuisine || 'any';
-  const openNow = _diningOpenNow;
-  const radius = '10';
-  const minRating = _diningPrefs.has('4.0+') ? '4.0' : '3.5';
+  document.getElementById('dining-runtime-note').textContent = diningRuntimeNote(payload);
+  document.getElementById('dining-stat-restaurants').textContent = Number(payload?.network_metrics?.restaurants || _diningAllSpots.length || 0).toLocaleString();
+  document.getElementById('dining-stat-cities').textContent = Number(payload?.network_metrics?.cities || 0).toLocaleString();
+  document.getElementById('dining-stat-reviews').textContent = Number(payload?.network_metrics?.reviews || 0).toLocaleString();
+  document.getElementById('dining-stat-match').textContent = payload?.network_metrics?.match_rate ? `${{payload.network_metrics.match_rate}}%` : '—';
+  document.getElementById('dining-map-filter-copy').textContent = `${{payload?.cuisine_label || _diningCuisineLabel(_diningCuisine)}}${{payload?.open_now ? ' · Open now' : ''}}${{payload?.query ? ' · ' + payload.query : ''}}`;
+  document.getElementById('dining-map-range-copy').textContent = 'Within 10 miles';
 
-  try {{
-    const params = new URLSearchParams({{cuisine, open_now: openNow, radius_miles: radius, min_rating: minRating, limit: 20}});
-    const d = await fetch('/api/dining/nearby?' + params).then(r => r.json());
-    let spots = d.restaurants || [];
-    if (_diningSamData?.recommendations?.length) {{
-      const seen = new Set();
-      spots = [..._diningSamData.recommendations, ...spots].filter(spot => {{
-        if (!spot?.place_id || seen.has(spot.place_id)) return false;
-        seen.add(spot.place_id);
-        return true;
-      }});
-    }}
-    const query = (_diningSearchQuery || '').toLowerCase();
-    if (query) {{
-      const tokens = query.split(/\\s+/).filter(Boolean);
-      const filtered = spots.filter(spot => {{
-        const hay = `${{spot.name || ''}} ${{spot.address || ''}} ${{(spot.types || []).join(' ')}} ${{_diningCuisineLabel(_diningCuisine)}}`.toLowerCase();
-        return tokens.every(token => hay.includes(token) || query.includes(token));
-      }});
-      if (filtered.length) spots = filtered;
-    }}
-    if (_diningQuickFilter === 'open') {{
-      spots = spots.filter(spot => spot.open_now);
-    }}
-    _diningAllSpots = spots;
-    if (!spots.length) {{
-      el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:var(--dining-muted);">No restaurants found. Try relaxing the filters.</div>';
-      document.getElementById('dining-map-list').innerHTML = '';
-      document.getElementById('dining-map-overlay').innerHTML = '';
-      document.getElementById('dining-detail-preview').innerHTML = '';
-      document.getElementById('dining-menu-insights').innerHTML = '';
-      document.getElementById('dining-reservation-panel').innerHTML = '';
-      return;
-    }}
-    _diningSelectedSpot = spots.find(spot => spot.place_id === _diningSelectedSpot?.place_id) || spots[0];
-    _diningSelectedDetail = null;
-    document.getElementById('dining-status-copy').textContent = _diningSamData?.sam_context || `Dining tuned for ${{_diningCuisineLabel(_diningCuisine).toLowerCase()}} with ${{
-      openNow ? 'open-now bias' : 'full-network search'
-    }}.`;
-    document.getElementById('dining-stat-restaurants').textContent = (spots.length + 12800).toLocaleString();
-    document.getElementById('dining-stat-cities').textContent = '218';
-    document.getElementById('dining-stat-reviews').textContent = `${{(spots.reduce((sum, spot) => sum + (spot.review_count || 0), 0) / 1000000).toFixed(1)}}M`;
-    document.getElementById('dining-stat-match').textContent = '92%';
-    document.getElementById('dining-map-filter-copy').textContent = `${{_diningCuisineLabel(_diningCuisine)}}${{openNow ? ' · Open now' : ''}}${{query ? ' · ' + _diningSearchQuery : ''}}`;
-    document.getElementById('dining-map-range-copy').textContent = 'Within 10 miles';
-    _diningRenderHero(_diningSelectedSpot);
-    el.innerHTML = spots.slice(0, 4).map((spot, idx) => _diningResultRow(spot, idx)).join('');
-    document.getElementById('dining-map-list').innerHTML = spots.slice(0, 5).map((spot, idx) => `
-      <div class="dining-list-card" style="padding:12px;cursor:pointer;" onclick="selectDiningSpot('${{escHtml(spot.place_id)}}')">
-        <strong>${{idx + 1}}. ${{escHtml(spot.name)}}</strong>
-        <span>${{spot.distance_mi || '—'}} mi · ${{escHtml(spot.price || '$$')}} · ${{spot.open_now ? 'Open' : 'Check hours'}}</span>
-      </div>`).join('');
-    _diningRenderMap(spots);
-    _diningRenderDetails(_diningSelectedSpot, null);
-    _diningRenderMenuInsights(_diningSelectedSpot);
-    _diningRenderReservation(_diningSelectedSpot);
+  if (!_diningAllSpots.length) {{
+    el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:var(--dining-muted);">No restaurants found. Try relaxing the filters.</div>';
+    document.getElementById('dining-map-list').innerHTML = '';
+    document.getElementById('dining-map-overlay').innerHTML = '';
+    document.getElementById('dining-detail-preview').innerHTML = '';
+    document.getElementById('dining-menu-insights').innerHTML = '';
+    document.getElementById('dining-reservation-panel').innerHTML = '';
     _diningRenderFeatures();
-    _diningRenderRecentSearches(spots);
-    _diningLoadSelectedDetail(_diningSelectedSpot.place_id);
-  }} catch(e) {{
-    el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:#f87171;">Failed to load restaurants: ' + escHtml(e.message) + '</div>';
+    _diningRenderRecentSearches(payload?.recent_searches || []);
+    return;
   }}
+
+  _diningSelectedSpot = _diningAllSpots.find(spot => spot.place_id === _diningSelectedSpot?.place_id)
+    || _diningAllSpots.find(spot => spot.place_id === payload?.selected_place_id)
+    || _diningAllSpots[0];
+  _diningSelectedDetail = null;
+  _diningRenderHero(_diningSelectedSpot);
+  el.innerHTML = _diningAllSpots.slice(0, 4).map((spot, idx) => _diningResultRow(spot, idx)).join('');
+  document.getElementById('dining-map-list').innerHTML = _diningAllSpots.slice(0, 5).map((spot, idx) => `
+    <div class="dining-list-card" style="padding:12px;cursor:pointer;" onclick="selectDiningSpot('${{escHtml(spot.place_id)}}')">
+      <strong>${{idx + 1}}. ${{escHtml(spot.name)}}</strong>
+      <span>${{spot.distance_mi || '—'}} mi · ${{escHtml(spot.price || '$$')}} · ${{spot.open_now ? 'Open' : 'Check hours'}}</span>
+    </div>`).join('');
+  _diningRenderMap(_diningAllSpots);
+  _diningRenderDetails(_diningSelectedSpot, null);
+  _diningRenderMenuInsights(_diningSelectedSpot);
+  _diningRenderReservation(_diningSelectedSpot);
+  _diningRenderFeatures();
+  _diningRenderRecentSearches(payload?.recent_searches || []);
+  _diningLoadSelectedDetail(_diningSelectedSpot.place_id);
+}}
+
+async function refreshDiningDesktop(notifyUser = false, options = {{}}) {{
+  const el = document.getElementById('dining-results');
+  if (!el) return;
+  const requestId = ++_diningRequestSerial;
+  el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:var(--dining-muted);">Loading restaurants…</div>';
+  try {{
+    const params = new URLSearchParams({{
+      query: _diningSearchQuery || '',
+      cuisine: _diningCuisine || 'any',
+      open_now: _diningOpenNow ? 'true' : 'false',
+      prefs: Array.from(_diningPrefs).join(','),
+      quick_filter: _diningQuickFilter || 'best',
+      limit: '12',
+    }});
+    const payload = await diningFetchJson('/api/dining/module?' + params.toString());
+    if (requestId !== _diningRequestSerial) return;
+    renderDiningModule(payload);
+    if (options?.recordSearch) {{
+      await diningRecordAction(
+        'Run Dining Search',
+        `Dining query "${{_diningSearchQuery || 'Nearby dining'}}" returned ${{payload?.counts?.results || 0}} result(s).`,
+        {{
+          related_kind: 'dining-search',
+          related_label: _diningSearchQuery || 'Nearby dining',
+          status_label: 'Loaded',
+          result_summary: `Dining refreshed with ${{payload?.counts?.results || 0}} live restaurant result(s).`,
+          query: _diningSearchQuery || '',
+          cuisine: _diningCuisine || 'any',
+        }},
+      );
+    }}
+    if (notifyUser) showToast('Dining refreshed');
+  }} catch (e) {{
+    if (requestId !== _diningRequestSerial) return;
+    document.getElementById('dining-runtime-note').textContent = 'Dining is partially unavailable in this runtime.';
+    el.innerHTML = '<div class="dining-list-card" style="padding:18px;color:#f87171;">Failed to load restaurants: ' + escHtml(e.message) + '</div>';
+    if (notifyUser) showToast('Dining refresh failed');
+  }}
+}}
+
+async function reloadDiningView() {{
+  return refreshDiningDesktop(false);
 }}
 
 async function loadDiningFavBtns() {{
@@ -47026,11 +47153,11 @@ async function loadDiningFavBtns() {{
 
 async function toggleDiningFav(placeId, name, address, rating) {{
   try {{
-    const d = await fetch('/api/dining/favorite', {{
+    const d = await diningFetchJson('/api/dining/favorite', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
       body: JSON.stringify({{place_id: placeId, name, address, rating: parseFloat(rating)}})
-    }}).then(r => r.json());
+    }});
     const btn = document.getElementById('fav-btn-' + placeId);
     if (btn) {{
       btn.textContent = d.action === 'added' ? '❤' : '♡';
@@ -47038,19 +47165,21 @@ async function toggleDiningFav(placeId, name, address, rating) {{
     }}
     _diningFavorites = d.favorites || _diningFavorites;
     _diningRenderFavoritesSummary();
+    if (_diningFavoritesPanelOpen) loadDiningFavorites(true);
+    await refreshDiningDesktop(false);
     showToast(d.action === 'added' ? 'Saved to favorites' : 'Removed from favorites');
   }} catch(e) {{ showToast('Could not update favorites'); }}
 }}
 
-async function loadDiningFavorites() {{
+async function loadDiningFavorites(forceOpen = false) {{
   const panel = document.getElementById('dining-favorites-panel');
   const list  = document.getElementById('dining-favorites-list');
   if (!panel || !list) return;
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-  if (panel.style.display === 'none') return;
+  _diningFavoritesPanelOpen = forceOpen ? true : !_diningFavoritesPanelOpen;
+  panel.style.display = _diningFavoritesPanelOpen ? 'block' : 'none';
+  if (!_diningFavoritesPanelOpen) return;
   try {{
-    const d = await fetch('/api/dining/favorites').then(r => r.json());
-    const favs = d.favorites || [];
+    const favs = Array.isArray(_diningModulePayload?.favorites) ? _diningModulePayload.favorites : _diningFavorites;
     _diningFavorites = favs;
     _diningRenderFavoritesSummary();
     if (!favs.length) {{ list.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:8px;">No favorites saved yet.</div>'; return; }}
@@ -47095,10 +47224,29 @@ function selectDiningSpot(placeId) {{
   _diningLoadSelectedDetail(placeId);
 }}
 
+async function diningSaveReservationIntent(slot = '') {{
+  if (!_diningSelectedSpot) return;
+  try {{
+    const payload = await diningFetchJson('/api/dining/reservation-intent', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        place_id: _diningSelectedSpot.place_id,
+        place_name: _diningSelectedSpot.name || 'Restaurant',
+        preferred_slot: slot || '',
+      }}),
+    }});
+    await refreshDiningDesktop(false);
+    showToast(payload.detail || 'Reservation intent saved');
+  }} catch (e) {{
+    showToast('Could not save reservation intent');
+  }}
+}}
+
 function selectDiningReservation(slot) {{
   if (!_diningSelectedSpot) return;
-  if (slot) showToast(`Reservation window staged for ${{slot}}`);
-  openDiningDetail(_diningSelectedSpot.place_id, _diningSelectedSpot.name || 'Restaurant');
+  diningSaveReservationIntent(slot || '');
 }}
 
 async function openDiningDetail(placeId, name) {{

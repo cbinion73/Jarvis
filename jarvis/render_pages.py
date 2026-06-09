@@ -1272,6 +1272,210 @@ def render_catalyst_workspace_page(runtime: JarvisRuntime, page: str) -> str:
     )
 
 
+def render_dining_module_page(payload: dict) -> str:
+    raw_json = json.dumps(payload, indent=2)
+    counts = dict(payload.get("counts") or {})
+    selected = dict(payload.get("selected_place") or {})
+    favorites = list(payload.get("favorites") or [])
+    recent_searches = list(payload.get("recent_searches") or [])
+    reservation_intents = list(payload.get("recent_reservation_intents") or [])
+    availability = "".join(
+        f"<li>{escape(str(item))}</li>"
+        for item in list(payload.get("availability_notes") or [])[:6]
+    ) or "<li>Dining module is ready for live queries.</li>"
+    result_rows = "".join(
+        f"""
+        <li>
+          <strong>{escape(str(item.get("name") or "Dining result"))}</strong>
+          <span>{escape(str(item.get("address") or ""))}</span>
+          <small>{escape(str(item.get("match_score") or "0"))}% match · {escape(str(item.get("rating") or "—"))} rating · {escape(str(item.get("price") or ""))}</small>
+        </li>
+        """
+        for item in list(payload.get("results") or [])[:6]
+    ) or "<li><strong>No live results yet.</strong><span>Adjust the query or inspect availability notes.</span><small>Dining stays honest when no restaurants match.</small></li>"
+    favorite_rows = "".join(
+        f"""
+        <li>
+          <strong>{escape(str(item.get("name") or "Favorite"))}</strong>
+          <span>{escape(str(item.get("address") or ""))}</span>
+        </li>
+        """
+        for item in favorites[:5]
+    ) or "<li><strong>No favorites saved yet.</strong><span>Use Dining favorites from the shell to build a shortlist.</span></li>"
+    history_rows = "".join(
+        f"""
+        <li>
+          <strong>{escape(str(item.get("label") or "Dining search"))}</strong>
+          <span>{escape(str(item.get("summary") or ""))}</span>
+        </li>
+        """
+        for item in recent_searches[:5]
+    ) or "<li><strong>No search continuity yet.</strong><span>Dining search history appears here once the shell records live searches.</span></li>"
+    reservation_rows = "".join(
+        f"""
+        <li>
+          <strong>{escape(str(item.get("label") or "Reservation intent"))}</strong>
+          <span>{escape(str(item.get("summary") or ""))}</span>
+        </li>
+        """
+        for item in reservation_intents[:5]
+    ) or "<li><strong>No reservation intents yet.</strong><span>Dining saves intent even when live booking is unavailable.</span></li>"
+    return _apply_module_surface_chrome(f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JARVIS Dining</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #060a0f;
+      --bg-2: #0c131b;
+      --panel: rgba(11, 18, 27, 0.92);
+      --line: rgba(213, 154, 59, 0.16);
+      --text: #f4efe7;
+      --muted: #b9ac97;
+      --accent: #d59a3b;
+      --accent-soft: rgba(213, 154, 59, 0.12);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: "SF Pro Display", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(213, 154, 59, 0.16), transparent 24%),
+        radial-gradient(circle at top right, rgba(130, 226, 168, 0.08), transparent 20%),
+        linear-gradient(180deg, #02060a 0%, var(--bg) 42%, var(--bg-2) 100%);
+    }}
+    .shell {{ max-width: 1380px; margin: 0 auto; padding: 24px 24px 60px; }}
+    .topbar, .hero, .panel {{ border: 1px solid var(--line); border-radius: 28px; background: var(--panel); }}
+    .topbar {{
+      display: flex; justify-content: space-between; gap: 16px; align-items: center;
+      padding: 16px 18px; margin-bottom: 18px; backdrop-filter: blur(16px);
+    }}
+    .topbar strong, .eyebrow {{ color: var(--accent); text-transform: uppercase; letter-spacing: 0.18em; font-size: 12px; }}
+    .topbar span {{ display: block; margin-top: 4px; color: var(--muted); }}
+    .hero {{
+      padding: 28px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+      gap: 18px;
+      box-shadow: 0 24px 54px rgba(0,0,0,0.28);
+    }}
+    .eyebrow {{
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(213,154,59,0.24); background: var(--accent-soft);
+    }}
+    .eyebrow::before {{
+      content: ""; width: 8px; height: 8px; border-radius: 999px; background: currentColor; box-shadow: 0 0 16px currentColor;
+    }}
+    h1 {{ margin: 14px 0 12px; font-size: clamp(34px, 5vw, 58px); line-height: 0.95; letter-spacing: -0.05em; }}
+    p {{ color: var(--muted); line-height: 1.6; }}
+    .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 20px; }}
+    .stat {{
+      padding: 16px; border-radius: 22px; border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(17, 26, 36, 0.96), rgba(10, 18, 27, 0.92));
+    }}
+    .stat span {{ display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }}
+    .stat strong {{ display: block; margin-top: 6px; font-size: 26px; }}
+    .hero-side {{ display: grid; gap: 14px; }}
+    .hero-note {{ padding: 18px; border-radius: 22px; border: 1px solid var(--line); background: rgba(255,255,255,0.03); }}
+    .hero-note strong {{ display: block; margin-bottom: 8px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }}
+    .grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }}
+    .panel {{ padding: 20px; }}
+    h2 {{ margin: 0 0 12px; font-size: 21px; }}
+    ul {{ margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 10px; }}
+    li strong {{ display: block; color: var(--text); margin-bottom: 4px; }}
+    li span, li small {{ display: block; color: var(--muted); }}
+    pre {{
+      margin-top: 18px; padding: 18px; overflow-x: auto; white-space: pre-wrap;
+      border-radius: 22px; border: 1px solid var(--line); background: rgba(3, 6, 10, 0.86); color: #d9ebff;
+      font-size: 12px; line-height: 1.55;
+    }}
+    @media (max-width: 980px) {{
+      .hero, .grid {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div>
+        <strong>Dining Module</strong>
+        <span>{escape(str(payload.get("runtime_note") or "Dining is loading."))}</span>
+      </div>
+      <div>
+        <strong>Proof Paths</strong>
+        <span>{escape(str((payload.get("proof_paths") or {}).get("module_api") or "/api/dining/module"))}</span>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div>
+        <div class="eyebrow">JARVIS Dining</div>
+        <h1>JARVIS Dining</h1>
+        <p>{escape(str(payload.get("summary") or ""))}</p>
+        <div class="stats">
+          <div class="stat"><span>Results</span><strong>{counts.get("results", 0)}</strong></div>
+          <div class="stat"><span>Favorites</span><strong>{counts.get("favorites", 0)}</strong></div>
+          <div class="stat"><span>Cities Covered</span><strong>{counts.get("cities", 0)}</strong></div>
+          <div class="stat"><span>Reviews Verified</span><strong>{counts.get("reviews", 0)}</strong></div>
+        </div>
+      </div>
+      <div class="hero-side">
+        <div class="hero-note">
+          <strong>Current Query</strong>
+          <p>{escape(str(payload.get("query") or "No active dining query yet."))}</p>
+        </div>
+        <div class="hero-note">
+          <strong>Selected Spot</strong>
+          <p>{escape(str(selected.get("name") or "No restaurant selected."))}</p>
+          <p>{escape(str(selected.get("address") or ""))}</p>
+        </div>
+        <div class="hero-note">
+          <strong>Reservation Coordination</strong>
+          <p>{escape(str(((payload.get("reservation_partner") or {}).get("message")) or ""))}</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Live Results</h2>
+        <ul>{result_rows}</ul>
+      </section>
+      <section class="panel">
+        <h2>Favorite Signals</h2>
+        <ul>{favorite_rows}</ul>
+      </section>
+      <section class="panel">
+        <h2>Recent Dining Continuity</h2>
+        <ul>{history_rows}</ul>
+      </section>
+      <section class="panel">
+        <h2>Reservation Intent Lane</h2>
+        <ul>{reservation_rows}</ul>
+      </section>
+      <section class="panel">
+        <h2>Availability Notes</h2>
+        <ul>{availability}</ul>
+      </section>
+      <section class="panel">
+        <h2>What Became Real</h2>
+        <p>{escape(str(payload.get("what_became_real") or ""))}</p>
+        <p>{escape(str(payload.get("remains_partial") or ""))}</p>
+      </section>
+    </div>
+
+    <pre>{escape(raw_json)}</pre>
+  </div>
+</body>
+</html>
+""", "/dining-center")
+
+
 def render_publish_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
     return _apply_module_surface_chrome(f"""<!doctype html>

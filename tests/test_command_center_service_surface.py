@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 import jarvis.approvals as approvals_module
 import jarvis.command_center_index as command_center_index_module
+import jarvis.dining as dining_module
 import jarvis.quarterly_review as quarterly_review_module
 import jarvis.user_profile as user_profile_module
 from jarvis.approvals import ApprovalQueue, init_approvals
@@ -2415,6 +2416,118 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertGreaterEqual(len(module_payload["board"]["lanes"]), 1)
         self.assertIsInstance(module_payload["templates"], list)
         self.assertIsInstance(module_payload["quick_actions"], list)
+
+    def test_dining_routes_expose_module_and_live_search_surfaces(self) -> None:
+        nearby_rows = [
+            {
+                "place_id": "place-1",
+                "name": "River Sushi",
+                "address": "1 Main St, Cincinnati, OH",
+                "rating": 4.7,
+                "review_count": 812,
+                "price": "$$$",
+                "open_now": True,
+                "distance_mi": 4.2,
+                "lat": 39.1031,
+                "lng": -84.5120,
+                "types": ["restaurant", "japanese_restaurant"],
+                "photo_ref": "",
+            },
+            {
+                "place_id": "place-2",
+                "name": "Skyline Patio Grill",
+                "address": "50 View Ave, Covington, KY",
+                "rating": 4.4,
+                "review_count": 391,
+                "price": "$$",
+                "open_now": False,
+                "distance_mi": 6.1,
+                "lat": 39.0837,
+                "lng": -84.5086,
+                "types": ["restaurant", "bar"],
+                "photo_ref": "",
+            },
+        ]
+        favorites = [
+            {
+                "place_id": "place-1",
+                "name": "River Sushi",
+                "address": "1 Main St, Cincinnati, OH",
+                "rating": 4.7,
+            }
+        ]
+        recommend_packet = {
+            "meal_type": "dinner",
+            "open_now_filter": True,
+            "goals": "Protein forward",
+            "allergies": [],
+            "sam_context": "Top dinner picks near you right now.",
+            "recommendations": [nearby_rows[0]],
+        }
+
+        with (
+            patch.object(dining_module, "nearby_restaurants", return_value=nearby_rows),
+            patch.object(dining_module, "recommend_restaurants", return_value=recommend_packet),
+            patch.object(dining_module, "get_favorites", return_value=favorites),
+        ):
+            dining_response = asyncio.run(
+                self._route("/dining-center", "GET")(
+                    query="sushi with a view",
+                    cuisine="japanese",
+                    open_now=True,
+                    prefs="view,4.0+",
+                    quick_filter="best",
+                )
+            )
+            dining_api_response = asyncio.run(
+                self._route("/api/dining/module", "GET")(
+                    query="sushi with a view",
+                    cuisine="japanese",
+                    open_now=True,
+                    prefs="view,4.0+",
+                    quick_filter="best",
+                    limit=8,
+                )
+            )
+            nearby_response = asyncio.run(
+                self._route("/api/dining/nearby", "GET")(
+                    cuisine="japanese",
+                    open_now=True,
+                    min_rating=4.0,
+                    radius_miles=10.0,
+                    limit=8,
+                    query="sushi with a view",
+                    prefs="view,4.0+",
+                )
+            )
+
+        dining_html = self._text_body(dining_response)
+        dining_snapshot = self._json_body(dining_api_response)
+        nearby_snapshot = self._json_body(nearby_response)
+
+        self.assertIn("JARVIS Dining", dining_html)
+        self.assertIn("Favorite Signals", dining_html)
+        self.assertIn("Reservation Coordination", dining_html)
+        self.assertIn("Recent Dining Continuity", dining_html)
+        self.assertIn("available", dining_snapshot)
+        self.assertIn("runtime_note", dining_snapshot)
+        self.assertIn("availability_notes", dining_snapshot)
+        self.assertIn("counts", dining_snapshot)
+        self.assertIn("results", dining_snapshot)
+        self.assertIn("favorites", dining_snapshot)
+        self.assertIn("reservation_partner", dining_snapshot)
+        self.assertIn("recent_searches", dining_snapshot)
+        self.assertIn("recent_reservation_intents", dining_snapshot)
+        self.assertIn("proof_paths", dining_snapshot)
+        self.assertEqual(dining_snapshot["proof_paths"]["module_route"], "/dining-center")
+        self.assertEqual(dining_snapshot["proof_paths"]["module_api"], "/api/dining/module")
+        self.assertEqual(dining_snapshot["proof_paths"]["favorite_api"], "/api/dining/favorite")
+        self.assertEqual(dining_snapshot["proof_paths"]["reservation_intent_api"], "/api/dining/reservation-intent")
+        self.assertEqual(dining_snapshot["counts"]["favorites"], 1)
+        self.assertEqual(len(dining_snapshot["results"]), 2)
+        self.assertEqual(dining_snapshot["selected_place"]["name"], "River Sushi")
+        self.assertEqual(nearby_snapshot["count"], 2)
+        self.assertTrue(all("match_score" in item for item in nearby_snapshot["restaurants"]))
 
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {

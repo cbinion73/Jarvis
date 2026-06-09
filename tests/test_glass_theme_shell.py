@@ -51,6 +51,21 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/health/symptom/triage", html)
         self.assertIn("Health is live and connected.", html)
 
+    def test_render_glass_shell_wires_dining_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="dining-refresh-button"', html)
+        self.assertIn('id="dining-runtime-note"', html)
+        self.assertIn("function diningFetchJson(", html)
+        self.assertIn("function diningSidebarAction(", html)
+        self.assertIn("function renderDiningModule(", html)
+        self.assertIn("function refreshDiningDesktop(", html)
+        self.assertIn("function diningSaveReservationIntent(", html)
+        self.assertIn("/api/dining/module", html)
+        self.assertIn("/api/dining/favorite", html)
+        self.assertIn("/api/dining/reservation-intent", html)
+        self.assertIn("Refresh Dining", html)
+
     def test_render_glass_shell_wires_daily_brief_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

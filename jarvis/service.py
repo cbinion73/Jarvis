@@ -4,6 +4,7 @@ import asyncio
 from contextlib import suppress
 from datetime import datetime, timezone
 import json
+import math
 import mimetypes
 import os
 import re
@@ -22,6 +23,7 @@ from .runtime import JarvisRuntime
 from .settings import LocationSettingsStore, VoiceSettingsStore
 from .voice_audio import generate_tts_audio
 from .voice_ui import render_voice_shell
+from . import dining as dining_module
 
 try:
     from .jarvis_theme_nexus import render_nexus_shell as _render_nexus_shell
@@ -76,6 +78,7 @@ from .render_pages import (
     render_catalyst_workspace_page,
     render_chronicle_module_page,
     render_daily_brief_module_page,
+    render_dining_module_page,
     render_health_module_page,
     render_huddle_module_page,
     render_mission_board_module_page,
@@ -1574,6 +1577,23 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/catalyst/view/{page}", response_class=HTMLResponse)
     async def catalyst_view(page: str) -> str:
         return render_catalyst_workspace_page(runtime, page)
+
+    @app.get("/dining-center", response_class=HTMLResponse)
+    async def dining_module_surface(
+        query: str = "",
+        cuisine: str = "japanese",
+        open_now: bool = False,
+        prefs: str = "",
+        quick_filter: str = "best",
+    ) -> HTMLResponse:
+        payload = await _build_dining_module_payload(
+            query=query,
+            cuisine=cuisine,
+            open_now=open_now,
+            prefs=_dining_parse_prefs(prefs),
+            quick_filter=quick_filter,
+        )
+        return HTMLResponse(render_dining_module_page(payload))
 
     @app.get("/publish", response_class=HTMLResponse)
     async def publish_module_surface() -> HTMLResponse:
@@ -11635,6 +11655,570 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "focus": focus,
             "history_entry": history_entry,
         }
+
+    def _dining_parse_prefs(raw: Any) -> list[str]:
+        if raw is None:
+            return []
+        if isinstance(raw, str):
+            parts = re.split(r"[,|]", raw)
+        elif isinstance(raw, (list, tuple, set)):
+            parts = [str(item) for item in raw]
+        else:
+            parts = [str(raw)]
+        seen: set[str] = set()
+        prefs: list[str] = []
+        for part in parts:
+            value = str(part or "").strip()
+            if not value:
+                continue
+            key = value.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            prefs.append(value)
+        return prefs
+
+    def _dining_bool(raw: Any) -> bool:
+        if isinstance(raw, bool):
+            return raw
+        text = str(raw or "").strip().lower()
+        return text in {"1", "true", "yes", "on"}
+
+    def _dining_cuisine_label(cuisine: str) -> str:
+        labels = {
+            "any": "Any",
+            "american": "American",
+            "breakfast": "Breakfast",
+            "burgers": "Burgers",
+            "barbecue": "BBQ",
+            "chinese": "Chinese",
+            "indian": "Indian",
+            "italian": "Italian",
+            "japanese": "Sushi",
+            "mexican": "Mexican",
+            "pizza": "Pizza",
+            "seafood": "Seafood",
+            "steak": "Steakhouse",
+            "thai": "Thai",
+        }
+        return labels.get(str(cuisine or "any").strip().lower(), str(cuisine or "Dining").strip() or "Dining")
+
+    def _dining_city_from_address(address: str) -> str:
+        parts = [part.strip() for part in str(address or "").split(",") if str(part or "").strip()]
+        if len(parts) >= 2:
+            return parts[-2]
+        if parts:
+            return parts[-1]
+        return "Nearby"
+
+    def _dining_match_metadata(
+        spot: dict[str, Any],
+        *,
+        query: str,
+        cuisine: str,
+        prefs: Sequence[str],
+        open_now_bias: bool,
+        favorite_ids: set[str],
+    ) -> dict[str, Any]:
+        name = str(spot.get("name") or "")
+        address = str(spot.get("address") or "")
+        types = [str(item or "") for item in list(spot.get("types") or [])]
+        haystack = " ".join([name, address, " ".join(types), _dining_cuisine_label(cuisine)]).lower()
+        tokens = [token for token in re.findall(r"[a-z0-9$+]+", str(query or "").lower()) if len(token) >= 3]
+        rating = float(spot.get("rating") or 0.0)
+        reviews = int(spot.get("review_count") or 0)
+        distance = float(spot.get("distance_mi") or 99.0)
+        price = str(spot.get("price") or "")
+        favorite = str(spot.get("place_id") or "") in favorite_ids
+
+        score = 48
+        if tokens:
+            matches = sum(1 for token in tokens if token in haystack)
+            score += min(18, matches * 5)
+        if rating:
+            score += min(18, max(0, round((rating - 3.5) * 10)))
+        if reviews:
+            score += min(10, max(1, round(math.log10(reviews + 1) * 3)))
+        if open_now_bias and bool(spot.get("open_now")):
+            score += 7
+        if distance <= 5:
+            score += 5
+        if len(price) >= 3 and any(pref.strip() == "$$$" for pref in prefs):
+            score += 4
+        if favorite:
+            score += 3
+        score = max(24, min(99, score))
+
+        reasons: list[str] = []
+        if bool(spot.get("open_now")):
+            reasons.append("Open now")
+        if rating >= 4.5:
+            reasons.append(f"{rating:.1f} star rating")
+        elif rating >= 4.0:
+            reasons.append(f"Strong {rating:.1f} star rating")
+        if reviews:
+            reasons.append(f"{reviews:,} verified reviews")
+        if distance <= 2:
+            reasons.append(f"{distance:.1f} mi away")
+        elif distance <= 5:
+            reasons.append(f"Within {distance:.1f} mi")
+        if len(price) >= 3:
+            reasons.append(f"{price} price posture")
+        if favorite:
+            reasons.append("Already saved to favorites")
+        if cuisine and cuisine != "any":
+            reasons.append(f"{_dining_cuisine_label(cuisine)} lane")
+        if tokens and not reasons:
+            reasons.append(f"Matched {len(tokens)} dining cue(s)")
+        if not reasons:
+            reasons.append("Useful nearby match")
+
+        return {
+            "match_score": score,
+            "highlights": reasons[:4],
+            "reasons": reasons[:5],
+            "city": _dining_city_from_address(address),
+            "is_favorite": favorite,
+        }
+
+    def _dining_recent_searches_from_activity(items: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+        searches: list[dict[str, Any]] = []
+        for item in items:
+            title = str(item.get("title") or "")
+            if title != "Run Dining Search":
+                continue
+            searches.append(
+                {
+                    "label": str(item.get("related_label") or item.get("subtitle") or "Dining search"),
+                    "summary": str(item.get("detail") or item.get("subtitle") or ""),
+                    "when": str(item.get("occurred_at") or item.get("created_at") or ""),
+                }
+            )
+        return searches[:6]
+
+    def _dining_recent_reservations_from_activity(items: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+        intents: list[dict[str, Any]] = []
+        for item in items:
+            title = str(item.get("title") or "")
+            if title != "Save Dining Reservation Intent":
+                continue
+            intents.append(
+                {
+                    "label": str(item.get("related_label") or "Reservation intent"),
+                    "summary": str(item.get("detail") or item.get("subtitle") or ""),
+                    "when": str(item.get("occurred_at") or item.get("created_at") or ""),
+                    "status": str(item.get("status_label") or "Saved"),
+                }
+            )
+        return intents[:6]
+
+    async def _build_dining_module_payload(
+        *,
+        query: str = "",
+        cuisine: str = "japanese",
+        open_now: bool = False,
+        prefs: Sequence[str] | None = None,
+        quick_filter: str = "best",
+        limit: int = 12,
+    ) -> dict[str, Any]:
+        generated_at = datetime.now(timezone.utc).isoformat()
+        prefs = _dining_parse_prefs(list(prefs or []))
+        query = str(query or "").strip()
+        cuisine = str(cuisine or "any").strip().lower() or "any"
+        quick_filter = str(quick_filter or "best").strip().lower() or "best"
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": "Dining now has a dedicated module route with live nearby search, Sam-backed recommendations, favorite persistence, and honest reservation boundaries.",
+            "what_became_real": "Dining is now represented as a dedicated app module route instead of a shell-only mockup with missing backend APIs.",
+            "remains_partial": "Live reservation feeds and structured menu partner data are still unavailable in this runtime.",
+            "runtime_note": "Dining is live and connected.",
+            "availability_notes": [],
+            "query": query,
+            "cuisine": cuisine,
+            "cuisine_label": _dining_cuisine_label(cuisine),
+            "open_now": bool(open_now),
+            "quick_filter": quick_filter,
+            "preferences": list(prefs),
+            "results": [],
+            "recommendations": [],
+            "favorites": [],
+            "recent_searches": [],
+            "recent_reservation_intents": [],
+            "recent_activity": [],
+            "feature_cards": [],
+            "reservation_partner": {
+                "connected": False,
+                "status": "unavailable",
+                "message": "Live reservation booking is not connected in this runtime. JARVIS can save reservation intent and route you to call, website, or maps instead.",
+            },
+            "counts": {
+                "results": 0,
+                "favorites": 0,
+                "cities": 0,
+                "reviews": 0,
+                "recent_searches": 0,
+                "reservation_intents": 0,
+                "recent_activity": 0,
+            },
+            "network_metrics": {
+                "restaurants": 0,
+                "cities": 0,
+                "reviews": 0,
+                "match_rate": 0,
+            },
+            "proof_paths": {
+                "module_route": "/dining-center",
+                "module_api": "/api/dining/module",
+                "nearby_api": "/api/dining/nearby",
+                "recommend_api": "/api/dining/recommend",
+                "details_api_suffix": "/api/dining/details/{place_id}",
+                "favorites_api": "/api/dining/favorites",
+                "favorite_api": "/api/dining/favorite",
+                "reservation_intent_api": "/api/dining/reservation-intent",
+                "activity_api": "/api/activity/operator-action",
+            },
+            "errors": [],
+        }
+
+        favorite_ids: set[str] = set()
+        try:
+            favorites = list(dining_module.get_favorites() or [])
+            payload["favorites"] = favorites
+            favorite_ids = {str(item.get("place_id") or "") for item in favorites}
+            payload["counts"]["favorites"] = len(favorites)
+        except Exception as exc:
+            payload["errors"].append(f"favorites: {exc}")
+            payload["availability_notes"].append("Favorites could not be loaded from the Dining store.")
+
+        try:
+            recommendation_packet = dining_module.recommend_restaurants(runtime=runtime, limit=3)
+            recommendation_rows = list(recommendation_packet.get("recommendations") or [])
+            payload["recommendations"] = [
+                dict(item, **_dining_match_metadata(
+                    item,
+                    query=query,
+                    cuisine=cuisine,
+                    prefs=prefs,
+                    open_now_bias=bool(open_now),
+                    favorite_ids=favorite_ids,
+                ))
+                for item in recommendation_rows
+                if isinstance(item, dict)
+            ]
+            if recommendation_packet.get("sam_context"):
+                payload["sam_context"] = str(recommendation_packet.get("sam_context") or "")
+        except Exception as exc:
+            payload["errors"].append(f"recommendations: {exc}")
+            payload["availability_notes"].append("Sam-backed dining recommendations are unavailable in this runtime.")
+
+        try:
+            min_rating = 4.0 if any(pref.strip() == "4.0+" for pref in prefs) else 3.5
+            nearby = dining_module.nearby_restaurants(
+                cuisine=cuisine,
+                open_now=bool(open_now),
+                min_rating=min_rating,
+                radius_miles=10.0,
+                limit=max(4, int(limit)),
+            )
+            results = [dict(item) for item in nearby if isinstance(item, dict)]
+            if payload["recommendations"]:
+                seen: set[str] = set()
+                merged: list[dict[str, Any]] = []
+                for item in list(payload["recommendations"]) + results:
+                    place_id = str(item.get("place_id") or "")
+                    if not place_id or place_id in seen:
+                        continue
+                    seen.add(place_id)
+                    merged.append(dict(item))
+                results = merged
+            if query:
+                tokens = [token for token in re.findall(r"[a-z0-9$+]+", query.lower()) if len(token) >= 3]
+                filtered = []
+                for item in results:
+                    haystack = " ".join(
+                        [
+                            str(item.get("name") or ""),
+                            str(item.get("address") or ""),
+                            " ".join(str(value or "") for value in list(item.get("types") or [])),
+                        ]
+                    ).lower()
+                    if all(token in haystack or token in query.lower() for token in tokens):
+                        filtered.append(item)
+                if filtered:
+                    results = filtered
+            enriched = [
+                dict(
+                    item,
+                    **_dining_match_metadata(
+                        item,
+                        query=query,
+                        cuisine=cuisine,
+                        prefs=prefs,
+                        open_now_bias=bool(open_now),
+                        favorite_ids=favorite_ids,
+                    ),
+                )
+                for item in results
+            ]
+            if quick_filter == "open":
+                enriched = [item for item in enriched if bool(item.get("open_now"))]
+            enriched.sort(
+                key=lambda item: (
+                    int(item.get("match_score") or 0),
+                    float(item.get("rating") or 0.0),
+                    int(item.get("review_count") or 0),
+                ),
+                reverse=True,
+            )
+            payload["results"] = enriched
+        except Exception as exc:
+            payload["status"] = "Wired"
+            payload["available"] = False
+            payload["summary"] = "Dining module route is live, but nearby restaurant search did not fully hydrate."
+            payload["runtime_note"] = "Dining is partially connected. Nearby search did not fully hydrate in this runtime."
+            payload["remains_partial"] = "Live Places search still needs configuration or repair in this runtime."
+            payload["errors"].append(f"nearby: {exc}")
+            payload["availability_notes"].append(str(exc))
+
+        payload["counts"]["results"] = len(payload["results"])
+        payload["network_metrics"]["restaurants"] = len(payload["results"])
+        payload["network_metrics"]["cities"] = len({str(item.get("city") or "") for item in payload["results"] if str(item.get("city") or "")})
+        payload["network_metrics"]["reviews"] = int(sum(int(item.get("review_count") or 0) for item in payload["results"]))
+        payload["network_metrics"]["match_rate"] = int(payload["results"][0].get("match_score") or 0) if payload["results"] else 0
+        payload["counts"]["cities"] = payload["network_metrics"]["cities"]
+        payload["counts"]["reviews"] = payload["network_metrics"]["reviews"]
+
+        recent_activity = _module_recent_activity(route="/dining-center", domain="dining", limit=10)
+        payload["recent_activity"] = recent_activity
+        payload["counts"]["recent_activity"] = len(recent_activity)
+        payload["recent_searches"] = _dining_recent_searches_from_activity(recent_activity)
+        payload["recent_reservation_intents"] = _dining_recent_reservations_from_activity(recent_activity)
+        payload["counts"]["recent_searches"] = len(payload["recent_searches"])
+        payload["counts"]["reservation_intents"] = len(payload["recent_reservation_intents"])
+
+        if payload["results"]:
+            payload["selected_place_id"] = str((payload["results"][0] or {}).get("place_id") or "")
+            payload["selected_place"] = payload["results"][0]
+            payload["summary"] = (
+                f"Dining loaded {len(payload['results'])} real restaurant result(s), "
+                f"{payload['counts']['favorites']} saved favorite(s), and "
+                f"{payload['counts']['recent_searches']} recent dining search event(s)."
+            )
+        else:
+            payload["status"] = "Wired" if payload["errors"] else "Useful"
+            payload["runtime_note"] = "Dining is live, but no restaurants matched the current filters."
+            payload["availability_notes"].append("No restaurants matched the current query and filter combination.")
+
+        if not payload["favorites"]:
+            payload["availability_notes"].append("No dining favorites are saved yet.")
+        if not payload["recent_searches"]:
+            payload["availability_notes"].append("No dining search history has been recorded yet.")
+        if not payload["recent_reservation_intents"]:
+            payload["availability_notes"].append("No dining reservation intents have been saved yet.")
+
+        payload["feature_cards"] = [
+            {
+                "title": "Real Nearby Search",
+                "copy": "Results come from the live nearby dining search route instead of static shortlist cards.",
+            },
+            {
+                "title": "Sam Recommendations",
+                "copy": "Taste-aware picks are merged in when recommendation sources are available.",
+            },
+            {
+                "title": "Favorites Persistence",
+                "copy": "Saved spots are backed by the Dining favorites store and survive reloads.",
+            },
+            {
+                "title": "Reservation Boundary",
+                "copy": payload["reservation_partner"]["message"],
+            },
+        ]
+
+        if payload["errors"] and payload["status"] == "Useful":
+            payload["runtime_note"] = "Dining is live, but some backend sources are partially unavailable."
+            payload["remains_partial"] = "Some dining sources still failed to hydrate; inspect the payload preview for details."
+        if not payload["availability_notes"]:
+            payload["availability_notes"].append("All currently available Dining sources hydrated successfully.")
+        return payload
+
+    @app.get("/api/dining/module")
+    async def api_dining_module(
+        query: str = "",
+        cuisine: str = "japanese",
+        open_now: bool = False,
+        prefs: str = "",
+        quick_filter: str = "best",
+        limit: int = 12,
+    ) -> JSONResponse:
+        payload = await _build_dining_module_payload(
+            query=query,
+            cuisine=cuisine,
+            open_now=open_now,
+            prefs=_dining_parse_prefs(prefs),
+            quick_filter=quick_filter,
+            limit=limit,
+        )
+        return _json(payload)
+
+    @app.get("/api/dining/nearby")
+    async def api_dining_nearby(
+        cuisine: str = "any",
+        open_now: bool = False,
+        min_rating: float = 3.5,
+        radius_miles: float = 10.0,
+        limit: int = 10,
+        query: str = "",
+        prefs: str = "",
+    ) -> JSONResponse:
+        try:
+            favorites = list(dining_module.get_favorites() or [])
+            favorite_ids = {str(item.get("place_id") or "") for item in favorites}
+            restaurants = dining_module.nearby_restaurants(
+                cuisine=cuisine,
+                open_now=open_now,
+                min_rating=min_rating,
+                radius_miles=radius_miles,
+                limit=limit,
+            )
+            enriched = [
+                dict(
+                    item,
+                    **_dining_match_metadata(
+                        item,
+                        query=query,
+                        cuisine=cuisine,
+                        prefs=_dining_parse_prefs(prefs),
+                        open_now_bias=bool(open_now),
+                        favorite_ids=favorite_ids,
+                    ),
+                )
+                for item in restaurants
+            ]
+            enriched.sort(key=lambda item: int(item.get("match_score") or 0), reverse=True)
+            return _json({"restaurants": enriched, "count": len(enriched)})
+        except Exception as exc:
+            return _json({"restaurants": [], "count": 0, "error": str(exc)})
+
+    @app.get("/api/dining/recommend")
+    async def api_dining_recommend(limit: int = 3) -> JSONResponse:
+        packet = dining_module.recommend_restaurants(runtime=runtime, limit=max(1, int(limit or 3)))
+        recommendations = [
+            dict(
+                item,
+                **_dining_match_metadata(
+                    item,
+                    query="",
+                    cuisine="any",
+                    prefs=[],
+                    open_now_bias=bool(packet.get("open_now_filter")),
+                    favorite_ids={str(f.get("place_id") or "") for f in list(dining_module.get_favorites() or [])},
+                ),
+            )
+            for item in list(packet.get("recommendations") or [])
+            if isinstance(item, dict)
+        ]
+        return _json({**packet, "recommendations": recommendations})
+
+    @app.get("/api/dining/details/{place_id}")
+    async def api_dining_details(place_id: str) -> JSONResponse:
+        try:
+            detail = dict(dining_module.get_place_details(place_id) or {})
+            photo_ref = str(detail.get("photo_ref") or "")
+            if photo_ref:
+                detail["photo_url"] = dining_module.photo_url(photo_ref)
+            return _json(detail)
+        except Exception as exc:
+            return _json({"error": str(exc)})
+
+    @app.get("/api/dining/favorites")
+    async def api_dining_favorites() -> JSONResponse:
+        try:
+            favorites = list(dining_module.get_favorites() or [])
+            return _json({"favorites": favorites, "count": len(favorites)})
+        except Exception as exc:
+            return _json({"favorites": [], "count": 0, "error": str(exc)})
+
+    @app.post("/api/dining/favorite")
+    async def api_dining_toggle_favorite(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        place_id = str(body.get("place_id") or "").strip()
+        name = str(body.get("name") or "").strip() or "Dining Favorite"
+        address = str(body.get("address") or "").strip()
+        rating = body.get("rating")
+        if not place_id:
+            raise HTTPException(status_code=400, detail="place_id is required")
+        result = dining_module.toggle_favorite(place_id, name, address, rating)
+        action = str(result.get("action") or "")
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": "Chris",
+                "domain": "dining",
+                "action": "Save Dining Favorite" if action == "added" else "Remove Dining Favorite",
+                "detail": (
+                    f"{'Saved' if action == 'added' else 'Removed'} {name} in Dining favorites."
+                ),
+                "route": "/dining-center",
+                "related_kind": "dining-favorite",
+                "related_label": name,
+                "status_label": "Saved" if action == "added" else "Removed",
+                "result_summary": (
+                    f"Dining favorites now track {len(list(result.get('favorites') or []))} spot(s)."
+                ),
+            },
+        )
+        return _json(result)
+
+    @app.post("/api/dining/reservation-intent")
+    async def api_dining_reservation_intent(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        actor = str(body.get("actor") or "Chris").strip() or "Chris"
+        place_id = str(body.get("place_id") or "").strip()
+        place_name = str(body.get("place_name") or "").strip() or "Dining reservation"
+        preferred_slot = str(body.get("preferred_slot") or "").strip()
+        detail = (
+            f"Saved a reservation intent for {place_name}"
+            + (f" at {preferred_slot}" if preferred_slot else "")
+            + ". Live booking is not connected in this runtime."
+        )
+        AuditLog(DEFAULT_AUDIT_ROOT).log_event(
+            "operator-action",
+            {
+                "actor": actor,
+                "domain": "dining",
+                "action": "Save Dining Reservation Intent",
+                "detail": detail,
+                "route": "/dining-center",
+                "related_kind": "dining-reservation-intent",
+                "related_label": place_name,
+                "status_label": "Saved",
+                "result_summary": "Dining reservation intent was saved for later follow-through.",
+                "place_id": place_id,
+                "preferred_slot": preferred_slot,
+            },
+        )
+        return _json(
+            {
+                "ok": True,
+                "status": "saved",
+                "partner_connected": False,
+                "place_id": place_id,
+                "place_name": place_name,
+                "preferred_slot": preferred_slot,
+                "detail": detail,
+                "next_step": "Use the phone, website, or map actions in Dining details to complete the booking manually.",
+            }
+        )
 
     def _build_publish_module_payload() -> dict[str, Any]:
         from datetime import datetime, timezone
