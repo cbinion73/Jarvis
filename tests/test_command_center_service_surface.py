@@ -252,6 +252,27 @@ class _StubRuntime:
     def _try_handle_calendar_event(self, request: str):
         return SimpleNamespace(output_text=f"Stub calendar write handled: {request}")
 
+    def stage_email_draft(self, payload: dict) -> dict:
+        return {
+            "ok": True,
+            "status": "staged",
+            "subject": str(payload.get("subject") or "Email draft from JARVIS"),
+            "recipient_email": str(payload.get("recipient_email") or "recipient@example.com"),
+            "notes": str(payload.get("notes") or ""),
+        }
+
+    def draft_message(self, actor: str, audience: str, purpose: str, context: str, tone: str = "warm") -> dict:
+        return {
+            "draft_id": "draft-1",
+            "actor": actor,
+            "audience": audience,
+            "purpose": purpose,
+            "context": context,
+            "tone": tone,
+            "body": f"Draft for {audience}",
+            "status": "staged",
+        }
+
     def execute_sandbox_job(self, *, actor_name: str, job_id: str, triggered_by: str) -> dict:
         return {"ok": True, "accepted": True, "job": {"job_id": job_id, "status": "sandbox-queued"}}
 
@@ -2492,6 +2513,51 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIsInstance(module_payload["people"], list)
         self.assertIsInstance(module_payload["queue"], list)
         self.assertIsInstance(module_payload["trusted_actions"], list)
+
+    def test_email_routes_expose_module_and_safe_action_boundary(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/email/module", "GET")()))
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("emails", module_payload)
+        self.assertIn("stats", module_payload)
+        self.assertIn("source_rows", module_payload)
+        self.assertIn("inbox_overview", module_payload)
+        self.assertIn("priority_rows", module_payload)
+        self.assertIn("intelligence_cards", module_payload)
+        self.assertIn("health_rows", module_payload)
+        self.assertIn("categories", module_payload)
+        self.assertIn("threads", module_payload)
+        self.assertIn("pending_actions", module_payload)
+        self.assertIn("automation_rows", module_payload)
+        self.assertIn("snoozed_rows", module_payload)
+        self.assertIn("compose_actions", module_payload)
+        self.assertIn("quick_search_actions", module_payload)
+        self.assertIn("trusted_actions", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_route"], "/email-center")
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/email/module")
+        self.assertEqual(module_payload["proof_paths"]["home_email_api"], "/api/home/email")
+        self.assertEqual(module_payload["proof_paths"]["mark_read_api"], "/api/home/email/{email_id}/read")
+        self.assertEqual(module_payload["proof_paths"]["sync_api"], "/api/home/sync")
+        self.assertEqual(module_payload["proof_paths"]["draft_api"], "/api/stage/email/draft")
+        self.assertEqual(module_payload["proof_paths"]["action_api"], "/api/email/module/action")
+        self.assertIsInstance(module_payload["emails"], list)
+        self.assertIsInstance(module_payload["source_rows"], list)
+        self.assertIsInstance(module_payload["trusted_actions"], list)
+
+        action_payload = self._json_body(
+            asyncio.run(
+                self._route("/api/email/module/action", "POST")(
+                    payload={"action": "stage-draft", "prompt": "Draft a short follow-up email about the workshop review."}
+                )
+            )
+        )
+        self.assertTrue(action_payload["ok"])
+        self.assertEqual(action_payload["action"], "stage-draft")
+        self.assertEqual(action_payload["mode"], "review-draft")
+        self.assertEqual(action_payload["message"], "Email draft staged for review.")
+        self.assertIn("Mailbox-native reply staging", action_payload["boundary_note"])
 
     def test_calendar_routes_expose_module_and_safe_action_boundary(self) -> None:
         module_payload = self._json_body(asyncio.run(self._route("/api/calendar/module", "GET")()))

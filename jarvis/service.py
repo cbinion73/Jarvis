@@ -1035,6 +1035,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             html = html.replace("</body>", injection, 1)
         return HTMLResponse(html)
 
+    @app.get("/email-center", response_class=HTMLResponse)
+    async def email_center() -> HTMLResponse:
+        html = _render_glass_shell(runtime)
+        injection = (
+            "<script>(function(){"
+            "function openEmail(){ try { switchView('email'); } catch (_) { setTimeout(openEmail, 60); } }"
+            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openEmail, 0); }"
+            "else { window.addEventListener('load', openEmail); }"
+            "})();</script></body>"
+        )
+        if "</body>" in html:
+            html = html.replace("</body>", injection, 1)
+        return HTMLResponse(html)
+
     @app.get("/chronicle-center", response_class=HTMLResponse)
     async def chronicle_center() -> HTMLResponse:
         return HTMLResponse(render_chronicle_module_page(await _build_chronicle_module_payload()))
@@ -9947,6 +9961,522 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             })
 
         raise HTTPException(status_code=400, detail=f"Unsupported calendar module action: {action}")
+
+    async def _build_email_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        availability_notes: list[str] = []
+        errors: list[str] = []
+
+        def email_category(item: dict[str, Any]) -> str:
+            subject = str(item.get("subject") or "").lower()
+            sender = str(item.get("sender_name") or item.get("sender_email") or "").lower()
+            labels = [str(label).lower() for label in list(item.get("labels") or [])]
+            if "newsletter" in subject or "digest" in subject or "substack" in sender or "newsletter" in sender:
+                return "newsletters"
+            if any(token in subject for token in ("invoice", "receipt", "statement", "report", "summary", "update")):
+                return "updates"
+            if any(token in subject for token in ("family", "emma", "liam", "sarah", "church")) or "family" in sender:
+                return "family"
+            if any(token in subject for token in ("approve", "review", "launch", "speaking", "urgent")) or "important" in labels or str(item.get("importance") or "").lower() == "high":
+                return "focused"
+            return "primary"
+
+        def email_priority(item: dict[str, Any]) -> str:
+            subject = str(item.get("subject") or "").lower()
+            if (
+                str(item.get("importance") or "").lower() == "high"
+                or bool(item.get("is_flagged"))
+                or any(token in subject for token in ("approve", "urgent", "launch"))
+            ):
+                return "high"
+            if (not bool(item.get("is_read"))) or any(token in subject for token in ("review", "schedule", "proposal")):
+                return "medium"
+            return "low"
+
+        home_db = _get_home_db()
+        inbox = _get_unified_inbox()
+        emails: list[dict[str, Any]] = []
+        stats: dict[str, Any] = {}
+        sync_states: list[dict[str, Any]] = []
+
+        if home_db is None:
+            availability_notes.append("Home inbox storage is not initialised in this runtime, so Email cannot hydrate cached mailbox state.")
+        else:
+            try:
+                emails = list(await asyncio.to_thread(home_db.list_emails, None, False, 80))
+            except Exception as exc:
+                errors.append(f"emails: {exc}")
+                availability_notes.append(f"Email cache could not be loaded: {exc}")
+            try:
+                stats = dict(await asyncio.to_thread(home_db.get_email_stats) or {})
+            except Exception as exc:
+                errors.append(f"stats: {exc}")
+                availability_notes.append(f"Email stats could not be loaded: {exc}")
+            try:
+                sync_states = list(await asyncio.to_thread(home_db.get_all_sync_states))
+            except Exception as exc:
+                errors.append(f"sync_states: {exc}")
+                availability_notes.append(f"Email sync states could not be loaded: {exc}")
+
+        for source_name in ("gmail", "outlook"):
+            stats.setdefault(source_name, {"total": 0, "unread": 0, "flagged": 0})
+
+        total_unread = sum(int((stats.get(source) or {}).get("unread") or 0) for source in ("gmail", "outlook"))
+        total_flagged = sum(int((stats.get(source) or {}).get("flagged") or 0) for source in ("gmail", "outlook"))
+        total_cached = len(emails)
+        category_counts: dict[str, int] = {"focused": 0, "primary": 0, "updates": 0, "newsletters": 0, "family": 0}
+        priority_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+        unread_by_sender: dict[str, int] = {}
+        thread_map: dict[str, dict[str, Any]] = {}
+        for item in emails:
+            category = email_category(item)
+            priority = email_priority(item)
+            category_counts[category] = int(category_counts.get(category, 0)) + 1
+            priority_counts[priority] = int(priority_counts.get(priority, 0)) + 1
+            if not bool(item.get("is_read")):
+                sender_key = str(item.get("sender_name") or item.get("sender_email") or "Unknown sender").strip() or "Unknown sender"
+                unread_by_sender[sender_key] = int(unread_by_sender.get(sender_key, 0)) + 1
+            thread_key = str(item.get("thread_id") or item.get("id") or "").strip()
+            if not thread_key:
+                continue
+            bucket = thread_map.setdefault(
+                thread_key,
+                {
+                    "thread_id": thread_key,
+                    "subject": str(item.get("subject") or "(No subject)").strip() or "(No subject)",
+                    "participants": set(),
+                    "count": 0,
+                    "last_received_at": str(item.get("received_at") or "").strip(),
+                    "priority": priority,
+                    "category": category,
+                    "unread_count": 0,
+                },
+            )
+            bucket["count"] = int(bucket.get("count") or 0) + 1
+            bucket["participants"].add(str(item.get("sender_name") or item.get("sender_email") or "Unknown sender").strip() or "Unknown sender")
+            if not bool(item.get("is_read")):
+                bucket["unread_count"] = int(bucket.get("unread_count") or 0) + 1
+            received_at = str(item.get("received_at") or "").strip()
+            if received_at and received_at >= str(bucket.get("last_received_at") or ""):
+                bucket["last_received_at"] = received_at
+                bucket["subject"] = str(item.get("subject") or bucket["subject"]).strip() or bucket["subject"]
+                bucket["priority"] = priority
+                bucket["category"] = category
+
+        focused_emails = [item for item in emails if email_priority(item) in {"high", "medium"}]
+        waiting_emails = [item for item in emails if (not bool(item.get("is_read"))) and email_priority(item) != "low"]
+        selected_email_id = str(((waiting_emails[:1] or emails[:1] or [{}])[0].get("id") or "")).strip()
+
+        review_load = total_unread + total_flagged + len(waiting_emails)
+        inbox_health_score = max(0, min(100, 100 - min(72, (total_unread * 4) + (total_flagged * 3) + len(waiting_emails))))
+        if total_cached <= 0:
+            inbox_health_score = 0
+
+        sync_by_source = {
+            str(item.get("source") or "").strip().lower(): dict(item)
+            for item in sync_states
+            if str(item.get("source") or "").strip()
+        }
+        source_rows: list[dict[str, Any]] = []
+        source_config = [
+            ("gmail", "Gmail", "/api/home/sync/gmail"),
+            ("outlook", "Outlook", "/api/home/sync/outlook"),
+            ("google_calendar", "Google Calendar", "/api/home/sync/google-calendar"),
+            ("outlook_calendar", "Outlook Calendar", "/api/home/sync/outlook-calendar"),
+        ]
+        for source_key, label, route in source_config:
+            state = sync_by_source.get(source_key, {})
+            source_stats = dict(stats.get(source_key) or {})
+            error_detail = str(state.get("error_detail") or "").strip()
+            status = str(state.get("status") or ("connected" if source_key in {"gmail", "outlook"} and int(source_stats.get("total") or 0) else "not-connected")).strip()
+            if error_detail and status in {"ok", "connected", "success"}:
+                status = "error"
+            tone = "warn" if status in {"error", "degraded", "disconnected"} else "good" if status in {"ok", "connected", "success"} else "low"
+            source_rows.append(
+                {
+                    "source": source_key,
+                    "label": label,
+                    "status": status,
+                    "tone": tone,
+                    "detail": str(error_detail or f"{int(source_stats.get('unread') or 0)} unread · {int(source_stats.get('total') or 0)} cached").strip(),
+                    "last_sync_at": str(state.get("last_sync_at") or state.get("updated_at") or "").strip(),
+                    "count": int(source_stats.get("unread") or 0),
+                    "total": int(source_stats.get("total") or 0),
+                    "sync_route": route,
+                }
+            )
+
+        recent_activity = _module_recent_activity(route="/email-center", domain="email", limit=8)
+        if not recent_activity:
+            recent_activity = _module_recent_activity(route="/command-center", domain="email", limit=6)
+
+        inbox_overview = [
+            {"label": "Unread", "value": total_unread, "note": "Messages still waiting in your live cache."},
+            {"label": "Actionable", "value": len(focused_emails), "note": "Messages JARVIS considers mission-relevant or time-sensitive."},
+            {"label": "Waiting", "value": len(waiting_emails), "note": "Unread items likely needing a reply or decision."},
+            {"label": "Flagged", "value": total_flagged, "note": "Messages currently flagged upstream."},
+            {"label": "Accounts", "value": len([row for row in source_rows if row["source"] in {"gmail", "outlook"} and row["status"] not in {"not-connected", "disconnected"}]), "note": "Mailbox sources currently showing live or cached state."},
+        ]
+
+        priority_rows = [
+            {"title": "High Priority", "count": priority_counts["high"], "detail": "Flagged or clearly urgent email surfaced from the live cache.", "tone": "high"},
+            {"title": "Needs Review", "count": priority_counts["medium"], "detail": "Unread or review-oriented email that should stay visible.", "tone": "medium"},
+            {"title": "Waiting On You", "count": len(waiting_emails), "detail": "Messages still unread with a likely next action.", "tone": "info"},
+        ]
+
+        intelligence_cards = [
+            {"title": "Connected Sources", "value": f"{len(source_rows)} lane(s)", "detail": "Mail and related sync sources surfaced through live sync state."},
+            {"title": "Recent Continuity", "value": f"{len(recent_activity)} event(s)", "detail": "Recent operator actions already linked to the Email surface."},
+            {"title": "Top Unread Sender", "value": max(unread_by_sender, key=unread_by_sender.get) if unread_by_sender else "Unavailable", "detail": "Based on unread sender concentration in the live cache."},
+            {"title": "Current Review Load", "value": f"{review_load} signal(s)", "detail": "Unread, flagged, and waiting signals currently competing for attention."},
+        ]
+
+        pattern_rows = [
+            {
+                "label": "Focused",
+                "count": category_counts["focused"],
+                "share": round((category_counts["focused"] / total_cached) * 100) if total_cached else 0,
+                "detail": "Priority and mission-aligned email.",
+            },
+            {
+                "label": "Primary",
+                "count": category_counts["primary"],
+                "share": round((category_counts["primary"] / total_cached) * 100) if total_cached else 0,
+                "detail": "Regular communication lanes.",
+            },
+            {
+                "label": "Updates",
+                "count": category_counts["updates"],
+                "share": round((category_counts["updates"] / total_cached) * 100) if total_cached else 0,
+                "detail": "Reports, receipts, and informational updates.",
+            },
+            {
+                "label": "Family",
+                "count": category_counts["family"],
+                "share": round((category_counts["family"] / total_cached) * 100) if total_cached else 0,
+                "detail": "Home, family, and relationship context.",
+            },
+            {
+                "label": "Newsletters",
+                "count": category_counts["newsletters"],
+                "share": round((category_counts["newsletters"] / total_cached) * 100) if total_cached else 0,
+                "detail": "Read-later or digest-style traffic.",
+            },
+        ]
+
+        health_rows = [
+            {
+                "title": "Inbox Health",
+                "value": f"{inbox_health_score}%",
+                "detail": "Derived from unread, flagged, and waiting signals in the live cache.",
+                "tone": "good" if inbox_health_score >= 80 else "warn" if inbox_health_score >= 55 else "high",
+            },
+            {
+                "title": "Sync Coverage",
+                "value": f"{len([row for row in source_rows if row['status'] not in {'not-connected', 'disconnected'}])}/{len(source_rows)}",
+                "detail": "Email sources with visible state in this runtime.",
+                "tone": "good" if any(row["status"] in {"ok", "connected", "success"} for row in source_rows) else "warn",
+            },
+            {
+                "title": "Draft Engine",
+                "value": "Available" if callable(getattr(runtime, "stage_email_draft", None)) else "Unavailable",
+                "detail": "Shared draft staging boundary for composed or assisted replies.",
+                "tone": "good" if callable(getattr(runtime, "stage_email_draft", None)) else "low",
+            },
+            {
+                "title": "Reply Queue",
+                "value": str(len(waiting_emails)),
+                "detail": "Unread items that likely need intentional follow-through.",
+                "tone": "warn" if waiting_emails else "good",
+            },
+        ]
+
+        categories = [
+            {"title": "Needs Your Response", "value": len(waiting_emails), "detail": "Unread messages likely needing your reply."},
+            {"title": "Waiting On Others", "value": len([item for item in emails if bool(item.get("is_read")) and email_priority(item) != "low"]), "detail": "Messages already seen but still part of an active loop."},
+            {"title": "Important Updates", "value": category_counts["updates"], "detail": "Receipts, reports, and status-style messages."},
+            {"title": "Projects & Work", "value": category_counts["primary"] + category_counts["focused"], "detail": "Execution and work-related inbox traffic."},
+            {"title": "Family & Personal", "value": category_counts["family"], "detail": "Household and relationship context."},
+            {"title": "Newsletters", "value": category_counts["newsletters"], "detail": "Digest and read-later traffic."},
+        ]
+
+        threads = []
+        for thread in sorted(thread_map.values(), key=lambda item: (str(item.get("last_received_at") or ""), int(item.get("unread_count") or 0)), reverse=True)[:6]:
+            participants = sorted(str(name) for name in list(thread.get("participants") or []))
+            threads.append(
+                {
+                    "thread_id": str(thread.get("thread_id") or "").strip(),
+                    "subject": str(thread.get("subject") or "(No subject)").strip() or "(No subject)",
+                    "participants": participants,
+                    "participant_summary": ", ".join(participants[:2]) if participants else "Unknown sender",
+                    "count": int(thread.get("count") or 0),
+                    "unread_count": int(thread.get("unread_count") or 0),
+                    "last_received_at": str(thread.get("last_received_at") or "").strip(),
+                    "priority": str(thread.get("priority") or "low"),
+                    "category": str(thread.get("category") or "primary"),
+                }
+            )
+
+        automation_rows = [
+            {
+                "title": "Source Sync",
+                "value": "Available" if inbox is not None else "Unavailable",
+                "detail": "Unified inbox can refresh Gmail, Outlook, and calendar-adjacent sources." if inbox is not None else "Unified inbox is not initialised in this runtime.",
+            },
+            {
+                "title": "Mark As Read",
+                "value": "Available" if home_db is not None else "Unavailable",
+                "detail": "Selected inbox items can be cleared from the desktop without leaving the board." if home_db is not None else "Inbox storage is not initialised in this runtime.",
+            },
+            {
+                "title": "Draft Staging",
+                "value": "Available" if callable(getattr(runtime, "stage_email_draft", None)) else "Unavailable",
+                "detail": "Compose flows can stage a real email draft instead of pretending mail was sent." if callable(getattr(runtime, "stage_email_draft", None)) else "The shared email draft engine is not available in this runtime.",
+            },
+            {
+                "title": "Continuity Log",
+                "value": f"{len(recent_activity)} event(s)",
+                "detail": "Operator actions tied to Email already feed into shared activity continuity.",
+            },
+        ]
+
+        pending_actions = [
+            {
+                "email_id": str(item.get("id") or "").strip(),
+                "subject": str(item.get("subject") or "(No subject)").strip() or "(No subject)",
+                "sender": str(item.get("sender_name") or item.get("sender_email") or "Unknown sender").strip() or "Unknown sender",
+                "received_at": str(item.get("received_at") or "").strip(),
+                "priority": email_priority(item),
+                "category": email_category(item),
+                "action": "mark-read",
+            }
+            for item in waiting_emails[:6]
+        ]
+
+        snoozed_rows = [
+            {
+                "title": "No live snooze store",
+                "detail": "This runtime does not expose a real snoozed-email backend yet, so Email is showing an honest boundary instead of fabricated parked mail.",
+                "status": "Unavailable",
+            }
+        ]
+
+        compose_actions = [
+            {"id": "compose-draft", "title": "New Email", "prompt_hint": "Draft a concise email to [recipient] about [topic].", "available": callable(getattr(runtime, "stage_email_draft", None))},
+            {"id": "reply-draft", "title": "Quick Reply", "prompt_hint": "Draft a polite reply to the selected email about [topic].", "available": callable(getattr(runtime, "stage_email_draft", None))},
+            {"id": "follow-up-draft", "title": "Follow Up", "prompt_hint": "Draft a follow-up email about [topic] that moves the conversation forward.", "available": callable(getattr(runtime, "stage_email_draft", None))},
+            {"id": "meeting-draft", "title": "Meeting Invite", "prompt_hint": "Draft an email inviting [recipient] to meet about [topic].", "available": callable(getattr(runtime, "stage_email_draft", None))},
+            {"id": "boundary-tone", "title": "Tone Assistant", "available": False, "unavailable_reason": "A dedicated tone-adjustment backend route is not exposed yet in this runtime."},
+            {"id": "boundary-grammar", "title": "Grammar Check", "available": False, "unavailable_reason": "A dedicated grammar-check backend route is not exposed yet in this runtime."},
+            {"id": "boundary-improve", "title": "AI Improve", "available": False, "unavailable_reason": "A dedicated revise/improve backend route is not exposed yet in this runtime."},
+        ]
+
+        quick_search_actions = [
+            {"id": "search-person", "title": "Search by Person", "route": "/command-center", "detail": "Email search by sender is currently routed into Command until a dedicated query surface exists."},
+            {"id": "search-date", "title": "Search by Date", "route": "/command-center", "detail": "Email search by date is currently routed into Command until a dedicated query surface exists."},
+            {"id": "search-attachments", "title": "Attachments", "route": "/command-center", "detail": "Attachment search is currently routed into Command until a dedicated query surface exists."},
+            {"id": "boundary-unsubscribe", "title": "Unsubscribe", "detail": "A safe unsubscribe backend route is not exposed in this runtime."},
+            {"id": "boundary-block-sender", "title": "Block Sender", "detail": "A safe sender-block backend route is not exposed in this runtime."},
+            {"id": "boundary-create-rule", "title": "Create Rule", "detail": "A dedicated mail-rule backend route is not exposed in this runtime."},
+            {"id": "boundary-export-thread", "title": "Export Thread", "detail": "A thread-export backend route is not exposed in this runtime."},
+        ]
+
+        trusted_actions = [
+            {
+                "id": "sync-sources",
+                "title": "Sync Sources",
+                "note": "Runs the live Gmail and Outlook sync boundary through the unified inbox.",
+                "action_type": "sync-sources",
+                "primary": True,
+                "available": bool(inbox is not None),
+                "unavailable_reason": "Unified inbox is not initialised in this runtime." if inbox is None else "",
+            },
+            {
+                "id": "mark-selected-read",
+                "title": "Mark Selected Read",
+                "note": "Clears the selected email from the unread queue through the live inbox cache.",
+                "action_type": "mark-read",
+                "primary": False,
+                "available": bool(home_db is not None and selected_email_id),
+                "unavailable_reason": "No selected email is available to mark read." if not selected_email_id else ("Home inbox storage is not initialised in this runtime." if home_db is None else ""),
+                "email_id": selected_email_id,
+            },
+            {
+                "id": "compose-draft",
+                "title": "Compose Draft",
+                "note": "Stages a real email draft through the shared draft-and-alert boundary.",
+                "action_type": "stage-draft",
+                "primary": False,
+                "available": callable(getattr(runtime, "stage_email_draft", None)),
+                "unavailable_reason": "The shared email draft engine is not available in this runtime." if not callable(getattr(runtime, "stage_email_draft", None)) else "",
+                "prompt_hint": "Draft a concise email to [recipient] about [topic].",
+            },
+        ]
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": f"Email loaded {total_cached} cached message(s), {total_unread} unread signal(s), {len(source_rows)} source lane(s), and {len(recent_activity)} continuity event(s).",
+            "what_became_real": "Email now hydrates from live inbox cache, source sync state, draft staging, and operator continuity instead of browser-side invented inbox math and fake connector status.",
+            "remains_partial": "Direct send, snooze, unsubscribe, rules, and richer mailbox search still depend on backend routes that are not yet exposed in this runtime.",
+            "runtime_note": "Email is live and connected.",
+            "availability_notes": availability_notes[:10],
+            "counts": {
+                "cached": total_cached,
+                "unread": total_unread,
+                "priority": priority_counts["high"],
+                "waiting": len(waiting_emails),
+                "flagged": total_flagged,
+                "focused": len(focused_emails),
+                "accounts": len(source_rows),
+                "connected_accounts": len([row for row in source_rows if row["status"] not in {"not-connected", "disconnected"}]),
+                "recent_activity": len(recent_activity),
+                "inbox_health_score": inbox_health_score,
+            },
+            "selected_email_id": selected_email_id,
+            "emails": emails,
+            "stats": {
+                **stats,
+                "total_unread": total_unread,
+                "total_flagged": total_flagged,
+                "total_cached": total_cached,
+            },
+            "inbox_overview": inbox_overview,
+            "priority_rows": priority_rows,
+            "intelligence_cards": intelligence_cards,
+            "pattern_rows": pattern_rows,
+            "health_rows": health_rows,
+            "source_rows": source_rows,
+            "categories": categories,
+            "threads": threads,
+            "pending_actions": pending_actions,
+            "automation_rows": automation_rows,
+            "snoozed_rows": snoozed_rows,
+            "compose_actions": compose_actions,
+            "quick_search_actions": quick_search_actions,
+            "trusted_actions": trusted_actions,
+            "recent_activity": recent_activity,
+            "proof_paths": {
+                "module_route": "/email-center",
+                "module_api": "/api/email/module",
+                "home_email_api": "/api/home/email",
+                "home_email_stats_api": "/api/home/email/stats",
+                "mark_read_api": "/api/home/email/{email_id}/read",
+                "sync_api": "/api/home/sync",
+                "draft_api": "/api/stage/email/draft",
+                "activity_api": "/api/activity/operator-action",
+                "action_api": "/api/email/module/action",
+            },
+            "errors": errors,
+        }
+
+        if errors and not emails and not sync_states and not recent_activity:
+            payload["available"] = False
+            payload["status"] = "Wired"
+            payload["summary"] = "Email is wired, but the runtime could not hydrate enough live inbox or sync data to make the surface fully useful."
+            payload["runtime_note"] = "Email is partially connected. Live inbox and sync sources did not fully hydrate."
+            payload["remains_partial"] = "Email needs live inbox cache or connector state in this runtime before the desktop can become richly informative."
+        elif errors:
+            payload["runtime_note"] = "Email is live, but some inbox or sync sources are partially unavailable."
+        elif not emails:
+            payload["runtime_note"] = "Email is live, but no cached email is currently visible in this runtime."
+            payload["availability_notes"].append("No cached email is currently available, so Email is showing a real empty state.")
+        if not payload["availability_notes"]:
+            payload["availability_notes"].append("All currently available Email sources hydrated successfully.")
+        return payload
+
+    @app.get("/api/email/module")
+    async def api_email_module(actor: str = "Chris") -> JSONResponse:
+        return _json(await _build_email_module_payload(actor))
+
+    @app.post("/api/email/module/action")
+    async def api_email_module_action(payload: dict[str, Any]) -> JSONResponse:
+        action = str(payload.get("action") or "").strip().lower()
+        if not action:
+            raise HTTPException(status_code=400, detail="Action is required.")
+
+        if action == "sync-sources":
+            inbox = _get_unified_inbox()
+            if inbox is None:
+                raise HTTPException(status_code=503, detail="Unified inbox not initialised")
+            result = await asyncio.to_thread(inbox.sync_all)
+            return _json({
+                "ok": True,
+                "action": action,
+                "message": "Email sources synced.",
+                "result": result,
+            })
+
+        if action == "mark-read":
+            email_id = str(payload.get("email_id") or "").strip()
+            if not email_id:
+                raise HTTPException(status_code=400, detail="email_id is required.")
+            home_db = _get_home_db()
+            if home_db is None:
+                raise HTTPException(status_code=503, detail="Home inbox storage not initialised")
+            await asyncio.to_thread(home_db.mark_email_read, email_id)
+            return _json({
+                "ok": True,
+                "action": action,
+                "email_id": email_id,
+                "message": "Email marked read.",
+            })
+
+        if action == "stage-draft":
+            draft_payload = dict(payload.get("draft") or {})
+            has_mailbox_contract = all(
+                key in draft_payload
+                for key in ("request_id", "arena_id", "principal_id", "source_message", "draft_intent", "stage_policy")
+            )
+
+            if has_mailbox_contract:
+                if not callable(getattr(runtime, "stage_email_draft", None)):
+                    raise HTTPException(status_code=503, detail="Email draft engine is unavailable in this runtime.")
+                result = runtime.stage_email_draft(draft_payload)
+                return _json({
+                    "ok": True,
+                    "action": action,
+                    "mode": "mailbox-draft",
+                    "message": "Email draft staged.",
+                    "result": result,
+                }, status_code=201)
+
+            if not callable(getattr(runtime, "draft_message", None)):
+                raise HTTPException(status_code=503, detail="Draft staging is unavailable in this runtime.")
+
+            prompt = str(payload.get("prompt") or "").strip()
+            if not prompt:
+                raise HTTPException(status_code=400, detail="A draft payload or prompt is required.")
+
+            recipient_name = str(payload.get("recipient_name") or "").strip()
+            recipient_email = str(payload.get("recipient_email") or "").strip()
+            audience = recipient_name or recipient_email or "Email recipient"
+            subject = str(payload.get("subject") or "Email draft from JARVIS").strip() or "Email draft from JARVIS"
+            intent = str(payload.get("intent") or "follow_up").strip().replace("_", " ") or "follow up"
+            actor = str(payload.get("actor") or "Chris").strip() or "Chris"
+            tone = str(payload.get("tone") or "warm").strip() or "warm"
+            context = f"Subject: {subject}\nIntent: {intent}\n\n{prompt}"
+
+            result = runtime.draft_message(
+                actor,
+                audience,
+                f"Email {intent}",
+                context,
+                tone,
+            )
+            return _json({
+                "ok": True,
+                "action": action,
+                "mode": "review-draft",
+                "message": "Email draft staged for review.",
+                "boundary_note": "Mailbox-native reply staging still requires a trust-arena email payload.",
+                "result": result,
+            }, status_code=201)
+
+        raise HTTPException(status_code=400, detail=f"Unsupported email module action: {action}")
 
     async def _build_home_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
         from datetime import datetime, timezone

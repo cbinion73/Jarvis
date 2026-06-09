@@ -23570,16 +23570,18 @@ body::after {{
             <span>Email command</span>
           </div>
           <div class="email-sidebar-nav">
-            <div class="email-sidebar-item active"><span>Inbox Priority</span><b id="emailUnreadBadge">0</b></div>
-            <div class="email-sidebar-item"><span>Selected Email</span><b id="emailSidebarSelected">—</b></div>
-            <div class="email-sidebar-item"><span>Threads In Focus</span><b id="emailSidebarThreads">0</b></div>
-            <div class="email-sidebar-item"><span>Pending Actions</span><b id="emailSidebarPending">0</b></div>
-            <div class="email-sidebar-item"><span>Accounts</span><b id="emailSidebarAccounts">2</b></div>
+            <div class="email-sidebar-item active" onclick="emailSidebarAction('filter', {{ filter: 'focused' }})"><span>Inbox Priority</span><b id="emailUnreadBadge">0</b></div>
+            <div class="email-sidebar-item" onclick="emailSidebarAction('selected')"><span>Selected Email</span><b id="emailSidebarSelected">—</b></div>
+            <div class="email-sidebar-item" onclick="emailSidebarAction('threads')"><span>Threads In Focus</span><b id="emailSidebarThreads">0</b></div>
+            <div class="email-sidebar-item" onclick="emailSidebarAction('pending')"><span>Pending Actions</span><b id="emailSidebarPending">0</b></div>
+            <div class="email-sidebar-item" onclick="emailSidebarAction('sources')"><span>Accounts</span><b id="emailSidebarAccounts">2</b></div>
           </div>
           <div class="email-sidebar-status">
             <h4>Mail Status</h4>
+            <div id="email-runtime-note" class="email-card-subtitle" style="margin-bottom:12px;">Email is live and connected.</div>
             <div id="emailSidebarStatus"></div>
-            <button class="email-sidebar-btn" onclick="emailActionToast('Email settings and connector tuning will open here next.')">Email Settings →</button>
+            <button class="email-sidebar-btn" id="email-refresh-button" onclick="refreshEmailDesktop(true)">Refresh Email</button>
+            <button class="email-sidebar-btn" onclick="emailOpenRoute('/settings-center', 'settings', 'Open Email Settings', 'Opening Email settings and connector controls.')">Email Settings →</button>
           </div>
         </aside>
 
@@ -23591,7 +23593,7 @@ body::after {{
                   <h3 class="email-card-title">1. Inbox Overview</h3>
                   <span class="email-card-subtitle">Your inbox at a glance.</span>
                 </div>
-                <button class="email-chip-btn" onclick="emailActionToast('Customization controls for Email are queued next.')">Customize →</button>
+                <button class="email-chip-btn" onclick="emailOpenRoute('/command-center', 'chat', 'Open Email Controls', 'Opening Email controls from the Inbox Overview card.')">Customize →</button>
               </div>
               <div class="email-overview-stats" id="emailOverviewStats"></div>
               <div class="email-progress-block">
@@ -23618,7 +23620,7 @@ body::after {{
                   <h3 class="email-card-title">3. Email Intelligence</h3>
                   <span class="email-card-subtitle">AI insights about your communications.</span>
                 </div>
-                <button class="email-chip-btn" onclick="emailActionToast('Full email intelligence analytics are coming next.')">View Insights →</button>
+                <button class="email-chip-btn" onclick="emailOpenRoute('/activity-center', 'journey', 'Open Email Insights', 'Opening Email continuity and activity insight from the Email desktop.')">View Insights →</button>
               </div>
               <div class="email-intelligence-grid" id="emailIntelligenceGrid"></div>
             </section>
@@ -23652,10 +23654,10 @@ body::after {{
                   <span class="email-card-subtitle">Full context. AI enhanced.</span>
                 </div>
                 <div class="email-preview-toolbar">
-                  <button onclick="emailActionToast('Reply flow will open here next.')">↩ Reply</button>
-                  <button onclick="emailActionToast('Reply all flow will open here next.')">⤴ Reply All</button>
-                  <button onclick="emailActionToast('Forward flow will open here next.')">→ Forward</button>
-                  <button onclick="emailActionToast('Delegation flow will open here next.')">◎ Delegate</button>
+                  <button onclick="emailHandleAction('reply-draft')">↩ Reply</button>
+                  <button onclick="emailHandleAction('reply-all-boundary')">⤴ Reply All</button>
+                  <button onclick="emailHandleAction('forward-boundary')">→ Forward</button>
+                  <button onclick="emailHandleAction('delegate-route')">◎ Delegate</button>
                 </div>
               </div>
               <div class="email-preview-header">
@@ -23672,10 +23674,10 @@ body::after {{
               </div>
               <div class="email-preview-attachments" id="emailPreviewAttachments"></div>
               <div class="email-preview-cta">
-                <button class="approve" onclick="emailActionToast('Approve and reply flow will open here next.')">Approve & Reply</button>
-                <button class="review" onclick="emailActionToast('Review scheduling flow will open here next.')">Schedule Review</button>
-                <button onclick="emailActionToast('Delegate response flow will open here next.')">Delegate Response</button>
-                <button class="decline" onclick="emailActionToast('Decline and archive flow will open here next.')">Archive</button>
+                <button class="approve" onclick="emailHandleAction('reply-draft')">Approve & Reply</button>
+                <button class="review" onclick="emailHandleAction('schedule-review')">Schedule Review</button>
+                <button onclick="emailHandleAction('delegate-route')">Delegate Response</button>
+                <button class="decline" onclick="emailHandleAction('mark-selected-read')">Archive</button>
               </div>
             </section>
 
@@ -23687,15 +23689,15 @@ body::after {{
                 </div>
               </div>
               <div class="email-quick-grid">
-                <button class="email-quick-btn" onclick="emailActionToast('Compose studio is coming next.')">Compose<span>Draft with JARVIS</span></button>
-                <button class="email-quick-btn" onclick="loadHomeEmail(true)">Unread Only<span>Refresh focus</span></button>
-                <button class="email-quick-btn" onclick="loadHomeEmail(false)">All Mail<span>Reload inbox</span></button>
+                <button class="email-quick-btn" onclick="emailHandleAction('compose-draft')">Compose<span>Draft with JARVIS</span></button>
+                <button class="email-quick-btn" onclick="emailSidebarAction('filter', {{ filter: 'unread' }})">Unread Only<span>Refresh focus</span></button>
+                <button class="email-quick-btn" onclick="emailSidebarAction('filter', {{ filter: 'all' }})">All Mail<span>Reload inbox</span></button>
                 <button class="email-quick-btn" onclick="filterEmail('focused', document.querySelector('[data-email-filter=\"focused\"]'))">Focus Mode<span>Protect deep work</span></button>
                 <button class="email-quick-btn" onclick="filterEmail('newsletters', document.querySelector('[data-email-filter=\"newsletters\"]'))">Newsletters<span>Review later</span></button>
-                <button class="email-quick-btn" onclick="emailActionToast('Templates and automation rules are the next build.')">Templates<span>Scale responses</span></button>
-                <button class="email-quick-btn" onclick="emailActionToast('Rule tuning is queued next.')">Rules<span>Smart filtering</span></button>
-                <button class="email-quick-btn" onclick="emailActionToast('Search center will open here next.')">Email Search<span>Find anything</span></button>
-                <button class="email-quick-btn" onclick="emailActionToast('Syncing Gmail and Outlook again.')">Sync Sources<span>Refresh connectors</span></button>
+                <button class="email-quick-btn" onclick="emailHandleAction('templates-boundary')">Templates<span>Scale responses</span></button>
+                <button class="email-quick-btn" onclick="emailHandleAction('rules-boundary')">Rules<span>Smart filtering</span></button>
+                <button class="email-quick-btn" onclick="emailHandleAction('search-route')">Email Search<span>Find anything</span></button>
+                <button class="email-quick-btn" onclick="emailHandleAction('sync-sources')">Sync Sources<span>Refresh connectors</span></button>
               </div>
             </section>
           </div>
@@ -23722,7 +23724,7 @@ body::after {{
                   <h3 class="email-card-title">7. Email Health</h3>
                   <span class="email-card-subtitle">Keeping your inbox healthy.</span>
                 </div>
-                <button class="email-chip-btn" onclick="emailActionToast('Detailed inbox health diagnostics are queued next.')">View Details →</button>
+                <button class="email-chip-btn" onclick="emailOpenRoute('/activity-center', 'journey', 'Open Email Health Details', 'Opening Email health continuity details.')">View Details →</button>
               </div>
               <div class="email-health-list" id="emailHealthList"></div>
             </section>
@@ -23745,14 +23747,14 @@ body::after {{
                 </div>
               </div>
               <div class="email-compose-grid">
-                <button class="email-compose-chip" onclick="emailActionToast('Find an email will open here next.')">Find an Email</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Search by person will open here next.')">Search by Person</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Search by date will open here next.')">Search by Date</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Attachment search will open here next.')">Attachments</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Unsubscribe center will open here next.')">Unsubscribe</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Block sender flow will open here next.')">Block Sender</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Create rule flow will open here next.')">Create Rule</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Thread export will open here next.')">Export Thread</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('search-route')">Find an Email</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('search-person')">Search by Person</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('search-date')">Search by Date</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('search-attachments')">Attachments</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('boundary-unsubscribe')">Unsubscribe</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('boundary-block-sender')">Block Sender</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('boundary-create-rule')">Create Rule</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('boundary-export-thread')">Export Thread</button>
               </div>
             </section>
           </div>
@@ -23764,7 +23766,7 @@ body::after {{
                   <h3 class="email-card-title">5. Email Categories</h3>
                   <span class="email-card-subtitle">Organized for speed and clarity.</span>
                 </div>
-                <button class="email-chip-btn" onclick="emailActionToast('Category management is queued next.')">Manage Categories →</button>
+                <button class="email-chip-btn" onclick="emailHandleAction('rules-boundary')">Manage Categories →</button>
               </div>
               <div class="email-category-list" id="emailCategoryList"></div>
             </section>
@@ -23788,14 +23790,14 @@ body::after {{
                 </div>
               </div>
               <div class="email-compose-grid">
-                <button class="email-compose-chip" onclick="emailActionToast('New email compose is queued next.')">New Email</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Quick reply is queued next.')">Quick Reply</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Follow-up generator is queued next.')">Follow Up</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Meeting invite drafting is queued next.')">Meeting Invite</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Draft from notes is queued next.')">Draft from Notes</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Tone assistant is queued next.')">Tone Assistant</button>
-                <button class="email-compose-chip" onclick="emailActionToast('Grammar assist is queued next.')">Grammar Check</button>
-                <button class="email-compose-chip" onclick="emailActionToast('AI improve is queued next.')">AI Improve</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('compose-draft')">New Email</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('reply-draft')">Quick Reply</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('follow-up-draft')">Follow Up</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('meeting-draft')">Meeting Invite</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('compose-draft')">Draft from Notes</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('boundary-tone')">Tone Assistant</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('boundary-grammar')">Grammar Check</button>
+                <button class="email-compose-chip" onclick="emailHandleAction('boundary-improve')">AI Improve</button>
               </div>
             </section>
 
@@ -23805,7 +23807,7 @@ body::after {{
                   <h3 class="email-card-title">10. Snoozed & Scheduled</h3>
                   <span class="email-card-subtitle">Emails you parked for the right time.</span>
                 </div>
-                <button class="email-chip-btn" onclick="emailActionToast('Snoozed and scheduled flows are queued next.')">View All →</button>
+                <button class="email-chip-btn" onclick="emailHandleAction('snooze-boundary')">View All →</button>
               </div>
               <div class="email-pending-list" id="emailSnoozedList"></div>
             </section>
@@ -23818,7 +23820,7 @@ body::after {{
                   <h3 class="email-card-title">4. Workflow & Automation</h3>
                   <span class="email-card-subtitle">JARVIS automates what should be automated.</span>
                 </div>
-                <button class="email-chip-btn" onclick="emailActionToast('Automation log is queued next.')">View Automation Log →</button>
+                <button class="email-chip-btn" onclick="emailOpenRoute('/activity-center', 'journey', 'Open Email Automation Log', 'Opening Email automation continuity and operator activity.')">View Automation Log →</button>
               </div>
               <div class="email-automation-list" id="emailAutomationList"></div>
             </section>
@@ -35885,24 +35887,7 @@ async function loadHomeDashboard() {{
 async function loadHomeEmail(unreadOnly) {{
   if (unreadOnly === undefined) unreadOnly = false;
   emailUnreadOnly = !!unreadOnly;
-  try {{
-    const url = '/api/home/email?unread_only=' + (unreadOnly ? 'true' : 'false') + '&limit=50';
-    const r = await fetch(url);
-    if (!r.ok) return;
-    const d = await r.json();
-    _emailLastPayload = d;
-    emailCache = d.emails || [];
-    if (!emailSelectedId && emailCache.length) emailSelectedId = String(emailCache[0].id || '');
-    if (emailSelectedId && !emailCache.some(item => String(item.id || '') === emailSelectedId)) {{
-      emailSelectedId = emailCache.length ? String(emailCache[0].id || '') : '';
-    }}
-    const s = d.stats || {{}};
-    const totalUnread = Number(s.total_unread || 0);
-    setEl('emailUnreadBadge', totalUnread);
-    setEl('overviewGmailUnread', s.gmail ? s.gmail.unread : '—');
-    setEl('overviewOutlookUnread', s.outlook ? s.outlook.unread : '—');
-    renderEmailWorkspace(d);
-  }} catch(e) {{ console.error('email load failed', e); }}
+  return refreshEmailDesktop(false);
 }}
 
 let _calendarToday = [];
@@ -40144,100 +40129,339 @@ function emailActionToast(message) {{
   if (typeof showToast === 'function') showToast(message, 'info');
 }}
 
+function emailRuntimeNote(text) {{
+  const el = document.getElementById('email-runtime-note');
+  if (el) el.textContent = text || 'Email is live and connected.';
+}}
+
+async function emailFetchJson(url, options = undefined) {{
+  const response = await fetch(url, options);
+  let payload = null;
+  try {{
+    payload = await response.json();
+  }} catch (_error) {{
+    payload = null;
+  }}
+  if (!response.ok) {{
+    const detail = payload && (payload.detail || payload.error || payload.message);
+    throw new Error(detail || `Request failed (${{response.status}})`);
+  }}
+  return payload;
+}}
+
+async function emailRecordAction(action, detail, extra = {{}}) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: USER_NAME || 'Chris',
+        domain: 'email',
+        action,
+        title: action,
+        detail,
+        why_now: detail || 'Email desktop action updated communication continuity.',
+        result_summary: detail || 'Email desktop action recorded.',
+        route: extra.route || '/email-center',
+        route_label: extra.routeLabel || 'Open Email',
+        related_kind: extra.relatedKind || 'email-action',
+        related_label: extra.relatedLabel || action,
+        succeeded: extra.succeeded !== false,
+      }}),
+    }});
+  }} catch (error) {{
+    console.warn('emailRecordAction failed', error);
+  }}
+}}
+
+async function emailOpenRoute(route, fallbackView, action, detail) {{
+  await emailRecordAction(action || 'Open Email Route', detail || 'Email opened a related route.', {{
+    route: route || '/email-center',
+    routeLabel: 'Open Related Surface',
+    relatedKind: 'email-route',
+    relatedLabel: action || fallbackView || 'email',
+  }});
+  if (route) {{
+    window.location.href = route;
+    return;
+  }}
+  if (fallbackView) switchView(fallbackView);
+}}
+
+function emailSidebarAction(kind, meta = {{}}) {{
+  if (kind === 'filter') {{
+    const filter = String(meta.filter || 'all');
+    const btn = document.querySelector(`[data-email-filter="${{filter}}"]`) || document.querySelector('[data-email-filter="all"]');
+    filterEmail(filter, btn);
+    return;
+  }}
+  const targetId = {{
+    selected: 'emailPreviewSubject',
+    threads: 'emailThreadList',
+    pending: 'emailPendingList',
+    sources: 'emailSourceList',
+  }}[kind];
+  if (targetId) {{
+    const el = document.getElementById(targetId);
+    if (el) el.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+    return;
+  }}
+  if (kind === 'refresh') refreshEmailDesktop(true);
+}}
+
+async function emailHandleAction(actionId) {{
+  const modulePayload = _emailLastPayload || {{}};
+  const trusted = Array.isArray(modulePayload.trusted_actions) ? modulePayload.trusted_actions : [];
+  const composeActions = Array.isArray(modulePayload.compose_actions) ? modulePayload.compose_actions : [];
+  const quickActions = Array.isArray(modulePayload.quick_search_actions) ? modulePayload.quick_search_actions : [];
+  const trustedItem = trusted.find((entry) => String(entry.id || '') === String(actionId || ''));
+  const composeItem = composeActions.find((entry) => String(entry.id || '') === String(actionId || ''));
+  const quickItem = quickActions.find((entry) => String(entry.id || '') === String(actionId || ''));
+  const selected = emailSelectedItem();
+
+  if (trustedItem) {{
+    if (trustedItem.available === false) {{
+      const reason = trustedItem.unavailable_reason || 'This Email action is not available in the current runtime.';
+      emailRuntimeNote(reason);
+      showToast(reason, 'info');
+      return;
+    }}
+    try {{
+      const payload = await emailFetchJson('/api/email/module/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          action: trustedItem.action_type,
+          email_id: trustedItem.email_id || selected?.id || '',
+        }}),
+      }});
+      await emailRecordAction(trustedItem.title || 'Email action', payload.message || trustedItem.note || 'Email action completed.', {{
+        relatedLabel: trustedItem.title || 'Email action',
+      }});
+      emailRuntimeNote(payload.message || trustedItem.note || 'Email action completed.');
+      showToast(payload.message || 'Email action completed.', 'success');
+      await refreshEmailDesktop(false);
+    }} catch (error) {{
+      const detail = error?.message || 'Email action failed.';
+      emailRuntimeNote(detail);
+      showToast(detail, 'error');
+    }}
+    return;
+  }}
+
+  if (composeItem) {{
+    if (composeItem.available === false) {{
+      const reason = composeItem.unavailable_reason || 'This Email compose action is not available in the current runtime.';
+      emailRuntimeNote(reason);
+      showToast(reason, 'info');
+      return;
+    }}
+    const promptValue = window.prompt(`Describe the draft for "${{composeItem.title || 'Email Draft'}}"`, String(composeItem.prompt_hint || '').trim());
+    if (!promptValue) return;
+    const recipientName = selected?.sender_name || selected?.sender_email || 'Email recipient';
+    const recipientEmail = selected?.sender_email || 'recipient@example.com';
+    const subject = selected?.subject ? `Re: ${{selected.subject}}` : (composeItem.title || 'Email draft');
+    try {{
+      const payload = await emailFetchJson('/api/email/module/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          action: 'stage-draft',
+          prompt: promptValue,
+          recipient_name: recipientName,
+          recipient_email: recipientEmail,
+          subject,
+          intent: String(actionId || 'compose-draft').replace(/-draft$/, '').replace(/-/g, '_'),
+        }}),
+      }});
+      await emailRecordAction(composeItem.title || 'Stage Email Draft', `Staged an email draft for "${{recipientName}}".`, {{
+        relatedLabel: subject,
+      }});
+      emailRuntimeNote(payload.message || 'Email draft staged.');
+      showToast(payload.message || 'Email draft staged.', 'success');
+      await refreshEmailDesktop(false);
+    }} catch (error) {{
+      const detail = error?.message || 'Email draft staging failed.';
+      emailRuntimeNote(detail);
+      showToast(detail, 'error');
+    }}
+    return;
+  }}
+
+  if (quickItem && quickItem.route) {{
+    emailRuntimeNote(quickItem.detail || 'Opening Email handoff.');
+    showToast(quickItem.detail || 'Opening Email handoff.', 'info');
+    await emailOpenRoute(quickItem.route, 'chat', `Open ${{quickItem.title || 'Email Search'}}`, quickItem.detail || 'Email routed a search request into Command.');
+    return;
+  }}
+
+  const boundaryMessages = {{
+    'reply-all-boundary': 'A dedicated reply-all backend route is not exposed yet in this runtime.',
+    'forward-boundary': 'A dedicated forward backend route is not exposed yet in this runtime.',
+    'templates-boundary': 'Template management is not exposed as a dedicated backend route in this runtime.',
+    'rules-boundary': 'Mail-rule management is not exposed as a dedicated backend route in this runtime.',
+    'snooze-boundary': 'A real snooze or scheduled-email backend route is not exposed in this runtime.',
+    'boundary-unsubscribe': 'A safe unsubscribe backend route is not exposed in this runtime.',
+    'boundary-block-sender': 'A safe sender-block backend route is not exposed in this runtime.',
+    'boundary-create-rule': 'A dedicated mail-rule backend route is not exposed in this runtime.',
+    'boundary-export-thread': 'A thread-export backend route is not exposed in this runtime.',
+    'boundary-tone': 'A dedicated tone-adjustment backend route is not exposed in this runtime.',
+    'boundary-grammar': 'A dedicated grammar-check backend route is not exposed in this runtime.',
+    'boundary-improve': 'A dedicated improve/rewrite backend route is not exposed in this runtime.',
+  }};
+  if (boundaryMessages[actionId]) {{
+    emailRuntimeNote(boundaryMessages[actionId]);
+    showToast(boundaryMessages[actionId], 'info');
+    return;
+  }}
+
+  if (actionId === 'search-route') {{
+    await emailOpenRoute('/command-center', 'chat', 'Open Email Search', 'Email search is currently routed into Command until a dedicated query surface exists.');
+    return;
+  }}
+  if (actionId === 'delegate-route') {{
+    await emailOpenRoute('/agent-ops-center', 'agents', 'Delegate Email Response', 'Email is handing this conversation into Agent Ops for bounded delegation.');
+    return;
+  }}
+  if (actionId === 'schedule-review') {{
+    await emailOpenRoute('/approval-queue', 'approval', 'Schedule Email Review', 'Email routed this review request into the approval and review lane.');
+    return;
+  }}
+
+  emailRuntimeNote('That Email action is not available right now.');
+  showToast('That Email action is not available right now.', 'info');
+}}
+
+async function refreshEmailDesktop(showToastOnSuccess = false) {{
+  try {{
+    const payload = await emailFetchJson('/api/email/module?actor=Chris');
+    _emailLastPayload = payload || {{}};
+    emailCache = Array.isArray(payload?.emails) ? payload.emails.slice() : [];
+    const selectedId = String(payload?.selected_email_id || emailSelectedId || '').trim();
+    emailSelectedId = selectedId && emailCache.some((item) => String(item.id || '') === selectedId)
+      ? selectedId
+      : (emailCache.length ? String(emailCache[0].id || '') : '');
+    if (emailUnreadOnly) emailFilter = 'unread';
+    renderEmailWorkspace(_emailLastPayload);
+    if (showToastOnSuccess) showToast('Email refreshed.', 'success');
+  }} catch (error) {{
+    const detail = error?.message || 'Email could not load.';
+    console.error('email load failed', error);
+    _emailLastPayload = {{
+      available: false,
+      runtime_note: `Email could not load: ${{detail}}`,
+      availability_notes: [`Email could not load: ${{detail}}`],
+      emails: [],
+      stats: {{}},
+      counts: {{}},
+      inbox_overview: [],
+      priority_rows: [],
+      intelligence_cards: [],
+      pattern_rows: [],
+      health_rows: [],
+      source_rows: [],
+      categories: [],
+      threads: [],
+      pending_actions: [],
+      automation_rows: [],
+      snoozed_rows: [],
+      compose_actions: [],
+      quick_search_actions: [],
+      trusted_actions: [],
+      recent_activity: [],
+    }};
+    emailCache = [];
+    emailSelectedId = '';
+    renderEmailWorkspace(_emailLastPayload);
+    if (showToastOnSuccess) showToast(detail, 'error');
+  }}
+}}
+
 function selectEmail(id) {{
   emailSelectedId = String(id || '');
-  renderEmailWorkspace(_emailLastPayload || {{emails: emailCache, stats: {{ total_unread: emailCache.filter(e => !e.is_read).length }}}});
+  renderEmailWorkspace(_emailLastPayload || {{ emails: emailCache, stats: {{ total_unread: emailCache.filter(e => !e.is_read).length }}, counts: {{}} }});
 }}
 
 function renderEmailWorkspace(payload) {{
-  const emails = Array.isArray(payload.emails) ? payload.emails.slice() : [];
-  const stats = payload.stats || {{}};
-  const gmailUnread = Number((stats.gmail || {{}}).unread || 0);
-  const gmailTotal = Number((stats.gmail || {{}}).total || 0);
-  const outlookUnread = Number((stats.outlook || {{}}).unread || 0);
-  const outlookTotal = Number((stats.outlook || {{}}).total || 0);
-  const totalUnread = Number(stats.total_unread || (gmailUnread + outlookUnread));
-  const newsletterCount = emails.filter(e => emailCategoryFor(e) === 'newsletters').length;
-  const updatesCount = emails.filter(e => emailCategoryFor(e) === 'updates').length;
-  const focusedItems = emails.filter(e => emailPriorityFor(e) !== 'low');
-  const highPriority = emails.filter(e => emailPriorityFor(e) === 'high').length;
-  const waitingOnYou = emails.filter(e => !e.is_read && emailPriorityFor(e) !== 'low').length;
-  const totalAccounts = (gmailTotal > 0 ? 1 : 0) + (outlookTotal > 0 ? 1 : 0) || 2;
-  const focusScore = Math.max(42, Math.min(96, Math.round(100 - (totalUnread * 1.2) - (newsletterCount * 0.35) + (focusedItems.length * 0.9))));
-  const inboxZero = Math.max(0, Math.min(100, Math.round(100 - (totalUnread * 1.1))));
-  const estimatedMinutes = Math.max(18, Math.round(emails.reduce((acc, item) => acc + Math.max(1, Math.round(String(item.snippet || '').length / 40)), 0)));
-  const timeSavedMinutes = Math.max(32, Math.round((newsletterCount * 3.5) + (updatesCount * 2.2) + (focusedItems.length * 1.4)));
-  const timeSavedHours = Math.floor(timeSavedMinutes / 60);
-  const timeSavedRemainder = timeSavedMinutes % 60;
+  const modulePayload = payload || {{}};
+  const emails = Array.isArray(modulePayload.emails) ? modulePayload.emails.slice() : [];
+  const stats = modulePayload.stats || {{}};
+  const counts = modulePayload.counts || {{}};
+  const totalUnread = Number(stats.total_unread || counts.unread || 0);
+  const highPriority = Number(counts.priority || 0);
+  const waitingOnYou = Number(counts.waiting || 0);
+  const totalAccounts = Number(counts.accounts || 0);
+  const focusScore = Number(counts.inbox_health_score || 0);
   const selected = emailSelectedItem();
+  const overviewCards = Array.isArray(modulePayload.inbox_overview) ? modulePayload.inbox_overview : [];
+  const priorityRows = Array.isArray(modulePayload.priority_rows) ? modulePayload.priority_rows : [];
+  const intelligenceCards = Array.isArray(modulePayload.intelligence_cards) ? modulePayload.intelligence_cards : [];
+  const categoryRows = Array.isArray(modulePayload.categories) ? modulePayload.categories : [];
+  const threadRows = Array.isArray(modulePayload.threads) ? modulePayload.threads : [];
+  const healthRows = Array.isArray(modulePayload.health_rows) ? modulePayload.health_rows : [];
+  const sourceRows = Array.isArray(modulePayload.source_rows) ? modulePayload.source_rows : [];
+  const snoozedRows = Array.isArray(modulePayload.snoozed_rows) ? modulePayload.snoozed_rows : [];
+  const automationRows = Array.isArray(modulePayload.automation_rows) ? modulePayload.automation_rows : [];
+  const pendingRows = Array.isArray(modulePayload.pending_actions) ? modulePayload.pending_actions : [];
+  const patternRows = Array.isArray(modulePayload.pattern_rows) ? modulePayload.pattern_rows : [];
+  const availability = Array.isArray(modulePayload.availability_notes) ? modulePayload.availability_notes.filter(Boolean) : [];
 
-  _setTextIfPresent('emailStatUnread', String(totalUnread));
+  emailRuntimeNote(modulePayload.runtime_note || availability[0] || 'Email is live and connected.');
+  _setTextIfPresent('emailStatUnread', String(totalUnread || 0));
   _setTextIfPresent('emailStatUnreadSub', totalUnread ? 'Needs review' : 'Inbox settled');
-  _setTextIfPresent('emailStatPriority', String(highPriority));
+  _setTextIfPresent('emailStatPriority', String(highPriority || 0));
   _setTextIfPresent('emailStatPrioritySub', highPriority ? 'High priority' : 'No red flags');
-  _setTextIfPresent('emailStatWaiting', String(waitingOnYou));
+  _setTextIfPresent('emailStatWaiting', String(waitingOnYou || 0));
   _setTextIfPresent('emailStatWaitingSub', waitingOnYou ? 'From others' : 'Queue is clear');
-  _setTextIfPresent('emailStatSent', String(Math.max(4, Math.round(emails.length * 0.45))));
-  _setTextIfPresent('emailStatSentSub', 'Emails');
-  _setTextIfPresent('emailStatTimeSaved', `${{timeSavedHours}}h ${{String(timeSavedRemainder).padStart(2, '0')}}m`);
-  _setTextIfPresent('emailStatTimeSavedSub', 'This week');
-  _setTextIfPresent('emailStatFocus', `${{focusScore}}%`);
-  _setTextIfPresent('emailStatFocusSub', focusScore >= 85 ? 'Excellent' : (focusScore >= 70 ? 'Stable' : 'Needs care'));
+  _setTextIfPresent('emailStatSent', '—');
+  _setTextIfPresent('emailStatSentSub', 'Unavailable');
+  _setTextIfPresent('emailStatTimeSaved', '—');
+  _setTextIfPresent('emailStatTimeSavedSub', 'Unavailable');
+  _setTextIfPresent('emailStatFocus', focusScore ? `${{focusScore}}%` : '—');
+  _setTextIfPresent('emailStatFocusSub', focusScore >= 80 ? 'Healthy' : (focusScore >= 55 ? 'Watch' : 'Partial'));
   _setTextIfPresent('emailSidebarSelected', selected ? 'Active' : 'None');
-  _setTextIfPresent('emailSidebarThreads', String(Math.max(3, focusedItems.length)));
-  _setTextIfPresent('emailSidebarPending', String(waitingOnYou));
-  _setTextIfPresent('emailSidebarAccounts', String(totalAccounts));
-  _setTextIfPresent('emailEngineStatusCopy', `${{totalAccounts}} account${{totalAccounts === 1 ? '' : 's'}} synced · focus score ${{focusScore}}%`);
+  _setTextIfPresent('emailSidebarThreads', String(threadRows.length || 0));
+  _setTextIfPresent('emailSidebarPending', String(pendingRows.length || 0));
+  _setTextIfPresent('emailSidebarAccounts', String(totalAccounts || 0));
+  _setTextIfPresent('emailEngineStatusCopy', availability[0] || `${{totalAccounts}} source lane${{totalAccounts === 1 ? '' : 's'}} loaded`);
 
   const sidebarStatus = document.getElementById('emailSidebarStatus');
   if (sidebarStatus) {{
     const rows = [
-      ['Accounts', `${{totalAccounts}} connected`],
-      ['Sync Status', emailUnreadOnly ? 'Unread mode' : 'All synced'],
-      ['Last Sync', '1 min ago'],
-      ['Storage Used', `${{Math.max(18, Math.min(72, Math.round((emails.length / Math.max(1, gmailTotal + outlookTotal || emails.length)) * 100)))}}%`],
+      ['Accounts', `${{Number(counts.connected_accounts || 0)}} connected`],
+      ['Sync Status', modulePayload.available === false ? 'Partial' : (emailUnreadOnly ? 'Unread mode' : 'Live module')],
+      ['Recent Activity', `${{Number(counts.recent_activity || 0)}} event(s)`],
+      ['Cache', `${{Number(counts.cached || 0)}} message(s)`],
     ];
     sidebarStatus.innerHTML = rows.map(([label, value]) => `<div class="email-status-row"><span>${{escHtml(label)}}</span><strong>${{escHtml(value)}}</strong></div>`).join('');
   }}
 
   const overview = document.getElementById('emailOverviewStats');
   if (overview) {{
-    const cards = [
-      ['Unread', totalUnread],
-      ['Actionable', focusedItems.length],
-      ['Waiting', waitingOnYou],
-      ['Newsletters', newsletterCount],
-      ['Updates', updatesCount],
-    ];
-    overview.innerHTML = cards.map(([label, value]) => `<div class="email-overview-stat"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(label)}}</span></div>`).join('');
+    overview.innerHTML = (overviewCards.length ? overviewCards : [
+      {{ label: 'Unread', value: totalUnread }},
+      {{ label: 'Actionable', value: highPriority + waitingOnYou }},
+      {{ label: 'Waiting', value: waitingOnYou }},
+    ]).map((item) => `<div class="email-overview-stat"><strong>${{escHtml(String(item.value ?? '—'))}}</strong><span>${{escHtml(item.label || 'Inbox')}}</span></div>`).join('');
   }}
-  _setTextIfPresent('email-zero-score', `${{inboxZero}}%`);
+  _setTextIfPresent('email-zero-score', focusScore ? `${{focusScore}}%` : '—');
   const zeroBar = document.getElementById('email-zero-bar');
-  if (zeroBar) zeroBar.style.width = `${{inboxZero}}%`;
-  _setTextIfPresent('email-zero-note', totalUnread <= 8 ? 'Your inbox is under control. Protect the focus window.' : 'There is enough noise here that JARVIS should keep filtering for you.');
+  if (zeroBar) zeroBar.style.width = `${{Math.max(0, Math.min(100, focusScore || 0))}}%`;
+  _setTextIfPresent('email-zero-note', availability[0] || (totalUnread <= 8 ? 'Your inbox is under control. Protect the focus window.' : 'Live inbox load is high enough that JARVIS should keep filtering for you.'));
 
   const priorityEl = document.getElementById('emailPriorityFocus');
   if (priorityEl) {{
-    const priorityRows = [
-      ['High Priority', highPriority, 'Requires action or decision', 'high'],
-      ['Time Sensitive', Math.max(0, focusedItems.length - highPriority), 'Needs attention within 24h', 'medium'],
-      ['Waiting on You', waitingOnYou, 'Others are waiting on your response', 'info'],
-    ];
-    priorityEl.innerHTML = priorityRows.map(([label, count, copy, tone]) => `<div class="email-priority-item"><div class="email-priority-main"><strong>${{escHtml(label)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-priority-badge ${{tone}}">${{escHtml(String(count))}}</div></div>`).join('');
+    priorityEl.innerHTML = (priorityRows.length ? priorityRows : [
+      {{ title: 'High Priority', count: highPriority, detail: 'Requires action or decision', tone: 'high' }},
+      {{ title: 'Waiting On You', count: waitingOnYou, detail: 'Unread messages likely needing a reply', tone: 'info' }},
+    ]).map((item) => `<div class="email-priority-item"><div class="email-priority-main"><strong>${{escHtml(item.title || 'Priority')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="email-priority-badge ${{escHtml(String(item.tone || 'info'))}}">${{escHtml(String(item.count ?? 0))}}</div></div>`).join('');
   }}
 
   const intelEl = document.getElementById('emailIntelligenceGrid');
   if (intelEl) {{
-    const responseRate = emails.length ? Math.max(62, Math.min(98, Math.round((emails.filter(e => e.is_read).length / emails.length) * 100))) : 87;
-    const bestWindow = highPriority ? 'Today 9:00 AM - 11:00 AM' : 'This afternoon';
-    const topSenders = Array.from(new Map(emails.map(item => [String(item.sender_name || item.sender_email || 'Unknown'), item])).keys()).slice(0, 3).join(', ') || 'Inbox is quiet';
-    const cards = [
-      ['Best Response Window', bestWindow, 'High response rate window'],
-      ['Response Rate', `${{responseRate}}%`, `Above your average (${{Math.max(54, responseRate - 11)}}%)`],
-      ['Top Senders', topSenders, 'Most common people in this queue'],
-      ['Reading Time', `${{estimatedMinutes}}m`, 'Estimated for current unread'],
-    ];
-    intelEl.innerHTML = cards.map(([title, value, copy]) => `<div class="email-intelligence-item"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(title)}}</span><span>${{escHtml(copy)}}</span></div>`).join('');
+    intelEl.innerHTML = (intelligenceCards.length ? intelligenceCards : [
+      {{ title: 'Connected Sources', value: `${{totalAccounts}} lane(s)`, detail: 'Source sync state unavailable.' }},
+    ]).map((item) => `<div class="email-intelligence-item"><strong>${{escHtml(String(item.value ?? '—'))}}</strong><span>${{escHtml(item.title || 'Insight')}}</span><span>${{escHtml(item.detail || '')}}</span></div>`).join('');
   }}
 
   renderEmailList(emailCache, emailFilter);
@@ -40245,100 +40469,75 @@ function renderEmailWorkspace(payload) {{
 
   const categoryEl = document.getElementById('emailCategoryList');
   if (categoryEl) {{
-    const groups = [
-      ['Needs Your Response', waitingOnYou, 'Messages awaiting your reply'],
-      ['Waiting On Others', Math.max(0, emails.filter(e => e.is_read && emailPriorityFor(e) !== 'low').length - 1), 'Conversations already in motion'],
-      ['Important Updates', updatesCount, 'Receipts, reports, and system notices'],
-      ['Projects & Work', emails.filter(e => ['focused', 'primary'].includes(emailCategoryFor(e))).length, 'Execution and launch lanes'],
-      ['Family & Personal', emails.filter(e => emailCategoryFor(e) === 'family').length, 'Home and relationship context'],
-      ['Newsletters', newsletterCount, 'Read later material'],
-    ];
-    categoryEl.innerHTML = groups.map(([title, value, copy]) => `<div class="email-category-item"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(value))}}</div></div>`).join('');
+    categoryEl.innerHTML = (categoryRows.length ? categoryRows : [
+      {{ title: 'No category data yet', value: '—', detail: availability[0] || 'No cached email is available.' }},
+    ]).map((item) => `<div class="email-category-item"><div><strong>${{escHtml(item.title || 'Category')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="email-pill info">${{escHtml(String(item.value ?? '—'))}}</div></div>`).join('');
   }}
 
   const threadEl = document.getElementById('emailThreadList');
   if (threadEl) {{
-    const threads = emailFilteredItems(emailCache, 'focused').slice(0, 5);
-    threadEl.innerHTML = threads.length ? threads.map(item => {{
-      const tone = emailPriorityFor(item);
-      return `<div class="email-thread-item"><div class="email-thread-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>${{escHtml(item.sender_name || item.sender_email || 'Unknown sender')}} · ${{escHtml(emailCategoryFor(item))}}</span></div><div style="text-align:right;"><div class="email-pill ${{tone}}">${{escHtml(tone)}}</div><span class="email-time" style="display:block;margin-top:6px;">${{escHtml(item.received_at ? fmtTime(item.received_at) : '—')}}</span></div></div>`;
-    }}).join('') : '<div class="loading-state">No active threads right now.</div>';
+    threadEl.innerHTML = threadRows.length ? threadRows.map((item) => `
+      <div class="email-thread-item">
+        <div class="email-thread-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>${{escHtml(item.participant_summary || 'Unknown sender')}} · ${{escHtml(item.category || 'primary')}}</span></div>
+        <div style="text-align:right;"><div class="email-pill ${{escHtml(item.priority || 'low')}}">${{escHtml(String(item.unread_count || item.count || 0))}}</div><span class="email-time" style="display:block;margin-top:6px;">${{escHtml(item.last_received_at ? fmtTime(item.last_received_at) : '—')}}</span></div>
+      </div>
+    `).join('') : '<div class="loading-state">No active threads right now.</div>';
   }}
 
   const healthEl = document.getElementById('emailHealthList');
   if (healthEl) {{
-    const items = [
-      ['Spam Protection', 'Active', 'Connector filtering is healthy'],
-      ['Unsubscribe Suggestions', `${{newsletterCount}} available`, 'Best batch relief opportunity'],
-      ['Duplicate Emails', `${{Math.max(0, Math.round(newsletterCount / 3))}} found`, 'Likely repeated updates'],
-      ['Large Attachments', `${{emails.filter(e => /pdf|assets|report|deck|invoice/i.test(String(e.subject || ''))).length}} visible`, 'Heavy review items'],
-      ['Old Emails to Archive', `${{Math.max(12, emails.length * 4)}} items`, 'Background cleanup candidate'],
-    ];
-    healthEl.innerHTML = items.map(([title, value, copy]) => `<div class="email-health-item"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(value))}}</div></div>`).join('');
+    healthEl.innerHTML = (healthRows.length ? healthRows : [
+      {{ title: 'Email health unavailable', value: '—', detail: availability[0] || 'No email health source is available.', tone: 'info' }},
+    ]).map((item) => `<div class="email-health-item"><div><strong>${{escHtml(item.title || 'Health')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="email-pill ${{escHtml(item.tone || 'info')}}">${{escHtml(String(item.value ?? '—'))}}</div></div>`).join('');
   }}
 
   const sourceEl = document.getElementById('emailSourceList');
   if (sourceEl) {{
-    const rows = [
-      ['iCloud (Primary)', `Inbox ${{Math.max(totalUnread, Math.round(gmailTotal * 0.4) || emails.length)}}`, 'Primary lane'],
-      ['Gmail (Work)', `Inbox ${{gmailUnread}}`, `${{gmailTotal}} total cached`],
-      ['Family (Shared)', `Inbox ${{Math.max(0, Math.round(outlookUnread * 0.6))}}`, 'Shared household coordination'],
-      ['Outlook', `Inbox ${{outlookUnread}}`, `${{outlookTotal}} total cached`],
-    ];
-    sourceEl.innerHTML = rows.map(([name, count, copy]) => `<div class="email-source-item"><div><strong>${{escHtml(name)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(count))}}</div></div>`).join('');
+    sourceEl.innerHTML = (sourceRows.length ? sourceRows : [
+      {{ label: 'No live source rows', count: '—', detail: availability[0] || 'Connector state is unavailable.', tone: 'info' }},
+    ]).map((item) => `<div class="email-source-item"><div><strong>${{escHtml(item.label || 'Source')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="email-pill ${{escHtml(item.tone || 'info')}}">${{escHtml(String(item.count ?? '—'))}}</div></div>`).join('');
   }}
 
   const snoozedEl = document.getElementById('emailSnoozedList');
   if (snoozedEl) {{
-    const candidates = emails.filter(e => ['newsletters', 'updates'].includes(emailCategoryFor(e))).slice(0, 3);
-    snoozedEl.innerHTML = candidates.length ? candidates.map((item, idx) => `<div class="email-pending-item"><div class="email-pending-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>Snoozed until ${{idx === 0 ? 'Today 10:00 AM' : idx === 1 ? 'Today 2:00 PM' : 'Tomorrow 9:00 AM'}}</span></div><div class="email-pill info">Later</div></div>`).join('') : '<div class="loading-state">Nothing is snoozed right now.</div>';
+    snoozedEl.innerHTML = snoozedRows.length ? snoozedRows.map((item) => `<div class="email-pending-item"><div class="email-pending-main"><strong>${{escHtml(item.title || 'Snoozed Mail')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="email-pill info">${{escHtml(item.status || 'Unavailable')}}</div></div>`).join('') : '<div class="loading-state">Nothing is snoozed right now.</div>';
   }}
 
   const automationEl = document.getElementById('emailAutomationList');
   if (automationEl) {{
-    const items = [
-      ['Auto-Filed Today', `${{newsletterCount + updatesCount}} emails`, 'Routine mail moved out of your main lane'],
-      ['Delegated to Agents', `${{Math.max(1, Math.round(focusedItems.length / 3))}} tasks created`, 'Catalyst and Workshop support'],
-      ['Snoozed for Later', `${{Math.max(0, newsletterCount - 1)}} emails`, 'Protected your focus window'],
-      ['Spam/Promotions Filtered', `${{Math.max(18, newsletterCount * 3)}} emails`, 'Noise removed before it reached you'],
-    ];
-    automationEl.innerHTML = items.map(([title, value, copy]) => `<div class="email-automation-item"><div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div><div class="email-pill info">${{escHtml(String(value))}}</div></div>`).join('');
+    automationEl.innerHTML = (automationRows.length ? automationRows : [
+      {{ title: 'No automation rows yet', value: '—', detail: availability[0] || 'Automation status is unavailable.' }},
+    ]).map((item) => `<div class="email-automation-item"><div><strong>${{escHtml(item.title || 'Automation')}}</strong><span>${{escHtml(item.detail || '')}}</span></div><div class="email-pill info">${{escHtml(String(item.value ?? '—'))}}</div></div>`).join('');
   }}
 
   const pendingEl = document.getElementById('emailPendingList');
   if (pendingEl) {{
-    const pending = emailFilteredItems(emailCache, 'focused').slice(0, 5);
-    pendingEl.innerHTML = pending.length ? pending.map(item => {{
-      const tone = emailPriorityFor(item);
-      return `<div class="email-pending-item"><div class="email-pending-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>${{escHtml(item.sender_name || item.sender_email || 'Unknown sender')}}</span></div><div class="email-pill ${{tone}}">${{escHtml(tone)}}</div></div>`;
-    }}).join('') : '<div class="loading-state">No pending actions right now.</div>';
+    pendingEl.innerHTML = pendingRows.length ? pendingRows.map((item) => `<div class="email-pending-item"><div class="email-pending-main"><strong>${{escHtml(item.subject || '(No subject)')}}</strong><span>${{escHtml(item.sender || 'Unknown sender')}}</span></div><div class="email-pill ${{escHtml(item.priority || 'info')}}">${{escHtml(item.priority || 'info')}}</div></div>`).join('') : '<div class="loading-state">No pending actions right now.</div>';
   }}
 
   const patternTime = document.getElementById('emailPatternTime');
-  if (patternTime) patternTime.textContent = `${{Math.floor(estimatedMinutes / 60)}}h ${{String(estimatedMinutes % 60).padStart(2, '0')}}m`;
+  if (patternTime) {{
+    const focusedPattern = patternRows.find((item) => String(item.label || '').toLowerCase() === 'focused') || patternRows[0];
+    patternTime.textContent = focusedPattern ? `${{focusedPattern.share || 0}}%` : '—';
+  }}
   const patternList = document.getElementById('emailPatternList');
   if (patternList) {{
-    const rows = [
-      ['Work', `${{Math.max(18, emails.filter(e => ['focused', 'primary'].includes(emailCategoryFor(e))).length)}}%`, `${{Math.max(48, Math.round(estimatedMinutes * 0.45))}}m`],
-      ['Personal', `${{Math.max(9, emails.filter(e => emailCategoryFor(e) === 'family').length * 6)}}%`, `${{Math.max(8, Math.round(estimatedMinutes * 0.16))}}m`],
-      ['Newsletters', `${{Math.max(7, newsletterCount * 3)}}%`, `${{Math.max(10, Math.round(estimatedMinutes * 0.18))}}m`],
-      ['Updates', `${{Math.max(6, updatesCount * 3)}}%`, `${{Math.max(7, Math.round(estimatedMinutes * 0.12))}}m`],
-      ['Other', `${{Math.max(4, 100 - 40 - 22 - 18 - 12)}}%`, `${{Math.max(4, Math.round(estimatedMinutes * 0.09))}}m`],
-    ];
-    patternList.innerHTML = rows.map(([label, pct, mins]) => `<div class="email-pattern-row"><strong>${{escHtml(label)}}</strong><span>${{escHtml(String(pct))}} · ${{escHtml(String(mins))}}</span></div>`).join('');
+    patternList.innerHTML = patternRows.length ? patternRows.map((item) => `<div class="email-pattern-row"><strong>${{escHtml(item.label || 'Pattern')}}</strong><span>${{escHtml(String(item.share || 0))}}% · ${{escHtml(item.detail || '')}}</span></div>`).join('') : '<div class="loading-state">No live pattern rows yet.</div>';
   }}
 
   const footer = document.getElementById('emailFooterStrip');
   if (footer) {{
+    const trustedActions = Array.isArray(modulePayload.trusted_actions) ? modulePayload.trusted_actions : [];
+    const composeTrusted = trustedActions.find((item) => String(item.id || '') === 'compose-draft');
     const pills = [
-      ['Focus on What Matters', 'Priority first. Noise last.'],
-      ['Protects Your Time', 'Automates the routine and protects your focus.'],
-      ['Intelligent Filtering', 'Right email, right time, never overwhelmed.'],
-      ['Secure & Private', 'Your email stays private and protected.'],
-      ['Seamless Across Devices', 'Same inbox, same context, everywhere you are.'],
-      ['Learns Continuously', 'Understands what matters to you most.'],
+      ['Inbox Cache', `${{Number(counts.cached || 0)}} live message(s) are currently visible in this runtime.`],
+      ['Unread Load', `${{totalUnread}} unread signal(s) are still waiting in the live cache.`],
+      ['Draft Boundary', composeTrusted && composeTrusted.available !== false ? 'Shared draft staging is available for real compose flows.' : 'Shared draft staging is unavailable in this runtime.'],
+      ['Continuity', `${{Number(counts.recent_activity || 0)}} recent operator event(s) are already tied to Email.`],
+      ['Source Status', `${{Number(counts.connected_accounts || 0)}} connected source lane(s) are visible right now.`],
+      ['Live Boundary', availability[0] || 'Email is running from live cache and sync state instead of placeholder inbox math.'],
     ];
-    footer.innerHTML = pills.map(([title, copy]) => `<div class="email-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('') + `<div class="email-footer-pill email-engine-status"><div><strong>Email Engine Online</strong><span>${{escHtml(totalAccounts + ' accounts synced · updated 1 min ago')}}</span></div><b></b></div>`;
+    footer.innerHTML = pills.map(([title, copy]) => `<div class="email-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('') + `<div class="email-footer-pill email-engine-status"><div><strong>Email Engine Online</strong><span>${{escHtml(modulePayload.runtime_note || 'Email is live and connected.')}}</span></div><b></b></div>`;
   }}
 }}
 
@@ -40437,25 +40636,10 @@ function renderEmailPreview(item) {{
 }}
 
 function emailPreviewAttachments(item) {{
-  const subject = String(item.subject || '').toLowerCase();
-  if (subject.includes('launch') || subject.includes('asset')) {{
+  const attachmentCount = Number(item?.attachment_count || 0);
+  if (attachmentCount > 0) {{
     return [
-      {{ name: 'Launch Assets.zip', meta: '24.8 MB' }},
-      {{ name: 'Email Sequence.pdf', meta: '2.1 MB' }},
-      {{ name: 'Social Content.xlsx', meta: '1.3 MB' }},
-      {{ name: 'Lead Magnet.pdf', meta: '3.7 MB' }},
-    ];
-  }}
-  if (subject.includes('report') || subject.includes('budget')) {{
-    return [
-      {{ name: 'Review Packet.pdf', meta: '1.8 MB' }},
-      {{ name: 'Finance Summary.xlsx', meta: '860 KB' }},
-    ];
-  }}
-  if (subject.includes('speaking') || subject.includes('summit')) {{
-    return [
-      {{ name: 'Event Brief.docx', meta: '420 KB' }},
-      {{ name: 'Proposed Session.pdf', meta: '1.1 MB' }},
+      {{ name: `${{attachmentCount}} attachment${{attachmentCount === 1 ? '' : 's'}}`, meta: 'Attachment metadata is not fully exposed in this runtime yet.' }},
     ];
   }}
   return [];
