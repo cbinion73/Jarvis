@@ -1643,6 +1643,15 @@ class AgentScheduler:
         except Exception:
             logger.debug("process_auto_approvals tick failed (non-fatal)", exc_info=True)
 
+        # Drive the event fabric autonomously so kernel events and attention routing
+        # happen unattended — not only when an HTTP consumer polls background_agent_status.
+        try:
+            background_cycle = getattr(self._runtime, "background_cycle", None)
+            if callable(background_cycle):
+                background_cycle()
+        except Exception:
+            logger.debug("background_cycle tick failed (non-fatal)", exc_info=True)
+
         # Epic 10: Family mode auto-advance (every ~30 min via the 60-s tick counter)
         self._maybe_auto_advance_mode()
 

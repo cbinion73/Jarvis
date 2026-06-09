@@ -951,6 +951,12 @@ class ApprovalGuard:
                 )
             except Exception:
                 logger.warning("Supervision decision evaluation failed during request staging", exc_info=True)
+                # Fail-closed: if supervision is required but unavailable, block staging
+                # rather than queue the request without a ruling (Article III.7 Safe Degradation).
+                raise RuntimeError(
+                    "Supervision evaluation failed; action cannot be staged without a ruling. "
+                    "Resolve the supervision engine fault before retrying."
+                ) from None
 
         request = ApprovalRequest(
             request_id=str(uuid.uuid4()),
@@ -1070,7 +1076,21 @@ class ApprovalGuard:
             )
         except Exception:
             logger.warning("Supervision decision evaluation failed during execution", exc_info=True)
-            return stored
+            # Use the stored staging decision only if it contains an explicit resolution.
+            # An empty stored dict means staging also failed — fall through to degraded-block
+            # rather than proceeding without any ruling (Article III.7 Safe Degradation).
+            if str(stored.get("resolution", "")).strip():
+                return stored
+            return {
+                "resolution": "forbidden",
+                "approval_required": True,
+                "sandbox_required": False,
+                "escalation_required": True,
+                "rollback_posture": "manual-only",
+                "authority_stage": "degraded",
+                "reasons": ["Supervision evaluation failed at both staging and execution; execution blocked."],
+                "degraded": True,
+            }
 
     def get_pending_for_ui(self, actor_id: str = "chris") -> list[dict]:
         """

@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (P1 True-Up session)
+Last updated: 2026-06-09 (GAP-2 + GAP-3 resolved; pending commit+push to Hetzner)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -32,34 +32,37 @@ Last updated: 2026-06-09 (P1 True-Up session)
 
 ## Current Phase
 
-P2 (next): Make always-on TRUE + close enforcement seams.
-P1 (true-up): DONE this session.
+P2: GAP-1 DONE. Now wiring event fabric (GAP-2) + enforcement seams (GAP-3, GAP-5).
 
 ## Gap List (priority order)
 
-### GAP-1 — Always-on is broken on this machine [P2, HIGHEST]
-7 of 8 jarvis launchd jobs exit with code 78 (EX_CONFIG): installed plists
-in ~/Library/LaunchAgents point at the stale checkout
-/Users/chris/Desktop/CODE/JARVIS. Repo is /Users/chris/Desktop/JARVIS.
-Server is not running; nothing is actually always-on.
-Fix: regenerate plists from ops/launchd templates with correct paths,
-reinstall via ops/install_launchd_services.sh (path-corrected), verify
-launchctl + /health + /api/runtime/posture. Until then Level 3 exit gate
-is NOT met.
+### GAP-1 — Always-on assessment [REASSESSED 2026-06-09]
+IMPORTANT: JARVIS does NOT run on the Mac. Production is a Hetzner VPS.
+Push to main → GitHub Actions → SSH → docker compose up --build jarvis.
+Stack: jarvis (FastAPI) + chronicle + ghostwritr + nginx + cloudflared +
+postgres + redis. Data persisted in Docker volume jarvis_data at /app/data.
+The local launchd fix done earlier this session was irrelevant to production.
+Level 3 always-on gate: EVALUATE against Hetzner Docker stack, not local.
+The Docker service has restart: unless-stopped — always-on is structurally
+met. Actual health depends on the running container on Hetzner.
 
-### GAP-2 — Event fabric is poll-driven, not autonomous [P2]
-BackgroundTaskScheduler.tick() (jarvis/agentic.py:2107) only runs when an
-HTTP consumer calls background_agent_status. The threaded AgentScheduler
-(jarvis/scheduler.py:1419) ticks every ~60s but never drives the event
-fabric. runtime_kernel_events.jsonl has never been written; data/state/
-has never been created.
-Fix: have AgentScheduler (or a dedicated loop) invoke the fabric tick so
-events, kernel lifecycle, and attention routing run unattended.
+### GAP-2 — Event fabric is poll-driven, not autonomous [RESOLVED 2026-06-09]
+Fixed: added background_cycle() call to AgentScheduler._tick()
+(jarvis/scheduler.py:1646). Now every 60s the scheduler drives the event
+fabric unattended. Verified: background_state.json, event_bus_events.json,
+event_bus_log.jsonl, and runtime_kernel_state.json all updated without any
+HTTP poll. 4 new tests in tests/test_scheduler_fabric_tick.py (all pass).
+runtime_kernel_events.jsonl only writes on agent lifecycle transitions
+(apply_control / record_heartbeat) — correct, not a gap.
 
-### GAP-3 — Supervision is fail-open on exceptions [P3]
-approvals.py:953 and :1072 swallow evaluate_action failures and fall back
-to the stored decision. Degraded-mode behavior should contract to a lower
-authority stage (constitution Article III.7 Safe Degradation), not proceed.
+### GAP-3 — Supervision is fail-open on exceptions [RESOLVED 2026-06-09]
+Fixed approvals.py two sites:
+- Staging (request_approval): exception in evaluate_action now raises
+  RuntimeError — action is not queued without a ruling.
+- Execution (_resolve_supervision_decision): exception falls back to stored
+  decision only if stored has an explicit resolution; empty stored → degraded
+  block dict (resolution=forbidden, degraded=True).
+5 new tests in tests/test_approval_guard_fail_closed.py (all pass).
 
 ### GAP-4 — Enforcement is choke-point, not universal [P3]
 Supervision/boundary gating happens in ApprovalManager.execute_approved and
@@ -147,17 +150,15 @@ writers or multi-process contention on persistence.py.
   blockers.md #3
 - Hardware-dependent items: Bambu printer, wake-word/speaker models,
   perception devices, E14 host/NAS/UPS — blockers.md #5–8
-- Confirm: OK to reinstall launchd plists pointing at
-  /Users/chris/Desktop/JARVIS (GAP-1)? This restarts the always-on stack
-  on this Mac.
+- Home Assistant credentials (HOME_ASSISTANT_URL / HOME_ASSISTANT_TOKEN) —
+  blockers.md #1 (still needed)
+- Live household entity map (garage/climate/lighting/lock/leak names)
 
 ## Next 3 Work Items
 
-1. GAP-1: regenerate + reinstall launchd plists with correct repo paths;
-   verify /health, /api/runtime/posture, guardian heartbeat. (Needs Chris
-   confirmation above, or run server manually in the interim.)
-2. GAP-2: drive event fabric + kernel from AgentScheduler tick; prove
-   runtime_kernel_events.jsonl and data/state/event_log.jsonl get written
-   unattended; add restart-survival test.
-3. GAP-3 + GAP-5: fail-closed supervision degradation; viewer requirement
-   on /api/learning/proposals/{id}.
+1. GAP-3: approvals.py:953 and :1072 — swallow evaluate_action failures must
+   contract to lower authority stage (fail-closed), not proceed.
+2. GAP-5: /api/learning/proposals/{id} takes no viewer; governance write/
+   approve paths open to any local caller.
+3. GAP-6: add suppress + escalate postures to _compute_interruption_posture
+   (apple_api.py:2702).
