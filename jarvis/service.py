@@ -13744,7 +13744,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             if isinstance(item, dict) and str(item.get("theme") or "").strip()
         ]
         theme = top_themes[0] if top_themes else (recurring[0] if recurring else str(daily_word.get("domain") or "").strip())
-        passage = str(daily_word.get("passage") or chronicle_context.get("study", {}).get("passage") or "").strip()
+        study = chronicle_context.get("study")
+        study_passage = study.get("passage") if isinstance(study, dict) else ""
+        passage = str(daily_word.get("passage") or study_passage or "").strip()
         focus = ""
         if chronicle_context.get("active_prayers"):
             focus = str(chronicle_context["active_prayers"][0].get("text") or "").strip()
