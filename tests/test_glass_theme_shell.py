@@ -89,6 +89,23 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("Refresh Navigation", html)
         self.assertIn("Open Navigation Center", html)
 
+    def test_render_glass_shell_wires_vision_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="vision-runtime-note"', html)
+        self.assertIn('id="vision-refresh-button"', html)
+        self.assertIn('id="vision-privacy-button"', html)
+        self.assertIn("function visionRuntimeNote(", html)
+        self.assertIn("function visionFetchJson(", html)
+        self.assertIn("function visionOpenRoute(", html)
+        self.assertIn("function visionApplyPrivacyToggle(", html)
+        self.assertIn("function refreshVisionDesktop(", html)
+        self.assertIn("/api/vision/module?actor=Chris", html)
+        self.assertIn("/api/privacy-update", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Refresh Vision", html)
+        self.assertIn("Vision is live and connected.", html)
+
     def test_render_glass_shell_wires_daily_brief_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

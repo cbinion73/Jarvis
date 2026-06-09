@@ -20809,6 +20809,11 @@ body::after {{
             <span>Executive Mode</span>
           </div>
         </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+          <span id="vision-runtime-note" style="font-size:12px;color:rgba(255,255,255,0.74);">Vision is live and connected.</span>
+          <button class="vision-header-action" type="button" id="vision-refresh-button" onclick="refreshVisionDesktop()">Refresh Vision</button>
+          <button class="vision-header-action" type="button" id="vision-privacy-button" onclick="visionApplyPrivacyToggle()">Pause Vision</button>
+        </div>
         <span id="vision-generated-at">Updated just now</span>
       </div>
     </div>
@@ -20817,7 +20822,7 @@ body::after {{
       <aside class="vision-input-sidebar">
         <div class="vision-side-title">Vision Inputs</div>
         <div class="vision-side-list" id="vision-inputs-list"></div>
-        <button class="vision-side-cta" onclick="switchView('home')">Vision Settings →</button>
+        <button class="vision-side-cta" onclick="visionOpenRoute('/settings-center', 'home', 'Open Vision Settings', 'Review privacy, connectors, and profile defaults that shape Vision.')">Vision Settings →</button>
       </aside>
 
       <div class="vision-grid">
@@ -20841,7 +20846,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-thumb-row" id="vision-scene-thumbs"></div>
-            <button class="vision-section-link" onclick="switchView('journey')" style="margin-top:14px;">View all scenes →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/activity-center', 'journey', 'View All Scenes', 'Review the live continuity lane behind recent visual scenes.')" style="margin-top:14px;">View all scenes →</button>
           </div>
         </section>
 
@@ -20852,7 +20857,7 @@ body::after {{
                 <div class="vision-card-number">2. What JARVIS Noticed</div>
                 <h3>Key observations and insights from what I see.</h3>
               </div>
-              <button class="vision-header-action" onclick="loadVisionView()">Refresh</button>
+              <button class="vision-header-action" onclick="refreshVisionDesktop()">Refresh</button>
             </div>
             <div class="vision-doc-list" id="vision-feed"></div>
           </div>
@@ -20865,7 +20870,7 @@ body::after {{
                 <div class="vision-card-number">3. Change Detection</div>
                 <h3>What has changed since last seen.</h3>
               </div>
-              <button class="vision-header-action" onclick="switchView('journey')">View Timeline</button>
+              <button class="vision-header-action" onclick="visionOpenRoute('/activity-center', 'journey', 'View Vision Timeline', 'Inspect recent visual changes inside the shared activity timeline.')">View Timeline</button>
             </div>
             <div class="vision-change-grid" id="vision-changes-list"></div>
           </div>
@@ -20880,7 +20885,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-doc-list" id="vision-docs-list"></div>
-            <button class="vision-section-link" onclick="switchView('publishing')" style="margin-top:14px;">View all documents →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/publish', 'publishing', 'Open Publishing', 'Review extracted text and document-adjacent visual context inside Publishing.')" style="margin-top:14px;">View all documents →</button>
           </div>
         </section>
 
@@ -20893,7 +20898,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-memory-grid" id="vision-memory-grid"></div>
-            <button class="vision-section-link" onclick="switchView('journey')" style="margin-top:14px;">Browse all visual memories →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/chronicle-center', 'journey', 'Open Visual Memories', 'Inspect saved visual memories through Chronicle continuity.')" style="margin-top:14px;">Browse all visual memories →</button>
           </div>
         </section>
 
@@ -20906,7 +20911,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-route-list" id="vision-route-list"></div>
-            <button class="vision-section-link" onclick="switchView('command')" style="margin-top:14px;">View all routed items →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/activity-center', 'command', 'Open Routed Items', 'Review the live downstream actions created from visual observations.')" style="margin-top:14px;">View all routed items →</button>
           </div>
         </section>
 
@@ -20919,7 +20924,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-categories-grid" id="vision-categories-grid"></div>
-            <button class="vision-section-link" onclick="switchView('agents')" style="margin-top:14px;">View analytics dashboard →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/agent-ops-center', 'agents', 'Open Analytics Dashboard', 'Inspect the live agent and analytics posture behind Vision categories.')" style="margin-top:14px;">View analytics dashboard →</button>
           </div>
         </section>
 
@@ -20932,7 +20937,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-alert-list" id="vision-alerts"></div>
-            <button class="vision-section-link" onclick="switchView('health')" style="margin-top:14px;">View all alerts →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/health-center', 'health', 'Open Vision Alerts', 'Review health and anomaly alerts surfaced by Vision.')" style="margin-top:14px;">View all alerts →</button>
           </div>
         </section>
 
@@ -20945,7 +20950,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-quick-grid" id="vision-input-center"></div>
-            <button class="vision-section-link" onclick="switchView('chat')" style="margin-top:14px;">Open capture tools →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/activity-center', 'chat', 'Open Capture Tools', 'Continue the capture and interpretation flow from a live Vision observation.')" style="margin-top:14px;">Open capture tools →</button>
           </div>
         </section>
 
@@ -20958,7 +20963,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-pattern-list" id="vision-pattern-list"></div>
-            <button class="vision-section-link" onclick="switchView('journey')" style="margin-top:14px;">View all patterns →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/activity-center', 'journey', 'Open Vision Patterns', 'Review recurring visual patterns in the shared continuity lane.')" style="margin-top:14px;">View all patterns →</button>
           </div>
         </section>
 
@@ -20971,7 +20976,7 @@ body::after {{
               </div>
             </div>
             <div class="vision-health-grid" id="vision-health-grid"></div>
-            <button class="vision-section-link" onclick="switchView('health')" style="margin-top:14px;">View improvement plan →</button>
+            <button class="vision-section-link" onclick="visionOpenRoute('/health-center', 'health', 'Open Improvement Plan', 'Review the live confidence and improvement posture behind Vision health.')" style="margin-top:14px;">View improvement plan →</button>
           </div>
         </section>
 
@@ -26912,37 +26917,139 @@ function initDesktopCardSequences() {{
 ═══════════════════════════════════════════════════════════════ */
 let _visionState = null;
 let _visionPerception = null;
+let _visionModule = null;
+
+function visionRuntimeNote(text) {{
+  const el = document.getElementById('vision-runtime-note');
+  if (el) el.textContent = text || 'Vision is live and connected.';
+}}
+
+async function visionFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    const payload = await response.json().catch(() => null);
+    return {{ ok: response.ok, status: response.status, payload }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
+
+async function visionRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: (typeof dailyBriefName === 'function' && dailyBriefName()) || 'Chris',
+        domain: 'vision',
+        route: '/activity-center',
+        route_label: 'Open Activity Feed',
+        ...payload,
+      }}),
+    }});
+  }} catch (_error) {{
+    // Best-effort continuity logging only.
+  }}
+}}
+
+function visionOpenRoute(route, fallbackView = '', label = 'Open Vision Surface', detail = '') {{
+  visionRuntimeNote(`Opening ${{label}}…`);
+  visionRecordAction({{
+    action: label,
+    title: label,
+    detail: detail || `Vision opened ${{label}}.`,
+    why_now: 'Vision routed a related surface from live visual continuity.',
+    result_summary: `${{label}} opened from Vision.`,
+    related_kind: 'vision-route',
+    related_label: label,
+    route: route || '/activity-center',
+    route_label: label,
+    succeeded: true,
+  }});
+  if (typeof commandOpenCommandRoute === 'function') {{
+    commandOpenCommandRoute(route || '', fallbackView || '');
+  }} else if (fallbackView) {{
+    switchView(fallbackView);
+  }} else if (route) {{
+    window.location.href = route;
+  }}
+}}
+
+async function visionApplyPrivacyToggle() {{
+  const scene = _visionModule?.scene_overview || {{}};
+  const target = String(scene.lead_camera_target || scene.lead_camera_label || 'Desk Camera').trim() || 'Desk Camera';
+  const targetLabel = String(scene.lead_camera_label || target).trim() || target;
+  const currentlyEnabled = Boolean(scene.camera_enabled);
+  visionRuntimeNote(`${{currentlyEnabled ? 'Pausing' : 'Resuming'}} Vision…`);
+  const response = await visionFetchJson('/api/privacy-update', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      kind: 'camera',
+      target,
+      enabled: !currentlyEnabled,
+    }}),
+  }});
+  if (!response.ok) {{
+    visionRuntimeNote('Vision privacy update could not be saved.');
+    return;
+  }}
+  await visionRecordAction({{
+    action: currentlyEnabled ? 'Pause Vision' : 'Resume Vision',
+    title: targetLabel,
+    detail: `${{currentlyEnabled ? 'Paused' : 'Resumed'}} camera posture for ${{targetLabel}} from Vision.`,
+    why_now: 'Vision adjusted live privacy posture directly from the desktop surface.',
+    result_summary: `${{currentlyEnabled ? 'Paused' : 'Resumed'}} ${{targetLabel}}.`,
+    related_kind: 'vision-privacy',
+    related_label: targetLabel,
+    route: '/settings-center',
+    route_label: 'Open Settings',
+    succeeded: true,
+  }});
+  await loadVisionView();
+}}
+
+async function refreshVisionDesktop() {{
+  visionRuntimeNote('Refreshing Vision…');
+  await loadVisionView();
+}}
 
 async function loadVisionView() {{
   try {{
-    const [state, perception] = await Promise.all([
-      fetch('/api/vision-state?actor=Chris', {{ cache: 'no-store' }}).then(r => r.json()),
-      fetch('/api/perception-overview', {{ cache: 'no-store' }}).then(r => r.json()),
-    ]);
+    visionRuntimeNote('Loading Vision…');
+    const moduleResponse = await visionFetchJson('/api/vision/module?actor=Chris');
+    if (!moduleResponse.ok) throw new Error('Vision module unavailable');
+    const modulePayload = moduleResponse.payload || {{}};
+    const state = modulePayload.state_snapshot || {{}};
+    const perception = modulePayload.perception_overview || {{}};
+    const privacy = modulePayload.privacy_state || {{}};
+    _visionModule = modulePayload;
     _visionState = state || {{}};
     _visionPerception = perception || {{}};
 
-    const observations = Array.isArray(state?.recent_observations) ? state.recent_observations : [];
-    const captures = Array.isArray(state?.recent_captures) ? state.recent_captures : [];
-    const cameraEvents = Array.isArray(perception?.camera_events) ? perception.camera_events : [];
-    const objectEvents = Array.isArray(perception?.object_events) ? perception.object_events : [];
-    const anomalies = Array.isArray(perception?.anomalies) ? perception.anomalies : [];
-    const mics = Array.isArray(perception?.microphone_events) ? perception.microphone_events : [];
-    const workshopObjects = Array.isArray(perception?.workshop_objects) ? perception.workshop_objects : [];
-    const packageRules = Array.isArray(perception?.package_rules) ? perception.package_rules : [];
-    const privacy = perception?.privacy_state || {{}};
-    const summary = state?.summary || {{}};
-
-    const confidenceLabel = String(summary.confidence || 'medium').toLowerCase();
+    const observations = Array.isArray(state.recent_observations) ? state.recent_observations : [];
+    const captures = Array.isArray(state.recent_captures) ? state.recent_captures : [];
+    const cameraEvents = Array.isArray(perception.camera_events) ? perception.camera_events : [];
+    const objectEvents = Array.isArray(perception.object_events) ? perception.object_events : [];
+    const anomalies = Array.isArray(perception.anomalies) ? perception.anomalies : [];
+    const mics = Array.isArray(perception.microphone_events) ? perception.microphone_events : [];
+    const workshopObjects = Array.isArray(perception.workshop_objects) ? perception.workshop_objects : [];
+    const packageRules = Array.isArray(perception.package_rules) ? perception.package_rules : [];
+    const summary = state.summary || {{}};
+    const counts = modulePayload.counts || {{}};
+    const confidenceLabel = String(modulePayload.confidence || summary.confidence || 'medium').toLowerCase();
     const confidenceScore = confidenceLabel === 'high' ? 92 : confidenceLabel === 'medium' ? 84 : 72;
-    const sceneCount = observations.length + captures.length;
-    const changesCount = cameraEvents.length + objectEvents.length;
-    const insightsCount = observations.length + anomalies.length + workshopObjects.length;
-    const memoryCount = Number(summary.capture_count || 0) + Number(summary.observation_count || 0);
-    const lastUpdated = state?.generated_at || new Date().toISOString();
+    const sceneCount = Number(counts.observations || 0) + Number(counts.captures || 0);
+    const changesCount = Number(counts.camera_events || 0) + Number(counts.object_events || 0);
+    const insightsCount = Number(counts.anomalies || 0) + Number(counts.workshop_objects || 0) + Number(counts.observations || 0);
+    const memoryCount = sceneCount;
+    const lastUpdated = modulePayload.generated_at || state.generated_at || new Date().toISOString();
 
     _visionSetText('vision-status-value', summary.has_calibration ? 'Active' : 'Learning');
-    _visionSetText('vision-status-sub', summary.has_calibration ? 'Continuously observing' : 'Calibration ready to improve');
+    _visionSetText('vision-status-sub', modulePayload.runtime_note || (summary.has_calibration ? 'Continuously observing' : 'Calibration ready to improve'));
     _visionSetText('vision-confidence-score', `${{confidenceScore}}%`);
     _visionSetText('vision-confidence-sub', confidenceLabel.charAt(0).toUpperCase() + confidenceLabel.slice(1));
     _visionSetText('vision-scenes-today', String(sceneCount));
@@ -26954,6 +27061,7 @@ async function loadVisionView() {{
     _visionSetText('vision-memory-count', String(memoryCount));
     _visionSetText('vision-memory-sub', `${{summary.capture_count || 0}} captures remembered`);
     _visionSetText('vision-generated-at', `Updated ${{visionRelativeTime(lastUpdated)}}`);
+    _visionSetText('vision-privacy-button', (_visionModule?.scene_overview?.camera_enabled ?? true) ? 'Pause Vision' : 'Resume Vision');
 
     renderVisionSceneOverview(observations, captures, cameraEvents);
     renderVisionObservationFeed(observations, objectEvents);
@@ -26965,10 +27073,11 @@ async function loadVisionView() {{
     renderVisionAlerts(anomalies, cameraEvents);
     renderVisionInputs(mics, perception, packageRules);
     renderVisionPatterns(observations, workshopObjects, anomalies);
-    renderVisionHealth(state, perception, confidenceScore);
-    renderVisionActions();
-    renderVisionSidebar(perception);
-    renderVisionFooter(privacy);
+    renderVisionHealth(state, perception, confidenceScore, modulePayload);
+    renderVisionActions(modulePayload.quick_actions || []);
+    renderVisionSidebar(perception, modulePayload);
+    renderVisionFooter(privacy, modulePayload);
+    visionRuntimeNote(modulePayload.runtime_note || 'Vision is live and connected.');
   }} catch (e) {{
     console.warn('loadVisionView', e);
     const targets = ['vision-feed', 'vision-alerts', 'vision-scene-thumbs'];
@@ -26976,6 +27085,7 @@ async function loadVisionView() {{
       const el = document.getElementById(id);
       if (el) el.innerHTML = `<div class="vision-empty">Vision feed unavailable: ${{escHtml(String(e))}}</div>`;
     }});
+    visionRuntimeNote('Vision is partially unavailable right now.');
   }}
 }}
 
@@ -27143,9 +27253,9 @@ function renderVisionRoutes(observations, cameraEvents, anomalies) {{
   const el = document.getElementById('vision-route-list');
   if (!el) return;
   const routes = [
-    ...(observations.slice(0, 2).map(item => [item.summary || item.detail || 'Observation', visionDomainTag(item.summary || item.detail), 'Create idea → Launch plan'])),
-    ...(cameraEvents.slice(0, 2).map(item => [item.detail || item.event_type || 'Camera event', visionDomainTag(item.detail || item.zone), 'Route to household or delivery lane'])),
-    ...(anomalies.slice(0, 1).map(item => [item.detail || item.reading || 'Anomaly', 'Health', 'Escalate for review and action'])),
+    ...(observations.slice(0, 2).map(item => [item.summary || item.detail || 'Observation', visionDomainTag(item.summary || item.detail), 'Activity feed and Chronicle continuity'])),
+    ...(cameraEvents.slice(0, 2).map(item => [item.detail || item.event_type || 'Camera event', visionDomainTag(item.detail || item.zone), 'Home, delivery, or awareness follow-through'])),
+    ...(anomalies.slice(0, 1).map(item => [item.detail || item.reading || 'Anomaly', 'Health', 'Escalate into review and bounded action'])),
   ].slice(0, 5);
   if (!routes.length) {{
     el.innerHTML = '<div class="vision-empty">No routed vision actions yet.</div>';
@@ -27217,12 +27327,14 @@ function renderVisionAlerts(anomalies, cameraEvents) {{
 function renderVisionInputs(mics, perception, packageRules) {{
   const inputCenter = document.getElementById('vision-input-center');
   if (inputCenter) {{
+    const observations = Array.isArray(_visionState?.recent_observations) ? _visionState.recent_observations : [];
+    const captures = Array.isArray(_visionState?.recent_captures) ? _visionState.recent_captures : [];
     const cards = [
       ['Camera', `${{(perception.camera_events || []).length}} recent`, 'Live camera events'],
-      ['Upload', `${{(_visionState?.recent_captures || []).length}} saved`, 'Vision captures stored'],
-      ['Scan Doc', `${{(_visionState?.recent_observations || []).filter(item => /note|receipt|label|whiteboard|text/i.test(`${{item.summary || ''}} ${{item.detail || ''}}`)).length}} detected`, 'Document extraction ready'],
+      ['Upload', `${{captures.length}} saved`, 'Vision captures stored'],
+      ['Scan Doc', `${{observations.filter(item => /note|receipt|label|whiteboard|text/i.test(`${{item.summary || ''}} ${{item.detail || ''}}`)).length}} detected`, 'Document extraction ready'],
       ['Phone Live', `${{(perception.phone_presence || []).length}} active`, 'Mobile presence cues'],
-      ['Screen Grab', `${{mics.length}} heard`, 'Multimodal context'],
+      ['Audio Context', `${{mics.length}} recent`, 'Multimodal context when available'],
     ];
     inputCenter.innerHTML = cards.map(([title, value, copy]) => `
       <div class="vision-quick-item">
@@ -27256,9 +27368,9 @@ function renderVisionPatterns(observations, workshopObjects, anomalies) {{
   const el = document.getElementById('vision-pattern-list');
   if (!el) return;
   const items = [
-    observations[0] ? ['Scene Stability', observations[0].summary || observations[0].detail || 'Recent scene trend', 'Reliable pattern from saved captures'] : null,
-    workshopObjects[0] ? ['Workshop Signal', workshopObjects[0].detail || workshopObjects[0].observed_object || 'Workshop pattern noticed', 'Strong pattern in workshop state'] : null,
-    anomalies[0] ? ['Risk Watch', anomalies[0].detail || anomalies[0].reading || 'Anomaly trend', 'Escalate when repeated'] : null,
+    observations[0] ? ['Scene Stability', observations[0].summary || observations[0].detail || 'Recent scene trend', 'Drawn from the latest saved observations and captures'] : null,
+    workshopObjects[0] ? ['Workshop Signal', workshopObjects[0].detail || workshopObjects[0].observed_object || 'Workshop pattern noticed', 'Current workshop object lane is active'] : null,
+    anomalies[0] ? ['Risk Watch', anomalies[0].detail || anomalies[0].reading || 'Anomaly trend', 'Escalates when repeated in the live anomaly lane'] : null,
   ].filter(Boolean);
   if (!items.length) {{
     el.innerHTML = '<div class="vision-empty">Pattern learning has not started yet.</div>';
@@ -27275,17 +27387,18 @@ function renderVisionPatterns(observations, workshopObjects, anomalies) {{
     </div>`).join('');
 }}
 
-function renderVisionHealth(state, perception, confidenceScore) {{
+function renderVisionHealth(state, perception, confidenceScore, modulePayload = null) {{
   const el = document.getElementById('vision-health-grid');
   if (!el) return;
   const privacy = perception.privacy_state || {{}};
+  const counts = modulePayload?.counts || {{}};
   const cards = [
-    ['Scene Clarity', `${{confidenceScore}}%`, 'Excellent'],
-    ['Recognition Accuracy', `${{Math.max(78, confidenceScore - 1)}}%`, 'High'],
-    ['Text Extraction', `${{Math.max(72, confidenceScore - 3)}}%`, 'Strong'],
-    ['Change Detection', `${{Math.max(75, confidenceScore - 5)}}%`, 'Reliable'],
-    ['Privacy Posture', privacy.physicalMuteRequired ? 'Bounded' : 'Open', 'Protected by design'],
-    ['Calibration', state.calibration?.unit ? `${{state.calibration.reference_length}} ${{state.calibration.unit}} ref` : 'Not set', 'Measurement ready'],
+    ['Scene Confidence', `${{confidenceScore}}%`, `${{counts.observations || 0}} observation${{(counts.observations || 0) === 1 ? '' : 's'}} are informing the current scene posture.`],
+    ['Object Continuity', `${{counts.object_events || 0}} events`, 'Recent object signals are available to the Vision desktop.'],
+    ['Anomaly Watch', `${{counts.anomalies || 0}} active`, counts.anomalies ? 'Visible watch items are currently influencing Vision routing.' : 'No anomaly watches are active right now.'],
+    ['Privacy Posture', privacy.physicalMuteRequired ? 'Bounded' : 'Open', privacy.physicalMuteRequired ? 'Vision is respecting a bounded privacy posture.' : 'Vision privacy controls are available live.'],
+    ['Calibration', state.calibration?.unit ? `${{state.calibration.reference_length}} ${{state.calibration.unit}} ref` : 'Not set', state.calibration?.unit ? 'Measurement lane is calibrated.' : 'Measurement lane is still waiting for calibration.'],
+    ['Input Health', `${{counts.camera_events || 0}} camera · ${{counts.microphone_events || 0}} audio`, 'Shows which perception inputs have contributed recently.'],
   ];
   el.innerHTML = cards.map(([title, value, copy]) => `
     <div class="vision-health-item">
@@ -27297,42 +27410,49 @@ function renderVisionHealth(state, perception, confidenceScore) {{
     </div>`).join('');
 }}
 
-function renderVisionActions() {{
+function renderVisionActions(actions = []) {{
   const el = document.getElementById('vision-actions-list');
   if (!el) return;
-  const items = [
-    ['Analyze this scene', 'Open the voice/capture path for a fresh read.', `switchView('chat')`],
-    ['Compare with yesterday', 'Use Journey to compare memory across time.', `switchView('journey')`],
-    ['Extract text from image', 'Route notes and receipts into working systems.', `switchView('publishing')`],
-    ['Find something specific', 'Open Command and ask JARVIS to look for it.', `switchView('chat')`],
-    ['Check for safety issues', 'Escalate anomalies into Health or Home lanes.', `switchView('health')`],
-    ['Save as project reference', 'Send visual context into Workshop or Foundry.', `switchView('workshop')`],
+  const items = actions.length ? actions : [
+    {{ kind: 'route', label: 'Open Activity Feed', detail: 'Review recent visual continuity.', route: '/activity-center', fallback_view: 'journey' }},
+    {{ kind: 'route', label: 'Open Chronicle', detail: 'Inspect saved visual memories.', route: '/chronicle-center', fallback_view: 'chronicle' }},
+    {{ kind: 'route', label: 'Open Workshop', detail: 'Route workshop-relevant vision context.', route: '/workshop', fallback_view: 'workshop' }},
   ];
-  el.innerHTML = items.map(([title, copy, action]) => `
-    <button onclick="${{action}}">
-      <strong>${{escHtml(title)}}</strong>
-      <span>${{escHtml(copy)}}</span>
-    </button>`).join('');
+  el.innerHTML = items.map((item) => {{
+    const label = item.label || 'Vision Action';
+    const detail = item.detail || 'Continue the live Vision workflow.';
+    if (item.kind === 'privacy-toggle') {{
+      return `<button type="button" onclick="visionApplyPrivacyToggle()"><strong>${{escHtml(label)}}</strong><span>${{escHtml(detail)}}</span></button>`;
+    }}
+    const route = JSON.stringify(item.route || '/activity-center');
+    const fallbackView = JSON.stringify(item.fallback_view || '');
+    const safeLabel = JSON.stringify(label);
+    const safeDetail = JSON.stringify(detail);
+    return `<button type="button" onclick='visionOpenRoute(${{route}}, ${{fallbackView}}, ${{safeLabel}}, ${{safeDetail}})'><strong>${{escHtml(label)}}</strong><span>${{escHtml(detail)}}</span></button>`;
+  }}).join('');
 }}
 
-function renderVisionSidebar(perception) {{
+function renderVisionSidebar(perception, modulePayload = null) {{
   const list = document.getElementById('vision-inputs-list');
   if (!list) return;
   if (list.children.length) return;
-  renderVisionInputs([], perception || {{}}, []);
+  renderVisionInputs([], perception || {{}}, modulePayload?.perception_overview?.package_rules || []);
 }}
 
-function renderVisionFooter(privacy) {{
+function renderVisionFooter(privacy, modulePayload = null) {{
   const el = document.getElementById('vision-footer-strip');
   if (!el) return;
+  const counts = modulePayload?.counts || {{}};
+  const runtimeNote = modulePayload?.runtime_note || 'Vision is live and connected.';
+  const availability = Array.isArray(modulePayload?.availability_notes) ? modulePayload.availability_notes.filter(Boolean) : [];
   const cards = [
-    ['Sees What Matters', 'Focuses on signal, not noise.'],
-    ['Remembers Visually', 'Builds memory through what it sees.'],
-    ['Understands Context', 'Interprets with awareness of your world.'],
-    ['Learns Continuously', 'Improves its ability to see and discern.'],
-    ['Protects Your Privacy', privacy?.physicalMuteRequired ? 'Sees with boundaries. You stay in control.' : 'Privacy posture available.'],
-    ['Turns Insight Into Action', 'Connects what it sees to what should happen.'],
-    ['Vision Engine Online', 'All visual systems operational'],
+    ['Runtime Note', runtimeNote],
+    ['Visual Memory', `${{counts.captures || 0}} captures and ${{counts.observations || 0}} observations are available in Vision right now.`],
+    ['Perception Events', `${{counts.camera_events || 0}} camera events · ${{counts.object_events || 0}} object events · ${{counts.anomalies || 0}} anomaly items.`],
+    ['Workshop Signals', `${{counts.workshop_objects || 0}} workshop cues are currently in the perception lane.`],
+    ['Privacy Posture', privacy?.physicalMuteRequired ? 'Vision is bounded by a privacy requirement right now.' : 'Vision privacy posture is available live and can be adjusted.' ],
+    ['Availability', availability.length ? availability[0] : 'All current Vision sources responded normally.'],
+    ['Vision Engine Online', modulePayload?.summary || 'Visual systems are operating with current runtime data.'],
   ];
   el.innerHTML = cards.map(([title, copy]) => `<div class="vision-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}

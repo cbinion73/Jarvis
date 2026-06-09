@@ -1015,6 +1015,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def navigation_center() -> HTMLResponse:
         return HTMLResponse(render_navigation_module_page(await _build_navigation_module_payload()))
 
+    @app.get("/api/vision/module")
+    async def api_vision_module(actor: str = "Chris") -> JSONResponse:
+        return _json(await _build_vision_module_payload(actor))
+
     @app.get("/huddle-center", response_class=HTMLResponse)
     async def huddle_center() -> HTMLResponse:
         return HTMLResponse(render_huddle_module_page(await _build_huddle_module_payload()))
@@ -1500,6 +1504,161 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "route": route_packet.get("route") if isinstance(route_packet, dict) else {},
             "sections": sections,
             "warning": route_warning,
+        }
+
+    async def _build_vision_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        actor_name = str(actor_name or "Chris").strip() or "Chris"
+        availability_notes: list[str] = []
+        if hasattr(runtime, "vision_state_snapshot"):
+            state_snapshot = await asyncio.to_thread(runtime.vision_state_snapshot, actor_name)
+        else:
+            state_snapshot = {
+                "actor": actor_name,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "calibration": {},
+                "recent_observations": [],
+                "recent_captures": [],
+                "summary": {
+                    "observation_count": 0,
+                    "capture_count": 0,
+                    "has_calibration": False,
+                    "confidence": "low",
+                },
+            }
+            availability_notes.append("Vision runtime snapshot is not fully available in this environment.")
+        if hasattr(runtime, "perception_overview"):
+            perception_overview = await asyncio.to_thread(runtime.perception_overview)
+        else:
+            perception_overview = {}
+            availability_notes.append("Perception overview is not available in this runtime.")
+        if hasattr(runtime, "privacy_state"):
+            privacy_state = await asyncio.to_thread(runtime.privacy_state)
+        else:
+            privacy_state = {}
+            availability_notes.append("Vision privacy state is not available in this runtime.")
+
+        observations = list(state_snapshot.get("recent_observations") or [])
+        captures = list(state_snapshot.get("recent_captures") or [])
+        camera_events = list(perception_overview.get("camera_events") or [])
+        object_events = list(perception_overview.get("object_events") or [])
+        anomalies = list(perception_overview.get("anomalies") or [])
+        workshop_objects = list(perception_overview.get("workshop_objects") or [])
+        presence_events = list(perception_overview.get("presence_events") or [])
+        phone_presence = list(perception_overview.get("phone_presence") or [])
+        package_rules = list(perception_overview.get("package_rules") or [])
+        microphone_events = list(perception_overview.get("microphone_events") or [])
+        summary = dict(state_snapshot.get("summary") or {})
+        generated_at = str(state_snapshot.get("generated_at") or "")
+        confidence = str(summary.get("confidence") or "low").strip() or "low"
+        lead_scene = observations[0] if observations else captures[0] if captures else camera_events[0] if camera_events else {}
+        lead_camera_label = str(
+            lead_scene.get("camera_label")
+            or lead_scene.get("camera")
+            or lead_scene.get("source")
+            or "Desk Camera"
+        ).strip() or "Desk Camera"
+        lead_camera_target = str(
+            lead_scene.get("camera_id")
+            or lead_scene.get("source_id")
+            or lead_scene.get("camera")
+            or lead_camera_label
+        ).strip() or lead_camera_label
+        privacy_cameras = dict(privacy_state.get("cameras") or {})
+        lead_camera_state = dict(privacy_cameras.get(lead_camera_target) or privacy_cameras.get(lead_camera_label) or {})
+        camera_enabled = bool(lead_camera_state.get("enabled", True))
+        if bool(privacy_state.get("physicalMuteRequired")):
+            camera_enabled = False
+
+        if not bool(summary.get("has_calibration")):
+            availability_notes.append("Vision calibration has not been saved yet, so measurements and confidence remain partial.")
+        if not observations and not captures:
+            availability_notes.append("No recent actor-scoped vision captures or observations are available yet.")
+        if not camera_events:
+            availability_notes.append("No recent camera events were surfaced by the perception overview.")
+        if bool(privacy_state.get("physicalMuteRequired")):
+            availability_notes.append("Vision privacy posture is currently bounded by a physical mute or similar privacy requirement.")
+
+        runtime_note = "Vision is live and connected."
+        if availability_notes:
+            runtime_note = availability_notes[0]
+
+        return {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful" if (observations or captures or camera_events or object_events) else "Wired",
+            "summary": (
+                f"Vision loaded {len(observations)} observation(s), {len(captures)} capture(s), "
+                f"and {len(camera_events) + len(object_events)} recent perception event(s) into a dedicated desktop module."
+            ),
+            "what_became_real": "Vision now has a dedicated live module contract for the glass desktop instead of shell-side composition from older raw endpoints.",
+            "remains_partial": "Real camera/upload capture tooling and richer multimodal interpretation still depend on live upstream signals, but the desktop now renders honest continuity, privacy posture, calibration posture, and route-ready visual context from shared runtime state.",
+            "runtime_note": runtime_note,
+            "availability_notes": availability_notes[:8],
+            "state_snapshot": state_snapshot,
+            "perception_overview": perception_overview,
+            "privacy_state": privacy_state,
+            "scene_overview": {
+                "lead_scene": lead_scene,
+                "recent_scenes": list((observations[:4] + captures[:4]))[:6],
+                "lead_camera_label": lead_camera_label,
+                "lead_camera_target": lead_camera_target,
+                "camera_enabled": camera_enabled,
+            },
+            "quick_actions": [
+                {
+                    "kind": "privacy-toggle",
+                    "label": "Resume Vision" if not camera_enabled else "Pause Vision",
+                    "detail": f"{'Re-enable' if not camera_enabled else 'Temporarily pause'} {lead_camera_label} through the live privacy boundary.",
+                    "kind_target": "camera",
+                    "target": lead_camera_target,
+                    "enabled": not camera_enabled,
+                },
+                {
+                    "kind": "route",
+                    "label": "Open Activity Feed",
+                    "detail": "Review the recent continuity created from visual observations and captures.",
+                    "route": "/activity-center",
+                    "fallback_view": "journey",
+                },
+                {
+                    "kind": "route",
+                    "label": "Open Chronicle",
+                    "detail": "Inspect the memory lane connected to saved visual captures.",
+                    "route": "/chronicle-center",
+                    "fallback_view": "chronicle",
+                },
+                {
+                    "kind": "route",
+                    "label": "Open Workshop",
+                    "detail": "Route workshop-relevant visual signals into the maker lane.",
+                    "route": "/workshop",
+                    "fallback_view": "workshop",
+                },
+            ],
+            "counts": {
+                "observations": len(observations),
+                "captures": len(captures),
+                "camera_events": len(camera_events),
+                "object_events": len(object_events),
+                "anomalies": len(anomalies),
+                "workshop_objects": len(workshop_objects),
+                "presence_events": len(presence_events),
+                "phone_presence": len(phone_presence),
+                "package_rules": len(package_rules),
+                "microphone_events": len(microphone_events),
+            },
+            "proof_paths": {
+                "module_api": "/api/vision/module",
+                "vision_state_api": "/api/vision-state",
+                "perception_api": "/api/perception-overview",
+                "privacy_state_api": "/api/privacy-state",
+                "privacy_update_api": "/api/privacy-update",
+                "vision_analyze_api": "/api/vision/analyze",
+                "vision_calibration_api": "/api/vision/calibration",
+                "vision_measure_api": "/api/vision/measure",
+                "activity_api": "/api/activity/operator-action",
+            },
+            "confidence": confidence,
         }
 
     @app.get("/api/navigation/module")
@@ -7741,6 +7900,19 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 selection=dict(payload.get("selection") or {}),
             )
         except (ValueError, KeyError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/privacy-update")
+    async def api_privacy_update(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = runtime.update_privacy_state(
+                str(payload.get("kind", "")),
+                str(payload.get("target", "")),
+                enabled=payload.get("enabled"),
+                muted=payload.get("muted"),
+            )
+        except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return _json(result)
 
