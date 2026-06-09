@@ -437,6 +437,14 @@ class _StubRuntime:
         return {
             "members": [dict(item) for item in self._identity_members],
             "devices": [dict(item) for item in self._identity_devices],
+            "service": {
+                "hosted_base_url": "https://jarvis.teambinion.org",
+                "remote_admin_host": "",
+                "remote_admin_user": "root",
+                "hosted_provider": "Hetzner",
+                "edge_provider": "Cloudflare Tunnel",
+                "compose_project": "jarvis-family",
+            },
         }
 
     def save_identity_member(self, payload: dict) -> dict:
@@ -2314,6 +2322,92 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("availability_notes", module_payload)
         self.assertTrue(chat_payload["ok"])
         self.assertIn("What should I notice?", chat_payload["reply"])
+
+    def test_faith_module_uses_hosted_chronicle_context_when_local_daily_word_is_unavailable(self) -> None:
+        from jarvis.chronicle_bridge import init_chronicle_bridge
+
+        init_chronicle_bridge()
+        self.runtime.identity_overview = lambda: {
+            "members": [dict(item) for item in self.runtime._identity_members],
+            "devices": [dict(item) for item in self.runtime._identity_devices],
+            "service": {
+                "hosted_base_url": "https://jarvis.teambinion.org",
+                "remote_admin_host": "5.78.212.15",
+                "remote_admin_user": "root",
+                "hosted_provider": "Hetzner",
+                "edge_provider": "Cloudflare Tunnel",
+                "compose_project": "jarvis-family",
+            },
+        }
+
+        async def _missing_daily_word(_runtime):
+            return {
+                "ok": False,
+                "available": False,
+                "agent_name": "JARVIS",
+                "passage": "",
+                "word": "",
+                "message": "Daily word unavailable",
+            }
+
+        def _fake_subprocess_run(cmd, capture_output=False, text=False, timeout=None, check=False):
+            joined = " ".join(str(part) for part in cmd)
+            if "/api/chronicle/recent" in joined:
+                return SimpleNamespace(
+                    returncode=0,
+                    stdout=json.dumps(
+                        {
+                            "ok": True,
+                            "entries": [
+                                {
+                                    "id": "chronicle-remote-1",
+                                    "entry_id": "chronicle-remote-1",
+                                    "date": "2026-06-09",
+                                    "type": "reflection",
+                                    "title": "Morning Reflection — Tuesday, June 9",
+                                    "body": "Reflection from hosted Chronicle.",
+                                    "passage": "James 1:5",
+                                    "themes": ["wisdom"],
+                                }
+                            ],
+                            "total": 1,
+                            "tags": ["wisdom"],
+                            "prayer_items": [],
+                            "active_prayers": 0,
+                            "answered_prayers": 0,
+                            "formation_rhythms": [],
+                            "owned_books": [],
+                            "chronicle_available": True,
+                        }
+                    ),
+                    stderr="",
+                )
+            if "/api/chronicle/morning-context" in joined:
+                return SimpleNamespace(
+                    returncode=0,
+                    stdout=json.dumps(
+                        {
+                            "reflection_prompt": "Scripture: James 1:5\n\nAsk God for wisdom before acting.",
+                            "scripture_of_day": {
+                                "ref": "James 1:5",
+                                "text": "If any of you lacks wisdom, you should ask God.",
+                            },
+                        }
+                    ),
+                    stderr="",
+                )
+            return SimpleNamespace(returncode=1, stdout="", stderr="unhandled")
+
+        with patch("jarvis.faith_agents.daily_word", _missing_daily_word), patch(
+            "jarvis.service.subprocess.run", _fake_subprocess_run
+        ):
+            module_payload = self._json_body(asyncio.run(self._route("/api/faith/module", "GET")()))
+
+        self.assertTrue(module_payload["ok"])
+        self.assertEqual(module_payload["chronicle_context"]["study"]["passage"], "James 1:5")
+        self.assertTrue(module_payload["daily_word"]["available"])
+        self.assertEqual(module_payload["daily_word"]["passage"], "James 1:5")
+        self.assertIn("Ask God for wisdom", module_payload["daily_word"]["word"])
 
     def test_faith_chat_route_surfaces_empty_reply_honestly(self) -> None:
         async def _empty_chat(*, agent_id: str, messages: list[dict], runtime, passage: str = ""):

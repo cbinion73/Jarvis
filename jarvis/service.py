@@ -9,8 +9,10 @@ import mimetypes
 import os
 import re
 import secrets
+import shlex
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -13403,6 +13405,124 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return merged
 
     async def _build_chronicle_recent_payload() -> dict[str, Any]:
+        _hosted_chronicle_cache: dict[str, tuple[float, dict[str, Any] | None]] = {}
+
+        def _hosted_chronicle_ssh_config() -> dict[str, str]:
+            service_plan: dict[str, Any] = {}
+            with suppress(Exception):
+                identity = runtime.identity_overview() if hasattr(runtime, "identity_overview") else {}
+                if isinstance(identity, dict):
+                    service_plan = dict(identity.get("service") or {})
+            remote_admin_host = str(os.environ.get("JARVIS_REMOTE_ADMIN_HOST") or service_plan.get("remote_admin_host") or "").strip()
+            remote_admin_user = str(os.environ.get("JARVIS_REMOTE_ADMIN_USER") or service_plan.get("remote_admin_user") or "root").strip() or "root"
+            hosted_base_url = str(os.environ.get("JARVIS_HOSTED_BASE_URL") or service_plan.get("hosted_base_url") or "").strip()
+            host_header = re.sub(r"^https?://", "", hosted_base_url).split("/", 1)[0].strip()
+            return {
+                "remote_admin_host": remote_admin_host,
+                "remote_admin_user": remote_admin_user,
+                "host_header": host_header,
+            }
+
+        def _fetch_hosted_chronicle_json(path: str) -> dict[str, Any] | None:
+            now = time.monotonic()
+            cached = _hosted_chronicle_cache.get(path)
+            if cached and (now - cached[0]) < 20:
+                return cached[1]
+
+            ssh_config = _hosted_chronicle_ssh_config()
+            remote_admin_host = ssh_config.get("remote_admin_host", "")
+            remote_admin_user = ssh_config.get("remote_admin_user", "root")
+            host_header = ssh_config.get("host_header", "")
+            if not remote_admin_host or not host_header:
+                _hosted_chronicle_cache[path] = (now, None)
+                return None
+
+            ssh_target = f"{remote_admin_user}@{remote_admin_host}"
+            remote_command = (
+                "curl -sS --max-time 10 "
+                f"-H {shlex.quote(f'Host: {host_header}')} "
+                f"{shlex.quote(f'http://127.0.0.1{path}')}"
+            )
+            try:
+                completed = subprocess.run(
+                    [
+                        "ssh",
+                        "-o",
+                        "BatchMode=yes",
+                        "-o",
+                        "ConnectTimeout=6",
+                        ssh_target,
+                        remote_command,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=18,
+                    check=False,
+                )
+            except Exception:
+                _hosted_chronicle_cache[path] = (now, None)
+                return None
+            if completed.returncode != 0 or not completed.stdout.strip():
+                _hosted_chronicle_cache[path] = (now, None)
+                return None
+            try:
+                payload = json.loads(completed.stdout)
+            except Exception:
+                _hosted_chronicle_cache[path] = (now, None)
+                return None
+            if not isinstance(payload, dict):
+                _hosted_chronicle_cache[path] = (now, None)
+                return None
+            _hosted_chronicle_cache[path] = (now, payload)
+            return payload
+
+        remote_recent = await asyncio.to_thread(_fetch_hosted_chronicle_json, "/api/chronicle/recent")
+        if isinstance(remote_recent, dict) and remote_recent.get("ok"):
+            snapshot_entries = [dict(item) for item in list(remote_recent.get("entries") or []) if isinstance(item, dict)]
+            prayer_items = _apply_chronicle_prayer_updates(
+                [dict(item) for item in list(remote_recent.get("prayer_items") or []) if isinstance(item, dict)]
+            )
+            rhythms = [dict(item) for item in list(remote_recent.get("formation_rhythms") or []) if isinstance(item, dict)]
+            books = [dict(item) for item in list(remote_recent.get("owned_books") or []) if isinstance(item, dict)]
+
+            pending_entries: list[dict[str, Any]] = []
+            bridge = _get_chronicle_bridge()
+            if bridge is not None:
+                try:
+                    pending = await asyncio.to_thread(bridge.get_pending_entries)
+                    pending_entries = [_legacy_entry_from_bridge(item) for item in list(pending or [])]
+                except Exception:
+                    pending_entries = []
+
+            entries = _merge_chronicle_entries(pending_entries, snapshot_entries, [])
+            tags = [str(theme).strip() for theme in list(remote_recent.get("tags") or []) if str(theme).strip()]
+            if not tags:
+                theme_counts: dict[str, int] = {}
+                for entry in entries:
+                    for theme in list(entry.get("themes") or []):
+                        name = str(theme).strip()
+                        if not name:
+                            continue
+                        theme_counts[name] = theme_counts.get(name, 0) + 1
+                tags = [theme for theme, _count in sorted(theme_counts.items(), key=lambda item: (-item[1], item[0]))]
+
+            active_prayers = int(remote_recent.get("active_prayers") or sum(1 for item in prayer_items if not item.get("answered")))
+            answered_prayers = int(remote_recent.get("answered_prayers") or sum(1 for item in prayer_items if item.get("answered")))
+
+            return {
+                "ok": True,
+                "entries": entries,
+                "total": len(entries),
+                "tags": tags,
+                "prayer_items": prayer_items,
+                "active_prayers": active_prayers,
+                "answered_prayers": answered_prayers,
+                "formation_rhythms": rhythms,
+                "owned_books": books,
+                "chronicle_available": True,
+                "remote_source": "hetzner-hosted-chronicle",
+            }
+
         from .chronicle_bridge import ChronicleSnapshotReader
 
         reader = ChronicleSnapshotReader()
@@ -13635,8 +13755,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         guidance_lines: list[str] = []
         if daily_word.get("word"):
             guidance_lines.append(" ".join(str(daily_word.get("word") or "").split())[:220])
-        if chronicle_context.get("todays_rhythm", {}).get("description"):
-            guidance_lines.append(str(chronicle_context["todays_rhythm"]["description"]).strip())
+        todays_rhythm = chronicle_context.get("todays_rhythm")
+        if isinstance(todays_rhythm, dict) and todays_rhythm.get("description"):
+            guidance_lines.append(str(todays_rhythm["description"]).strip())
         if theme:
             guidance_lines.append(f"Keep listening for {theme} instead of forcing resolution too early.")
         guidance_lines = [line for line in guidance_lines if line]
@@ -13655,8 +13776,62 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             _build_faith_agents_payload(),
             _build_chronicle_recent_payload(),
         )
+        remote_morning_context: dict[str, Any] | None = None
+        with suppress(Exception):
+            identity = runtime.identity_overview() if hasattr(runtime, "identity_overview") else {}
+            service_plan = dict(identity.get("service") or {}) if isinstance(identity, dict) else {}
+            remote_admin_host = str(os.environ.get("JARVIS_REMOTE_ADMIN_HOST") or service_plan.get("remote_admin_host") or "").strip()
+            remote_admin_user = str(os.environ.get("JARVIS_REMOTE_ADMIN_USER") or service_plan.get("remote_admin_user") or "root").strip() or "root"
+            hosted_base_url = str(os.environ.get("JARVIS_HOSTED_BASE_URL") or service_plan.get("hosted_base_url") or "").strip()
+            host_header = re.sub(r"^https?://", "", hosted_base_url).split("/", 1)[0].strip()
+            if remote_admin_host and host_header:
+                ssh_target = f"{remote_admin_user}@{remote_admin_host}"
+                remote_command = (
+                    "curl -sS --max-time 10 "
+                    f"-H {shlex.quote(f'Host: {host_header}')} "
+                    f"{shlex.quote('http://127.0.0.1/api/chronicle/morning-context')}"
+                )
+                completed = await asyncio.to_thread(
+                    subprocess.run,
+                    [
+                        "ssh",
+                        "-o",
+                        "BatchMode=yes",
+                        "-o",
+                        "ConnectTimeout=6",
+                        ssh_target,
+                        remote_command,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=18,
+                    check=False,
+                )
+                if completed.returncode == 0 and completed.stdout.strip():
+                    parsed = json.loads(completed.stdout)
+                    if isinstance(parsed, dict):
+                        remote_morning_context = parsed
         chronicle_context = _chronicle_context_from_recent(chronicle_recent)
         chronicle_patterns = _chronicle_patterns_from_recent(chronicle_recent)
+        if isinstance(remote_morning_context, dict):
+            scripture = dict(remote_morning_context.get("scripture_of_day") or {})
+            reflection_prompt = str(remote_morning_context.get("reflection_prompt") or "").strip()
+            if not chronicle_context.get("study") and str(scripture.get("ref") or "").strip():
+                chronicle_context["study"] = {
+                    "passage": str(scripture.get("ref") or "").strip(),
+                    "title": "Scripture of the day",
+                    "date": "",
+                }
+            if (daily_word_payload.get("available") is False or not str(daily_word_payload.get("passage") or "").strip()) and str(scripture.get("ref") or "").strip():
+                daily_word_payload["available"] = True
+                daily_word_payload["agent_name"] = str(daily_word_payload.get("agent_name") or "Chronicle")
+                daily_word_payload["agent_title"] = str(daily_word_payload.get("agent_title") or "Hosted Chronicle")
+                daily_word_payload["domain"] = str(daily_word_payload.get("domain") or "Morning Reflection")
+                daily_word_payload["passage"] = str(scripture.get("ref") or "").strip()
+                if reflection_prompt:
+                    daily_word_payload["word"] = reflection_prompt
+                elif str(scripture.get("text") or "").strip():
+                    daily_word_payload["word"] = str(scripture.get("text") or "").strip()
         try:
             capabilities = getattr(runtime, "interface_router").system_manifest("chronicle").get("capabilities", {})
         except Exception:
