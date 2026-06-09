@@ -22542,14 +22542,15 @@ body::after {{
         <aside class="huddle-rail">
           <div class="huddle-rail-brand">✦</div>
           <div class="huddle-rail-stack">
-            <div class="huddle-rail-icon active">⌂</div>
-            <div class="huddle-rail-icon">☰</div>
-            <div class="huddle-rail-icon">⚡</div>
-            <div class="huddle-rail-icon">◎</div>
+            <button class="huddle-rail-icon active" type="button" data-huddle-nav="1" onclick="setHuddlePage(1)" aria-label="Open council chamber">⌂</button>
+            <button class="huddle-rail-icon" type="button" data-huddle-nav="2" onclick="setHuddlePage(2)" aria-label="Open party mode">☰</button>
+            <button class="huddle-rail-icon" type="button" data-huddle-nav="3" onclick="setHuddlePage(3)" aria-label="Open mission board">⚡</button>
+            <button class="huddle-rail-icon" type="button" data-huddle-nav="4" onclick="setHuddlePage(4)" aria-label="Open delegate back out">◎</button>
             <div class="huddle-rail-icon">✎</div>
             <div class="huddle-rail-icon">⬡</div>
             <div class="huddle-rail-icon">⚙</div>
           </div>
+          <div class="module-runtime-note" id="huddle-runtime-note">Loading Huddle surface…</div>
         </aside>
 
         <main class="huddle-main">
@@ -22575,7 +22576,7 @@ body::after {{
                 <div class="huddle-card-shell">
                   <div class="huddle-card-heading">
                     <div class="huddle-card-label">Council Roster<strong>Who is in the room</strong></div>
-                    <button class="huddle-refresh-btn" onclick="loadHuddle()">↺ Refresh</button>
+                    <button class="huddle-refresh-btn" id="huddle-refresh-button" onclick="refreshHuddleDesktop(true)">↺ Refresh Huddle</button>
                   </div>
                   <div class="huddle-council-roster" id="huddle-council-roster">
                     <div class="skel" style="height:58px;border-radius:14px;"></div>
@@ -26479,7 +26480,7 @@ function loadViewData(name) {{
         refreshAgentsDesktop(true);
       }}, 30000);
       break;
-    case 'huddle':       loadHuddle(); loadPassiveIncomePipeline(); loadDossiers(); loadPartyStatus(); loadIdeaInbox(); break;
+    case 'huddle':       loadHuddleDesktop(); break;
     case 'notifications': loadNotificationCenter(); break;
     case 'publishing':   loadPublishing(); loadHomeProjects(); break;
     case 'intelligence': loadStatus(); break;
@@ -37286,60 +37287,75 @@ async function loadAgentsDesktop() {{
 // ═══════════════════════════════════════════════════════════════
 
 let _ideaFilter = '';
+let _huddleModuleData = null;
+let _huddleRequestSerial = 0;
+
+function huddleRuntimeNote(text) {{
+  const el = document.getElementById('huddle-runtime-note');
+  if (el) el.textContent = text || 'Huddle is live and connected.';
+}}
+
+async function huddleFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, options);
+    const text = await response.text();
+    let payload = null;
+    try {{
+      payload = text ? JSON.parse(text) : null;
+    }} catch (_error) {{
+      payload = null;
+    }}
+    return {{ ok: response.ok, status: response.status, payload, text }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, error: String(error), payload: null, text: '' }};
+  }}
+}}
+
+async function huddleRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify(payload || {{}}),
+    }});
+  }} catch (_error) {{}}
+}}
 
 function setIdeaFilter(btn, status) {{
   _ideaFilter = status;
   document.querySelectorAll('.idea-filter-pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   loadIdeaInbox();
 }}
 
 async function loadIdeaInbox() {{
   const listEl = document.getElementById('idea-inbox-list');
-  const badgeEl = document.getElementById('idea-inbox-badge');
-  const overviewBadge = document.getElementById('idea-inbox-badge');
   const countsEl = document.getElementById('idea-inbox-counts');
-  if (listEl) listEl.innerHTML = '<div style="color:var(--text-3);font-size:11px;">Loading...</div>';
-
-  try {{
-    const url = '/api/ideas' + (_ideaFilter ? '?status=' + encodeURIComponent(_ideaFilter) : '');
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const ideas = data.ideas || [];
-    _huddleIdeas = ideas;
-    const s = (data.stats && data.stats.by_status) || {{}};
-
-    // Update badges
-    const pending = (s.captured || 0) + (s.queued || 0) + (s.researching || 0);
-    if (badgeEl) badgeEl.textContent = pending || ideas.length;
-    if (countsEl) countsEl.textContent =
-      [
-        s.captured ? s.captured + ' captured' : '',
-        s.queued ? s.queued + ' queued' : '',
-        s.researching ? s.researching + ' researching' : '',
-        s.done ? s.done + ' done' : '',
-        s.passed ? s.passed + ' passed' : '',
-      ].filter(Boolean).join(' · ');
-
-    // Update overview widget too
-    const overviewRecent = document.getElementById('idea-inbox-recent');
-    if (overviewRecent) {{
-      const recent = (data.ideas || []).filter(i => ['captured','queued','researching'].includes(i.status)).slice(0,5);
-      overviewRecent.innerHTML = recent.map(i => renderIdeaChip(i)).join('');
-    }}
-
-    if (!listEl) return;
-    if (!ideas.length) {{
-      listEl.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:16px 0;text-align:center;">No ideas yet. Capture your first one above.</div>';
-      renderHuddleDesktopFromState();
-      return;
-    }}
-    listEl.innerHTML = ideas.map(renderIdeaRow).join('');
-    renderHuddleDesktopFromState();
-  }} catch(e) {{
-    if (listEl) listEl.innerHTML = '<div style="color:#ef4444;font-size:11px;">Error: ' + e + '</div>';
+  const inbox = (_huddleModuleData || {{}}).idea_inbox || {{}};
+  const stats = {{
+    captured: Number(inbox.captured_count || 0),
+    queued: Number(inbox.queued_count || 0),
+    researching: Number(inbox.researching_count || 0),
+    done: Number(inbox.done_count || 0),
+    passed: Number(inbox.passed_count || 0),
+  }};
+  const ideas = Array.isArray(inbox.recent) ? inbox.recent.filter(idea => !_ideaFilter || String(idea.status || '') === _ideaFilter) : [];
+  _huddleIdeas = Array.isArray(inbox.recent) ? inbox.recent.slice() : [];
+  if (countsEl) {{
+    countsEl.textContent = [
+      stats.captured ? stats.captured + ' captured' : '',
+      stats.queued ? stats.queued + ' queued' : '',
+      stats.researching ? stats.researching + ' researching' : '',
+      stats.done ? stats.done + ' ready' : '',
+      stats.passed ? stats.passed + ' passed' : '',
+    ].filter(Boolean).join(' · ') || 'No ideas captured';
   }}
+  if (!listEl) return;
+  if (!ideas.length) {{
+    listEl.innerHTML = '<div style="color:var(--text-3);font-size:12px;padding:16px 0;text-align:center;">No ideas match this filter yet.</div>';
+    return;
+  }}
+  listEl.innerHTML = ideas.map(renderIdeaRow).join('');
 }}
 
 function renderIdeaChip(idea) {{
@@ -37420,34 +37436,14 @@ function showIdeaAddModal() {{
 }}
 
 async function huddleBulkImport(input) {{
-  const file = input.files && input.files[0];
-  if (!file) return;
   const statusEl = document.getElementById('huddle-bulk-status');
-  const domain = document.getElementById('huddle-bulk-domain')?.value || 'general';
-  if (statusEl) {{ statusEl.style.display = 'inline'; statusEl.textContent = 'Importing…'; }}
-  const fd = new FormData();
-  fd.append('file', file);
-  fd.append('domain', domain);
-  fd.append('source', 'import');
-  try {{
-    const res = await fetch('/api/ideas/bulk-import', {{ method: 'POST', body: fd }});
-    const data = await res.json();
-    if (res.ok) {{
-      const msg = `✓ ${{data.imported}} idea${{data.imported !== 1 ? 's' : ''}} imported` +
-        (data.skipped ? ` (${{data.skipped}} skipped)` : '');
-      if (statusEl) {{ statusEl.textContent = msg; statusEl.style.color = 'var(--green, #4ade80)'; }}
-      showToast(msg, 'success');
-      loadIdeaInbox();
-    }} else {{
-      const err = data.detail || 'Import failed';
-      if (statusEl) {{ statusEl.textContent = '✗ ' + err; statusEl.style.color = 'var(--red, #f87171)'; }}
-      showToast('Import failed: ' + err, 'error');
-    }}
-  }} catch(e) {{
-    if (statusEl) {{ statusEl.textContent = '✗ Network error'; }}
-    showToast('Network error: ' + e, 'error');
+  if (statusEl) {{
+    statusEl.style.display = 'inline';
+    statusEl.style.color = 'var(--text-3)';
+    statusEl.textContent = 'Bulk import is not connected for Huddle yet.';
   }}
-  input.value = '';
+  showToast('Bulk import is not connected for Huddle yet.', 'info');
+  if (input) input.value = '';
 }}
 
 async function huddleAddIdea() {{
@@ -37455,21 +37451,37 @@ async function huddleAddIdea() {{
   if (!inp) return;
   const text = inp.value.trim();
   if (!text) return;
+  const domain = document.getElementById('huddle-bulk-domain')?.value || 'general';
   inp.value = '';
   inp.placeholder = 'Saving...';
   try {{
-    const res = await fetch('/api/ideas', {{
+    const response = await huddleFetchJson('/api/huddle/ideas', {{
       method: 'POST',
       headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{ text }}),
+      body: JSON.stringify({{ text, domain, actor: 'Chris' }}),
     }});
-    if (!res.ok) {{ showToast('Error saving idea: ' + res.status, 'error'); return; }}
+    if (!response.ok) {{
+      showToast('Error saving idea: ' + (response.payload?.detail || response.status || response.error), 'error');
+      inp.placeholder = 'Describe an idea — JARVIS will research it and return a full dossier...';
+      return;
+    }}
+    await huddleRecordAction({{
+      actor: 'Chris',
+      domain: 'huddle',
+      action: 'Capture Huddle Idea',
+      detail: `Captured Huddle idea: ${{text.slice(0, 96)}}`,
+      route: '/huddle-center',
+      route_label: 'Open Huddle',
+      related_kind: 'idea',
+      related_label: text.slice(0, 96),
+      succeeded: true,
+    }});
     showToast('Idea captured. Click "Research Now" to build a dossier.', 'info');
     inp.placeholder = 'Describe an idea — JARVIS will research it and return a full dossier...';
-    loadIdeaInbox();
+    await refreshHuddleDesktop(false);
   }} catch(e) {{
     showToast('Error: ' + e, 'error');
-    inp.placeholder = 'Describe an idea...';
+    inp.placeholder = 'Describe an idea — JARVIS will research it and return a full dossier...';
   }}
 }}
 
@@ -37498,20 +37510,19 @@ async function ideaResearchNow(ideaId) {{
   if (rowEl) rowEl.style.opacity = '0.5';
   showToast('Starting research — this runs in the background. Check Huddle for the dossier.', 'info');
   try {{
-    const res = await fetch('/api/ideas/' + encodeURIComponent(ideaId) + '/research-now', {{
+    const response = await huddleFetchJson('/api/huddle/ideas/' + encodeURIComponent(ideaId) + '/research-now', {{
       method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ actor: 'Chris' }}),
     }});
-    if (!res.ok) {{
-      const err = await res.json().catch(() => ({{}}));
-      showToast('Research error: ' + (err.detail || res.status), 'error');
+    if (!response.ok) {{
+      showToast('Research error: ' + (response.payload?.detail || response.status || response.error), 'error');
     }} else {{
-      const data = await res.json();
-      showToast(data.message || 'Research started.', 'info');
+      showToast(response.payload?.message || 'Research started.', 'info');
     }}
     if (rowEl) rowEl.style.opacity = '1';
-    loadIdeaInbox();
-    // Poll for dossier after 30s
-    setTimeout(() => {{ loadDossiers(); loadIdeaInbox(); }}, 30000);
+    await refreshHuddleDesktop(false);
+    setTimeout(() => {{ refreshHuddleDesktop(false); }}, 30000);
   }} catch(e) {{
     showToast('Error: ' + e, 'error');
     if (rowEl) rowEl.style.opacity = '1';
@@ -37519,19 +37530,27 @@ async function ideaResearchNow(ideaId) {{
 }}
 
 async function ideaQueue(ideaId) {{
-  await fetch('/api/ideas/' + encodeURIComponent(ideaId) + '/queue', {{ method: 'POST' }});
-  loadIdeaInbox();
+  await huddleFetchJson('/api/huddle/ideas/' + encodeURIComponent(ideaId) + '/queue', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{ actor: 'Chris' }}),
+  }});
+  await refreshHuddleDesktop(false);
 }}
 
 async function ideaPass(ideaId) {{
-  await fetch('/api/ideas/' + encodeURIComponent(ideaId) + '/pass', {{ method: 'POST' }});
-  loadIdeaInbox();
+  await huddleFetchJson('/api/huddle/ideas/' + encodeURIComponent(ideaId) + '/pass', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{ actor: 'Chris' }}),
+  }});
+  await refreshHuddleDesktop(false);
 }}
 
 async function ideaDelete(ideaId) {{
   if (!confirm('Delete this idea permanently?')) return;
   await fetch('/api/ideas/' + encodeURIComponent(ideaId), {{ method: 'DELETE' }});
-  loadIdeaInbox();
+  await refreshHuddleDesktop(false);
 }}
 
 // ═══════════════════════════════════════════════════════════════
@@ -37567,6 +37586,11 @@ let _huddleDossiers = [];
 let _huddlePartySnapshot = null;
 let _huddleIdeas = [];
 
+function setHuddlePage(page) {{
+  huddleStoryboardPage = page;
+  syncHuddleStoryboard();
+}}
+
 function syncHuddleStoryboard() {{
   const panels = Array.from(document.querySelectorAll('#view-huddle .huddle-page'));
   if (!panels.length) return;
@@ -37584,6 +37608,9 @@ function syncHuddleStoryboard() {{
   if (count) count.textContent = `Page ${{huddleStoryboardPage}} of ${{pageCount}}`;
   const label = document.getElementById('huddle-page-label');
   if (label) label.textContent = pageMeta?.label || `Page ${{huddleStoryboardPage}}`;
+  document.querySelectorAll('[data-huddle-nav]').forEach(node => {{
+    node.classList.toggle('active', Number(node.getAttribute('data-huddle-nav')) === huddleStoryboardPage);
+  }});
   const prev = document.getElementById('huddle-nav-prev');
   const next = document.getElementById('huddle-nav-next');
   if (prev) prev.disabled = huddleStoryboardPage === 1;
@@ -37759,72 +37786,124 @@ function renderHuddleDesktopFromState() {{
   renderHuddleMissionBoard();
   renderHuddleResolution();
   renderHuddlePartyInsights();
+  loadIdeaInbox();
 }}
 
-async function loadHuddle() {{
+function renderHuddleModule(payload) {{
   syncHuddleStoryboard();
   const grid = document.getElementById('huddle-reports-grid');
   const approvalsSection = document.getElementById('huddle-approvals');
   const approvalsList = document.getElementById('huddle-approvals-list');
-  if (grid) grid.innerHTML = '<div class="skeleton-block" style="height:140px;border-radius:8px;"></div>'.repeat(3);
+  const counts = payload.counts || {{}};
+  const reports = Array.isArray(payload.reports) ? payload.reports : [];
+  const approvals = Array.isArray(payload.approvals) ? payload.approvals : [];
+  _huddleModuleData = payload || {{}};
+  _huddleSnapshot = {{
+    agent_reports: reports.map(item => ({{
+      agent_id: item.agent_id || '',
+      agent_name: item.agent_name || item.agent_id || 'Agent',
+      domain: item.domain || '',
+      source: item.status || 'live',
+      yesterday: item.highlights?.[0] || item.summary || 'No report.',
+      today: item.summary || item.highlights?.[0] || 'Monitoring',
+      needs: item.needs || 'Nothing needed today.',
+      highlights: Array.isArray(item.highlights) ? item.highlights : [],
+      active_work_count: Number(item.active_work_count || 0),
+    }})),
+    approvals_needed: approvals.slice(),
+    blockers: Array.isArray(payload.blockers) ? payload.blockers.slice() : [],
+    total_active_work: Number(payload.total_active_work || counts.active_work || 0),
+  }};
+  _huddlePipelineItems = Array.isArray(payload.pipeline) ? payload.pipeline.slice() : [];
+  _huddleDossiers = Array.isArray(payload.dossiers) ? payload.dossiers.slice() : [];
+  _huddlePartySnapshot = payload.party_mode || {{}};
+  _huddleIdeas = Array.isArray(payload.idea_inbox?.recent) ? payload.idea_inbox.recent.slice() : [];
 
-  try {{
-    const res = await fetch('/api/huddle');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
+  const awEl = document.getElementById('huddle-active-work');
+  if (awEl) awEl.textContent = `${{Number(payload.total_active_work || counts.active_work || 0)}} active items`;
+  const blEl = document.getElementById('huddle-blockers-count');
+  if (blEl) blEl.textContent = `${{Array.isArray(payload.blockers) ? payload.blockers.length : 0}} blockers`;
+  const apEl = document.getElementById('huddle-approvals-count');
+  if (apEl) apEl.textContent = `${{approvals.length}} awaiting approval`;
 
-    _huddleSnapshot = d;
-    // Update meta bar
-    const awEl = document.getElementById('huddle-active-work');
-    if (awEl) awEl.textContent = (d.total_active_work || 0) + ' active items';
-    const blEl = document.getElementById('huddle-blockers-count');
-    if (blEl) blEl.textContent = (d.blockers || []).length + ' blockers';
-    const apEl = document.getElementById('huddle-approvals-count');
-    if (apEl) apEl.textContent = (d.approvals_needed || []).length + ' awaiting approval';
-
-    // Approvals needed
-    const approvals = d.approvals_needed || [];
-    if (approvals.length > 0 && approvalsSection && approvalsList) {{
-      approvalsSection.style.display = 'block';
-      approvalsList.innerHTML = approvals.map(a => {{
-        const work_id = escHtml(a.work_id || '');
-        const title = escHtml(a.title || 'Untitled');
-        const agent = escHtml(a.agent || a.agent_id || '?');
-        const fullProposal = escHtml(a.proposal || a.idea || '');
-        const shortProposal = escHtml((a.proposal || a.idea || '').slice(0, 120));
-        const proposalHtml = fullProposal.length > 120
-          ? '<div class="approval-item-desc expand-toggle" data-full="' + fullProposal + '" data-short="' + shortProposal + '" data-expanded="0" title="Click to expand" onclick="toggleExpand(this)">' + shortProposal + '…</div>'
-          : '<div class="approval-item-desc">' + shortProposal + '</div>';
-        return '<div class="approval-item">' +
-          '<div>' +
-            '<div class="approval-item-agent">' + agent + '</div>' +
-            '<div class="approval-item-title">' + title + '</div>' +
-            proposalHtml +
-          '</div>' +
-          '<div class="approval-item-actions">' +
-            '<button class="approve-btn" data-wid="' + work_id + '" onclick="approveWorkItem(this.dataset.wid)">✓ Approve</button>' +
-            '<button class="reject-btn" data-wid="' + work_id + '" onclick="rejectWorkItem(this.dataset.wid)">✗ Pass</button>' +
-          '</div>' +
-        '</div>';
-      }}).join('');
-    }} else if (approvalsSection) {{
-      approvalsSection.style.display = 'none';
-    }}
-
-    // Standup cards
-    const reports = d.agent_reports || [];
-    if (grid) {{
-      if (reports.length === 0) {{
-        grid.innerHTML = '<div class="pi-empty">No standups generated yet — agents will report after their first run.</div>';
-        renderHuddleDesktopFromState();
-        return;
-      }}
-      grid.innerHTML = reports.map(r => renderHuddleCard(r)).join('');
-    }}
-    renderHuddleDesktopFromState();
-  }} catch (e) {{
-    if (grid) grid.innerHTML = '<div class="pi-empty">Huddle unavailable: ' + escHtml(e.message) + '</div>';
+  if (approvals.length > 0 && approvalsSection && approvalsList) {{
+    approvalsSection.style.display = 'block';
+    approvalsList.innerHTML = approvals.map(a => {{
+      const work_id = escHtml(a.work_id || '');
+      const title = escHtml(a.title || 'Untitled');
+      const agent = escHtml(a.agent || a.agent_id || '?');
+      const fullProposal = escHtml(a.proposal || a.idea || '');
+      const shortProposal = escHtml((a.proposal || a.idea || '').slice(0, 120));
+      const proposalHtml = fullProposal.length > 120
+        ? '<div class="approval-item-desc expand-toggle" data-full="' + fullProposal + '" data-short="' + shortProposal + '" data-expanded="0" title="Click to expand" onclick="toggleExpand(this)">' + shortProposal + '…</div>'
+        : '<div class="approval-item-desc">' + shortProposal + '</div>';
+      return '<div class="approval-item">' +
+        '<div>' +
+          '<div class="approval-item-agent">' + agent + '</div>' +
+          '<div class="approval-item-title">' + title + '</div>' +
+          proposalHtml +
+        '</div>' +
+        '<div class="approval-item-actions">' +
+          '<button class="approve-btn" data-wid="' + work_id + '" onclick="approveWorkItem(this.dataset.wid)">✓ Approve</button>' +
+          '<button class="reject-btn" data-wid="' + work_id + '" onclick="rejectWorkItem(this.dataset.wid)">✗ Pass</button>' +
+        '</div>' +
+      '</div>';
+    }}).join('');
+  }} else if (approvalsSection) {{
+    approvalsSection.style.display = 'none';
   }}
+
+  if (grid) {{
+    if (!reports.length) {{
+      grid.innerHTML = '<div class="pi-empty">No standups generated yet — agents will report after their first run.</div>';
+    }} else {{
+      grid.innerHTML = reports.map(r => renderHuddleCard({{
+        agent_name: r.agent_name,
+        agent_id: r.agent_id,
+        domain: r.domain,
+        source: r.status || 'live',
+        yesterday: (r.highlights || [])[0] || r.summary || 'No report.',
+        today: r.summary || 'Monitoring',
+        needs: r.needs || 'Nothing needed today.',
+        highlights: r.highlights || [],
+        active_work_count: r.active_work_count || 0,
+      }})).join('');
+    }}
+  }}
+  loadPassiveIncomePipeline();
+  loadPartyStatus();
+  loadDossiers();
+  renderHuddleDesktopFromState();
+}}
+
+async function refreshHuddleDesktop(showToast = false) {{
+  const requestId = ++_huddleRequestSerial;
+  huddleRuntimeNote(showToast ? 'Refreshing Huddle surface…' : 'Loading Huddle surface…');
+  const grid = document.getElementById('huddle-reports-grid');
+  if (grid) grid.innerHTML = '<div class="skeleton-block" style="height:140px;border-radius:8px;"></div>'.repeat(3);
+  const response = await huddleFetchJson('/api/huddle/module');
+  if (requestId !== _huddleRequestSerial) return;
+  if (!response.ok) {{
+    const detail = response.payload?.detail || response.error || `HTTP ${{response.status}}`;
+    huddleRuntimeNote(`Huddle unavailable: ${{detail}}`);
+    if (grid) grid.innerHTML = '<div class="pi-empty">Huddle unavailable: ' + escHtml(String(detail)) + '</div>';
+    return;
+  }}
+  const payload = response.payload || {{}};
+  const notes = Array.isArray(payload.availability_notes) ? payload.availability_notes.filter(Boolean) : [];
+  huddleRuntimeNote(notes[0] || payload.runtime_note || payload.summary || 'Huddle is live and connected.');
+  renderHuddleModule(payload);
+  if (showToast) showToast('Huddle refreshed.', 'success');
+}}
+
+async function loadHuddleDesktop() {{
+  syncHuddleStoryboard();
+  await refreshHuddleDesktop(false);
+  syncDesktopCardSequence('huddle');
+}}
+
+async function loadHuddle() {{
+  await refreshHuddleDesktop(false);
 }}
 
 function renderHuddleCard(r) {{
@@ -37869,7 +37948,20 @@ async function approveWorkItem(workId) {{
   if (!workId) return;
   try {{
     const res = await fetch('/api/agent-work/approve/' + encodeURIComponent(workId), {{method:'POST'}});
-    if (res.ok) {{ loadHuddle(); loadPassiveIncomePipeline(); }}
+    if (res.ok) {{
+      await huddleRecordAction({{
+        actor: 'Chris',
+        domain: 'huddle',
+        action: 'Approve Huddle Work Item',
+        detail: `Approved Huddle work item ${{workId}}.`,
+        route: '/huddle-center',
+        route_label: 'Open Huddle',
+        related_kind: 'approval',
+        related_label: workId,
+        succeeded: true,
+      }});
+      await refreshHuddleDesktop(false);
+    }}
     else alert('Approval failed: HTTP ' + res.status);
   }} catch (e) {{ alert('Approval error: ' + e.message); }}
 }}
@@ -37883,7 +37975,20 @@ async function rejectWorkItem(workId) {{
       headers:{{'Content-Type':'application/json'}},
       body: JSON.stringify({{reason}})
     }});
-    if (res.ok) {{ loadHuddle(); loadPassiveIncomePipeline(); }}
+    if (res.ok) {{
+      await huddleRecordAction({{
+        actor: 'Chris',
+        domain: 'huddle',
+        action: 'Pass Huddle Work Item',
+        detail: `Passed Huddle work item ${{workId}}.`,
+        route: '/huddle-center',
+        route_label: 'Open Huddle',
+        related_kind: 'approval',
+        related_label: workId,
+        succeeded: true,
+      }});
+      await refreshHuddleDesktop(false);
+    }}
     else alert('Reject failed: HTTP ' + res.status);
   }} catch (e) {{ alert('Reject error: ' + e.message); }}
 }}
@@ -37891,74 +37996,74 @@ async function rejectWorkItem(workId) {{
 async function loadPassiveIncomePipeline() {{
   const grid = document.getElementById('huddle-pi-pipeline');
   if (!grid) return;
-  grid.innerHTML = '<div class="skeleton-block" style="height:80px;border-radius:8px;"></div>';
-  try {{
-    const res = await fetch('/api/agent-work/passive-income');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
-    const items = (d.items || []).slice(0, 12);
-    _huddlePipelineItems = items;
-    if (items.length === 0) {{
-      grid.innerHTML = '<div class="pi-empty">No passive income ideas yet — Mantis will dream some up on her next run.</div>';
-      renderHuddleDesktopFromState();
-      return;
-    }}
-    grid.innerHTML = items.map(item => {{
-      const status = item.status || 'dreamed';
-      const title = escHtml(item.title || 'Untitled');
-      const fullIdea = escHtml(item.idea || item.proposal || item.research || '');
-      const shortIdea = escHtml((item.idea || item.proposal || item.research || '').slice(0, 120));
-      const ideaHtml = fullIdea.length > 120
-        ? '<div class="pi-card-idea expand-toggle" data-full="' + fullIdea + '" data-short="' + shortIdea + '" data-expanded="0" title="Click to expand" onclick="toggleExpand(this)">' + shortIdea + '…</div>'
-        : '<div class="pi-card-idea">' + shortIdea + '</div>';
-      const agent = escHtml(item.agent_id || '?');
-      return '<div class="pi-card">' +
-        '<span class="pi-card-status pi-status-' + status + '">' + status + '</span>' +
-        '<div class="pi-card-title">' + title + '</div>' +
-        ideaHtml +
-      '</div>';
-    }}).join('');
-    renderHuddleDesktopFromState();
-  }} catch (e) {{
-    grid.innerHTML = '<div class="pi-empty">Pipeline unavailable: ' + escHtml(e.message) + '</div>';
+  const items = _huddlePipelineItems || [];
+  if (items.length === 0) {{
+    grid.innerHTML = '<div class="pi-empty">No passive income ideas yet — the pipeline is quiet right now.</div>';
+    return;
   }}
+  grid.innerHTML = items.map(item => {{
+    const status = item.status || 'dreamed';
+    const title = escHtml(item.title || 'Untitled');
+    const fullIdea = escHtml(item.idea || item.proposal || item.research || '');
+    const shortIdea = escHtml((item.idea || item.proposal || item.research || '').slice(0, 120));
+    const ideaHtml = fullIdea.length > 120
+      ? '<div class="pi-card-idea expand-toggle" data-full="' + fullIdea + '" data-short="' + shortIdea + '" data-expanded="0" title="Click to expand" onclick="toggleExpand(this)">' + shortIdea + '…</div>'
+      : '<div class="pi-card-idea">' + shortIdea + '</div>';
+    return '<div class="pi-card">' +
+      '<span class="pi-card-status pi-status-' + status + '">' + status + '</span>' +
+      '<div class="pi-card-title">' + title + '</div>' +
+      ideaHtml +
+    '</div>';
+  }}).join('');
 }}
 
 /* ─── Party Mode + Dossier System ─── */
 
 async function loadPartyStatus() {{
-  try {{
-    const res = await fetch('/api/party-mode/status');
-    if (!res.ok) return;
-    const d = await res.json();
-    _huddlePartySnapshot = d;
-    const bar = document.getElementById('party-mode-bar');
-    const txt = document.getElementById('party-bar-text');
-    if (!bar || !txt) return;
-    if (d.status === 'running') {{
-      bar.style.display = 'flex';
-      const built = (d.dossiers_built || []).length;
-      const last = d.last_log || 'Working...';
-      txt.textContent = 'Agents are researching overnight · ' + built + ' dossier' + (built !== 1 ? 's' : '') + ' built · ' + escHtml(last);
-    }} else if (d.status === 'completed') {{
-      bar.style.display = 'flex';
-      bar.querySelector('.party-bar-indicator').style.background = '#94a3b8';
-      bar.querySelector('.party-bar-indicator').style.animation = 'none';
-      const built = (d.dossiers_built || []).length;
-      txt.textContent = 'Last night: ' + built + ' dossier' + (built !== 1 ? 's' : '') + ' completed · Session ended ' + (d.ended_at ? new Date(d.ended_at).toLocaleTimeString() : '');
-    }} else {{
-      bar.style.display = 'none';
+  const d = _huddlePartySnapshot || {{}};
+  const bar = document.getElementById('party-mode-bar');
+  const txt = document.getElementById('party-bar-text');
+  if (!bar || !txt) return;
+  const indicator = bar.querySelector('.party-bar-indicator');
+  if (indicator) {{
+    indicator.style.background = '';
+    indicator.style.animation = '';
+  }}
+  if (d.status === 'running') {{
+    bar.style.display = 'flex';
+    const built = (d.dossiers_built || []).length;
+    const last = d.last_log || 'Working...';
+    txt.textContent = 'Agents are researching overnight · ' + built + ' dossier' + (built !== 1 ? 's' : '') + ' built · ' + escHtml(last);
+  }} else if (d.status === 'completed') {{
+    bar.style.display = 'flex';
+    if (indicator) {{
+      indicator.style.background = '#94a3b8';
+      indicator.style.animation = 'none';
     }}
-    renderHuddleDesktopFromState();
-  }} catch (e) {{}}
+    const built = (d.dossiers_built || []).length;
+    txt.textContent = 'Last night: ' + built + ' dossier' + (built !== 1 ? 's' : '') + ' completed · Session ended ' + (d.ended_at ? new Date(d.ended_at).toLocaleTimeString() : '');
+  }} else {{
+    bar.style.display = 'none';
+  }}
 }}
 
 async function startPartyMode() {{
   try {{
-    const res = await fetch('/api/party-mode/start', {{method:'POST'}});
-    const d = await res.json();
+    const response = await huddleFetchJson('/api/party-mode/start', {{method:'POST'}});
+    const d = response.payload || {{}};
     if (d.status === 'started' || d.status === 'already_running') {{
-      setTimeout(() => {{ loadPartyStatus(); loadDossiers(); }}, 2000);
+      await huddleRecordAction({{
+        actor: 'Chris',
+        domain: 'huddle',
+        action: 'Start Overnight Research',
+        detail: d.status === 'started' ? 'Started Huddle party mode.' : 'Party mode was already running.',
+        route: '/huddle-center',
+        route_label: 'Open Huddle',
+        related_kind: 'party-mode',
+        related_label: 'Overnight research',
+        succeeded: true,
+      }});
+      setTimeout(() => {{ refreshHuddleDesktop(false); }}, 2000);
     }}
   }} catch (e) {{ alert('Could not start party mode: ' + e.message); }}
 }}
@@ -37967,23 +38072,14 @@ async function loadDossiers() {{
   const grid = document.getElementById('huddle-dossier-grid');
   const section = document.getElementById('dossier-section');
   if (!grid) return;
-  try {{
-    const res = await fetch('/api/dossiers');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
-    const dossiers = (d.dossiers || []).filter(x => x.status !== 'presented');
-    _huddleDossiers = dossiers;
-    if (dossiers.length === 0) {{
-      section.style.display = 'none';
-      renderHuddleDesktopFromState();
-      return;
-    }}
-    section.style.display = 'block';
-    grid.innerHTML = dossiers.map(renderDossierCard).join('');
-    renderHuddleDesktopFromState();
-  }} catch (e) {{
-    grid.innerHTML = '<div class="pi-empty">Dossiers unavailable.</div>';
+  const dossiers = _huddleDossiers || [];
+  if (!dossiers.length) {{
+    if (section) section.style.display = 'none';
+    grid.innerHTML = '<div class="pi-empty">No dossiers are ready yet.</div>';
+    return;
   }}
+  if (section) section.style.display = 'block';
+  grid.innerHTML = dossiers.map(renderDossierCard).join('');
 }}
 
 function renderDossierCard(d) {{

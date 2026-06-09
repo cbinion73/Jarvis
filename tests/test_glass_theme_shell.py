@@ -227,6 +227,30 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/activity/operator-action", html)
         self.assertIn("Quick Draft Project", html)
 
+    def test_render_glass_shell_wires_huddle_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="huddle-runtime-note"', html)
+        self.assertIn('id="huddle-refresh-button"', html)
+        self.assertIn("function refreshHuddleDesktop(", html)
+        self.assertIn("function renderHuddleModule(", html)
+        self.assertIn("function huddleRecordAction(", html)
+        self.assertIn("function huddleAddIdea(", html)
+        self.assertIn("function huddleBulkImport(", html)
+        self.assertIn("function ideaQueue(", html)
+        self.assertIn("function ideaPass(", html)
+        self.assertIn("function ideaResearchNow(", html)
+        self.assertIn("function startPartyMode(", html)
+        self.assertIn('data-huddle-nav="1"', html)
+        self.assertIn("/api/huddle/module", html)
+        self.assertIn("/api/huddle/ideas", html)
+        self.assertIn("/api/huddle/ideas/' + encodeURIComponent(ideaId) + '/queue", html)
+        self.assertIn("/api/huddle/ideas/' + encodeURIComponent(ideaId) + '/pass", html)
+        self.assertIn("/api/huddle/ideas/' + encodeURIComponent(ideaId) + '/research-now", html)
+        self.assertIn("/api/party-mode/start", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Refresh Huddle", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

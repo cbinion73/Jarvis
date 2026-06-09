@@ -9452,6 +9452,21 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "summary": "Huddle now has a dedicated module route with live standups, runtime posture, dossiers, and idea capture.",
             "what_became_real": "Huddle is now represented as a dedicated app module instead of a shell-only packet path.",
             "remains_partial": "Broader decision workflows and richer cross-route continuity review still need follow-on slices.",
+            "runtime_note": "Huddle is live and connected.",
+            "availability_notes": [],
+            "counts": {
+                "reports": 0,
+                "approvals": 0,
+                "blockers": 0,
+                "dossiers": 0,
+                "ideas_total": 0,
+                "ideas_captured": 0,
+                "ideas_queued": 0,
+                "ideas_researching": 0,
+                "active_work": 0,
+                "recent_activity": 0,
+                "pipeline": 0,
+            },
             "total_active_work": 0,
             "approvals_count": 0,
             "blocker_count": 0,
@@ -9462,6 +9477,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "highlights": [],
             "runtime": {},
             "party_mode": {},
+            "pipeline": [],
             "dossiers": [],
             "idea_inbox": {
                 "total": 0,
@@ -9475,11 +9491,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "module_api": "/api/huddle/module",
                 "huddle_api": "/api/huddle",
                 "party_start_api": "/api/party-mode/start",
+                "party_status_api": "/api/party-mode/status",
                 "ideas_api": "/api/huddle/ideas",
                 "idea_queue_api": "/api/huddle/ideas/{idea_id}/queue",
                 "idea_pass_api": "/api/huddle/ideas/{idea_id}/pass",
                 "idea_research_api": "/api/huddle/ideas/{idea_id}/research-now",
                 "dossiers_api": "/api/dossiers",
+                "dossier_chat_api": "/api/dossiers/{dossier_id}/chat",
+                "pipeline_api": "/api/agent-work/passive-income",
+                "approve_api_prefix": "/api/agent-work/approve/",
+                "reject_api_prefix": "/api/agent-work/reject/",
+                "activity_api": "/api/activity/operator-action",
             },
             "errors": [],
         }
@@ -9523,12 +9545,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["total_active_work"] = int(data.get("total_active_work") or 0)
             payload["approvals_count"] = len(approvals)
             payload["blocker_count"] = len(payload["blockers"])
+            payload["counts"]["reports"] = len(reports)
+            payload["counts"]["approvals"] = len(approvals)
+            payload["counts"]["blockers"] = len(payload["blockers"])
+            payload["counts"]["active_work"] = payload["total_active_work"]
         except Exception as exc:
             payload["status"] = "Wired"
             payload["available"] = False
             payload["summary"] = "Huddle center route is live, but standup aggregation did not fully hydrate."
             payload["remains_partial"] = "Live huddle standup sources still need repair or population in this runtime."
             payload["errors"].append(f"standups: {exc}")
+            payload["availability_notes"].append("Standup aggregation is not fully available in this runtime.")
 
         try:
             runtime_snapshot = runtime.background_agent_status()
@@ -9556,6 +9583,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }
         except Exception as exc:
             payload["errors"].append(f"runtime: {exc}")
+            payload["availability_notes"].append(f"Runtime posture could not be read: {exc}")
 
         try:
             from .party_mode import get_party_controller
@@ -9563,6 +9591,31 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["party_mode"] = get_party_controller(runtime).get_status()
         except Exception as exc:
             payload["errors"].append(f"party_mode: {exc}")
+            payload["availability_notes"].append(f"Party mode status was unavailable: {exc}")
+
+        try:
+            from .agent_work import get_all_stores
+            from dataclasses import asdict
+
+            pipeline_items = []
+            for store in get_all_stores().values():
+                pipeline_items.extend(store.get_by_domain("passive-income"))
+            pipeline_items.sort(key=lambda item: item.updated_at, reverse=True)
+            payload["pipeline"] = [
+                {
+                    "work_id": str(item.get("work_id") or ""),
+                    "agent_id": str(item.get("agent_id") or ""),
+                    "title": str(item.get("title") or "Untitled"),
+                    "status": str(item.get("status") or "watching"),
+                    "idea": str(item.get("idea") or item.get("proposal") or item.get("research") or ""),
+                    "updated_at": str(item.get("updated_at") or ""),
+                }
+                for item in (asdict(entry) for entry in pipeline_items[:10])
+            ]
+            payload["counts"]["pipeline"] = len(payload["pipeline"])
+        except Exception as exc:
+            payload["errors"].append(f"pipeline: {exc}")
+            payload["availability_notes"].append(f"Passive-income pipeline was unavailable: {exc}")
 
         try:
             from .dossier import get_dossier_store
@@ -9588,8 +9641,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             items.sort(key=lambda item: item["updated_at"], reverse=True)
             payload["dossiers"] = items[:6]
             payload["ready_dossier_count"] = len(items)
+            payload["counts"]["dossiers"] = len(payload["dossiers"])
         except Exception as exc:
             payload["errors"].append(f"dossiers: {exc}")
+            payload["availability_notes"].append(f"Dossiers were unavailable: {exc}")
 
         try:
             from .ideas import list_ideas, stats
@@ -9601,6 +9656,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "total": int(summary.get("total") or 0),
                 "captured_count": int(by_status.get("captured") or 0),
                 "queued_count": int(by_status.get("queued") or 0),
+                "researching_count": int(by_status.get("researching") or 0),
+                "done_count": int(by_status.get("done") or 0),
+                "passed_count": int(by_status.get("passed") or 0),
                 "recent": [
                     {
                         "id": str(item.get("id") or ""),
@@ -9612,8 +9670,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                     for item in ideas[:6]
                 ],
             }
+            payload["counts"]["ideas_total"] = payload["idea_inbox"]["total"]
+            payload["counts"]["ideas_captured"] = payload["idea_inbox"]["captured_count"]
+            payload["counts"]["ideas_queued"] = payload["idea_inbox"]["queued_count"]
+            payload["counts"]["ideas_researching"] = payload["idea_inbox"]["researching_count"]
         except Exception as exc:
             payload["errors"].append(f"ideas: {exc}")
+            payload["availability_notes"].append(f"Idea inbox was unavailable: {exc}")
 
         if payload["status"] == "Useful":
             payload["summary"] = (
@@ -9625,8 +9688,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 payload["remains_partial"] = "The dedicated Huddle screen is live, but no standup reports were available in this runtime."
 
         payload["recent_activity"] = _module_recent_activity(route="/huddle-center", domain="huddle")
+        payload["counts"]["recent_activity"] = len(payload["recent_activity"])
+        if not payload["reports"]:
+            payload["availability_notes"].append("No live standup reports are currently available.")
+        if not payload["dossiers"]:
+            payload["availability_notes"].append("No ready dossiers are currently surfaced.")
+        if not payload["pipeline"]:
+            payload["availability_notes"].append("No passive-income workstreams are active right now.")
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some huddle sources still failed to hydrate; inspect the payload preview for details."
+            payload["runtime_note"] = "Huddle is live, but some sources are partially unavailable."
+        if payload["availability_notes"] and payload["runtime_note"] == "Huddle is live and connected.":
+            payload["runtime_note"] = payload["availability_notes"][0]
         return payload
 
     @app.get("/api/huddle")
