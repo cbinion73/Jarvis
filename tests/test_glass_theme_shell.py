@@ -27,6 +27,30 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("function openHealthDesktopExperience()", html)
         self.assertIn("window.open('/health-desktop', '_blank', 'noopener');", html)
 
+    def test_render_glass_shell_wires_health_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="health-runtime-note"', html)
+        self.assertIn('id="health-refresh-button"', html)
+        self.assertIn('data-health-nav="1"', html)
+        self.assertIn('data-health-nav="6"', html)
+        self.assertIn("function setHealthPage(", html)
+        self.assertIn("function healthRuntimeNote(", html)
+        self.assertIn("function healthFetchJson(", html)
+        self.assertIn("function renderHealthModule(", html)
+        self.assertIn("function refreshHealthDesktop(", html)
+        self.assertIn("function loadHealthDetailPanels(", html)
+        self.assertIn("function healthManualCheckin(", html)
+        self.assertIn("function healthReviewLatestCheckin(", html)
+        self.assertIn("function healthSaveObjective(", html)
+        self.assertIn("function healthRunTriage(", html)
+        self.assertIn("/api/health/module", html)
+        self.assertIn("/api/health/checkins", html)
+        self.assertIn("/api/health/checkins/{checkin_id}/review", html)
+        self.assertIn("/api/health/quarterly/objectives", html)
+        self.assertIn("/api/health/symptom/triage", html)
+        self.assertIn("Health is live and connected.", html)
+
     def test_render_glass_shell_wires_daily_brief_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

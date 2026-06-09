@@ -14169,6 +14169,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "summary": "Health now has a dedicated module route with live drift, objective, and triage posture inside JARVIS.",
             "what_became_real": "Health is now represented as a dedicated app module with visible route-owned continuity instead of a storyboard-only route.",
             "remains_partial": "Deeper health workflows and broader manual data entry still need follow-on slices.",
+            "runtime_note": "Health is live and connected.",
+            "availability_notes": [],
+            "counts": {
+                "signals": 0,
+                "clusters": 0,
+                "objectives": 0,
+                "checkins": 0,
+                "review_items": 0,
+                "recent_activity": 0,
+            },
             "signal_count": 0,
             "active_cluster_count": 0,
             "objective_count": 0,
@@ -14205,16 +14215,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["drift_scan"] = drift_scan
             payload["signal_count"] = len(current_signals)
             payload["active_cluster_count"] = len(list(drift_scan.get("active_clusters") or []))
+            payload["counts"]["signals"] = payload["signal_count"]
+            payload["counts"]["clusters"] = payload["active_cluster_count"]
             payload["summary"] = f"Health center loaded {len(current_signals)} current signal(s) with {len(list(drift_scan.get('active_clusters') or []))} active drift cluster(s)."
             if not current_signals:
                 payload["status"] = "Wired"
                 payload["remains_partial"] = "The dedicated Health screen is live, but current signal sources are still sparse in this runtime."
+                payload["runtime_note"] = "Health is live, but current signal feeds are still sparse in this runtime."
+                payload["availability_notes"].append("Current signal feeds are sparse, so readiness and drift may be partial.")
         except Exception as exc:
             payload["status"] = "Wired"
             payload["available"] = False
             payload["errors"].append(f"drift: {exc}")
             payload["summary"] = "Health center route is live, but drift and signal sources did not fully hydrate."
             payload["remains_partial"] = "Live health sources still need repair or population in this runtime."
+            payload["runtime_note"] = "Health is partially connected. Drift and signal sources did not fully hydrate."
+            payload["availability_notes"].append("Drift and current signal hydration failed in this runtime.")
 
         try:
             from .quarterly_review import get_current_objectives
@@ -14222,8 +14238,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             objectives = await get_current_objectives()
             payload["objectives"] = objectives
             payload["objective_count"] = len(objectives)
+            payload["counts"]["objectives"] = len(objectives)
         except Exception as exc:
             payload["errors"].append(f"objectives: {exc}")
+            payload["availability_notes"].append("Quarterly health objectives could not be loaded.")
 
         try:
             from .symptom_triage import get_red_flags_for_patient
@@ -14231,16 +14249,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["red_flags"] = get_red_flags_for_patient()
         except Exception as exc:
             payload["errors"].append(f"red_flags: {exc}")
+            payload["availability_notes"].append("Personalized symptom red flags could not be loaded.")
 
         payload["recent_activity"] = _module_recent_activity(route="/health-center", domain="health")
+        payload["counts"]["recent_activity"] = len(payload["recent_activity"])
         checkin_store = HealthCheckInStore()
         recent_checkins = checkin_store.list_checkins("chris", limit=6)
         review_summary = checkin_store.review_summary("chris", limit=6)
         payload["recent_checkins"] = recent_checkins
         payload["checkin_count"] = len(recent_checkins)
+        payload["counts"]["checkins"] = payload["checkin_count"]
         payload["review_lane"] = list(review_summary.get("items") or [])
         payload["review_count"] = int(review_summary.get("count") or 0)
         payload["review_status_counts"] = dict(review_summary.get("counts") or {})
+        payload["counts"]["review_items"] = payload["review_count"]
         payload["proof_paths"]["checkins_api"] = "/api/health/checkins"
         payload["proof_paths"]["checkin_review_api"] = "/api/health/checkins/{checkin_id}/review"
         if recent_checkins:
@@ -14253,9 +14275,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 payload["available"] = True
                 payload["remains_partial"] = "Live health sources are still partially hydrated, but manual check-ins and route-owned continuity now keep the module useful."
             payload["latest_checkin"] = latest_checkin
+            payload["runtime_note"] = f"Health is live and connected. {len(recent_checkins)} manual check-in(s) are available for continuity."
+        else:
+            payload["availability_notes"].append("No recent manual health check-ins are available yet.")
 
         if payload["errors"] and payload["status"] == "Useful":
             payload["remains_partial"] = "Some health sources still failed to hydrate; inspect the payload preview for details."
+        if payload["review_count"]:
+            payload["runtime_note"] = (
+                f"{payload['runtime_note']} {payload['review_count']} review item(s) are waiting in the historical lane."
+            ).strip()
+        if not payload["objective_count"]:
+            payload["availability_notes"].append("No active quarterly health objectives are saved yet.")
+        if not payload["availability_notes"]:
+            payload["availability_notes"].append("All currently available Health sources hydrated successfully.")
         return payload
 
     @app.get("/api/health/module")

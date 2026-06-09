@@ -2328,16 +2328,40 @@ body::after {{
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   padding: 9px 10px;
   border-radius: 12px;
   border: 1px solid transparent;
+  background: transparent;
   color: var(--health-copy-faint);
   font-size: 13px;
+  text-align: left;
+  cursor: pointer;
 }}
 .health-sidebar-item.active {{
   background: rgba(127,215,224,0.10);
   border-color: rgba(127,215,224,0.20);
   color: var(--health-copy);
+}}
+.health-sidebar-runtime {{
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(127,215,224,0.16);
+  background: rgba(127,215,224,0.06);
+}}
+.health-sidebar-runtime strong {{
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--health-copy);
+}}
+.health-sidebar-runtime-note {{
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--health-copy-muted);
 }}
 .health-sidebar-foot {{
   margin-top: auto;
@@ -24075,20 +24099,25 @@ body::after {{
             <div class="health-sidebar-mark">✦</div>
           </div>
           <div class="health-sidebar-nav">
-            <div class="health-sidebar-item active">⌂ Command Center</div>
-            <div class="health-sidebar-item">◔ Vitals</div>
-            <div class="health-sidebar-item">⌁ Trends</div>
-            <div class="health-sidebar-item">✦ Coach</div>
-            <div class="health-sidebar-item">◉ Medications</div>
-            <div class="health-sidebar-item">♡ Care</div>
-            <div class="health-sidebar-item">◫ Nutrition</div>
-            <div class="health-sidebar-item">◌ Fitness</div>
-            <div class="health-sidebar-item">◍ Mind Health</div>
-            <div class="health-sidebar-item">☷ Labs</div>
-            <div class="health-sidebar-item">☰ Reports</div>
-            <div class="health-sidebar-item">⚙ Settings</div>
+            <button class="health-sidebar-item active" type="button" data-health-nav="1" onclick="setHealthPage(1)">⌂ Command Center</button>
+            <button class="health-sidebar-item" type="button" data-health-nav="2" onclick="setHealthPage(2)">◔ Vitals</button>
+            <button class="health-sidebar-item" type="button" data-health-nav="3" onclick="setHealthPage(3)">⌁ Trends</button>
+            <button class="health-sidebar-item" type="button" data-health-nav="4" onclick="setHealthPage(4)">✦ Coach</button>
+            <button class="health-sidebar-item" type="button" data-health-nav="5" onclick="setHealthPage(5)">◉ Medications</button>
+            <button class="health-sidebar-item" type="button" data-health-nav="6" onclick="setHealthPage(6)">♡ Care</button>
+            <button class="health-sidebar-item" type="button" onclick="setHealthPage(4)">◫ Nutrition</button>
+            <button class="health-sidebar-item" type="button" onclick="setHealthPage(4)">◌ Fitness</button>
+            <button class="health-sidebar-item" type="button" onclick="setHealthPage(4)">◍ Mind Health</button>
+            <button class="health-sidebar-item" type="button" onclick="setHealthPage(3)">☷ Labs</button>
+            <button class="health-sidebar-item" type="button" onclick="openHealthDesktopExperience()">☰ Reports</button>
+            <button class="health-sidebar-item" type="button" onclick="openHealthDesktopExperience()">⚙ Settings</button>
+          </div>
+          <div class="health-sidebar-runtime">
+            <strong>Runtime</strong>
+            <div id="health-runtime-note" class="health-sidebar-runtime-note">Health is loading live signals…</div>
           </div>
           <div class="health-sidebar-foot">
+            <button class="health-sidebar-item" id="health-refresh-button" type="button" onclick="refreshHealthDesktop(true)">↻ Refresh Health</button>
             <div class="health-sidebar-user">
               <strong>Chris</strong>
               Personal profile
@@ -24193,7 +24222,7 @@ body::after {{
                     </div>
                     <div class="health-mini-card">
                       <strong>Resting Heart Rate</strong>
-                      <p><span id="hm-egfr">87</span> eGFR watch · <span id="hm-weight">—</span> lbs</p>
+                      <p><span id="hm-egfr">—</span> eGFR watch · <span id="hm-weight">—</span> lbs</p>
                       <div id="spark-egfr" class="hm-sparkline"></div>
                     </div>
                     <div class="health-mini-card">
@@ -24203,7 +24232,7 @@ body::after {{
                     </div>
                     <div class="health-mini-card">
                       <strong>Lipid Watch</strong>
-                      <p><span id="hm-ldl">156</span> mg/dL LDL</p>
+                      <p><span id="hm-ldl">—</span> mg/dL LDL</p>
                       <div id="spark-ldl" class="hm-sparkline"></div>
                     </div>
                   </div>
@@ -24234,9 +24263,13 @@ body::after {{
                       <div class="health-card-label">Quick Controls<strong>Move directly to what matters</strong></div>
                     </div>
                     <div class="health-action-row">
-                      <button class="faith-action-btn primary" type="button" onclick="advanceHealthPage(5)">Open Consultation</button>
+                      <button class="faith-action-btn primary" type="button" onclick="setHealthPage(6)">Open Consultation</button>
                       <button class="faith-action-btn muted" type="button" onclick="openVitalsEntry()">Log vitals</button>
                       <button class="faith-action-btn muted" type="button" onclick="openHealthDesktopExperience()">Open full desktop page</button>
+                    </div>
+                    <div class="health-action-row" style="margin-top:8px;">
+                      <button class="faith-action-btn muted" type="button" onclick="healthManualCheckin()">Manual check-in</button>
+                      <button class="faith-action-btn muted" type="button" onclick="healthReviewLatestCheckin()">Review latest</button>
                     </div>
                   </div>
                 </div>
@@ -24259,11 +24292,11 @@ body::after {{
                         <p id="health-readiness-grade">—</p>
                       </div>
                       <div class="health-mini-card">
-                        <strong>7h 12m</strong>
+                        <strong id="health-sleep-hours">—</strong>
                         <p>Hours slept</p>
                       </div>
                       <div class="health-mini-card">
-                        <strong>62 ms</strong>
+                        <strong id="health-hrv-value">—</strong>
                         <p>HRV balanced</p>
                       </div>
                       <div class="health-mini-card">
@@ -24275,7 +24308,7 @@ body::after {{
                         <p>Pulse</p>
                       </div>
                       <div class="health-mini-card">
-                        <strong>164 lbs</strong>
+                        <strong id="health-weight-value">—</strong>
                         <p>Weight</p>
                       </div>
                     </div>
@@ -24304,8 +24337,8 @@ body::after {{
                     </div>
                     <p>Use the coach, care, and physician pages below to decide whether today is a recovery day, a planning day, or a push day.</p>
                     <div class="health-action-row">
-                      <button class="faith-action-btn primary" type="button" onclick="advanceHealthPage(3)">Open Coaching Studio</button>
-                      <button class="faith-action-btn muted" type="button" onclick="advanceHealthPage(2)">Open Trends</button>
+                      <button class="faith-action-btn primary" type="button" onclick="setHealthPage(4)">Open Coaching Studio</button>
+                      <button class="faith-action-btn muted" type="button" onclick="setHealthPage(3)">Open Trends</button>
                     </div>
                   </div>
                 </div>
@@ -24506,6 +24539,9 @@ body::after {{
                         <div style="font-size:11px;color:var(--text-3);">Loading…</div>
                       </div>
                     </div>
+                    <div class="health-action-row" style="margin-top:16px;">
+                      <button class="faith-action-btn muted" type="button" onclick="healthSaveObjective()">Save Health Objective</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -24586,6 +24622,9 @@ body::after {{
                         <button class="faith-action-btn muted" type="button" onclick="healthTestIngest()">Test ingest</button>
                         <button class="faith-action-btn muted" type="button" onclick="mychartStartSync()" id="mychart-sync-btn">Sync records</button>
                         <button class="faith-action-btn muted" type="button" onclick="mychartViewRecords()">View records</button>
+                      </div>
+                      <div class="health-action-row" style="margin-top:8px;">
+                        <button class="faith-action-btn muted" type="button" onclick="healthRunTriage()">Symptom triage</button>
                       </div>
                     </div>
                   </div>
@@ -26489,7 +26528,7 @@ function loadViewData(name) {{
     case 'email':        loadHomeEmail(); break;
     case 'social':       loadSocialView(); break;
     case 'calendar':     loadHomeCalendar(); break;
-    case 'health':       loadHealth(); loadDailyHealthScore(); break;
+    case 'health':       refreshHealthDesktop(); break;
     case 'workshop':     loadWorkshop(); break;
     case 'catalyst':     loadWorkIntelligence(); break;
     case 'news':         loadNews(false); break;
@@ -44429,6 +44468,15 @@ function fmtLocalTime(utcStr, {{dateOnly=false, short=false}}={{}}) {{
 
 let _helenNarrativeExpanded = false;
 let healthStoryboardPage = 1;
+let _healthModuleData = null;
+let _healthRequestSerial = 0;
+const HEALTH_PROOF_PATHS = {{
+  module: '/api/health/module',
+  checkins: '/api/health/checkins',
+  checkinReview: '/api/health/checkins/{{checkin_id}}/review',
+  objectives: '/api/health/quarterly/objectives',
+  triage: '/api/health/symptom/triage',
+}};
 const HEALTH_STORYBOARD_TITLES = {{
   1: {{
     title: '1. Health Command Center',
@@ -44489,6 +44537,12 @@ function syncHealthStoryboard() {{
   const next = document.getElementById('health-nav-next');
   if (prev) prev.disabled = healthStoryboardPage === 1;
   if (next) next.disabled = healthStoryboardPage === pageCount;
+
+  const navItems = Array.from(document.querySelectorAll('#view-health [data-health-nav]'));
+  navItems.forEach((item) => {{
+    const page = Number(item.getAttribute('data-health-nav') || 0);
+    item.classList.toggle('active', page === healthStoryboardPage);
+  }});
 }}
 
 function advanceHealthPage(delta) {{
@@ -44496,7 +44550,307 @@ function advanceHealthPage(delta) {{
   syncHealthStoryboard();
 }}
 
-async function loadHealth() {{
+function setHealthPage(page) {{
+  healthStoryboardPage = page;
+  syncHealthStoryboard();
+}}
+
+function healthRuntimeNote(text) {{
+  const el = document.getElementById('health-runtime-note');
+  if (el) el.textContent = text || 'Health is live and connected.';
+}}
+
+async function healthFetchJson(url, options) {{
+  const response = await fetch(url, options).catch(() => null);
+  if (!response) throw new Error('Network request failed.');
+  if (!response.ok) {{
+    let message = `Request failed: ${{url}}`;
+    try {{
+      const body = await response.json();
+      message = body?.detail || body?.error || message;
+    }} catch (_) {{}}
+    throw new Error(message);
+  }}
+  return response.json();
+}}
+
+function renderHealthModule(payload) {{
+  const data = payload || {{}};
+  _healthModuleData = data;
+  const counts = data.counts || {{}};
+  const runtimeText = data.runtime_note || (data.available === false ? 'Health is partially connected.' : 'Health is live and connected.');
+  healthRuntimeNote(runtimeText);
+
+  const lastSync = document.getElementById('health-last-sync');
+  if (lastSync && data.generated_at) {{
+    lastSync.textContent = 'Module ' + fmtLocalTime(data.generated_at, {{ short: true }});
+  }}
+
+  const readinessMessage = document.getElementById('health-readiness-message');
+  if (readinessMessage) readinessMessage.textContent = data.summary || runtimeText;
+
+  const readinessFactors = document.getElementById('health-readiness-factors');
+  if (readinessFactors) {{
+    const rows = [];
+    const clusters = Array.isArray(data.drift_scan?.active_clusters) ? data.drift_scan.active_clusters.slice(0, 4) : [];
+    if (clusters.length) {{
+      rows.push(...clusters.map((cluster) => {{
+        const title = cluster.cluster || cluster.name || 'Drift cluster';
+        const reason = cluster.why_it_matters || cluster.summary || 'Active drift cluster surfaced in the Health module.';
+        return `<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-2);">${{escHtml(title)}}</span><span style="color:var(--amber);max-width:58%;text-align:right;">${{escHtml(reason)}}</span></div>`;
+      }}));
+    }}
+    const availability = Array.isArray(data.availability_notes) ? data.availability_notes.slice(0, 2) : [];
+    if (availability.length) {{
+      rows.push(...availability.map((item) => `<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-2);">Availability</span><span style="color:var(--text-3);max-width:58%;text-align:right;">${{escHtml(item)}}</span></div>`));
+    }}
+    if (!rows.length) {{
+      rows.push(`<div style="display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);"><span style="color:var(--text-2);">Status</span><span style="color:var(--health-teal);">${{escHtml(runtimeText)}}</span></div>`);
+    }}
+    readinessFactors.innerHTML = rows.join('');
+  }}
+
+  const actions = [];
+  const objectives = Array.isArray(data.objectives) ? data.objectives : [];
+  objectives.slice(0, 2).forEach((objective, index) => {{
+    actions.push({{
+      rank: actions.length + 1,
+      urgency: index === 0 ? 'high' : 'moderate',
+      category: 'Objective',
+      timeline: objective.time_horizon || 'This quarter',
+      action: objective.objective || objective.title || `Objective ${{index + 1}}`,
+      why: objective.why_this_matters || objective.reason || objective.metric || 'Quarterly health objective is active.',
+      expected_benefit: objective.target || objective.success_criteria || '',
+    }});
+  }});
+  const reviewItems = Array.isArray(data.review_lane) ? data.review_lane : [];
+  reviewItems.slice(0, 2).forEach((item) => {{
+    actions.push({{
+      rank: actions.length + 1,
+      urgency: String(item.review_status || '').toLowerCase().includes('watch') ? 'moderate' : 'low',
+      category: 'Review lane',
+      timeline: fmtLocalTime(item.recorded_at || item.reviewed_at || data.generated_at, {{ short: true }}),
+      action: item.symptoms || item.title || 'Recent health check-in',
+      why: item.note || item.review_note || 'Recent check-in is available for longitudinal review.',
+      expected_benefit: item.review_status_label || item.review_status || '',
+    }});
+  }});
+  if (!actions.length) {{
+    actions.push({{
+      rank: 1,
+      urgency: data.available === false ? 'moderate' : 'low',
+      category: 'Module status',
+      timeline: 'Now',
+      action: data.summary || 'Health is ready for review.',
+      why: runtimeText,
+      expected_benefit: (data.availability_notes || [])[0] || 'Use manual check-ins and the Health desktop page while deeper sources hydrate.',
+    }});
+  }}
+  _renderActions(actions);
+
+  const metricsGrid = document.getElementById('health-metrics-grid');
+  if (metricsGrid) {{
+    const signals = data.current_signals || {{}};
+    const labelMap = {{ weight: 'Weight', sleep_hours: 'Sleep', hrv: 'HRV', resting_hr: 'Resting HR', blood_oxygen: 'Blood O₂', steps: 'Steps', systolic: 'Systolic', diastolic: 'Diastolic' }};
+    const unitMap = {{ weight: 'lbs', sleep_hours: 'hrs', hrv: 'ms', resting_hr: 'bpm', blood_oxygen: '%', steps: '', systolic: 'mmHg', diastolic: 'mmHg' }};
+    const entries = Object.entries(signals).filter(([, value]) => value !== null && value !== undefined).slice(0, 8);
+    if (entries.length) {{
+      metricsGrid.innerHTML = entries.map(([key, value]) => {{
+        const label = labelMap[key] || key.replace(/_/g, ' ');
+        const unit = unitMap[key] || '';
+        const display = typeof value === 'number' ? Number(value).toLocaleString() : String(value);
+        return `<div style="background:var(--surface-2);border-radius:6px;padding:8px 10px;"><div style="font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">${{escHtml(label)}}</div><div style="font-size:18px;font-weight:600;color:var(--text-1);font-family:var(--font-mono);">${{escHtml(display)}}<span style="font-size:9px;color:var(--text-3);margin-left:2px;">${{escHtml(unit)}}</span></div></div>`;
+      }}).join('');
+    }}
+  }}
+
+  const deviationMap = Object.fromEntries(
+    (Array.isArray(data.baseline_deviations) ? data.baseline_deviations : []).map((item) => [String(item.metric || '').toLowerCase(), item])
+  );
+  const egfrEl = document.getElementById('hm-egfr');
+  if (egfrEl && deviationMap.egfr?.current !== undefined) egfrEl.textContent = String(deviationMap.egfr.current);
+  const ldlEl = document.getElementById('hm-ldl');
+  if (ldlEl && deviationMap.ldl?.current !== undefined) ldlEl.textContent = String(deviationMap.ldl.current);
+
+  const goals = document.getElementById('helen-goals');
+  if (goals && objectives.length) {{
+    goals.innerHTML = objectives.map((objective) => {{
+      const title = objective.objective || objective.title || 'Objective';
+      const target = objective.target || objective.metric || objective.success_criteria || 'Live target pending';
+      const horizon = objective.time_horizon || 'This quarter';
+      return `<div style="padding:5px 0;border-bottom:1px solid var(--border);"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:11px;color:var(--text-2);">${{escHtml(title)}}</span><span style="font-size:10px;font-weight:700;color:var(--health-teal);">${{escHtml(horizon)}}</span></div><div style="font-size:10px;color:var(--text-3);margin-top:2px;">${{escHtml(target)}}</div></div>`;
+    }}).join('');
+  }}
+
+  const missingData = document.getElementById('helen-missing-data');
+  if (missingData) {{
+    const notes = Array.isArray(data.availability_notes) ? data.availability_notes : [];
+    missingData.innerHTML = (notes.length ? notes : ['No additional Health data gaps were reported by the module.']).map((item) => `<div style="font-size:10px;color:var(--text-3);padding:3px 0;">⬜ ${{escHtml(item)}}</div>`).join('');
+  }}
+
+  const conditions = document.getElementById('helen-conditions');
+  if (conditions) {{
+    const redFlags = data.red_flags || {{}};
+    const categories = Object.entries(redFlags).filter(([, value]) => Array.isArray(value) && value.length);
+    if (categories.length) {{
+      conditions.innerHTML = categories.slice(0, 4).map(([category, value]) => `<div style="padding:6px 0;border-bottom:1px solid var(--border);"><div style="font-size:11px;font-weight:600;color:var(--text-1);">${{escHtml(category.replace(/_/g, ' '))}}</div><div style="font-size:10px;color:var(--text-3);margin-top:2px;line-height:1.5;">${{escHtml((value || []).slice(0, 2).join(' · '))}}</div></div>`).join('');
+    }}
+  }}
+
+  const labAlerts = document.getElementById('helen-lab-alerts');
+  if (labAlerts) {{
+    const clusters = Array.isArray(data.drift_scan?.active_clusters) ? data.drift_scan.active_clusters : [];
+    if (clusters.length) {{
+      labAlerts.innerHTML = clusters.slice(0, 4).map((cluster) => `<div style="padding:5px 0;border-bottom:1px solid var(--border);"><div style="font-size:10px;font-weight:600;color:var(--amber);">${{escHtml(cluster.cluster || cluster.name || 'Active drift cluster')}}</div><div style="font-size:10px;color:var(--text-2);margin:2px 0;">${{escHtml(cluster.summary || cluster.why_it_matters || 'Health drift cluster surfaced by the module.')}}</div></div>`).join('');
+    }}
+  }}
+
+  const longevity = document.getElementById('health-longevity-content');
+  if (longevity) {{
+    longevity.innerHTML = `<div style="font-size:11px;color:var(--text-2);line-height:1.6;">${{escHtml(data.what_became_real || data.summary || runtimeText)}}</div><div style="font-size:10px;color:var(--text-3);margin-top:8px;">${{escHtml(data.remains_partial || '')}}</div>`;
+  }}
+
+  const twin = document.getElementById('health-twin-grid');
+  if (twin) {{
+    const cards = [
+      {{ title: 'Signals', value: counts.signals ?? data.signal_count ?? 0, note: 'Current module inputs' }},
+      {{ title: 'Drift Clusters', value: counts.clusters ?? data.active_cluster_count ?? 0, note: 'Active drift groups' }},
+      {{ title: 'Objectives', value: counts.objectives ?? data.objective_count ?? 0, note: 'Quarterly health goals' }},
+      {{ title: 'Review Lane', value: counts.review_items ?? data.review_count ?? 0, note: 'Historical review items' }},
+    ];
+    twin.innerHTML = cards.map((card) => `<div class="health-mini-card"><strong>${{escHtml(card.title)}}</strong><p><span style="font-family:var(--font-mono);">${{escHtml(String(card.value))}}</span></p><div style="font-size:10px;color:var(--text-3);margin-top:6px;">${{escHtml(card.note)}}</div></div>`).join('');
+  }}
+
+  const syncStatus = document.getElementById('mychart-sync-status');
+  if (syncStatus && data.available === false) syncStatus.textContent = 'Partial';
+}}
+
+async function refreshHealthDesktop(showToast = false) {{
+  const refreshButton = document.getElementById('health-refresh-button');
+  const requestSerial = ++_healthRequestSerial;
+  syncHealthStoryboard();
+  if (refreshButton) {{
+    refreshButton.disabled = true;
+    refreshButton.textContent = '↻ Refreshing…';
+  }}
+  healthRuntimeNote('Health is loading live signals…');
+  try {{
+    const payload = await healthFetchJson(HEALTH_PROOF_PATHS.module);
+    if (requestSerial !== _healthRequestSerial) return;
+    renderHealthModule(payload);
+    await Promise.allSettled([loadHealthDetailPanels(), loadDailyHealthScore()]);
+    if (showToast) showToast('Health refreshed', 'ok');
+  }} catch (error) {{
+    if (requestSerial !== _healthRequestSerial) return;
+    const message = error?.message || 'Health module unavailable.';
+    healthRuntimeNote(message);
+    const actions = document.getElementById('helen-actions');
+    if (actions) actions.innerHTML = `<div style="font-size:11px;color:var(--text-3);padding:8px 0;">${{escHtml(message)}}</div>`;
+    if (showToast) showToast('Health refresh failed', 'warn');
+  }} finally {{
+    if (requestSerial === _healthRequestSerial && refreshButton) {{
+      refreshButton.disabled = false;
+      refreshButton.textContent = '↻ Refresh Health';
+    }}
+  }}
+}}
+
+async function healthManualCheckin() {{
+  const symptoms = (window.prompt('What symptoms or health context should JARVIS save?', '') || '').trim();
+  if (!symptoms) return;
+  const note = (window.prompt('Any note for continuity or coaching?', '') || '').trim();
+  try {{
+    await healthFetchJson(HEALTH_PROOF_PATHS.checkins, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        actor_id: 'chris',
+        symptoms,
+        note,
+        source: 'desktop-shell',
+      }}),
+    }});
+    showToast('Health check-in saved', 'ok');
+    refreshHealthDesktop();
+  }} catch (error) {{
+    showToast(error?.message || 'Could not save health check-in', 'warn');
+  }}
+}}
+
+async function healthReviewLatestCheckin() {{
+  const latest = _healthModuleData?.latest_checkin;
+  if (!latest?.checkin_id) {{
+    showToast('No recent check-in available to review', 'warn');
+    return;
+  }}
+  const note = (window.prompt('Review note for the latest health check-in?', latest.note || '') || '').trim();
+  try {{
+    await healthFetchJson(HEALTH_PROOF_PATHS.checkinReview.replace('{{checkin_id}}', encodeURIComponent(latest.checkin_id)), {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        status: 'watch',
+        note: note || 'Reviewed from the Health desktop shell.',
+      }}),
+    }});
+    showToast('Health check-in reviewed', 'ok');
+    refreshHealthDesktop();
+  }} catch (error) {{
+    showToast(error?.message || 'Could not review health check-in', 'warn');
+  }}
+}}
+
+async function healthSaveObjective() {{
+  const objective = (window.prompt('New quarterly health objective', '') || '').trim();
+  if (!objective) return;
+  const target = (window.prompt('Target or success criteria', '') || '').trim();
+  const existing = Array.isArray(_healthModuleData?.objectives) ? _healthModuleData.objectives.slice() : [];
+  existing.push({{
+    objective,
+    target,
+    time_horizon: 'This quarter',
+  }});
+  try {{
+    await healthFetchJson(HEALTH_PROOF_PATHS.objectives, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        objectives: existing,
+      }}),
+    }});
+    showToast('Health objective saved', 'ok');
+    refreshHealthDesktop();
+  }} catch (error) {{
+    showToast(error?.message || 'Could not save objective', 'warn');
+  }}
+}}
+
+async function healthRunTriage() {{
+  const symptoms = (window.prompt('Describe the symptom or question for triage', '') || '').trim();
+  if (!symptoms) return;
+  const duration = (window.prompt('How long has this been going on?', '') || '').trim();
+  try {{
+    const result = await healthFetchJson(HEALTH_PROOF_PATHS.triage, {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        symptoms,
+        duration,
+        severity: 5,
+        context: 'Submitted from the Health desktop shell.',
+      }}),
+    }});
+    const headline = result.summary || result.recommendation || result.urgency || 'Triage complete.';
+    showToast(String(headline).slice(0, 120), 'ok');
+  }} catch (error) {{
+    showToast(error?.message || 'Could not run symptom triage', 'warn');
+  }}
+}}
+
+async function loadHealthDetailPanels() {{
   syncHealthStoryboard();
   // Fire all data loads in parallel
   const [sumRes, ecgRes, bpRes, omronRes, helenRes, dbRes] = await Promise.all([
@@ -44663,7 +45017,7 @@ async function submitVitals() {{
       document.getElementById('vitals-entry-overlay')?.classList.add('hidden');
       // Refresh the health view if it's visible
       if (document.getElementById('view-health')?.style.display !== 'none') {{
-        setTimeout(() => loadHealthView && loadHealthView(), 800);
+        setTimeout(() => refreshHealthDesktop && refreshHealthDesktop(), 800);
       }}
     }} else {{
       showToast('Could not save — check console', 'warn');
@@ -44713,13 +45067,29 @@ function _helenPollForAnalysis() {{
 function _renderHealthDashboard(d) {{
   // Readiness
   const r = d.readiness || {{}};
+  const m = d.metrics || {{}};
   const scoreEl = document.getElementById('health-readiness-score');
   const gradeEl = document.getElementById('health-readiness-grade');
   const msgEl   = document.getElementById('health-readiness-message');
   const facEl   = document.getElementById('health-readiness-factors');
+  const sleepEl = document.getElementById('health-sleep-hours');
+  const hrvEl   = document.getElementById('health-hrv-value');
+  const weightEl = document.getElementById('health-weight-value');
   if (scoreEl) scoreEl.textContent = r.score != null ? r.score : '—';
   if (gradeEl) gradeEl.textContent = r.grade || '—';
   if (msgEl)   msgEl.textContent   = r.message || '';
+  if (sleepEl) sleepEl.textContent = m.sleep_hours != null ? Number(m.sleep_hours).toFixed(1) : '—';
+  if (hrvEl) hrvEl.textContent = m.hrv != null ? Math.round(Number(m.hrv)) + ' ms' : '—';
+  if (weightEl) {{
+    const rawWeight = m.weight ?? m.weight_lbs ?? null;
+    if (rawWeight == null) {{
+      weightEl.textContent = '—';
+    }} else {{
+      const numericWeight = Number(rawWeight);
+      const lbs = numericWeight > 250 ? numericWeight : numericWeight * 2.205;
+      weightEl.textContent = Math.round(lbs) + ' lbs';
+    }}
+  }}
   if (facEl && r.factors && r.factors.length) {{
     facEl.innerHTML = r.factors.map(f =>
       `<div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);">
@@ -45198,7 +45568,7 @@ async function omronSync() {{
     headers:{{'Content-Type':'application/json'}}, body:'{{}}'}}).catch(() => null);
   if (res && res.ok) {{
     showToast('Omron sync started', 'success');
-    setTimeout(loadHealth, 4000);
+    setTimeout(refreshHealthDesktop, 4000);
   }} else {{
     showToast('Omron sync failed', 'error');
   }}
@@ -45225,7 +45595,7 @@ async function healthTestIngest() {{
     headers: {{'Content-Type': 'application/json'}},
     body: JSON.stringify(sample),
   }});
-  if (res.ok) {{ showToast('Sample data ingested!', 'success'); loadHealth(); }}
+  if (res.ok) {{ showToast('Sample data ingested!', 'success'); refreshHealthDesktop(); }}
   else showToast('Ingest failed', 'error');
 }}
 
