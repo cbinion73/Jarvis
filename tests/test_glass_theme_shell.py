@@ -392,6 +392,23 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("Refresh News", html)
         self.assertIn("News is live and connected.", html)
 
+    def test_render_glass_shell_wires_social_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="social-runtime-note"', html)
+        self.assertIn('data-social-nav="1"', html)
+        self.assertIn('data-social-nav="12"', html)
+        self.assertIn("function socialRuntimeNote(", html)
+        self.assertIn("function socialFetchJson(", html)
+        self.assertIn("function socialHandleAction(", html)
+        self.assertIn("function refreshSocialDesktop(", html)
+        self.assertIn("function socialOpenRoute(", html)
+        self.assertIn("/api/social/module?actor=Chris", html)
+        self.assertIn("/api/social/module/action", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("/social-center", html)
+        self.assertIn("Social Media is live and connected.", html)
+
     def test_render_glass_shell_wires_publishing_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

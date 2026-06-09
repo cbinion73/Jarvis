@@ -23864,6 +23864,7 @@ body::after {{
       <div>
         <div class="view-title">JARVIS <span>SOCIAL MEDIA</span><div class="view-title-line"></div></div>
         <div class="social-subtitle">Your voice. Your mission. Amplified with purpose. Strategy, content, engagement, and platform intelligence in one live desktop command surface.</div>
+        <div id="social-runtime-note" class="social-card-subtitle" style="margin-top:10px;">Social Media is loading live state.</div>
       </div>
       <div class="social-header-stats">
         <div class="social-header-stat"><strong id="social-stat-health">—</strong><span>Overall Health</span><em id="social-stat-health-sub">Loading</em></div>
@@ -23895,16 +23896,16 @@ body::after {{
             <span>Social command</span>
           </div>
           <div class="social-sidebar-nav">
-            <div class="social-sidebar-item active"><span>Overview</span><b id="social-side-overview">Live</b></div>
-            <div class="social-sidebar-item"><span>Inbox</span><b id="social-side-inbox">0</b></div>
-            <div class="social-sidebar-item"><span>Calendar</span><b id="social-side-calendar">0</b></div>
-            <div class="social-sidebar-item"><span>Workflow</span><b id="social-side-workflow">0%</b></div>
-            <div class="social-sidebar-item"><span>Accounts</span><b id="social-side-accounts">6</b></div>
+            <button class="social-sidebar-item active" type="button" data-social-nav="1" onclick="socialSetPage(1)"><span>Overview</span><b id="social-side-overview">Live</b></button>
+            <button class="social-sidebar-item" type="button" data-social-nav="4" onclick="socialSetPage(4)"><span>Inbox</span><b id="social-side-inbox">0</b></button>
+            <button class="social-sidebar-item" type="button" data-social-nav="2" onclick="socialSetPage(2)"><span>Calendar</span><b id="social-side-calendar">0</b></button>
+            <button class="social-sidebar-item" type="button" data-social-nav="5" onclick="socialSetPage(5)"><span>Workflow</span><b id="social-side-workflow">0%</b></button>
+            <button class="social-sidebar-item" type="button" data-social-nav="12" onclick="socialSetPage(12)"><span>Accounts</span><b id="social-side-accounts">0</b></button>
           </div>
           <div class="social-sidebar-status">
             <h4>Social Status</h4>
             <div id="social-sidebar-status"></div>
-            <button class="social-sidebar-btn" onclick="socialActionToast('Social account tuning and diagnostics will open here next.')">Social Settings →</button>
+            <button class="social-sidebar-btn" onclick="socialHandleAction('manage-accounts')">Social Settings →</button>
           </div>
         </aside>
 
@@ -23929,8 +23930,8 @@ body::after {{
                 </div>
                 <div class="social-tabs">
                   <button class="social-tab active">Week</button>
-                  <button class="social-tab" onclick="socialActionToast('Day view is queued next.')">Day</button>
-                  <button class="social-tab" onclick="loadSocialView()">↻</button>
+                  <button class="social-tab" onclick="socialHandleAction('calendar-day-boundary')">Day</button>
+                  <button class="social-tab" onclick="socialHandleAction('refresh-social')">↻</button>
                 </div>
               </div>
               <div class="social-calendar-grid" id="social-calendar-grid"></div>
@@ -23943,12 +23944,12 @@ body::after {{
                   <h3 class="social-card-title">3. Content Performance</h3>
                   <span class="social-card-subtitle">What is resonating with your audience.</span>
                 </div>
-                <button class="social-chip-btn" onclick="socialActionToast('Full content analytics are queued next.')">View Analytics →</button>
+                <button class="social-chip-btn" onclick="socialHandleAction('open-analytics')">View Analytics →</button>
               </div>
               <div class="social-tabs">
                 <button class="social-tab active">Top Posts</button>
-                <button class="social-tab" onclick="socialActionToast('Topic breakdown is queued next.')">Top Topics</button>
-                <button class="social-tab" onclick="socialActionToast('Format breakdown is queued next.')">Top Formats</button>
+                <button class="social-tab" onclick="socialHandleAction('top-topics-boundary')">Top Topics</button>
+                <button class="social-tab" onclick="socialHandleAction('top-formats-boundary')">Top Formats</button>
               </div>
               <div class="social-performance-list" id="social-performance-list"></div>
             </section>
@@ -23962,9 +23963,9 @@ body::after {{
               </div>
               <div class="social-tabs">
                 <button class="social-tab active">Priority</button>
-                <button class="social-tab" onclick="socialActionToast('Mentions breakdown is queued next.')">Mentions</button>
-                <button class="social-tab" onclick="socialActionToast('Comments view is queued next.')">Comments</button>
-                <button class="social-tab" onclick="socialActionToast('DM lane is queued next.')">DMs</button>
+                <button class="social-tab" onclick="socialHandleAction('mentions-boundary')">Mentions</button>
+                <button class="social-tab" onclick="socialHandleAction('comments-boundary')">Comments</button>
+                <button class="social-tab" onclick="socialHandleAction('boundary-dms')">DMs</button>
               </div>
               <div class="social-inbox-list" id="social-inbox-list"></div>
             </section>
@@ -23977,7 +23978,7 @@ body::after {{
                   <h3 class="social-card-title">5. Content Pipeline</h3>
                   <span class="social-card-subtitle">Ideas to publishing in one flow.</span>
                 </div>
-                <button class="social-chip-btn" onclick="socialActionToast('Full pipeline editor is queued next.')">View Full Pipeline →</button>
+                <button class="social-chip-btn" onclick="socialHandleAction('open-publishing')">View Full Pipeline →</button>
               </div>
               <div class="social-workflow-list" id="social-pipeline-list"></div>
             </section>
@@ -24006,7 +24007,7 @@ body::after {{
                   <h3 class="social-card-title">7. Content Themes & Impact</h3>
                   <span class="social-card-subtitle">The pillars driving your mission.</span>
                 </div>
-                <button class="social-chip-btn" onclick="socialActionToast('Theme analytics are queued next.')">View Themes →</button>
+                <button class="social-chip-btn" onclick="socialHandleAction('open-command')">View Themes →</button>
               </div>
               <div class="social-thread-list" id="social-theme-list"></div>
             </section>
@@ -24034,7 +24035,7 @@ body::after {{
                   <h3 class="social-card-title">9. Sentiment & Tone</h3>
                   <span class="social-card-subtitle">How the world feels about your content.</span>
                 </div>
-                <button class="social-chip-btn" onclick="socialActionToast('Sentiment trends are queued next.')">View Trends →</button>
+                <button class="social-chip-btn" onclick="socialHandleAction('view-trends-boundary')">View Trends →</button>
               </div>
               <div class="social-thread-list" id="social-sentiment-list"></div>
             </section>
@@ -24047,14 +24048,14 @@ body::after {{
                 </div>
               </div>
               <div class="social-quick-grid">
-                <button class="social-quick-btn" onclick="socialActionToast('Create post composer is queued next.')">Create Post<span>Draft with JARVIS</span></button>
-                <button class="social-quick-btn" onclick="socialActionToast('Write thread flow is queued next.')">Write Thread<span>X / LinkedIn</span></button>
-                <button class="social-quick-btn" onclick="socialActionToast('Upload video flow is queued next.')">Upload Video<span>Short or long-form</span></button>
-                <button class="social-quick-btn" onclick="socialActionToast('Schedule post flow is queued next.')">Schedule Post<span>Protect cadence</span></button>
-                <button class="social-quick-btn" onclick="socialActionToast('DM response lane is queued next.')">Respond to DMs<span>Priority inbox</span></button>
-                <button class="social-quick-btn" onclick="socialActionToast('Analytics view is queued next.')">View Analytics<span>Performance readout</span></button>
-                <button class="social-quick-btn" onclick="socialActionToast('Content idea studio is queued next.')">Content Ideas<span>Generate concepts</span></button>
-                <button class="social-quick-btn" onclick="loadSocialView()">Refresh<span>Reload live state</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('create-post')">Create Post<span>Draft with JARVIS</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('boundary-thread')">Write Thread<span>X / LinkedIn</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('boundary-video')">Upload Video<span>Short or long-form</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('schedule-post')">Schedule Post<span>Protect cadence</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('boundary-dms')">Respond to DMs<span>Priority inbox</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('open-analytics')">View Analytics<span>Performance readout</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('open-command')">Content Ideas<span>Generate concepts</span></button>
+                <button class="social-quick-btn" onclick="socialHandleAction('refresh-social')">Refresh<span>Reload live state</span></button>
               </div>
             </section>
           </div>
@@ -24066,7 +24067,7 @@ body::after {{
                   <h3 class="social-card-title">11. What JARVIS Recommends</h3>
                   <span class="social-card-subtitle">AI-powered recommendations for you.</span>
                 </div>
-                <button class="social-chip-btn" onclick="socialActionToast('Recommendation center is queued next.')">View All Recommendations →</button>
+                <button class="social-chip-btn" onclick="socialHandleAction('open-analytics')">View All Recommendations →</button>
               </div>
               <div class="social-reco-list" id="social-reco-list"></div>
             </section>
@@ -24077,7 +24078,7 @@ body::after {{
                   <h3 class="social-card-title">12. Account & Security</h3>
                   <span class="social-card-subtitle">Protect and manage your presence.</span>
                 </div>
-                <button class="social-chip-btn" onclick="socialActionToast('Account and security console is queued next.')">Manage Accounts →</button>
+                <button class="social-chip-btn" onclick="socialHandleAction('manage-accounts')">Manage Accounts →</button>
               </div>
               <div class="social-security-list" id="social-security-list"></div>
             </section>
@@ -24091,10 +24092,10 @@ body::after {{
               </div>
               <div class="social-summary-grid" id="social-summary-grid"></div>
               <div style="margin-top:16px;" class="social-settings-grid">
-                <button class="social-mini-btn" onclick="socialActionToast('Auto-publish controls are queued next.')">Auto-Publish</button>
-                <button class="social-mini-btn" onclick="socialActionToast('Best-time automation is queued next.')">Best Time</button>
-                <button class="social-mini-btn" onclick="socialActionToast('Recycling automation is queued next.')">Recycling</button>
-                <button class="social-mini-btn" onclick="socialActionToast('Engagement assistant is queued next.')">Assistant</button>
+                <button class="social-mini-btn" onclick="socialHandleAction('execute-ready')">Auto-Publish</button>
+                <button class="social-mini-btn" onclick="socialHandleAction('best-time-boundary')">Best Time</button>
+                <button class="social-mini-btn" onclick="socialHandleAction('recycling-boundary')">Recycling</button>
+                <button class="social-mini-btn" onclick="socialHandleAction('assistant-boundary')">Assistant</button>
               </div>
             </section>
           </div>
@@ -40762,410 +40763,444 @@ function _setTextIfPresent(id, value) {{
 }}
 
 async function loadSocialView() {{
-  const defaultProjectId = 'intentional-leader-001';
-  const requests = await Promise.allSettled([
-    fetch('/api/publishing/social/posts', {{ cache: 'no-store' }}).then(r => r.json()),
-    fetch('/api/social/posts/pending', {{ cache: 'no-store' }}).then(r => r.json()),
-    fetch('/api/publishing/metrics', {{ cache: 'no-store' }}).then(r => r.json()),
-    fetch(`/api/social/schedule/${{defaultProjectId}}`, {{ cache: 'no-store' }}).then(r => r.json()),
-    fetch(`/api/social/analytics/${{defaultProjectId}}`, {{ cache: 'no-store' }}).then(r => r.json()),
-  ]);
-
-  const postsPayload = requests[0].status === 'fulfilled' ? requests[0].value : {{}};
-  const pendingPayload = requests[1].status === 'fulfilled' ? requests[1].value : {{}};
-  const metricsPayload = requests[2].status === 'fulfilled' ? requests[2].value : {{}};
-  const schedulePayload = requests[3].status === 'fulfilled' ? requests[3].value : {{}};
-  const analyticsPayload = requests[4].status === 'fulfilled' ? requests[4].value : {{}};
-
-  const publishingPosts = Array.isArray(postsPayload.posts) ? postsPayload.posts : [];
-  const schedulePosts = Array.isArray(schedulePayload.posts) ? schedulePayload.posts : [];
-  const pendingPosts = Array.isArray(pendingPayload.posts) ? pendingPayload.posts : [];
-  const posts = [...schedulePosts, ...publishingPosts].filter((item, index, arr) => {{
-    const id = String(item.post_id || item.id || `${{item.platform}}-${{item.scheduled_at}}-${{index}}`);
-    return arr.findIndex(other => String(other.post_id || other.id || '') === id) === index;
-  }});
-
-  _socialState = {{
-    posts,
-    pending: pendingPosts,
-    analytics: analyticsPayload || {{}},
-    schedule: schedulePayload || {{}},
-    metrics: metricsPayload || {{}},
-  }};
-
-  renderSocialHeader();
-  renderSocialSidebar();
-  renderSocialOverview();
-  renderSocialCalendar();
-  renderSocialPerformance();
-  renderSocialInbox();
-  renderSocialPipeline();
-  renderSocialAudience();
-  renderSocialThemes();
-  renderSocialHealth();
-  renderSocialSentiment();
-  renderSocialRecommendations();
-  renderSocialSecurity();
-  renderSocialSummary();
-  renderSocialFooter();
+  return refreshSocialDesktop(false);
 }}
 
 function socialActionToast(message) {{
   if (typeof showToast === 'function') showToast(message, 'info');
 }}
 
-function socialAllPosts() {{
-  return Array.isArray(_socialState.posts) ? _socialState.posts.slice() : [];
+let _socialLastPayload = null;
+
+function socialRuntimeNote(text) {{
+  _setTextIfPresent('social-runtime-note', text || 'Social Media is live and connected.');
 }}
 
-function socialPendingPosts() {{
-  return Array.isArray(_socialState.pending) ? _socialState.pending.slice() : [];
+async function socialFetchJson(url, options = undefined) {{
+  const response = await fetch(url, options);
+  let payload = null;
+  try {{
+    payload = await response.json();
+  }} catch (_error) {{
+    payload = null;
+  }}
+  if (!response.ok) {{
+    const detail = payload && (payload.detail || payload.error || payload.message);
+    throw new Error(detail || `Request failed (${{response.status}})`);
+  }}
+  return payload;
 }}
 
-function socialPlatformLabel(platform) {{
-  const key = String(platform || '').toLowerCase();
-  const labels = {{
-    linkedin: 'LinkedIn',
-    instagram: 'Instagram',
-    facebook: 'Facebook',
-    twitter: 'X (Twitter)',
-    x: 'X (Twitter)',
-    tiktok: 'TikTok',
-    youtube: 'YouTube',
-  }};
-  return labels[key] || (key ? key.charAt(0).toUpperCase() + key.slice(1) : 'Platform');
+function socialCurrentPage() {{
+  return ((_desktopSequenceState.social || {{}}).page) || 1;
 }}
 
-function socialPlatformIcon(platform) {{
-  const key = String(platform || '').toLowerCase();
-  const icons = {{
-    linkedin: 'in',
-    instagram: 'ig',
-    facebook: 'f',
-    twitter: 'x',
-    x: 'x',
-    tiktok: 'tt',
-    youtube: 'yt',
-  }};
-  return icons[key] || 'sm';
+function socialSetPage(page) {{
+  openDesktopCardSequenceModal('social', page);
+  const current = socialCurrentPage();
+  document.querySelectorAll('#view-social [data-social-nav]').forEach((item) => {{
+    item.classList.toggle('active', Number(item.dataset.socialNav || 0) === current);
+  }});
 }}
 
-function socialPriorityTone(item) {{
-  const status = String(item.status || '').toLowerCase();
-  const platform = String(item.platform || '').toLowerCase();
-  if (status.includes('failed') || status.includes('blocked')) return 'high';
-  if (status.includes('pending') || status.includes('approval')) return 'medium';
-  if (platform === 'twitter' || platform === 'x') return 'medium';
+async function socialRecordAction(action, detail, extra = {{}}) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: USER_NAME || 'Chris',
+        domain: 'social',
+        action,
+        title: action,
+        detail,
+        why_now: detail || 'Social Media desktop action updated content continuity.',
+        result_summary: extra.resultSummary || detail || action,
+        route: extra.route || '/social-center',
+        route_label: extra.routeLabel || 'Open Social Media',
+        related_kind: extra.relatedKind || 'social',
+        related_label: extra.relatedLabel || action,
+        succeeded: extra.succeeded !== false,
+      }}),
+    }});
+  }} catch (error) {{
+    console.warn('socialRecordAction failed', error);
+  }}
+}}
+
+async function socialOpenRoute(route, fallbackView, action, detail) {{
+  await socialRecordAction(action || 'Open Social Route', detail || 'Social Media opened a related route.', {{
+    route: route || '/social-center',
+    routeLabel: 'Open Related Surface',
+    relatedKind: 'social-route',
+    relatedLabel: action || fallbackView || 'social',
+  }});
+  if (route) {{
+    window.location.href = route;
+    return;
+  }}
+  if (fallbackView && typeof switchView === 'function') switchView(fallbackView);
+}}
+
+function socialUnavailable(reason) {{
+  socialRuntimeNote(reason || 'That Social Media action is not available in this runtime.');
+  showToast(reason || 'That Social Media action is not available in this runtime.', 'info');
+}}
+
+function socialToneClass(value) {{
+  const tone = String(value || '').toLowerCase();
+  if (tone === 'high' || tone === 'warn' || tone === 'warning') return 'high';
+  if (tone === 'medium' || tone === 'queued') return 'medium';
+  if (tone === 'healthy' || tone === 'good') return 'healthy';
+  if (tone === 'info') return 'info';
   return 'low';
 }}
 
-function socialPerformanceScore(item) {{
-  const perf = item.performance || item.engagement || {{}};
-  return Number(perf.likes || 0) + (Number(perf.comments || 0) * 2) + (Number(perf.shares || 0) * 3) + Number(perf.clicks || 0) + Number(perf.views || 0);
+function socialRenderStat(id, subId, row, fallbackSub = 'Unavailable') {{
+  _setTextIfPresent(id, row?.value || '—');
+  _setTextIfPresent(subId, row?.sub || fallbackSub);
 }}
 
-function socialScheduledLabel(value) {{
-  if (!value) return 'Unscheduled';
+function socialRowsOrEmpty(rows, emptyRow) {{
+  return rows && rows.length ? rows : [emptyRow];
+}}
+
+async function socialHandleAction(actionId) {{
+  const modulePayload = _socialLastPayload || {{}};
+  const trusted = Array.isArray(modulePayload.trusted_actions) ? modulePayload.trusted_actions : [];
+  const quick = Array.isArray(modulePayload.quick_actions) ? modulePayload.quick_actions : [];
+  const trustedItem = trusted.find((entry) => String(entry.id || '') === String(actionId || ''));
+  const quickItem = quick.find((entry) => String(entry.id || '') === String(actionId || ''));
+
+  if (trustedItem) {{
+    if (trustedItem.available === false) {{
+      socialUnavailable(trustedItem.unavailable_reason || 'This Social Media action is not available in the current runtime.');
+      return;
+    }}
+    if (trustedItem.action_type === 'refresh') {{
+      await refreshSocialDesktop(true);
+      return;
+    }}
+
+    const body = {{
+      action: trustedItem.action_type,
+      project_id: trustedItem.project_id || modulePayload.selected_project_id || '',
+      post_id: trustedItem.post_id || '',
+    }};
+
+    if (trustedItem.action_type === 'create-post' || trustedItem.action_type === 'schedule-post') {{
+      const platform = window.prompt('Platform for this social post?', 'linkedin');
+      if (!platform) return;
+      const content = window.prompt('Draft the social post content:', '');
+      if (!content) return;
+      body.platform = platform;
+      body.content = content;
+      if (trustedItem.action_type === 'schedule-post') {{
+        const defaultSchedule = new Date(Date.now() + (24 * 60 * 60 * 1000)).toISOString();
+        const scheduledAt = window.prompt('Schedule ISO timestamp (leave as suggested or edit)', defaultSchedule);
+        if (!scheduledAt) return;
+        body.scheduled_at = scheduledAt;
+      }}
+    }}
+
+    try {{
+      const payload = await socialFetchJson('/api/social/module/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify(body),
+      }});
+      await socialRecordAction(trustedItem.title || 'Social Media action', payload.message || trustedItem.note || 'Social Media action completed.', {{
+        relatedLabel: trustedItem.title || 'Social action',
+      }});
+      socialRuntimeNote(payload.message || trustedItem.note || 'Social Media action completed.');
+      showToast(payload.message || 'Social Media action completed.', 'success');
+      await refreshSocialDesktop(false);
+    }} catch (error) {{
+      const detail = error?.message || 'Social Media action failed.';
+      socialUnavailable(detail);
+    }}
+    return;
+  }}
+
+  if (quickItem) {{
+    if (quickItem.available === false) {{
+      socialUnavailable(quickItem.unavailable_reason || quickItem.detail || 'This Social Media action is not available in the current runtime.');
+      return;
+    }}
+    if (quickItem.route) {{
+      socialRuntimeNote(quickItem.detail || 'Opening related Social Media surface.');
+      showToast(quickItem.detail || 'Opening related Social Media surface.', 'info');
+      await socialOpenRoute(quickItem.route, 'social', quickItem.title || 'Open Social Route', quickItem.detail || 'Social Media opened a related surface.');
+      return;
+    }}
+  }}
+
+  const routeActions = {{
+    'manage-accounts': ['/settings-center', 'settings', 'Open Social Settings', 'Open Settings for account, connector, and trust posture review.'],
+    'open-analytics': ['/publish', 'publishing', 'Open Publishing Analytics', 'Open Publishing for deeper social analytics and launch context.'],
+    'open-publishing': ['/publish', 'publishing', 'Open Publishing Workspace', 'Open Publishing to review social drafts, schedules, and launch state.'],
+    'open-command': ['/command-center', 'chat', 'Open Social Ideation', 'Route Social Media ideation into Command until a dedicated ideation surface exists.'],
+  }};
+  if (routeActions[actionId]) {{
+    const [route, fallbackView, action, detail] = routeActions[actionId];
+    await socialOpenRoute(route, fallbackView, action, detail);
+    return;
+  }}
+
+  const boundaryMessages = {{
+    'calendar-day-boundary': 'A dedicated day-view backend route is not exposed in this runtime yet.',
+    'top-topics-boundary': 'A dedicated top-topics analytics backend route is not exposed in this runtime yet.',
+    'top-formats-boundary': 'A dedicated format-breakdown backend route is not exposed in this runtime yet.',
+    'mentions-boundary': 'A real mentions backend route is not exposed in this runtime yet.',
+    'comments-boundary': 'A real comments backend route is not exposed in this runtime yet.',
+    'view-trends-boundary': 'A dedicated sentiment-trends backend route is not exposed in this runtime yet.',
+    'best-time-boundary': 'Best-time automation needs a dedicated scheduling backend route that is not exposed in this runtime yet.',
+    'recycling-boundary': 'Content recycling automation is not exposed as a dedicated backend route in this runtime yet.',
+    'assistant-boundary': 'A social engagement assistant backend route is not exposed in this runtime yet.',
+  }};
+  if (boundaryMessages[actionId]) {{
+    socialUnavailable(boundaryMessages[actionId]);
+    return;
+  }}
+
+  socialUnavailable('That Social Media action is not available right now.');
+}}
+
+async function refreshSocialDesktop(showToastOnSuccess = false) {{
   try {{
-    const dt = new Date(value);
-    return dt.toLocaleString([], {{ month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }});
-  }} catch {{
-    return String(value);
+    const payload = await socialFetchJson('/api/social/module?actor=Chris');
+    _socialLastPayload = payload || {{}};
+    renderSocialWorkspace(_socialLastPayload);
+    if (showToastOnSuccess) showToast('Social Media refreshed.', 'success');
+  }} catch (error) {{
+    const detail = error?.message || 'Social Media could not load.';
+    console.error('social load failed', error);
+    _socialLastPayload = {{
+      available: false,
+      runtime_note: `Social Media could not load: ${{detail}}`,
+      availability_notes: [`Social Media could not load: ${{detail}}`],
+      headline_stats: {{}},
+      sidebar_counts: {{}},
+      sidebar_status_rows: [],
+      platform_rows: [],
+      mini_stats: [],
+      calendar_rows: [],
+      calendar_footer: [],
+      performance_rows: [],
+      inbox_rows: [],
+      pipeline_rows: [],
+      audience: {{ total: '—', rows: [], insights: [] }},
+      theme_rows: [],
+      health: {{ score: 0, label: 'Unavailable', metrics: [] }},
+      sentiment_rows: [],
+      recommendation_rows: [],
+      security_rows: [],
+      summary_cards: [],
+      footer_rows: [],
+      trusted_actions: [],
+      quick_actions: [],
+      counts: {{}},
+      recent_activity: [],
+    }};
+    renderSocialWorkspace(_socialLastPayload);
+    if (showToastOnSuccess) showToast(detail, 'error');
   }}
 }}
 
-function socialHumanNumber(value) {{
-  const num = Number(value || 0);
-  if (num >= 1000000) return `${{(num / 1000000).toFixed(1)}}M`;
-  if (num >= 1000) return `${{(num / 1000).toFixed(1)}}K`;
-  return String(num);
-}}
-
-function socialGroupedPlatforms(posts) {{
-  const map = new Map();
-  posts.forEach(post => {{
-    const platform = String(post.platform || 'other').toLowerCase();
-    const current = map.get(platform) || {{ count: 0, score: 0 }};
-    current.count += 1;
-    current.score += socialPerformanceScore(post);
-    map.set(platform, current);
+function renderSocialWorkspace(payload) {{
+  const modulePayload = payload || {{}};
+  const headline = modulePayload.headline_stats || {{}};
+  const sidebar = modulePayload.sidebar_counts || {{}};
+  const platformRows = socialRowsOrEmpty(modulePayload.platform_rows, {{
+    label: 'No live platform signal',
+    audience: 0,
+    detail: 'Social Media is showing an honest empty state until live queues or snapshots appear.',
+    status: 'Unavailable',
+    tone: 'low',
   }});
-  return map;
-}}
+  const miniStats = socialRowsOrEmpty(modulePayload.mini_stats, {{
+    label: 'Social Media',
+    value: 'Unavailable',
+  }});
+  const calendarRows = socialRowsOrEmpty(modulePayload.calendar_rows, {{
+    day: 'No schedule',
+    label: 'Unavailable',
+    detail: 'No scheduled social posts are currently visible in this runtime.',
+    status: 'low',
+  }});
+  const performanceRows = socialRowsOrEmpty(modulePayload.performance_rows, {{
+    title: 'No posted performance data yet.',
+    subtitle: 'Performance will surface here after live posting and reach data accumulate.',
+    score: '—',
+    reach: 'Unavailable',
+  }});
+  const inboxRows = socialRowsOrEmpty(modulePayload.inbox_rows, {{
+    title: 'No inbox backend is exposed yet.',
+    who: 'Boundary',
+    when: 'Unavailable',
+    tone: 'low',
+  }});
+  const pipelineRows = socialRowsOrEmpty(modulePayload.pipeline_rows, {{
+    label: 'Pipeline',
+    count: 0,
+    detail: 'No live social pipeline signal is visible yet.',
+  }});
+  const audience = modulePayload.audience || {{}};
+  const audienceRows = socialRowsOrEmpty(audience.rows, {{
+    label: 'Audience snapshots',
+    value: 'Unavailable',
+    detail: 'No audience snapshots are available yet.',
+  }});
+  const audienceInsights = socialRowsOrEmpty(audience.insights, {{
+    label: 'Audience mix',
+    pct: '—',
+    detail: 'A real audience mix will appear after live snapshots are captured.',
+  }});
+  const themeRows = socialRowsOrEmpty(modulePayload.theme_rows, {{
+    label: 'Theme metadata unavailable',
+    share: '—',
+    lift: '—',
+    detail: 'Publishing tags are not rich enough yet to build a deeper live theme mix.',
+  }});
+  const health = modulePayload.health || {{}};
+  const healthMetrics = socialRowsOrEmpty(health.metrics, {{
+    label: 'Health',
+    value: 'Unavailable',
+    detail: 'No live health signal is visible yet.',
+  }});
+  const sentimentRows = socialRowsOrEmpty(modulePayload.sentiment_rows, {{
+    label: 'Sentiment snapshots',
+    value: 'Unavailable',
+    detail: 'No live sentiment data is visible yet.',
+    tone: 'low',
+  }});
+  const recommendationRows = socialRowsOrEmpty(modulePayload.recommendation_rows, {{
+    title: 'Recommendations will appear after more live social signal accumulates.',
+    detail: 'Social analytics needs more posted content and engagement snapshots in this runtime.',
+    tone: 'low',
+  }});
+  const securityRows = socialRowsOrEmpty(modulePayload.security_rows, {{
+    label: 'Platform auth health',
+    value: 'Unavailable',
+    detail: 'Per-platform auth diagnostics are not exposed in this runtime yet.',
+    tone: 'low',
+  }});
+  const summaryCards = socialRowsOrEmpty(modulePayload.summary_cards, {{
+    label: 'Social Media',
+    value: 'Unavailable',
+  }});
+  const footerRows = socialRowsOrEmpty(modulePayload.footer_rows, {{
+    title: 'Social Media',
+    copy: modulePayload.runtime_note || 'Social Media is live.',
+  }});
+  const statusRows = socialRowsOrEmpty(modulePayload.sidebar_status_rows, {{
+    label: 'Status',
+    value: modulePayload.available === false ? 'Partial' : 'Live',
+  }});
 
-function renderSocialHeader() {{
-  const posts = socialAllPosts();
-  const pending = socialPendingPosts();
-  const platformMap = socialGroupedPlatforms(posts);
-  const analytics = _socialState.analytics || {{}};
-  const topBreakdown = (((_socialState.metrics || {{}}).content_performance || {{}}).platform_breakdown || {{}});
-  const engagement = Object.values(topBreakdown).reduce((sum, item) => sum + Number(item.total_likes || 0) + Number(item.total_shares || 0) + Number(item.total_clicks || 0), 0);
-  const totalReach = Object.values(topBreakdown).reduce((sum, item) => sum + Number(item.total_reach || 0), 0) || (posts.length * 10700);
-  const totalFollowers = Array.from(platformMap.values()).reduce((sum, item) => sum + item.count, 0) * 26 + 3200;
-  const focusScore = Math.max(62, Math.min(96, 82 + Math.min(8, platformMap.size) - pending.length));
-  const profileVisits = Math.max(420, Math.round(totalReach * 0.032));
-  const timeSavedHours = Math.max(1, Math.round((pending.length * 0.35) + (posts.length * 0.12)));
-  const timeSavedMinutes = Math.max(8, ((pending.length * 13) + (posts.length * 6)) % 60);
-  _setTextIfPresent('social-stat-health', String(focusScore));
-  _setTextIfPresent('social-stat-health-sub', focusScore >= 85 ? 'Excellent' : 'Stable');
-  _setTextIfPresent('social-stat-engagement', socialHumanNumber(engagement || (posts.length * 380)));
-  _setTextIfPresent('social-stat-engagement-sub', `+${{Math.max(12, posts.length * 2)}}% vs 7d`);
-  _setTextIfPresent('social-stat-followers', `+${{Math.max(14, Math.round(totalFollowers * 0.03))}}`);
-  _setTextIfPresent('social-stat-followers-sub', `+${{Math.max(9, pending.length * 3)}}% vs 7d`);
-  _setTextIfPresent('social-stat-impressions', socialHumanNumber(totalReach));
-  _setTextIfPresent('social-stat-impressions-sub', `+${{Math.max(16, posts.length * 2)}}% vs 7d`);
-  _setTextIfPresent('social-stat-visits', socialHumanNumber(profileVisits));
-  _setTextIfPresent('social-stat-visits-sub', `+${{Math.max(11, platformMap.size * 4)}}% vs 7d`);
-  _setTextIfPresent('social-stat-reach', socialHumanNumber(Math.round(totalReach * 0.54)));
-  _setTextIfPresent('social-stat-reach-sub', `+${{Math.max(15, posts.length * 2)}}% vs 7d`);
-  _setTextIfPresent('social-stat-time', `${{timeSavedHours}}h ${{String(timeSavedMinutes).padStart(2, '0')}}m`);
-  _setTextIfPresent('social-stat-time-sub', 'This week');
-}}
+  socialRuntimeNote(modulePayload.runtime_note || 'Social Media is live and connected.');
+  socialRenderStat('social-stat-health', 'social-stat-health-sub', headline.health, 'Unavailable');
+  socialRenderStat('social-stat-engagement', 'social-stat-engagement-sub', headline.engagement, 'Unavailable');
+  socialRenderStat('social-stat-followers', 'social-stat-followers-sub', headline.followers, 'Unavailable');
+  socialRenderStat('social-stat-impressions', 'social-stat-impressions-sub', headline.impressions, 'Unavailable');
+  socialRenderStat('social-stat-visits', 'social-stat-visits-sub', headline.visits, 'Unavailable');
+  socialRenderStat('social-stat-reach', 'social-stat-reach-sub', headline.reach, 'Unavailable');
+  socialRenderStat('social-stat-time', 'social-stat-time-sub', headline.time_saved, 'Unavailable');
 
-function renderSocialSidebar() {{
-  const posts = socialAllPosts();
-  const pending = socialPendingPosts();
-  _setTextIfPresent('social-side-inbox', String(Math.max(3, pending.length + 5)));
-  _setTextIfPresent('social-side-calendar', String(posts.filter(post => String(post.scheduled_at || '').trim()).length));
-  const workflowPct = posts.length ? Math.round((posts.filter(post => ['approved', 'scheduled', 'posted'].includes(String(post.status || '').toLowerCase())).length / posts.length) * 100) : 74;
-  _setTextIfPresent('social-side-workflow', `${{workflowPct}}%`);
-  _setTextIfPresent('social-side-accounts', String(Math.max(6, new Set(posts.map(post => String(post.platform || 'other'))).size)));
+  _setTextIfPresent('social-side-overview', sidebar.overview || 'Live');
+  _setTextIfPresent('social-side-inbox', sidebar.inbox || '0');
+  _setTextIfPresent('social-side-calendar', sidebar.calendar || '0');
+  _setTextIfPresent('social-side-workflow', sidebar.workflow || '0%');
+  _setTextIfPresent('social-side-accounts', sidebar.accounts || '0');
 
-  const status = document.getElementById('social-sidebar-status');
-  if (status) {{
-    const rows = [
-      ['Accounts', `${{Math.max(6, new Set(posts.map(post => String(post.platform || 'other'))).size)}} connected`],
-      ['Scheduled', String(posts.filter(post => ['scheduled', 'approved'].includes(String(post.status || '').toLowerCase())).length)],
-      ['Auto-Published', String(posts.filter(post => String(post.status || '').toLowerCase() === 'posted').length)],
-      ['Requires Review', String(pending.length)],
-      ['Last Sync', '1 min ago'],
-    ];
-    status.innerHTML = rows.map(([label, value]) => `<div class="social-status-row"><span>${{escHtml(label)}}</span><strong>${{escHtml(value)}}</strong></div>`).join('');
+  const sidebarStatus = document.getElementById('social-sidebar-status');
+  if (sidebarStatus) {{
+    sidebarStatus.innerHTML = statusRows.map((row) => `<div class="social-status-row"><span>${{escHtml(String(row.label || 'Status'))}}</span><strong>${{escHtml(String(row.value || '—'))}}</strong></div>`).join('');
   }}
-}}
 
-function renderSocialOverview() {{
-  const posts = socialAllPosts();
-  const platformMap = socialGroupedPlatforms(posts);
-  const grid = document.getElementById('social-platform-grid');
-  if (grid) {{
-    const defaults = ['facebook', 'instagram', 'twitter', 'linkedin', 'youtube', 'tiktok'];
-    grid.innerHTML = defaults.map(platform => {{
-      const info = platformMap.get(platform) || {{ count: 0, score: 0 }};
-      return `<div class="social-platform-card"><strong>${{escHtml(socialPlatformLabel(platform))}}</strong><span>${{socialHumanNumber(9200 + info.score * 8)}} audience</span><em>↑ ${{Math.max(9, info.count * 4)}}%</em></div>`;
-    }}).join('');
+  const platformGrid = document.getElementById('social-platform-grid');
+  if (platformGrid) {{
+    platformGrid.innerHTML = platformRows.map((row) => `<div class="social-platform-card"><strong>${{escHtml(String(row.label || 'Platform'))}}</strong><span>${{escHtml(row.audience ? `${{row.audience.toLocaleString()}} audience` : String(row.detail || 'No live audience snapshot'))}}</span><em>${{escHtml(String(row.status || 'Unavailable'))}}</em></div>`).join('');
   }}
+
   const mini = document.getElementById('social-mini-stats');
   if (mini) {{
-    const cards = [
-      ['Reach', socialHumanNumber(posts.length * 42000 || 524000)],
-      ['Engagement', socialHumanNumber(posts.reduce((sum, item) => sum + socialPerformanceScore(item), 0) || 6800)],
-      ['Profile Visits', socialHumanNumber(Math.max(2400, posts.length * 320))],
-      ['Content Published', String(posts.filter(post => String(post.status || '').toLowerCase() === 'posted').length || 12)],
-      ['Audience Growth', `+${{Math.max(156, posts.length * 14)}}`],
-    ];
-    mini.innerHTML = cards.map(([label, value]) => `<div class="social-mini-stat"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(label)}}</span></div>`).join('');
+    mini.innerHTML = miniStats.map((row) => `<div class="social-mini-stat"><strong>${{escHtml(String(row.value || '—'))}}</strong><span>${{escHtml(String(row.label || 'Metric'))}}</span></div>`).join('');
   }}
-}}
 
-function renderSocialCalendar() {{
-  const posts = socialAllPosts().filter(post => String(post.scheduled_at || '').trim()).sort((a, b) => String(a.scheduled_at).localeCompare(String(b.scheduled_at)));
-  const grid = document.getElementById('social-calendar-grid');
-  if (grid) {{
-    const days = posts.slice(0, 6);
-    grid.innerHTML = days.length ? days.map(post => {{
-      const dt = new Date(post.scheduled_at);
-      const day = Number.isNaN(dt.getTime()) ? 'Soon' : dt.toLocaleDateString([], {{ weekday:'short', month:'short', day:'numeric' }});
-      return `<div class="social-calendar-day"><strong>${{escHtml(day)}}</strong><span>${{escHtml(socialPlatformLabel(post.platform))}}</span><span>${{escHtml((post.caption || post.content || '').slice(0, 68) || 'Content placeholder')}}</span></div>`;
-    }}).join('') : '<div class="loading-state">No scheduled social posts yet.</div>';
+  const calendarGrid = document.getElementById('social-calendar-grid');
+  if (calendarGrid) {{
+    calendarGrid.innerHTML = calendarRows.map((row) => `<div class="social-calendar-day"><strong>${{escHtml(String(row.day || 'Soon'))}}</strong><span>${{escHtml(String(row.label || 'Platform'))}}</span><span>${{escHtml(String(row.detail || 'Scheduled social content'))}}</span></div>`).join('');
   }}
-  const foot = document.getElementById('social-calendar-foot');
-  if (foot) {{
-    const scheduled = posts.length;
-    const drafts = socialAllPosts().filter(post => String(post.status || '').toLowerCase() === 'draft').length;
-    const waiting = socialPendingPosts().length;
-    foot.innerHTML = `<span>${{scheduled}} scheduled</span><span>${{drafts}} drafts</span><span>${{waiting}} waiting on approval</span><span>${{Math.max(1, scheduled - waiting)}} ready to move</span>`;
+  const calendarFoot = document.getElementById('social-calendar-foot');
+  if (calendarFoot) {{
+    const footerBits = Array.isArray(modulePayload.calendar_footer) ? modulePayload.calendar_footer : [];
+    calendarFoot.innerHTML = footerBits.map((bit) => `<span>${{escHtml(String(bit || ''))}}</span>`).join('');
   }}
-}}
 
-function renderSocialPerformance() {{
-  const perf = (((_socialState.metrics || {{}}).content_performance || {{}}).top_performers || []).slice();
-  const posts = socialAllPosts();
-  const list = document.getElementById('social-performance-list');
-  if (!list) return;
-  const items = perf.length ? perf.map(item => ({{
-    title: item.content_preview || 'Top performer',
-    subtitle: socialPlatformLabel(item.platform),
-    score: socialHumanNumber(item.engagement_score || 0),
-    reach: `${{item.reach_rate || 0}}%`,
-  }})) : posts.slice(0, 5).map(post => ({{
-    title: (post.caption || post.content || 'Draft post').slice(0, 72),
-    subtitle: socialPlatformLabel(post.platform),
-    score: socialHumanNumber(Math.max(420, socialPerformanceScore(post))),
-    reach: socialHumanNumber(Math.max(9600, socialPerformanceScore(post) * 8)),
-  }}));
-  list.innerHTML = items.length ? items.map(item => `<div class="social-performance-item"><div class="social-performance-main"><strong>${{escHtml(item.title)}}</strong><span>${{escHtml(item.subtitle)}}</span></div><div style="text-align:right;"><strong>${{escHtml(item.score)}}</strong><span>${{escHtml(item.reach)}}</span></div></div>`).join('') : '<div class="loading-state">Performance data will appear after live posts publish.</div>';
-}}
-
-function renderSocialInbox() {{
-  const pending = socialPendingPosts();
-  const posts = socialAllPosts();
-  const list = document.getElementById('social-inbox-list');
-  if (!list) return;
-  const items = pending.length ? pending.slice(0, 6).map(post => ({{
-    title: (post.caption || post.content || 'Pending social post').slice(0, 84),
-    who: socialPlatformLabel(post.platform),
-    when: socialScheduledLabel(post.scheduled_at),
-    tone: socialPriorityTone(post),
-  }})) : posts.slice(0, 6).map((post, idx) => ({{
-    title: `Mention / reply lane for ${{socialPlatformLabel(post.platform)}}`,
-    who: (post.caption || post.content || 'Social thread').slice(0, 52),
-    when: `${{idx + 1}}h ago`,
-    tone: idx % 3 === 0 ? 'high' : idx % 3 === 1 ? 'medium' : 'low',
-  }}));
-  list.innerHTML = items.length ? items.map(item => `<div class="social-inbox-item"><div class="social-inbox-main"><strong>${{escHtml(item.title)}}</strong><span>${{escHtml(item.who)}}</span></div><div style="text-align:right;"><div class="social-pill ${{item.tone}}">${{escHtml(item.tone)}}</div><span style="display:block;margin-top:6px;" class="social-card-subtitle">${{escHtml(item.when)}}</span></div></div>`).join('') : '<div class="loading-state">Inbox is quiet right now.</div>';
-}}
-
-function renderSocialPipeline() {{
-  const posts = socialAllPosts();
-  const list = document.getElementById('social-pipeline-list');
-  if (!list) return;
-  const buckets = [
-    ['Ideas', posts.filter(post => String(post.status || '').toLowerCase() === 'idea').length || 24, 'Content sparks and hooks'],
-    ['Drafts', posts.filter(post => String(post.status || '').toLowerCase() === 'draft').length || 7, 'Working captions and assets'],
-    ['Review', socialPendingPosts().length || 3, 'Waiting on approval'],
-    ['Scheduled', posts.filter(post => ['approved', 'scheduled'].includes(String(post.status || '').toLowerCase())).length || 5, 'Ready to publish'],
-    ['Published', posts.filter(post => String(post.status || '').toLowerCase() === 'posted').length || 12, 'Already live'],
-  ];
-  list.innerHTML = buckets.map(([label, count, copy]) => `<div class="social-workflow-item"><div><strong>${{escHtml(label)}}</strong><span>${{escHtml(copy)}}</span></div><div class="social-pill info">${{escHtml(String(count))}}</div></div>`).join('') + posts.slice(0, 4).map(post => `<div class="social-workflow-item"><div><strong>${{escHtml((post.caption || post.content || 'Social post').slice(0, 68))}}</strong><span>${{escHtml(socialPlatformLabel(post.platform))}} · ${{escHtml(String(post.status || 'draft'))}}</span></div><div class="social-pill ${{socialPriorityTone(post)}}">${{escHtml(String(post.status || 'draft'))}}</div></div>`).join('');
-}}
-
-function renderSocialAudience() {{
-  const posts = socialAllPosts();
-  const totalAudience = Math.max(12400, posts.length * 1030);
-  _setTextIfPresent('social-audience-total', socialHumanNumber(totalAudience));
-  const list = document.getElementById('social-audience-list');
-  if (list) {{
-    const rows = [
-      ['Top Location', 'United States'],
-      ['Top Age', '35–44'],
-      ['Top Interest', 'Leadership'],
-      ['Fastest Growth', 'Faith + Formation'],
-    ];
-    list.innerHTML = rows.map(([label, value]) => `<div class="social-audience-row"><strong>${{escHtml(label)}}</strong><span>${{escHtml(value)}}</span></div>`).join('');
+  const performanceList = document.getElementById('social-performance-list');
+  if (performanceList) {{
+    performanceList.innerHTML = performanceRows.map((row) => `<div class="social-performance-item"><div class="social-performance-main"><strong>${{escHtml(String(row.title || 'Top performer'))}}</strong><span>${{escHtml(String(row.subtitle || 'Platform'))}}</span></div><div style="text-align:right;"><strong>${{escHtml(String(row.score || '—'))}}</strong><span>${{escHtml(String(row.reach || 'Unavailable'))}}</span></div></div>`).join('');
   }}
-  const insights = document.getElementById('social-audience-insights');
-  if (insights) {{
-    const rows = [
-      ['Leadership & Builders', '42%', 'LinkedIn-first, high-conviction audience'],
-      ['Creators & Entrepreneurs', '24%', 'High interest in systems and purpose'],
-      ['Families & Faith', '18%', 'Strong resonance with reflective content'],
-      ['Other', '16%', 'Broad discovery audience'],
-    ];
-    insights.innerHTML = rows.map(([label, pct, copy]) => `<div class="social-thread-item"><div class="social-thread-main"><strong>${{escHtml(label)}}</strong><span>${{escHtml(copy)}}</span></div><div style="text-align:right;"><strong>${{escHtml(pct)}}</strong></div></div>`).join('');
+
+  const inboxList = document.getElementById('social-inbox-list');
+  if (inboxList) {{
+    inboxList.innerHTML = inboxRows.map((row) => `<div class="social-inbox-item"><div class="social-inbox-main"><strong>${{escHtml(String(row.title || 'Inbox item'))}}</strong><span>${{escHtml(String(row.who || 'Signal'))}}</span></div><div style="text-align:right;"><div class="social-pill ${{socialToneClass(row.tone)}}">${{escHtml(String(row.tone || 'info'))}}</div><span style="display:block;margin-top:6px;" class="social-card-subtitle">${{escHtml(String(row.when || 'Now'))}}</span></div></div>`).join('');
   }}
-}}
 
-function renderSocialThemes() {{
-  const list = document.getElementById('social-theme-list');
-  if (!list) return;
-  const themes = [
-    ['Leadership', '36%', '+22%'],
-    ['Faith & Spiritual Growth', '28%', '+15%'],
-    ['Family & Relationships', '18%', '+9%'],
-    ['Business & Strategy', '11%', '+5%'],
-    ['Health & Wellness', '7%', '+3%'],
-  ];
-  list.innerHTML = themes.map(([name, share, lift]) => `<div class="social-thread-item"><div class="social-thread-main"><strong>${{escHtml(name)}}</strong><span>Current theme contribution</span></div><div style="text-align:right;"><strong>${{escHtml(share)}}</strong><span style="color:var(--social-green);">${{escHtml(lift)}}</span></div></div>`).join('');
-}}
-
-function renderSocialHealth() {{
-  const posts = socialAllPosts();
-  const pending = socialPendingPosts();
-  const score = Math.max(68, Math.min(96, 88 - pending.length + Math.min(6, posts.length)));
-  _setTextIfPresent('social-health-score', `${{score}}%`);
-  _setTextIfPresent('social-health-label', score >= 88 ? 'Healthy' : 'Stable');
-  const metrics = document.getElementById('social-health-metrics');
-  if (metrics) {{
-    const rows = [
-      ['Content Quality', `${{Math.max(84, score + 2)}}%`],
-      ['Engagement Rate', `${{Math.max(81, score - 1)}}%`],
-      ['Community Health', `${{Math.max(79, score - 3)}}%`],
-      ['Response Time', `${{Math.max(76, score - 4)}}%`],
-      ['Consistency', `${{Math.max(82, score)}}%`],
-      ['Account Security', '95%'],
-    ];
-    metrics.innerHTML = rows.map(([label, value]) => `<div class="social-health-metric"><strong>${{escHtml(label)}}</strong><span>${{escHtml(value)}}</span></div>`).join('');
+  const pipelineList = document.getElementById('social-pipeline-list');
+  if (pipelineList) {{
+    pipelineList.innerHTML = pipelineRows.map((row) => `<div class="social-workflow-item"><div><strong>${{escHtml(String(row.label || 'Stage'))}}</strong><span>${{escHtml(String(row.detail || ''))}}</span></div><div class="social-pill info">${{escHtml(String(row.count ?? '0'))}}</div></div>`).join('');
   }}
-}}
 
-function renderSocialSentiment() {{
-  const analytics = _socialState.analytics || {{}};
-  const trend = String(analytics.sentiment_trend || 'stable');
-  const list = document.getElementById('social-sentiment-list');
-  if (!list) return;
-  const rows = [
-    ['Positive', trend === 'improving' ? '82%' : '78%', 'Audience resonance is healthy', 'healthy'],
-    ['Neutral', '14%', 'Routine informational feedback', 'info'],
-    ['Negative', trend === 'declining' ? '12%' : '6%', 'Low, but watch drift in tone', trend === 'declining' ? 'high' : 'low'],
-  ];
-  list.innerHTML = rows.map(([label, value, copy, tone]) => `<div class="social-thread-item"><div class="social-thread-main"><strong>${{escHtml(label)}}</strong><span>${{escHtml(copy)}}</span></div><div style="text-align:right;"><div class="social-pill ${{tone}}">${{escHtml(value)}}</div></div></div>`).join('');
-}}
+  _setTextIfPresent('social-audience-total', String(audience.total || '—'));
+  const audienceList = document.getElementById('social-audience-list');
+  if (audienceList) {{
+    audienceList.innerHTML = audienceRows.map((row) => `<div class="social-audience-row"><strong>${{escHtml(String(row.label || 'Audience'))}}</strong><span>${{escHtml(String(row.value || row.detail || '—'))}}</span></div>`).join('');
+  }}
+  const audienceInsightsList = document.getElementById('social-audience-insights');
+  if (audienceInsightsList) {{
+    audienceInsightsList.innerHTML = audienceInsights.map((row) => `<div class="social-thread-item"><div class="social-thread-main"><strong>${{escHtml(String(row.label || 'Audience insight'))}}</strong><span>${{escHtml(String(row.detail || ''))}}</span></div><div style="text-align:right;"><strong>${{escHtml(String(row.pct || '—'))}}</strong></div></div>`).join('');
+  }}
 
-function renderSocialRecommendations() {{
-  const recos = document.getElementById('social-reco-list');
-  if (!recos) return;
-  const analytics = _socialState.analytics || {{}};
-  const adjustments = Array.isArray(analytics.recommended_adjustments) ? analytics.recommended_adjustments : [];
-  const rows = adjustments.length ? adjustments.slice(0, 5).map((text, idx) => [text, idx === 0 ? 'high' : idx === 1 ? 'medium' : 'low']) : [
-    ['Post a weekend inspiration video at the best engagement window.', 'high'],
-    ['Respond to the top priority DMs to build relationships.', 'medium'],
-    ['Repurpose the strongest leadership post into a carousel.', 'low'],
-  ];
-  recos.innerHTML = rows.map(([text, tone]) => `<div class="social-reco-item"><div><strong>${{escHtml(String(text))}}</strong><span>${{tone === 'high' ? 'Highest-leverage move' : tone === 'medium' ? 'Good leverage' : 'Low-friction gain'}}</span></div><div class="social-pill ${{tone}}">${{escHtml(tone)}}</div></div>`).join('');
-}}
+  const themeList = document.getElementById('social-theme-list');
+  if (themeList) {{
+    themeList.innerHTML = themeRows.map((row) => `<div class="social-thread-item"><div class="social-thread-main"><strong>${{escHtml(String(row.label || 'Theme'))}}</strong><span>${{escHtml(String(row.detail || ''))}}</span></div><div style="text-align:right;"><strong>${{escHtml(String(row.share || '—'))}}</strong><span style="color:var(--social-green);">${{escHtml(String(row.lift || ''))}}</span></div></div>`).join('');
+  }}
 
-function renderSocialSecurity() {{
-  const list = document.getElementById('social-security-list');
-  if (!list) return;
-  const rows = [
-    ['All Accounts Connected', '6 platforms active', 'healthy'],
-    ['Security Status', 'Strong', 'healthy'],
-    ['Two-Factor Authentication', 'Enabled', 'healthy'],
-    ['API Connections', 'Healthy', 'healthy'],
-    ['Backup & Recovery', 'Up to date', 'info'],
-  ];
-  list.innerHTML = rows.map(([label, value, tone]) => `<div class="social-security-item"><div><strong>${{escHtml(label)}}</strong><span>${{escHtml(value)}}</span></div><div class="social-pill ${{tone}}">${{escHtml(value)}}</div></div>`).join('');
-}}
+  _setTextIfPresent('social-health-score', health.score ? `${{health.score}}%` : '—');
+  _setTextIfPresent('social-health-label', health.label || 'Unavailable');
+  const healthList = document.getElementById('social-health-metrics');
+  if (healthList) {{
+    healthList.innerHTML = healthMetrics.map((row) => `<div class="social-health-metric"><strong>${{escHtml(String(row.label || 'Metric'))}}</strong><span>${{escHtml(String(row.value || '—'))}}</span></div>`).join('');
+  }}
 
-function renderSocialSummary() {{
-  const posts = socialAllPosts();
-  const pending = socialPendingPosts();
-  const grid = document.getElementById('social-summary-grid');
-  if (!grid) return;
-  const cards = [
-    ['Posts Published', String(posts.filter(post => String(post.status || '').toLowerCase() === 'posted').length || 18)],
-    ['People Reached', socialHumanNumber(posts.length * 12800 || 128000)],
-    ['Engagements', socialHumanNumber(posts.reduce((sum, item) => sum + socialPerformanceScore(item), 0) || 4200)],
-    ['New Followers', `+${{Math.max(96, posts.length * 9)}}`],
-    ['Pending Review', String(pending.length || 3)],
-    ['Time Saved', `${{Math.max(3, Math.round(posts.length * 0.18))}}h ${{String((posts.length * 7) % 60).padStart(2, '0')}}m`],
-  ];
-  grid.innerHTML = cards.map(([label, value]) => `<div class="social-summary-card"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(label)}}</span></div>`).join('');
-}}
+  const sentimentList = document.getElementById('social-sentiment-list');
+  if (sentimentList) {{
+    sentimentList.innerHTML = sentimentRows.map((row) => `<div class="social-thread-item"><div class="social-thread-main"><strong>${{escHtml(String(row.label || 'Sentiment'))}}</strong><span>${{escHtml(String(row.detail || ''))}}</span></div><div style="text-align:right;"><div class="social-pill ${{socialToneClass(row.tone)}}">${{escHtml(String(row.value || '—'))}}</div></div></div>`).join('');
+  }}
 
-function renderSocialFooter() {{
+  const recoList = document.getElementById('social-reco-list');
+  if (recoList) {{
+    recoList.innerHTML = recommendationRows.map((row) => `<div class="social-reco-item"><div><strong>${{escHtml(String(row.title || 'Recommendation'))}}</strong><span>${{escHtml(String(row.detail || ''))}}</span></div><div class="social-pill ${{socialToneClass(row.tone)}}">${{escHtml(String(row.tone || 'info'))}}</div></div>`).join('');
+  }}
+
+  const securityList = document.getElementById('social-security-list');
+  if (securityList) {{
+    securityList.innerHTML = securityRows.map((row) => `<div class="social-security-item"><div><strong>${{escHtml(String(row.label || 'Security'))}}</strong><span>${{escHtml(String(row.detail || ''))}}</span></div><div class="social-pill ${{socialToneClass(row.tone)}}">${{escHtml(String(row.value || '—'))}}</div></div>`).join('');
+  }}
+
+  const summaryGrid = document.getElementById('social-summary-grid');
+  if (summaryGrid) {{
+    summaryGrid.innerHTML = summaryCards.map((row) => `<div class="social-summary-card"><strong>${{escHtml(String(row.value || '—'))}}</strong><span>${{escHtml(String(row.label || 'Summary'))}}</span></div>`).join('');
+  }}
+
   const footer = document.getElementById('social-footer-strip');
-  if (!footer) return;
-  const pills = [
-    ['Amplify Your Mission', 'Use your voice for good.'],
-    ['Engage Your Community', 'Build relationships that last.'],
-    ['Create With Purpose', 'Content that transforms.'],
-    ['Measure What Matters', 'Focus on real impact.'],
-    ['Protect Your Brand', 'Security and reputation stay visible.'],
-    ['Stay Consistent', 'Show up with excellence.'],
-  ];
-  footer.innerHTML = pills.map(([title, copy]) => `<div class="social-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('') + `<div class="social-footer-pill social-engine-status"><div><strong>Social Media Engine Online</strong><span>All systems operational · updated 1 min ago</span></div><b></b></div>`;
+  if (footer) {{
+    footer.innerHTML = footerRows.map((row) => `<div class="social-footer-pill"><strong>${{escHtml(String(row.title || 'Social Media'))}}</strong><span>${{escHtml(String(row.copy || ''))}}</span></div>`).join('') + `<div class="social-footer-pill social-engine-status"><div><strong>Social Media Engine</strong><span>${{escHtml(modulePayload.runtime_note || 'Live social posture loaded.')}}</span></div><b></b></div>`;
+  }}
+
+  socialSetPage(socialCurrentPage());
 }}
 
 function renderEventList(containerId, events) {{

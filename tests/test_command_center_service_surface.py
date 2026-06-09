@@ -2643,6 +2643,57 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(action_payload["action"], "save-article")
         self.assertEqual(action_payload["message"], "Article saved to shared continuity.")
 
+    def test_social_routes_expose_module_and_safe_action_boundary(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/social/module", "GET")()))
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("headline_stats", module_payload)
+        self.assertIn("sidebar_counts", module_payload)
+        self.assertIn("platform_rows", module_payload)
+        self.assertIn("mini_stats", module_payload)
+        self.assertIn("calendar_rows", module_payload)
+        self.assertIn("performance_rows", module_payload)
+        self.assertIn("inbox_rows", module_payload)
+        self.assertIn("pipeline_rows", module_payload)
+        self.assertIn("audience", module_payload)
+        self.assertIn("theme_rows", module_payload)
+        self.assertIn("health", module_payload)
+        self.assertIn("sentiment_rows", module_payload)
+        self.assertIn("recommendation_rows", module_payload)
+        self.assertIn("security_rows", module_payload)
+        self.assertIn("summary_cards", module_payload)
+        self.assertIn("footer_rows", module_payload)
+        self.assertIn("trusted_actions", module_payload)
+        self.assertIn("quick_actions", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_route"], "/social-center")
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/social/module")
+        self.assertEqual(module_payload["proof_paths"]["publishing_projects_api"], "/api/publishing/projects")
+        self.assertEqual(module_payload["proof_paths"]["publishing_social_api"], "/api/publishing/social/posts")
+        self.assertEqual(module_payload["proof_paths"]["social_pending_api"], "/api/social/posts/pending")
+        self.assertEqual(module_payload["proof_paths"]["social_approve_api"], "/api/social/post/approve/{post_id}")
+        self.assertEqual(module_payload["proof_paths"]["social_execute_api"], "/api/social/execute")
+        self.assertEqual(module_payload["proof_paths"]["action_api"], "/api/social/module/action")
+        self.assertIsInstance(module_payload["platform_rows"], list)
+        self.assertIsInstance(module_payload["trusted_actions"], list)
+
+        action_payload = self._json_body(
+            asyncio.run(
+                self._route("/api/social/module/action", "POST")(
+                    payload={
+                        "action": "create-post",
+                        "platform": "linkedin",
+                        "content": "A short social post drafted from the Social Media desktop test.",
+                    }
+                )
+            )
+        )
+        self.assertTrue(action_payload["ok"])
+        self.assertEqual(action_payload["action"], "create-post")
+        self.assertEqual(action_payload["message"], "Social post draft created.")
+        self.assertEqual(action_payload["post"]["platform"], "linkedin")
+
     def test_calendar_routes_expose_module_and_safe_action_boundary(self) -> None:
         module_payload = self._json_body(asyncio.run(self._route("/api/calendar/module", "GET")()))
 

@@ -1063,6 +1063,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             html = html.replace("</body>", injection, 1)
         return HTMLResponse(html)
 
+    @app.get("/social-center", response_class=HTMLResponse)
+    async def social_center() -> HTMLResponse:
+        html = _render_glass_shell(runtime)
+        injection = (
+            "<script>(function(){"
+            "function openSocial(){ try { switchView('social'); } catch (_) { setTimeout(openSocial, 60); } }"
+            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openSocial, 0); }"
+            "else { window.addEventListener('load', openSocial); }"
+            "})();</script></body>"
+        )
+        if "</body>" in html:
+            html = html.replace("</body>", injection, 1)
+        return HTMLResponse(html)
+
     @app.get("/chronicle-center", response_class=HTMLResponse)
     async def chronicle_center() -> HTMLResponse:
         return HTMLResponse(render_chronicle_module_page(await _build_chronicle_module_payload()))
@@ -4318,6 +4332,698 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["runtime_note"] = "News is live, but the RSS sources returned no current headlines in this runtime."
         elif errors:
             payload["runtime_note"] = "News is live, but some source or weather context is partially unavailable."
+        return payload
+
+    async def _build_social_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        from collections import Counter
+        from datetime import datetime, timezone
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        availability_notes: list[str] = []
+        errors: list[str] = []
+
+        def _platform_label(platform: str) -> str:
+            key = str(platform or "").strip().lower()
+            labels = {
+                "linkedin": "LinkedIn",
+                "instagram": "Instagram",
+                "facebook": "Facebook",
+                "twitter": "X (Twitter)",
+                "x": "X (Twitter)",
+                "tiktok": "TikTok",
+                "youtube": "YouTube",
+            }
+            return labels.get(key, key.title() if key else "Platform")
+
+        def _human_number(value: Any) -> str:
+            try:
+                num = float(value or 0)
+            except (TypeError, ValueError):
+                return "—"
+            if abs(num) >= 1_000_000:
+                return f"{num / 1_000_000:.1f}M"
+            if abs(num) >= 1_000:
+                return f"{num / 1_000:.1f}K"
+            if num.is_integer():
+                return str(int(num))
+            return f"{num:.1f}"
+
+        def _safe_iso(value: str) -> str:
+            return str(value or "").strip()
+
+        def _parse_iso(value: str):
+            if not value:
+                return None
+            try:
+                return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            except ValueError:
+                return None
+
+        def _format_stamp(value: str, *, with_time: bool = False) -> str:
+            parsed = _parse_iso(value)
+            if parsed is None:
+                return str(value or "Unscheduled").strip() or "Unscheduled"
+            fmt = {"month": "short", "day": "numeric"}
+            if with_time:
+                fmt.update({"hour": "numeric", "minute": "2-digit"})
+            return parsed.astimezone().strftime("%b %-d, %-I:%M %p" if with_time else "%b %-d")
+
+        def _normalize_social_post(item: Any, source: str) -> dict[str, Any]:
+            raw = item.to_dict() if hasattr(item, "to_dict") else dict(item or {})
+            post_id = str(raw.get("post_id") or raw.get("id") or "").strip()
+            platform = str(raw.get("platform") or "").strip().lower()
+            status = str(raw.get("status") or "").strip().lower() or "draft"
+            scheduled_at = _safe_iso(str(raw.get("scheduled_at") or ""))
+            posted_at = _safe_iso(str(raw.get("posted_at") or ""))
+            caption = str(raw.get("caption") or raw.get("content") or "").strip()
+            performance = dict(raw.get("performance") or raw.get("engagement") or {})
+            reach = int(performance.get("reach") or performance.get("views") or 0)
+            likes = int(performance.get("likes") or 0)
+            comments = int(performance.get("comments") or 0)
+            shares = int(performance.get("shares") or 0)
+            clicks = int(performance.get("clicks") or 0)
+            engagement_score = likes + (comments * 2) + (shares * 3) + clicks + int(performance.get("views") or 0)
+            return {
+                "post_id": post_id,
+                "project_id": str(raw.get("project_id") or "").strip(),
+                "platform": platform,
+                "platform_label": _platform_label(platform),
+                "status": status,
+                "scheduled_at": scheduled_at,
+                "posted_at": posted_at,
+                "caption": caption,
+                "content_type": str(raw.get("content_type") or "text").strip() or "text",
+                "source": source,
+                "reach": reach,
+                "likes": likes,
+                "comments": comments,
+                "shares": shares,
+                "clicks": clicks,
+                "engagement_score": engagement_score,
+            }
+
+        engine = _get_social_engine()
+        publishing = None
+        try:
+            publishing = _publishing_or_503()
+        except HTTPException as exc:
+            errors.append(f"publishing: {exc.detail}")
+            availability_notes.append(f"Publishing suite is not fully available in this runtime: {exc.detail}")
+
+        publishing_projects: list[Any] = []
+        publishing_posts: list[Any] = []
+        publishing_metrics: dict[str, Any] = {}
+        content_performance: dict[str, Any] = {}
+
+        if publishing is not None:
+            try:
+                publishing_projects = list(await asyncio.to_thread(publishing._store.list_projects))
+            except Exception as exc:
+                errors.append(f"publishing_projects: {exc}")
+                availability_notes.append(f"Publishing projects could not be loaded: {exc}")
+            try:
+                publishing_posts = list(await asyncio.to_thread(publishing._store.list_posts, None))
+            except Exception as exc:
+                errors.append(f"publishing_posts: {exc}")
+                availability_notes.append(f"Publishing social drafts could not be loaded: {exc}")
+            try:
+                publishing_metrics = dict(await asyncio.to_thread(publishing.sage.get_publishing_metrics) or {})
+            except Exception as exc:
+                errors.append(f"publishing_metrics: {exc}")
+                availability_notes.append(f"Publishing metrics could not be loaded: {exc}")
+            try:
+                content_performance = dict(await asyncio.to_thread(publishing.sage.get_content_performance) or {})
+            except Exception as exc:
+                errors.append(f"content_performance: {exc}")
+                availability_notes.append(f"Publishing performance metrics could not be loaded: {exc}")
+
+        engine_posts: list[Any] = []
+        schedule_rows_raw: list[Any] = []
+        engagement_rows_raw: list[Any] = []
+        if engine is None:
+            availability_notes.append("Social engine is not initialised in this runtime, so approvals, execution, and engagement snapshots may be partial.")
+        else:
+            try:
+                engine_posts = list(await asyncio.to_thread(engine.store.list_posts, None, None))
+            except Exception as exc:
+                errors.append(f"engine_posts: {exc}")
+                availability_notes.append(f"Social engine posts could not be loaded: {exc}")
+            try:
+                schedule_rows_raw = list(await asyncio.to_thread(engine.store.list_schedules, None))
+            except Exception as exc:
+                errors.append(f"schedules: {exc}")
+                availability_notes.append(f"Social schedules could not be loaded: {exc}")
+            try:
+                engagement_rows_raw = list(await asyncio.to_thread(engine.store.list_engagement, None, None))
+            except Exception as exc:
+                errors.append(f"engagement: {exc}")
+                availability_notes.append(f"Engagement snapshots could not be loaded: {exc}")
+
+        project_titles = {
+            str(getattr(project, "project_id", "") or "").strip(): str(getattr(project, "title", "") or "").strip()
+            for project in publishing_projects
+            if str(getattr(project, "project_id", "") or "").strip()
+        }
+
+        normalized_posts: list[dict[str, Any]] = []
+        seen_post_ids: set[str] = set()
+        for item in engine_posts:
+            post = _normalize_social_post(item, "social_engine")
+            if post["post_id"] and post["post_id"] in seen_post_ids:
+                continue
+            if post["post_id"]:
+                seen_post_ids.add(post["post_id"])
+            normalized_posts.append(post)
+        for item in publishing_posts:
+            post = _normalize_social_post(item, "publishing")
+            if post["post_id"] and post["post_id"] in seen_post_ids:
+                continue
+            if post["post_id"]:
+                seen_post_ids.add(post["post_id"])
+            normalized_posts.append(post)
+
+        project_post_counts = Counter(post["project_id"] for post in normalized_posts if post["project_id"])
+        for schedule in schedule_rows_raw:
+            project_id = str(getattr(schedule, "project_id", "") or "").strip()
+            if project_id:
+                project_post_counts[project_id] += int(getattr(schedule, "total_posts", 0) or len(list(getattr(schedule, "posts", []) or [])))
+        default_project_id = project_post_counts.most_common(1)[0][0] if project_post_counts else ""
+        if not default_project_id and publishing_projects:
+            default_project_id = str(getattr(publishing_projects[0], "project_id", "") or "").strip()
+
+        project_analytics: dict[str, Any] = {}
+        adaptation_excerpt: list[str] = []
+        if engine is not None and default_project_id:
+            try:
+                project_analytics = dict(await asyncio.to_thread(engine.sage.analyze_performance, default_project_id) or {})
+            except Exception as exc:
+                errors.append(f"social_analytics: {exc}")
+                availability_notes.append(f"Project-level social analytics could not be loaded: {exc}")
+            try:
+                adaptation_report = str(await asyncio.to_thread(engine.sage.generate_adaptation_report, default_project_id) or "").strip()
+                adaptation_excerpt = [line.strip("- ").strip() for line in adaptation_report.splitlines() if line.strip().startswith("-")][:4]
+            except Exception:
+                adaptation_excerpt = []
+
+        posted_posts = [post for post in normalized_posts if post["status"] == "posted"]
+        scheduled_posts = [post for post in normalized_posts if post["status"] in {"scheduled", "approved"} and post["scheduled_at"]]
+        pending_posts = [post for post in normalized_posts if post["status"] in {"pending_approval", "pending-review"}]
+        draft_posts = [post for post in normalized_posts if post["status"] in {"draft", "idea", "outline", "editing"}]
+        failed_posts = [post for post in normalized_posts if post["status"] in {"failed", "blocked"}]
+
+        platform_breakdown = dict(content_performance.get("platform_breakdown") or {})
+        platform_keys = sorted(
+            {
+                str(post["platform"]).strip().lower()
+                for post in normalized_posts
+                if str(post["platform"]).strip()
+            }
+            | {str(getattr(snap, "platform", "") or "").strip().lower() for snap in engagement_rows_raw if str(getattr(snap, "platform", "") or "").strip()}
+            | {str(key).strip().lower() for key in platform_breakdown.keys() if str(key).strip()}
+        )
+
+        latest_snapshot_by_platform: dict[str, Any] = {}
+        follower_delta = 0
+        impressions_total = 0
+        reach_total = 0
+        for platform in platform_keys:
+            snaps = [
+                snap for snap in engagement_rows_raw
+                if str(getattr(snap, "platform", "") or "").strip().lower() == platform
+            ]
+            snaps.sort(key=lambda snap: str(getattr(snap, "captured_at", "") or ""))
+            if snaps:
+                latest_snapshot_by_platform[platform] = snaps[-1]
+                impressions_total += int(getattr(snaps[-1], "total_reach", 0) or 0)
+                reach_total += int(getattr(snaps[-1], "total_reach", 0) or 0)
+                if len(snaps) >= 2:
+                    follower_delta += int(getattr(snaps[-1], "followers", 0) or 0) - int(getattr(snaps[0], "followers", 0) or 0)
+
+        if impressions_total <= 0:
+            impressions_total = sum(int((platform_breakdown.get(platform) or {}).get("total_reach") or 0) for platform in platform_keys)
+            reach_total = impressions_total
+
+        total_engagement = sum(post["engagement_score"] for post in posted_posts)
+        if total_engagement <= 0:
+            total_engagement = sum(int(getattr(snap, "total_engagement", 0) or 0) for snap in engagement_rows_raw)
+
+        top_performers = list(content_performance.get("top_performers") or [])
+        if top_performers:
+            performance_rows = [
+                {
+                    "title": str(item.get("content_preview") or "Top performer").strip() or "Top performer",
+                    "subtitle": _platform_label(str(item.get("platform") or "")),
+                    "score": _human_number(item.get("engagement_score") or 0),
+                    "reach": f"{item.get('reach_rate', 0)}% engagement",
+                }
+                for item in top_performers[:5]
+            ]
+        else:
+            performance_rows = [
+                {
+                    "title": post["caption"][:72] or "Posted social content",
+                    "subtitle": post["platform_label"],
+                    "score": _human_number(post["engagement_score"]),
+                    "reach": _human_number(post["reach"]) if post["reach"] else "Reach unavailable",
+                }
+                for post in sorted(posted_posts, key=lambda entry: entry["engagement_score"], reverse=True)[:5]
+            ]
+
+        accounts_rows = []
+        audience_total = 0
+        for platform in platform_keys:
+            rows = [post for post in normalized_posts if post["platform"] == platform]
+            posted_count = len([post for post in rows if post["status"] == "posted"])
+            queued_count = len([post for post in rows if post["status"] in {"draft", "idea", "outline", "editing", "pending_approval", "approved", "scheduled"}])
+            failed_count = len([post for post in rows if post["status"] in {"failed", "blocked"}])
+            breakdown = dict(platform_breakdown.get(platform) or {})
+            snap = latest_snapshot_by_platform.get(platform)
+            followers = int(getattr(snap, "followers", 0) or 0) if snap is not None else 0
+            audience_total += followers
+            reach_value = int(getattr(snap, "total_reach", 0) or 0) if snap is not None else int(breakdown.get("total_reach") or 0)
+            engagement_value = int(getattr(snap, "total_engagement", 0) or 0) if snap is not None else (
+                int(breakdown.get("total_likes") or 0) + (int(breakdown.get("total_shares") or 0) * 2) + int(breakdown.get("total_clicks") or 0)
+            )
+            status = "Connected"
+            tone = "healthy"
+            if failed_count:
+                status = "Watch"
+                tone = "high"
+            elif not rows and snap is None:
+                status = "Not Connected"
+                tone = "low"
+            elif queued_count and not posted_count:
+                status = "Queued"
+                tone = "medium"
+            accounts_rows.append(
+                {
+                    "platform": platform,
+                    "label": _platform_label(platform),
+                    "status": status,
+                    "tone": tone,
+                    "audience": followers,
+                    "reach": reach_value,
+                    "engagement": engagement_value,
+                    "detail": f"{posted_count} posted · {queued_count} queued · {failed_count} failed",
+                }
+            )
+
+        if audience_total <= 0:
+            audience_total = sum(row["audience"] for row in accounts_rows if int(row.get("audience") or 0) > 0)
+
+        scheduled_sorted = sorted(
+            [post for post in normalized_posts if post["scheduled_at"]],
+            key=lambda post: post["scheduled_at"] or "9999",
+        )
+        calendar_rows = [
+            {
+                "day": _format_stamp(post["scheduled_at"]),
+                "label": post["platform_label"],
+                "detail": post["caption"][:84] or "Scheduled social content",
+                "status": post["status"],
+            }
+            for post in scheduled_sorted[:6]
+        ]
+
+        calendar_footer = [
+            f"{len(scheduled_posts)} scheduled",
+            f"{len(draft_posts)} drafts",
+            f"{len(pending_posts)} waiting on approval",
+            f"{max(0, len(scheduled_posts) - len(pending_posts))} ready to move",
+        ]
+
+        inbox_rows = [
+            {
+                "title": post["caption"][:84] or "Pending social post",
+                "who": post["platform_label"],
+                "when": _format_stamp(post["scheduled_at"], with_time=True) if post["scheduled_at"] else "Needs review",
+                "tone": "medium",
+            }
+            for post in pending_posts[:5]
+        ]
+        if not inbox_rows:
+            inbox_rows.append(
+                {
+                    "title": "No live mentions, comments, or DM inbox backend is exposed in this runtime yet.",
+                    "who": "Boundary",
+                    "when": "Unavailable",
+                    "tone": "low",
+                }
+            )
+
+        pipeline_rows = [
+            {"label": "Ideas", "count": len([post for post in normalized_posts if post["status"] == "idea"]), "detail": "Early concepts retained in the live queue."},
+            {"label": "Drafts", "count": len([post for post in normalized_posts if post["status"] in {"draft", "outline", "editing"}]), "detail": "Captions and assets still being shaped."},
+            {"label": "Review", "count": len(pending_posts), "detail": "Posts waiting on approval before they can ship."},
+            {"label": "Scheduled", "count": len(scheduled_posts), "detail": "Approved or scheduled content with a live publish time."},
+            {"label": "Published", "count": len(posted_posts), "detail": "Content already executed through the live systems."},
+        ]
+
+        audience_rows = []
+        audience_insights = []
+        active_audience_rows = [row for row in accounts_rows if int(row.get("audience") or 0) > 0]
+        if active_audience_rows:
+            total_followers = sum(int(row["audience"]) for row in active_audience_rows) or 1
+            for row in sorted(active_audience_rows, key=lambda item: int(item["audience"]), reverse=True)[:4]:
+                share = round((int(row["audience"]) / total_followers) * 100)
+                audience_rows.append({"label": row["label"], "value": _human_number(row["audience"]), "detail": row["detail"]})
+                audience_insights.append(
+                    {
+                        "label": row["label"],
+                        "pct": f"{share}%",
+                        "detail": f"Follower share derived from the latest {row['label']} engagement snapshot.",
+                    }
+                )
+        else:
+            audience_rows.append({"label": "Audience snapshots", "value": "Unavailable", "detail": "Follower and reach snapshots have not been captured in this runtime yet."})
+            audience_insights.append({"label": "Audience mix", "pct": "—", "detail": "A real audience distribution will appear after engagement snapshots are captured."})
+
+        tag_counter: Counter[str] = Counter()
+        for project in publishing_projects:
+            for tag in list(getattr(project, "tags", []) or []):
+                clean = str(tag or "").strip()
+                if clean:
+                    tag_counter[clean] += 1
+        theme_rows = [
+            {
+                "label": tag,
+                "share": f"{count} project{'s' if count != 1 else ''}",
+                "lift": f"{round((count / max(len(publishing_projects), 1)) * 100)}%",
+                "detail": "Theme share derived from live publishing project tags.",
+            }
+            for tag, count in tag_counter.most_common(5)
+        ]
+        if not theme_rows:
+            theme_rows.append(
+                {
+                    "label": "Theme metadata unavailable",
+                    "share": "—",
+                    "lift": "—",
+                    "detail": "Publishing projects do not currently expose enough real tag metadata to build a richer theme mix.",
+                }
+            )
+
+        health_score = 0
+        if normalized_posts or engagement_rows_raw or publishing_projects:
+            health_score = max(
+                0,
+                min(
+                    100,
+                    82
+                    + min(10, len(posted_posts))
+                    - (len(pending_posts) * 4)
+                    - (len(failed_posts) * 8)
+                    + min(8, len(accounts_rows)),
+                ),
+            )
+        health_label = "Unavailable"
+        if health_score >= 85:
+            health_label = "Healthy"
+        elif health_score >= 65:
+            health_label = "Stable"
+        elif health_score > 0:
+            health_label = "Watch"
+        health_metrics = [
+            {"label": "Queue Pressure", "value": f"{len(pending_posts)} waiting", "detail": "Posts pending approval right now."},
+            {"label": "Execution Reliability", "value": f"{len(failed_posts)} failed", "detail": "Failed or blocked posts currently visible."},
+            {"label": "Snapshot Coverage", "value": f"{len(engagement_rows_raw)} snapshot(s)", "detail": "Live engagement snapshots captured by the social engine."},
+            {"label": "Projects in Motion", "value": f"{len(publishing_projects)} project(s)", "detail": "Publishing projects contributing signal to this social surface."},
+            {"label": "Connected Platforms", "value": f"{len(accounts_rows)} lane(s)", "detail": "Platforms showing real queue or performance signal."},
+            {"label": "Publish Ready", "value": f"{len(scheduled_posts)} ready", "detail": "Scheduled or approved posts that can execute through the live engine."},
+        ]
+
+        sentiment_rows = []
+        sentiment_scores = [float(getattr(snap, "sentiment_score", 0.0) or 0.0) for snap in engagement_rows_raw]
+        if sentiment_scores:
+            avg_sentiment = round((sum(sentiment_scores) / max(len(sentiment_scores), 1)) * 100)
+            trend = str(project_analytics.get("sentiment_trend") or "stable")
+            sentiment_rows = [
+                {"label": "Average Sentiment", "value": f"{avg_sentiment}%", "detail": "Derived from live social engagement snapshots.", "tone": "healthy" if avg_sentiment >= 70 else "medium" if avg_sentiment >= 45 else "high"},
+                {"label": "Trend", "value": trend.title(), "detail": "Project-level sentiment direction from the active social analytics engine.", "tone": "healthy" if trend == "improving" else "medium" if trend == "stable" else "high"},
+                {"label": "Snapshot Coverage", "value": str(len(sentiment_scores)), "detail": "Number of captured sentiment-bearing snapshots visible right now.", "tone": "info"},
+            ]
+        else:
+            sentiment_rows = [
+                {"label": "Sentiment snapshots", "value": "Unavailable", "detail": "No live sentiment snapshots are available in this runtime yet.", "tone": "low"}
+            ]
+
+        recommendation_rows = [
+            {
+                "title": str(text).strip(),
+                "detail": "Recommended directly by the live social analytics engine.",
+                "tone": "high" if idx == 0 else "medium" if idx == 1 else "low",
+            }
+            for idx, text in enumerate(list(project_analytics.get("recommended_adjustments") or [])[:5])
+            if str(text).strip()
+        ]
+        if adaptation_excerpt:
+            for text in adaptation_excerpt:
+                if len(recommendation_rows) >= 5:
+                    break
+                recommendation_rows.append(
+                    {
+                        "title": text,
+                        "detail": "Adaptation note surfaced from the live social report.",
+                        "tone": "low",
+                    }
+                )
+        if not recommendation_rows:
+            recommendation_rows.append(
+                {
+                    "title": "Recommendations will deepen after more posted content and engagement snapshots accumulate.",
+                    "detail": "The live social engine does not yet have enough signal for richer recommendations in this runtime.",
+                    "tone": "low",
+                }
+            )
+
+        security_rows = [
+            {
+                "label": "Live Platform Signal",
+                "value": f"{len(accounts_rows)} lane(s)",
+                "tone": "healthy" if accounts_rows else "low",
+                "detail": "Platforms with visible queue, schedule, or engagement signal.",
+            },
+            {
+                "label": "Approval Queue",
+                "value": f"{len(pending_posts)} waiting",
+                "tone": "medium" if pending_posts else "healthy",
+                "detail": "Posts that still require review before execution.",
+            },
+            {
+                "label": "Execution Engine",
+                "value": "Available" if engine is not None else "Unavailable",
+                "tone": "healthy" if engine is not None else "low",
+                "detail": "Controls whether approved scheduled posts can execute through the live Social Engine.",
+            },
+            {
+                "label": "Direct DM Inbox",
+                "value": "Unavailable",
+                "tone": "low",
+                "detail": "A real mentions, comments, or DM ingestion backend is not exposed in this runtime yet.",
+            },
+            {
+                "label": "Platform Auth Health",
+                "value": "Partial",
+                "tone": "medium",
+                "detail": "Per-platform auth and 2FA posture are not separately exposed by backend contracts yet.",
+            },
+        ]
+
+        summary_cards = [
+            {"label": "Posts Published", "value": str(len(posted_posts))},
+            {"label": "People Reached", "value": _human_number(reach_total) if reach_total else "Unavailable"},
+            {"label": "Engagements", "value": _human_number(total_engagement) if total_engagement else "Unavailable"},
+            {"label": "New Followers", "value": f"+{follower_delta}" if follower_delta else "Unavailable"},
+            {"label": "Pending Review", "value": str(len(pending_posts))},
+            {"label": "Time Saved", "value": "Unavailable"},
+        ]
+
+        footer_rows = [
+            {"title": "Social Module", "copy": "The desktop now hydrates from one live social contract instead of client-side stitched math."},
+            {"title": "Execution", "copy": f"{len(scheduled_posts)} scheduled and {len(pending_posts)} pending signal(s) are visible right now."},
+            {"title": "Continuity", "copy": "Recent social operator actions stay linked to this surface for review and handoff."},
+        ]
+        if availability_notes:
+            footer_rows.append({"title": "Availability", "copy": availability_notes[0]})
+
+        recent_activity = _module_recent_activity(route="/social-center", domain="social", limit=8)
+        if not recent_activity:
+            recent_activity = _module_recent_activity(route="/publish", domain="social", limit=6)
+
+        headline_stats = {
+            "health": {"value": str(health_score) if health_score else "—", "sub": health_label},
+            "engagement": {"value": _human_number(total_engagement) if total_engagement else "—", "sub": "Live engagement total" if total_engagement else "Unavailable"},
+            "followers": {"value": f"+{follower_delta}" if follower_delta else "—", "sub": "Net snapshot delta" if follower_delta else "No live growth delta"},
+            "impressions": {"value": _human_number(impressions_total) if impressions_total else "—", "sub": "Tracked reach" if impressions_total else "Unavailable"},
+            "visits": {"value": "—", "sub": "No live visit feed"},
+            "reach": {"value": _human_number(reach_total) if reach_total else "—", "sub": "Tracked audience reach" if reach_total else "Unavailable"},
+            "time_saved": {"value": "—", "sub": "Unavailable"},
+        }
+
+        mini_stats = [
+            {"label": "Reach", "value": _human_number(reach_total) if reach_total else "Unavailable"},
+            {"label": "Engagement", "value": _human_number(total_engagement) if total_engagement else "Unavailable"},
+            {"label": "Published", "value": str(len(posted_posts))},
+            {"label": "Scheduled", "value": str(len(scheduled_posts))},
+            {"label": "Projects", "value": str(len(publishing_projects) or int(publishing_metrics.get("total_projects") or 0))},
+        ]
+
+        sidebar_counts = {
+            "overview": "Live",
+            "inbox": str(len(inbox_rows)),
+            "calendar": str(len(calendar_rows)),
+            "workflow": f"{round((len(posted_posts) + len(scheduled_posts)) / max(len(normalized_posts), 1) * 100) if normalized_posts else 0}%",
+            "accounts": str(len(accounts_rows)),
+        }
+        sidebar_status_rows = [
+            {"label": "Accounts", "value": f"{len(accounts_rows)} visible"},
+            {"label": "Scheduled", "value": str(len(scheduled_posts))},
+            {"label": "Auto-Published", "value": str(len(posted_posts))},
+            {"label": "Requires Review", "value": str(len(pending_posts))},
+            {"label": "Last Refresh", "value": _format_stamp(generated_at, with_time=True)},
+        ]
+
+        trusted_actions = [
+            {
+                "id": "refresh-social",
+                "title": "Refresh Social",
+                "action_type": "refresh",
+                "available": True,
+                "note": "Reload the live Social Media module payload.",
+            },
+            {
+                "id": "create-post",
+                "title": "Create Post",
+                "action_type": "create-post",
+                "available": publishing is not None,
+                "unavailable_reason": "Publishing social post drafting is not available in this runtime." if publishing is None else "",
+                "project_id": default_project_id,
+                "note": "Create a live social post draft through the publishing store.",
+            },
+            {
+                "id": "schedule-post",
+                "title": "Schedule Post",
+                "action_type": "schedule-post",
+                "available": publishing is not None,
+                "unavailable_reason": "Publishing social scheduling is not available in this runtime." if publishing is None else "",
+                "project_id": default_project_id,
+                "note": "Create a scheduled social post through the publishing store.",
+            },
+            {
+                "id": "approve-next",
+                "title": "Approve Next",
+                "action_type": "approve-post",
+                "available": bool(pending_posts),
+                "unavailable_reason": "No pending social post is currently waiting for approval." if not pending_posts else "",
+                "post_id": str((pending_posts[:1] or [{}])[0].get("post_id") or ""),
+                "note": "Approve the next post currently waiting in the social engine review lane.",
+            },
+            {
+                "id": "execute-ready",
+                "title": "Run Ready Posts",
+                "action_type": "execute-project",
+                "available": bool(engine is not None and default_project_id and scheduled_posts),
+                "unavailable_reason": "No project with ready scheduled posts is currently available for execution." if not (engine is not None and default_project_id and scheduled_posts) else "",
+                "project_id": default_project_id,
+                "note": "Execute approved scheduled posts through the live Social Engine.",
+            },
+        ]
+
+        quick_actions = [
+            {"id": "open-publishing", "title": "Open Publishing", "route": "/publish", "detail": "Open the publishing workspace connected to live social drafts, projects, and launch state."},
+            {"id": "open-command", "title": "Content Ideas", "route": "/command-center", "detail": "Route content ideation into Command until a dedicated social ideation surface exists."},
+            {"id": "open-analytics", "title": "View Analytics", "route": "/publish", "detail": "Open the publishing workspace for deeper social and launch analytics."},
+            {"id": "boundary-thread", "title": "Write Thread", "detail": "A dedicated thread composer route is not exposed in this runtime yet.", "available": False, "unavailable_reason": "A dedicated thread composer route is not exposed in this runtime yet."},
+            {"id": "boundary-video", "title": "Upload Video", "detail": "A dedicated video upload or asset-publish route is not exposed in this runtime yet.", "available": False, "unavailable_reason": "A dedicated video upload or asset-publish route is not exposed in this runtime yet."},
+            {"id": "boundary-dms", "title": "Respond to DMs", "detail": "A live DM reply backend is not exposed in this runtime yet.", "available": False, "unavailable_reason": "A live DM reply backend is not exposed in this runtime yet."},
+        ]
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": f"Social Media loaded {len(normalized_posts)} live post signal(s), {len(accounts_rows)} platform lane(s), {len(pending_posts)} approval item(s), and {len(recent_activity)} continuity event(s).",
+            "what_became_real": "Social Media now hydrates from live publishing projects, social queues, scheduling, analytics, engagement snapshots, and operator continuity instead of browser-side invented social math and toast-only actions.",
+            "remains_partial": "Direct DM inboxes, native thread composition, uploader flows, and per-platform auth diagnostics still depend on backend routes that are not yet exposed in this runtime.",
+            "runtime_note": "Social Media is live and connected." if normalized_posts or accounts_rows or recent_activity else "Social Media is wired, but the runtime has thin live social signal right now.",
+            "availability_notes": availability_notes[:10],
+            "counts": {
+                "posts": len(normalized_posts),
+                "pending": len(pending_posts),
+                "scheduled": len(scheduled_posts),
+                "posted": len(posted_posts),
+                "drafts": len(draft_posts),
+                "failed": len(failed_posts),
+                "accounts": len(accounts_rows),
+                "projects": len(publishing_projects) or int(publishing_metrics.get("total_projects") or 0),
+                "recent_activity": len(recent_activity),
+                "health_score": health_score,
+            },
+            "selected_project_id": default_project_id,
+            "projects": [
+                {
+                    "project_id": str(getattr(project, "project_id", "") or "").strip(),
+                    "title": str(getattr(project, "title", "") or "").strip() or str(getattr(project, "project_id", "") or "").strip(),
+                    "project_type": str(getattr(project, "project_type", "") or "").strip(),
+                    "status": str(getattr(project, "status", "") or "").strip(),
+                    "platform": str(getattr(project, "platform", "") or "").strip(),
+                    "tags": list(getattr(project, "tags", []) or []),
+                }
+                for project in publishing_projects[:8]
+            ],
+            "headline_stats": headline_stats,
+            "sidebar_counts": sidebar_counts,
+            "sidebar_status_rows": sidebar_status_rows,
+            "platform_rows": accounts_rows,
+            "mini_stats": mini_stats,
+            "calendar_rows": calendar_rows,
+            "calendar_footer": calendar_footer,
+            "performance_rows": performance_rows,
+            "inbox_rows": inbox_rows,
+            "pipeline_rows": pipeline_rows,
+            "audience": {
+                "total": _human_number(audience_total) if audience_total else "—",
+                "rows": audience_rows,
+                "insights": audience_insights,
+            },
+            "theme_rows": theme_rows,
+            "health": {"score": health_score, "label": health_label, "metrics": health_metrics},
+            "sentiment_rows": sentiment_rows,
+            "recommendation_rows": recommendation_rows,
+            "security_rows": security_rows,
+            "summary_cards": summary_cards,
+            "footer_rows": footer_rows,
+            "trusted_actions": trusted_actions,
+            "quick_actions": quick_actions,
+            "recent_activity": recent_activity,
+            "proof_paths": {
+                "module_route": "/social-center",
+                "module_api": "/api/social/module",
+                "publishing_projects_api": "/api/publishing/projects",
+                "publishing_social_api": "/api/publishing/social/posts",
+                "publishing_metrics_api": "/api/publishing/metrics",
+                "social_pending_api": "/api/social/posts/pending",
+                "social_schedule_api": "/api/social/schedule/{project_id}",
+                "social_approve_api": "/api/social/post/approve/{post_id}",
+                "social_execute_api": "/api/social/execute",
+                "social_analytics_api": "/api/social/analytics/{project_id}",
+                "social_adaptation_api": "/api/social/adaptation/{project_id}",
+                "activity_api": "/api/activity/operator-action",
+                "action_api": "/api/social/module/action",
+            },
+            "errors": errors,
+        }
+
+        if not availability_notes:
+            payload["availability_notes"].append("All currently available Social Media sources hydrated successfully.")
+        if not normalized_posts and not accounts_rows and not recent_activity and errors:
+            payload["available"] = False
+            payload["status"] = "Wired"
+            payload["runtime_note"] = "Social Media is wired, but the runtime could not hydrate enough live social data to make the surface richly useful yet."
+        elif not normalized_posts and not accounts_rows:
+            payload["runtime_note"] = "Social Media is live, but no posts, platforms, or engagement snapshots are currently visible in this runtime."
+        elif errors:
+            payload["runtime_note"] = "Social Media is live, but some queue, analytics, or engagement sources are partially unavailable."
         return payload
 
     async def _build_daily_brief_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
@@ -10891,6 +11597,102 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }, status_code=201)
 
         raise HTTPException(status_code=400, detail=f"Unsupported email module action: {action}")
+
+    @app.get("/api/social/module")
+    async def api_social_module(actor: str = "Chris") -> JSONResponse:
+        return _json(await _build_social_module_payload(actor))
+
+    @app.post("/api/social/module/action")
+    async def api_social_module_action(payload: dict[str, Any]) -> JSONResponse:
+        action = str(payload.get("action") or "").strip().lower()
+        if not action:
+            raise HTTPException(status_code=400, detail="Action is required.")
+
+        if action == "refresh":
+            return _json({
+                "ok": True,
+                "action": action,
+                "message": "Social Media refreshed.",
+                "module": await _build_social_module_payload(str(payload.get("actor") or "Chris").strip() or "Chris"),
+            })
+
+        publishing = _publishing_or_503()
+
+        if action in {"create-post", "schedule-post"}:
+            from .publishing_suite import SocialPost
+            import uuid as _service_uuid
+
+            content = str(payload.get("content") or "").strip()
+            platform = str(payload.get("platform") or "").strip().lower()
+            if not content:
+                raise HTTPException(status_code=400, detail="content is required.")
+            if not platform:
+                raise HTTPException(status_code=400, detail="platform is required.")
+            scheduled_at = str(payload.get("scheduled_at") or "").strip()
+            status = "scheduled" if action == "schedule-post" and scheduled_at else "draft"
+            post = SocialPost(
+                post_id=str(_service_uuid.uuid4()),
+                platform=platform,
+                content=content,
+                media_urls=list(payload.get("media_urls", []) or []),
+                status=status,
+                scheduled_at=scheduled_at,
+                campaign_id=str(payload.get("campaign_id") or "").strip(),
+                project_id=str(payload.get("project_id") or "").strip(),
+                performance={},
+            )
+            await asyncio.to_thread(publishing._store.save_social_post, post)
+            return _json(
+                {
+                    "ok": True,
+                    "action": action,
+                    "message": "Scheduled social post created." if status == "scheduled" else "Social post draft created.",
+                    "post": post.to_dict(),
+                },
+                status_code=201,
+            )
+
+        if action == "approve-post":
+            engine = _get_social_engine()
+            if engine is None:
+                raise HTTPException(status_code=503, detail="SocialEngine not initialised")
+            post_id = str(payload.get("post_id") or "").strip()
+            if not post_id:
+                raise HTTPException(status_code=400, detail="post_id is required.")
+            post = await asyncio.to_thread(engine.store.get_post, post_id)
+            if post is None:
+                raise HTTPException(status_code=404, detail=f"Post {post_id} not found")
+            if str(post.status or "").lower() not in {"pending_approval", "draft"}:
+                raise HTTPException(status_code=400, detail=f"Post is {post.status}; cannot approve")
+            post.status = "approved"
+            await asyncio.to_thread(engine.store.save_post, post)
+            return _json(
+                {
+                    "ok": True,
+                    "action": action,
+                    "message": "Social post approved.",
+                    "post": post.to_dict(),
+                }
+            )
+
+        if action == "execute-project":
+            engine = _get_social_engine()
+            if engine is None:
+                raise HTTPException(status_code=503, detail="SocialEngine not initialised")
+            project_id = str(payload.get("project_id") or "").strip()
+            if not project_id:
+                raise HTTPException(status_code=400, detail="project_id is required.")
+            result = await asyncio.to_thread(engine.quicksilver.execute_scheduled_posts, project_id)
+            return _json(
+                {
+                    "ok": True,
+                    "action": action,
+                    "message": "Social execution run completed.",
+                    "result": result,
+                }
+            )
+
+        raise HTTPException(status_code=400, detail=f"Unsupported social module action: {action}")
 
     @app.get("/api/news/module")
     async def api_news_module(actor: str = "Chris", force: bool = False) -> JSONResponse:
