@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import suppress
+from datetime import datetime, timezone
 import json
 import mimetypes
 import os
@@ -46,6 +47,7 @@ from .health_checkins import HealthCheckInStore
 from . import layout_engine as _layout_engine
 from .publish_history import PublishHistoryStore
 from .recovery_cases import RecoveryCaseStore
+from .persistence import atomic_write_json
 
 try:
     from .voice_pipeline import get_friday, get_pipeline, get_time_aware_greeting, init_voice as _init_voice_pipeline, VOICE_TOOL_ALLOWLIST
@@ -11520,6 +11522,474 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=503, detail="Forge support not initialised")
         return s
 
+    def _forge_bridge_root() -> Path:
+        store = _get_forge_store()
+        root = getattr(store, "root", None)
+        if isinstance(root, Path):
+            root.mkdir(parents=True, exist_ok=True)
+            return root
+        fallback = Path.home() / ".jarvis" / "forge"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+    def _forge_bridge_config_path() -> Path:
+        return _forge_bridge_root() / "bridge_config.json"
+
+    def _forge_load_bridge_config() -> dict[str, Any]:
+        path = _forge_bridge_config_path()
+        if not path.exists():
+            return {
+                "export_folder": "",
+                "wow_install_path": "",
+                "blender_path": "",
+            }
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                return {
+                    "export_folder": str(payload.get("export_folder") or ""),
+                    "wow_install_path": str(payload.get("wow_install_path") or ""),
+                    "blender_path": str(payload.get("blender_path") or ""),
+                }
+        except Exception:
+            pass
+        return {
+            "export_folder": "",
+            "wow_install_path": "",
+            "blender_path": "",
+        }
+
+    def _forge_save_bridge_config(payload: dict[str, Any]) -> dict[str, Any]:
+        config = {
+            "export_folder": str(payload.get("export_folder") or "").strip(),
+            "wow_install_path": str(payload.get("wow_install_path") or "").strip(),
+            "blender_path": str(payload.get("blender_path") or "").strip(),
+        }
+        atomic_write_json(_forge_bridge_config_path(), config)
+        return config
+
+    def _forge_resolve_project_file(store, project_id: str, filename: str) -> Path | None:
+        cleaned = str(filename or "").strip()
+        if not cleaned:
+            return None
+        uploads_dir = store.uploads_dir(project_id)
+        models_dir = store.models_dir(project_id)
+        for base in (uploads_dir, models_dir):
+            candidate = (base / cleaned).resolve()
+            try:
+                candidate.relative_to(base.resolve())
+            except ValueError:
+                continue
+            if candidate.exists():
+                return candidate
+        return None
+
+    def _forge_register_model_artifact(
+        store,
+        project_id: str,
+        *,
+        filename: str,
+        method: str,
+        title: str,
+        notes: str,
+        source_filename: str = "",
+    ) -> dict[str, Any]:
+        path = store.models_dir(project_id) / filename
+        suffix = path.suffix.lower().lstrip(".") or "unknown"
+        model_dict = {
+            "model_id": secrets.token_hex(8),
+            "version": 1,
+            "title": title,
+            "method": method,
+            "filename": filename,
+            "format": suffix,
+            "file_size_bytes": path.stat().st_size if path.exists() else 0,
+            "bounding_box_mm": {},
+            "is_manifold": None,
+            "was_repaired": False,
+            "repair_notes": "",
+            "print_readiness": {},
+            "created_at": _forge_now(),
+            "notes": notes,
+            "source_filename": source_filename,
+        }
+        store.add_generated_model(project_id, model_dict)
+        store.set_status(project_id, "model_ready", f"{method} artifact added")
+        return model_dict
+
+    def _forge_module_project_summary(project: dict[str, Any]) -> dict[str, Any]:
+        capture_sessions = list(project.get("capture_sessions") or [])
+        generated_models = list(project.get("generated_models") or [])
+        measurements = list(project.get("measurements") or [])
+        latest_capture = capture_sessions[-1] if capture_sessions else {}
+        latest_model = generated_models[-1] if generated_models else {}
+        return {
+            "id": project.get("id"),
+            "title": project.get("title") or "Untitled Forge Project",
+            "status": project.get("status") or "idea",
+            "updated_at": project.get("updated_at") or project.get("created_at") or "",
+            "measurement_count": len(measurements),
+            "capture_frame_count": len(list(latest_capture.get("frames") or [])),
+            "model_count": len(generated_models),
+            "latest_model": latest_model.get("filename") or "",
+            "description": project.get("description") or "",
+        }
+
+    def _forge_build_module_payload(project_id: str = "") -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "generated_at": _forge_now(),
+            "available": True,
+            "status": "Wired",
+            "summary": "Forge is loading live project, fabrication, and bridge state.",
+            "availability_notes": [],
+            "projects": [],
+            "active_project_id": "",
+            "active_project": None,
+            "capture": {},
+            "council": {},
+            "pipeline": {},
+            "memory": {},
+            "manufacturing": {},
+            "systems": {},
+            "wow": {},
+            "convert": {},
+            "proof_paths": {
+                "module_route": "/forge",
+                "module_api": "/api/forge/module",
+                "projects_api": "/api/forge/projects",
+                "project_api": "/api/forge/projects/{project_id}",
+                "generate_api": "/api/forge/projects/{project_id}/generate",
+                "inspect_api": "/api/forge/projects/{project_id}/inspect",
+                "slice_api": "/api/forge/projects/{project_id}/slice",
+                "timeline_api": "/api/forge/projects/{project_id}/timeline",
+                "wow_status_api": "/api/forge/wow/status",
+                "convert_format_api": "/api/forge/convert/format",
+            },
+        }
+        store = _get_forge_store()
+        if store is None:
+            payload["available"] = False
+            payload["status"] = "Unavailable"
+            payload["summary"] = "Forge storage is not available in this runtime."
+            payload["availability_notes"].append("Forge store not initialised.")
+            return payload
+
+        project_index = list(store.list_projects(include_archived=False))
+        project_records: list[dict[str, Any]] = []
+        for item in project_index:
+            project = store.get_project(str(item.get("id") or ""))
+            if project:
+                project_records.append(project)
+        project_records.sort(key=lambda item: item.get("updated_at") or item.get("created_at") or "", reverse=True)
+        payload["projects"] = [_forge_module_project_summary(item) for item in project_records]
+
+        active_project = None
+        if project_id:
+            active_project = next((item for item in project_records if str(item.get("id")) == str(project_id)), None)
+        if active_project is None and project_records:
+            active_project = project_records[0]
+        payload["active_project"] = active_project
+        payload["active_project_id"] = str(active_project.get("id") or "") if active_project else ""
+
+        wow_config = _forge_load_bridge_config()
+        export_folder = Path(str(wow_config.get("export_folder") or "")).expanduser() if wow_config.get("export_folder") else None
+        wow_models: list[dict[str, Any]] = []
+        if export_folder and export_folder.exists():
+            for candidate in sorted(export_folder.iterdir(), key=lambda path: path.stat().st_mtime, reverse=True):
+                if not candidate.is_file():
+                    continue
+                if candidate.suffix.lower() not in {".glb", ".obj", ".stl", ".3mf", ".m2"}:
+                    continue
+                wow_models.append(
+                    {
+                        "filename": candidate.name,
+                        "size_bytes": candidate.stat().st_size,
+                        "modified_at": datetime.fromtimestamp(candidate.stat().st_mtime, timezone.utc).isoformat(),
+                    }
+                )
+
+        payload["wow"] = {
+            "config": wow_config,
+            "export_folder_exists": bool(export_folder and export_folder.exists()),
+            "wow_install_found": bool(wow_config.get("wow_install_path") and Path(str(wow_config.get("wow_install_path"))).expanduser().exists()),
+            "blender_found": bool(wow_config.get("blender_path") and Path(str(wow_config.get("blender_path"))).expanduser().exists()),
+            "models": wow_models[:24],
+            "model_count": len(wow_models),
+            "setup_tip": "Configure an export folder to scan wow.export output, then import a model into the active Forge project.",
+        }
+        payload["convert"] = {
+            "available_formats": ["glb", "obj", "stl", "ply"],
+            "repair_supported": True,
+            "scale_supported": True,
+            "notes": "Conversion, repair, and scaling operate on real project files. Some formats still depend on trimesh export support.",
+        }
+
+        if active_project is None:
+            payload["summary"] = "Forge is live, but there is no active project yet."
+            payload["status"] = "Useful"
+            payload["availability_notes"].append("Create or load a Forge project to activate the desktop workflow.")
+            payload["systems"] = {
+                "environments": [
+                    {"title": "Garage Systems", "copy": "Mounts, charging, tools, and storage that reduce daily friction."},
+                    {"title": "Home Organization", "copy": "Physical products that tidy, protect, and improve movement."},
+                    {"title": "Office & Workspaces", "copy": "Printer stands, cable paths, desks, and production rigs."},
+                    {"title": "Family Command", "copy": "Support the household with systems that actually get used."},
+                    {"title": "Creator Rigs", "copy": "Camera handles, shelves, docks, and modular setups."},
+                    {"title": "Mobile & Vehicle", "copy": "Travel adapters, mounts, and in-motion utility pieces."},
+                ],
+                "recent_projects": payload["projects"],
+            }
+            return payload
+
+        support = _get_forge_support()
+        measurements = list(active_project.get("measurements") or [])
+        capture_sessions = list(active_project.get("capture_sessions") or [])
+        generated_models = list(active_project.get("generated_models") or [])
+        slices = list(active_project.get("slices") or [])
+        approvals = list(active_project.get("approvals") or [])
+        timeline = list(store.read_timeline(str(active_project.get("id"))))
+        latest_capture = capture_sessions[-1] if capture_sessions else {}
+        latest_model = generated_models[-1] if generated_models else {}
+        latest_slice = slices[-1] if slices else {}
+        latest_readiness = latest_model.get("print_readiness") if isinstance(latest_model.get("print_readiness"), dict) else {}
+
+        if support is not None and latest_capture:
+            try:
+                capture_status = support.capture_completeness(latest_capture)
+            except Exception as exc:
+                capture_status = {"ready_to_model": False, "missing_views": [], "error": str(exc)}
+                payload["availability_notes"].append(f"Capture completeness partial: {exc}")
+        else:
+            capture_status = {
+                "ready_to_model": bool(latest_capture),
+                "missing_views": [],
+                "geometry_confidence": latest_capture.get("confidence", {}).get("geometry", "low"),
+                "scale_confidence": latest_capture.get("confidence", {}).get("scale", "low"),
+                "print_readiness": latest_capture.get("confidence", {}).get("print_readiness", "not_ready"),
+                "required_count": len(list(latest_capture.get("frames") or [])),
+                "required_total": 5,
+            }
+
+        readiness_ok = bool(latest_readiness.get("ok") and latest_readiness.get("printable"))
+        geometry_conf = str(capture_status.get("geometry_confidence") or "low").lower()
+        scale_conf = str(capture_status.get("scale_confidence") or "low").lower()
+        confirmed_count = len([item for item in measurements if item.get("confirmed")])
+        total_measurements = len(measurements)
+        frame_count = len(list(latest_capture.get("frames") or []))
+        model_count = len(generated_models)
+
+        def _confidence_score(base: int, extra: int = 0) -> int:
+            return max(12, min(99, base + extra))
+
+        option_scores = [
+            {
+                "option": "Option A",
+                "label": "Strongest",
+                "score": _confidence_score(40 + confirmed_count * 8 + (12 if readiness_ok else 0)),
+                "copy": "Favors retained dimensions, print readiness, and structural confidence from the active artifact.",
+            },
+            {
+                "option": "Option B",
+                "label": "Fastest",
+                "score": _confidence_score(30 + frame_count * 10 + (10 if model_count else 0)),
+                "copy": "Optimizes for getting to the next printable iteration with the current capture and model history.",
+            },
+            {
+                "option": "Option C",
+                "label": "Cleanest",
+                "score": _confidence_score(28 + total_measurements * 9 + (10 if geometry_conf == "high" else 0)),
+                "copy": "Rewards clarity of constraints, fewer unknowns, and cleaner installation logic in the brief.",
+            },
+            {
+                "option": "Option D",
+                "label": "Adjustable",
+                "score": _confidence_score(24 + len(active_project.get("assumptions") or []) * 5 + (14 if scale_conf in {"medium", "high"} else 0)),
+                "copy": "Keeps flexibility where the environment or downstream install still calls for adaptation.",
+            },
+        ]
+
+        factor_items = [
+            f"{total_measurements} measured dimensions",
+            f"{confirmed_count} confirmed constraint{'' if confirmed_count == 1 else 's'}",
+            f"{frame_count} capture frame{'' if frame_count == 1 else 's'}",
+            f"{model_count} generated model{'' if model_count == 1 else 's'}",
+            readiness_ok and "Printable artifact available" or "Printability still needs confirmation",
+            latest_slice and "Slice package has been staged" or "No slice report staged yet",
+            approvals and f"{len(approvals)} approval record{'s' if len(approvals) != 1 else ''}" or "Approval history still empty",
+            latest_model.get("format") and f"Current model format: {str(latest_model.get('format')).upper()}" or "No active model format yet",
+        ]
+
+        pipeline_stages = [
+            {"title": "CAD", "status": "Captured" if active_project.get("title") else "Waiting"},
+            {"title": "Mesh Repair", "status": readiness_ok and "Ready" or (latest_model and "Validate" or "Waiting")},
+            {"title": "Optimize", "status": model_count and "Refine" or "Waiting"},
+            {"title": "Slice & Sim", "status": latest_slice and "Staged" or "Stage"},
+            {"title": "Validate", "status": latest_readiness and "Inspect" or "Inspect"},
+            {"title": "Package", "status": approvals and "Approved" or "Approve"},
+        ]
+
+        manufacture_plan = [
+            {
+                "title": "3D Print Prototype",
+                "copy": latest_model and "Use the active artifact to validate fit, orientation, and support strategy on the fastest loop." or "Generate or upload a model first so the prototype lane has something real to evaluate.",
+            },
+            {
+                "title": "Field Test",
+                "copy": confirmed_count and "Confirmed measurements and captured context now support a meaningful fit and use-case test." or "Add confirmed dimensions before trusting a field test result.",
+            },
+            {
+                "title": "Finalize Design",
+                "copy": latest_readiness and "Inspection, repair, and scaling data stay attached so the design can cross fabrication methods cleanly." or "Run inspection so downstream manufacture is based on the real artifact, not the mockup shell.",
+            },
+        ]
+
+        bbox = latest_model.get("bounding_box_mm") if isinstance(latest_model.get("bounding_box_mm"), dict) else {}
+        volume_mm3 = latest_readiness.get("volume_mm3") if isinstance(latest_readiness, dict) else None
+        estimate_rows = [
+            {
+                "title": "3D Print (In-House)",
+                "copy": (
+                    f"BBox {bbox.get('x', '—')} × {bbox.get('y', '—')} × {bbox.get('z', '—')} mm."
+                    if bbox else
+                    "Fastest path to prototype and the tightest feedback loop for fit adjustments."
+                ),
+            },
+            {
+                "title": "CNC Machining",
+                "copy": volume_mm3 and f"Model volume: {round(float(volume_mm3), 1)} mm³. CNC becomes more relevant when finish and material matter." or "Higher precision and material durability when the geometry and volumes warrant it.",
+            },
+            {
+                "title": "Batch Production",
+                "copy": approvals and "Approval history exists, which makes cost/volume comparison worth exploring." or "Use once the design is stable and the cost curve justifies a wider run.",
+            },
+        ]
+
+        learn_rows = []
+        if confirmed_count:
+            learn_rows.append(
+                {
+                    "title": "Confirmed dimensions are accumulating",
+                    "copy": f"{confirmed_count} confirmed dimension(s) now anchor the brief in real-world fit instead of assumptions.",
+                }
+            )
+        if latest_capture:
+            learn_rows.append(
+                {
+                    "title": "Capture posture improved",
+                    "copy": f"{frame_count} frame(s) are attached to the latest session, which sharpens geometry and scale reasoning.",
+                }
+            )
+        if latest_readiness:
+            learn_rows.append(
+                {
+                    "title": "Inspection memory retained",
+                    "copy": latest_readiness.get("repair_notes") or "The latest model already carries inspection state, so the next build step starts with evidence instead of guesswork.",
+                }
+            )
+        if latest_slice:
+            learn_rows.append(
+                {
+                    "title": "Slice staging is now remembered",
+                    "copy": f"Printer {latest_slice.get('printer_id') or 'unknown'} · material {latest_slice.get('material') or 'unknown'} · status {latest_slice.get('status') or 'staged'}.",
+                }
+            )
+        if not learn_rows:
+            learn_rows.append(
+                {
+                    "title": "Waiting for stronger signal",
+                    "copy": "Measurements, council outputs, repairs, and approvals will summarize here once the project is loaded.",
+                }
+            )
+
+        memory_rows = []
+        for idx, model in enumerate(reversed(generated_models[-4:]), start=1):
+            memory_rows.append(
+                {
+                    "title": f"Model revision {idx}",
+                    "copy": f"{model.get('filename') or 'Generated model'} · {model.get('method') or 'forge'} · {model.get('created_at') or ''}",
+                }
+            )
+        for idx, session in enumerate(reversed(capture_sessions[-2:]), start=1):
+            memory_rows.append(
+                {
+                    "title": f"Capture session {idx}",
+                    "copy": f"{len(list(session.get('frames') or []))} frame(s) · {session.get('created_at') or ''}",
+                }
+            )
+        if not memory_rows:
+            memory_rows.append(
+                {
+                    "title": "No revisions yet",
+                    "copy": "Once the project starts generating captures, models, and inspections, they will appear here.",
+                }
+            )
+
+        printer_host = str(os.environ.get("JARVIS_FORGE_MOONRAKER_HOST") or "").strip()
+        printer_status: dict[str, Any] = {}
+        if support is not None and printer_host:
+            try:
+                printer_status = support.moonraker_status(printer_host)
+            except Exception as exc:
+                printer_status = {"available": False, "error": str(exc)}
+        else:
+            printer_status = {
+                "available": False,
+                "error": "Printer host not configured.",
+            }
+            if not printer_host:
+                payload["availability_notes"].append("Printer telemetry is unavailable because JARVIS_FORGE_MOONRAKER_HOST is not configured.")
+
+        payload["capture"] = capture_status
+        payload["council"] = {
+            "scores": option_scores,
+            "factors": factor_items,
+            "stress_copy_top": latest_model.get("filename") and f"Current model: {latest_model.get('filename')}" or "Use the Council when you want the review to feed directly into model generation.",
+            "stress_copy": latest_model.get("filename") and "The loaded artifact becomes the thing the council can challenge for stress, fit, failure points, and install logic." or "Bring a design brief or uploaded model here and let the Council reason about the tradeoffs before fabrication.",
+        }
+        payload["pipeline"] = {
+            "stages": pipeline_stages,
+            "printer_status": printer_status,
+            "latest_readiness": latest_readiness,
+            "latest_slice": latest_slice,
+            "latest_approval": approvals[-1] if approvals else None,
+        }
+        payload["memory"] = {
+            "revisions": memory_rows,
+            "learnings": learn_rows,
+            "timeline": timeline[-12:],
+        }
+        payload["manufacturing"] = {
+            "plan": manufacture_plan,
+            "estimates": estimate_rows,
+            "factory_modes": ["In-House", "Local Makers", "CNC / Laser", "Injection Molding", "Casting"],
+        }
+        payload["systems"] = {
+            "environments": [
+                {"title": "Garage Systems", "copy": "Mounts, charging, tools, and storage that reduce daily friction."},
+                {"title": "Home Organization", "copy": "Physical products that tidy, protect, and improve movement."},
+                {"title": "Office & Workspaces", "copy": "Printer stands, cable paths, desks, and production rigs."},
+                {"title": "Family Command", "copy": "Support the household with systems that actually get used."},
+                {"title": "Creator Rigs", "copy": "Camera handles, shelves, docks, and modular setups."},
+                {"title": "Mobile & Vehicle", "copy": "Travel adapters, mounts, and in-motion utility pieces."},
+            ],
+            "recent_projects": payload["projects"],
+        }
+
+        payload["status"] = "Useful"
+        payload["summary"] = (
+            f"Forge loaded {active_project.get('title') or 'the active project'} with "
+            f"{total_measurements} measurement(s), {frame_count} capture frame(s), and {model_count} generated model(s)."
+        )
+        if not generated_models:
+            payload["availability_notes"].append("No generated model yet — design, conversion, and fabrication lanes are operating from the brief and capture data.")
+        if not confirmed_count:
+            payload["availability_notes"].append("No confirmed measurements yet — dimensional certainty is still limited.")
+        return payload
+
+    @app.get("/api/forge/module")
+    async def api_forge_module(project_id: str = Query(default="")) -> JSONResponse:
+        return _json(await asyncio.to_thread(_forge_build_module_payload, project_id))
+
     @app.get("/api/forge/projects")
     async def api_forge_list_projects(
         include_archived: bool = Query(default=False),
@@ -12026,6 +12496,345 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         port_param = 7125
         result = await asyncio.to_thread(support.moonraker_status, host, port_param)
         return _json(result)
+
+    @app.get("/api/forge/wow/config")
+    async def api_forge_wow_config_get() -> JSONResponse:
+        return _json(_forge_load_bridge_config())
+
+    @app.post("/api/forge/wow/config")
+    async def api_forge_wow_config_post(request: Request) -> JSONResponse:
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        config = _forge_save_bridge_config(body)
+        return _json({**config, "ok": True})
+
+    @app.get("/api/forge/wow/status")
+    async def api_forge_wow_status() -> JSONResponse:
+        config = _forge_load_bridge_config()
+        export_folder_value = str(config.get("export_folder") or "").strip()
+        export_folder = Path(export_folder_value).expanduser() if export_folder_value else None
+        wow_value = str(config.get("wow_install_path") or "").strip()
+        blender_value = str(config.get("blender_path") or "").strip()
+        wow_path = Path(wow_value).expanduser() if wow_value else None
+        blender_path = Path(blender_value).expanduser() if blender_value else None
+        details: list[str] = []
+        if export_folder:
+            details.append(f"Export folder: {export_folder}")
+        if wow_path:
+            details.append(f"WoW install: {wow_path}")
+        if blender_path:
+            details.append(f"Blender path: {blender_path}")
+        return _json(
+            {
+                **config,
+                "ok": True,
+                "export_folder_exists": bool(export_folder and export_folder.exists()),
+                "wow_install_found": bool(wow_path and wow_path.exists()),
+                "blender_found": bool(blender_path and blender_path.exists()),
+                "wow_export_setup_tip": "Point Forge at the wow.export folder, then refresh the bridge to import a real model.",
+                "details": details,
+            }
+        )
+
+    @app.get("/api/forge/wow/models")
+    async def api_forge_wow_models() -> JSONResponse:
+        config = _forge_load_bridge_config()
+        export_folder_value = str(config.get("export_folder") or "").strip()
+        if not export_folder_value:
+            return _json({"ok": False, "available": False, "models": [], "detail": "Export folder is not configured yet."})
+        export_folder = Path(export_folder_value).expanduser()
+        if not export_folder.exists():
+            return _json({"ok": False, "available": False, "models": [], "detail": f"Export folder does not exist: {export_folder}"})
+        models = []
+        for candidate in sorted(export_folder.iterdir(), key=lambda path: path.stat().st_mtime, reverse=True):
+            if not candidate.is_file():
+                continue
+            if candidate.suffix.lower() not in {".glb", ".obj", ".stl", ".3mf", ".m2"}:
+                continue
+            models.append(
+                {
+                    "filename": candidate.name,
+                    "size_bytes": candidate.stat().st_size,
+                    "modified_at": datetime.fromtimestamp(candidate.stat().st_mtime, timezone.utc).isoformat(),
+                }
+            )
+        return _json({"ok": True, "available": True, "models": models, "count": len(models)})
+
+    @app.post("/api/forge/wow/import")
+    async def api_forge_wow_import(request: Request) -> JSONResponse:
+        store = _forge_store_or_503()
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        project_id = str(body.get("project_id") or "").strip()
+        filename = str(body.get("filename") or "").strip()
+        if not project_id:
+            raise HTTPException(status_code=400, detail="project_id is required")
+        if not filename:
+            raise HTTPException(status_code=400, detail="filename is required")
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+        config = _forge_load_bridge_config()
+        export_folder_value = str(config.get("export_folder") or "").strip()
+        if not export_folder_value:
+            raise HTTPException(status_code=400, detail="WoW export folder is not configured")
+        export_folder = Path(export_folder_value).expanduser().resolve()
+        source = (export_folder / filename).resolve()
+        try:
+            source.relative_to(export_folder)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid import path")
+        if not source.exists() or not source.is_file():
+            raise HTTPException(status_code=404, detail="WoW export file not found")
+        safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", source.name).strip("-._") or source.name
+        dest = await asyncio.to_thread(store.uploads_dir, project_id)
+        target = dest / safe_name
+        await asyncio.to_thread(shutil.copy2, source, target)
+        await asyncio.to_thread(store.add_source_file, project_id, safe_name, "3d_model", target.stat().st_size)
+        await asyncio.to_thread(store.log_event, project_id, "wow_import", f"filename={safe_name!r}")
+        return _json({"ok": True, "filename": safe_name, "project_id": project_id})
+
+    @app.post("/api/forge/convert/format")
+    async def api_forge_convert_format(
+        project_id: str = Form(""),
+        target_format: str = Form("stl"),
+        source_filename: str = Form(""),
+        file: UploadFile | None = File(None),
+    ) -> JSONResponse:
+        store = _forge_store_or_503()
+        project_id = str(project_id or "").strip()
+        if not project_id:
+            raise HTTPException(status_code=400, detail="project_id is required")
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project is None:
+            raise HTTPException(status_code=404, detail="Forge project not found")
+        target_format = str(target_format or "stl").strip().lower()
+        if target_format not in {"glb", "obj", "stl", "ply"}:
+            raise HTTPException(status_code=400, detail="target_format must be glb, obj, stl, or ply")
+
+        upload_path: Path | None = None
+        source_path: Path | None = None
+        source_label = ""
+        if file is not None and getattr(file, "filename", ""):
+            safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", file.filename or "upload").strip("-._") or "upload"
+            upload_path = await asyncio.to_thread(store.uploads_dir, project_id) / safe_name
+            content = await file.read()
+            upload_path.write_bytes(content)
+            await asyncio.to_thread(store.add_source_file, project_id, safe_name, "3d_model", len(content))
+            source_path = upload_path
+            source_label = safe_name
+        else:
+            source_filename = str(source_filename or "").strip()
+            if not source_filename:
+                raise HTTPException(status_code=400, detail="source_filename or file is required")
+            source_path = await asyncio.to_thread(_forge_resolve_project_file, store, project_id, source_filename)
+            source_label = source_filename
+        if source_path is None or not source_path.exists():
+            raise HTTPException(status_code=404, detail="Source file not found")
+
+        stem = source_path.stem
+        dest_name = f"{stem}_converted.{target_format}"
+        dest_path = await asyncio.to_thread(store.models_dir, project_id) / dest_name
+        if source_path.suffix.lower().lstrip(".") == target_format:
+            await asyncio.to_thread(shutil.copy2, source_path, dest_path)
+        else:
+            try:
+                import trimesh  # type: ignore[import]
+            except ImportError as exc:
+                raise HTTPException(status_code=503, detail=f"trimesh not available: {exc}")
+            try:
+                mesh = await asyncio.to_thread(trimesh.load, str(source_path))
+                if hasattr(mesh, "geometry") and getattr(mesh, "geometry", None):
+                    mesh = trimesh.util.concatenate(list(mesh.geometry.values()))
+                await asyncio.to_thread(mesh.export, str(dest_path), file_type=target_format)
+            except Exception as exc:
+                raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
+        model_dict = await asyncio.to_thread(
+            _forge_register_model_artifact,
+            store,
+            project_id,
+            filename=dest_name,
+            method="format_convert",
+            title=f"Converted {target_format.upper()} artifact",
+            notes=f"Converted from {source_label}.",
+            source_filename=source_label,
+        )
+        await asyncio.to_thread(store.log_event, project_id, "convert_format", f"{source_label!r} -> {dest_name!r}")
+        return _json({"ok": True, "filename": dest_name, "project_id": project_id, "download_url": f"/api/forge/projects/{project_id}/file/{dest_name}", "model": model_dict})
+
+    @app.get("/api/forge/convert/blender-check")
+    async def api_forge_convert_blender_check() -> JSONResponse:
+        config = _forge_load_bridge_config()
+        blender_value = str(config.get("blender_path") or "").strip()
+        blender_path = Path(blender_value).expanduser() if blender_value else None
+        details = []
+        if blender_path:
+            details.append(f"Configured blender path: {blender_path}")
+        else:
+            details.append("Blender path is not configured.")
+        details.append("WoW Blender Studio addon detection is not yet automated in this runtime.")
+        return _json(
+            {
+                "ok": bool(blender_path and blender_path.exists()),
+                "blender_found": bool(blender_path and blender_path.exists()),
+                "blender_version": "",
+                "addon_found": False,
+                "details": details,
+            }
+        )
+
+    @app.post("/api/forge/convert/repair")
+    async def api_forge_convert_repair(request: Request) -> JSONResponse:
+        store = _forge_store_or_503()
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        project_id = str(body.get("project_id") or "").strip()
+        source_filename = str(body.get("source_filename") or "").strip()
+        if not project_id or not source_filename:
+            raise HTTPException(status_code=400, detail="project_id and source_filename are required")
+        source_path = await asyncio.to_thread(_forge_resolve_project_file, store, project_id, source_filename)
+        if source_path is None:
+            raise HTTPException(status_code=404, detail="Source file not found")
+        try:
+            import trimesh  # type: ignore[import]
+            from trimesh import repair as trimesh_repair  # type: ignore[import]
+        except ImportError as exc:
+            raise HTTPException(status_code=503, detail=f"trimesh not available: {exc}")
+
+        try:
+            mesh = await asyncio.to_thread(trimesh.load, str(source_path))
+            if hasattr(mesh, "geometry") and getattr(mesh, "geometry", None):
+                mesh = trimesh.util.concatenate(list(mesh.geometry.values()))
+            was_watertight = bool(mesh.is_watertight)
+            ops_applied: list[str] = []
+            if body.get("fill_holes", True):
+                await asyncio.to_thread(trimesh_repair.fill_holes, mesh)
+                ops_applied.append("fill_holes")
+            if body.get("fix_normals", True):
+                await asyncio.to_thread(trimesh_repair.fix_normals, mesh)
+                ops_applied.append("fix_normals")
+            if body.get("fix_winding", True) and hasattr(trimesh_repair, "fix_winding"):
+                await asyncio.to_thread(trimesh_repair.fix_winding, mesh)
+                ops_applied.append("fix_winding")
+            is_watertight = bool(mesh.is_watertight)
+            dest_name = f"{source_path.stem}_repaired{source_path.suffix.lower() or '.stl'}"
+            dest_path = await asyncio.to_thread(store.models_dir, project_id) / dest_name
+            await asyncio.to_thread(mesh.export, str(dest_path))
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Repair failed: {exc}")
+
+        model_dict = await asyncio.to_thread(
+            _forge_register_model_artifact,
+            store,
+            project_id,
+            filename=dest_name,
+            method="mesh_repair",
+            title="Repaired mesh artifact",
+            notes=f"Repair applied to {source_filename}.",
+            source_filename=source_filename,
+        )
+        model_dict["was_repaired"] = True
+        model_dict["is_manifold"] = is_watertight
+        project = await asyncio.to_thread(store.get_project, project_id)
+        if project:
+            models = list(project.get("generated_models") or [])
+            if models:
+                models[-1].update(model_dict)
+                await asyncio.to_thread(store.update_project, project_id, generated_models=models)
+        await asyncio.to_thread(store.log_event, project_id, "repair_mesh", f"{source_filename!r} -> {dest_name!r}")
+        return _json(
+            {
+                "ok": True,
+                "filename": dest_name,
+                "project_id": project_id,
+                "ops_applied": ops_applied,
+                "was_watertight": was_watertight,
+                "is_watertight": is_watertight,
+                "download_url": f"/api/forge/projects/{project_id}/file/{dest_name}",
+                "model": model_dict,
+            }
+        )
+
+    @app.post("/api/forge/convert/scale")
+    async def api_forge_convert_scale(request: Request) -> JSONResponse:
+        store = _forge_store_or_503()
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        project_id = str(body.get("project_id") or "").strip()
+        source_filename = str(body.get("source_filename") or "").strip()
+        if not project_id or not source_filename:
+            raise HTTPException(status_code=400, detail="project_id and source_filename are required")
+        source_path = await asyncio.to_thread(_forge_resolve_project_file, store, project_id, source_filename)
+        if source_path is None:
+            raise HTTPException(status_code=404, detail="Source file not found")
+        operation = str(body.get("operation") or "rescale").strip().lower()
+        try:
+            import trimesh  # type: ignore[import]
+        except ImportError as exc:
+            raise HTTPException(status_code=503, detail=f"trimesh not available: {exc}")
+        try:
+            mesh = await asyncio.to_thread(trimesh.load, str(source_path))
+            if hasattr(mesh, "geometry") and getattr(mesh, "geometry", None):
+                mesh = trimesh.util.concatenate(list(mesh.geometry.values()))
+            original_extents = [float(value) for value in mesh.bounding_box.extents.tolist()]
+            scale_factor = 1.0
+            if operation == "rescale":
+                target_size = float(body.get("target_size") or 100.0)
+                current_max = max(original_extents) if original_extents else 1.0
+                scale_factor = target_size / current_max if current_max else 1.0
+                mesh.apply_scale(scale_factor)
+            elif operation == "normalize_bbox":
+                current_max = max(original_extents) if original_extents else 1.0
+                scale_factor = 1.0 / current_max if current_max else 1.0
+                mesh.apply_scale(scale_factor)
+            elif operation == "center_origin":
+                mesh.apply_translation(-mesh.bounding_box.centroid)
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported scale operation")
+            final_extents = [float(value) for value in mesh.bounding_box.extents.tolist()]
+            dest_name = f"{source_path.stem}_{operation}{source_path.suffix.lower() or '.stl'}"
+            dest_path = await asyncio.to_thread(store.models_dir, project_id) / dest_name
+            await asyncio.to_thread(mesh.export, str(dest_path))
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Scale failed: {exc}")
+
+        model_dict = await asyncio.to_thread(
+            _forge_register_model_artifact,
+            store,
+            project_id,
+            filename=dest_name,
+            method="scale_transform",
+            title=f"Scaled artifact ({operation})",
+            notes=f"Scale operation {operation} applied to {source_filename}.",
+            source_filename=source_filename,
+        )
+        await asyncio.to_thread(store.log_event, project_id, "scale_mesh", f"{source_filename!r} -> {dest_name!r} ({operation})")
+        return _json(
+            {
+                "ok": True,
+                "filename": dest_name,
+                "project_id": project_id,
+                "operation": operation,
+                "scale_factor": scale_factor,
+                "original_bbox_mm": original_extents,
+                "final_bbox_mm": final_extents,
+                "download_url": f"/api/forge/projects/{project_id}/file/{dest_name}",
+                "model": model_dict,
+            }
+        )
 
     @app.post("/api/forge/reconstruct")
     async def api_forge_reconstruct(

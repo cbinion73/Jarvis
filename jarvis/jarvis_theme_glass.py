@@ -20156,6 +20156,8 @@ body::after {{
             <div class="forge-status-row"><span>Project</span><span id="forge-sidebar-project">No project</span></div>
             <div class="forge-status-row"><span>Signal Health</span><span id="forge-sidebar-health">Syncing…</span></div>
             <div class="forge-status-row"><span>Recent Projects</span><span id="forge-sidebar-count">0</span></div>
+            <div class="forge-status-row"><span>Runtime</span><span id="forge-runtime-note">Loading Forge context…</span></div>
+            <button class="forge-action-btn" type="button" onclick="refreshForgeDesktop()" style="width:100%;margin-top:8px;">Refresh Forge</button>
             <button class="forge-action-btn" type="button" onclick="forgeNewProject()" style="width:100%;margin-top:8px;">Open New Forge Project</button>
           </div>
         </aside>
@@ -20349,12 +20351,12 @@ body::after {{
                     <button class="forge-action-btn primary" onclick="forgeRunDesignCouncil()">See Full Council Report</button>
                   </div>
                   <div class="forge-score-list">
-                    <div class="forge-score-row"><span>Option A</span><div class="forge-score-track"><div class="forge-score-fill" style="width:92%;"></div></div><strong class="forge-score-value">92</strong></div>
-                    <div class="forge-score-row"><span>Option B</span><div class="forge-score-track"><div class="forge-score-fill" style="width:87%;"></div></div><strong class="forge-score-value">87</strong></div>
-                    <div class="forge-score-row"><span>Option C</span><div class="forge-score-track"><div class="forge-score-fill" style="width:89%;"></div></div><strong class="forge-score-value">89</strong></div>
-                    <div class="forge-score-row"><span>Option D</span><div class="forge-score-track"><div class="forge-score-fill" style="width:84%;"></div></div><strong class="forge-score-value">84</strong></div>
+                    <div class="forge-score-row"><span id="forge-score-a-label">Option A</span><div class="forge-score-track"><div class="forge-score-fill" id="forge-score-a-fill" style="width:92%;"></div></div><strong class="forge-score-value" id="forge-score-a-value">92</strong></div>
+                    <div class="forge-score-row"><span id="forge-score-b-label">Option B</span><div class="forge-score-track"><div class="forge-score-fill" id="forge-score-b-fill" style="width:87%;"></div></div><strong class="forge-score-value" id="forge-score-b-value">87</strong></div>
+                    <div class="forge-score-row"><span id="forge-score-c-label">Option C</span><div class="forge-score-track"><div class="forge-score-fill" id="forge-score-c-fill" style="width:89%;"></div></div><strong class="forge-score-value" id="forge-score-c-value">89</strong></div>
+                    <div class="forge-score-row"><span id="forge-score-d-label">Option D</span><div class="forge-score-track"><div class="forge-score-fill" id="forge-score-d-fill" style="width:84%;"></div></div><strong class="forge-score-value" id="forge-score-d-value">84</strong></div>
                   </div>
-                  <div class="forge-factor-list">
+                  <div class="forge-factor-list" id="forge-factor-list">
                     <div>Load capacity</div>
                     <div>Installation method</div>
                     <div>Failure points</div>
@@ -20382,12 +20384,12 @@ body::after {{
                   <div class="forge-card-label">Build Pipeline<strong>From CAD to machine-ready. Optimized for success.</strong><small>Inspect the current model, stage the slice, and decide whether this project is ready to move forward.</small></div>
                 </div>
                 <div class="forge-pipeline-row">
-                  <div class="forge-pipeline-stage"><span>CAD</span><strong>Captured</strong></div>
-                  <div class="forge-pipeline-stage"><span>Mesh Repair</span><strong>Validate</strong></div>
-                  <div class="forge-pipeline-stage"><span>Optimize</span><strong>Refine</strong></div>
-                  <div class="forge-pipeline-stage"><span>Slice &amp; Sim</span><strong>Stage</strong></div>
-                  <div class="forge-pipeline-stage"><span>Validate</span><strong>Inspect</strong></div>
-                  <div class="forge-pipeline-stage"><span>Package</span><strong>Approve</strong></div>
+                  <div class="forge-pipeline-stage"><span>CAD</span><strong id="forge-stage-cad">Captured</strong></div>
+                  <div class="forge-pipeline-stage"><span>Mesh Repair</span><strong id="forge-stage-repair">Validate</strong></div>
+                  <div class="forge-pipeline-stage"><span>Optimize</span><strong id="forge-stage-optimize">Refine</strong></div>
+                  <div class="forge-pipeline-stage"><span>Slice &amp; Sim</span><strong id="forge-stage-slice">Stage</strong></div>
+                  <div class="forge-pipeline-stage"><span>Validate</span><strong id="forge-stage-validate">Inspect</strong></div>
+                  <div class="forge-pipeline-stage"><span>Package</span><strong id="forge-stage-package">Approve</strong></div>
                 </div>
                 <div class="forge-detail-grid">
                   <div class="forge-readiness-panel">
@@ -20482,7 +20484,7 @@ body::after {{
                 <div class="forge-card-heading">
                   <div class="forge-card-label">Environments &amp; Systems Design<strong>Design whole spaces, systems, and better ways of living.</strong><small>Forge is not only for one part. It is the physical systems layer for your garage, home, office, rigs, storage, and maker environment.</small></div>
                 </div>
-                <div class="forge-environment-row">
+                <div class="forge-environment-row" id="forge-environment-row">
                   <div class="forge-environment-card"><strong>Garage Systems</strong><span>Mounts, charging, tools, and storage that reduce daily friction.</span></div>
                   <div class="forge-environment-card"><strong>Home Organization</strong><span>Physical products that tidy, protect, and improve movement.</span></div>
                   <div class="forge-environment-card"><strong>Office &amp; Workspaces</strong><span>Printer stands, cable paths, desks, and production rigs.</span></div>
@@ -40199,6 +40201,8 @@ let _forgeMesh = null;
 let _forgeCameraStream = null;
 let forgeStoryboardPage = 1;
 let _forgeProjectCache = [];
+let _forgeRequestSerial = 0;
+let _forgeModuleData = null;
 
 const FORGE_STORYBOARD_TITLES = {{
   1: {{
@@ -40237,6 +40241,33 @@ const FORGE_STORYBOARD_TITLES = {{
     subtitle: 'Treat Forge as the physical systems layer for your garage, home, office, rigs, and repeatable products, not just one isolated part.',
   }},
 }};
+
+function forgeRuntimeNote(text) {{
+  const el = document.getElementById('forge-runtime-note');
+  if (el) el.textContent = text || 'Forge is live.';
+}}
+
+async function forgeReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_) {{
+    return null;
+  }}
+}}
+
+async function forgeFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    const payload = await forgeReadJson(response);
+    if (!response.ok) return {{ ok: false, status: response.status, payload }};
+    return {{ ok: true, status: response.status, payload }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
 
 function syncForgeStoryboard() {{
   const panels = Array.from(document.querySelectorAll('#view-forge .forge-page'));
@@ -40371,10 +40402,133 @@ function forgeRenderDesktopMeta(project) {{
   }}
 }}
 
+function forgeRenderCouncil(council) {{
+  const scores = Array.isArray(council?.scores) ? council.scores : [];
+  const ids = ['a', 'b', 'c', 'd'];
+  ids.forEach((suffix, index) => {{
+    const score = scores[index] || {{}};
+    const label = score.option && score.label ? `${{score.option}} — ${{score.label}}` : (score.option || `Option ${{String.fromCharCode(65 + index)}}`);
+    const value = Number.isFinite(Number(score.score)) ? Math.max(0, Math.min(100, Number(score.score))) : 0;
+    const labelEl = document.getElementById(`forge-score-${{suffix}}-label`);
+    const fillEl = document.getElementById(`forge-score-${{suffix}}-fill`);
+    const valueEl = document.getElementById(`forge-score-${{suffix}}-value`);
+    if (labelEl) labelEl.textContent = label;
+    if (fillEl) fillEl.style.width = `${{value}}%`;
+    if (valueEl) valueEl.textContent = String(value);
+  }});
+  const factorEl = document.getElementById('forge-factor-list');
+  if (factorEl) {{
+    const factors = Array.isArray(council?.factors) ? council.factors : [];
+    factorEl.innerHTML = (factors.length ? factors : ['No active council factors yet']).map(item => `<div>${{escHtml(String(item || ''))}}</div>`).join('');
+  }}
+  const topEl = document.getElementById('forge-stress-copy-top');
+  const bodyEl = document.getElementById('forge-stress-copy');
+  if (topEl) topEl.textContent = council?.stress_copy_top || 'Use the Council when you want the review to feed directly into model generation.';
+  if (bodyEl) bodyEl.textContent = council?.stress_copy || 'Bring a design brief or uploaded model here and let the Council reason about the tradeoffs before fabrication.';
+}}
+
+function forgeRenderPipeline(pipeline) {{
+  const stages = Array.isArray(pipeline?.stages) ? pipeline.stages : [];
+  const ids = ['cad', 'repair', 'optimize', 'slice', 'validate', 'package'];
+  ids.forEach((id, index) => {{
+    const el = document.getElementById(`forge-stage-${{id}}`);
+    if (el) el.textContent = stages[index]?.status || el.textContent || 'Waiting';
+  }});
+  const printer = pipeline?.printer_status || {{}};
+  const chip = document.getElementById('forge-printer-chip');
+  const chipBar = document.getElementById('forge-printer-chip-bar');
+  const label = printer.available
+    ? `Printer ${{escHtml(String(printer.print_state || 'ready')).toString()}}`
+    : `Printer unavailable`;
+  if (chip) {{
+    chip.style.display = 'inline-flex';
+    chip.textContent = printer.available ? `K2 Pro — ${{printer.print_state || 'ready'}}` : `K2 Pro — unavailable`;
+  }}
+  if (chipBar) {{
+    chipBar.style.display = 'inline-flex';
+    chipBar.textContent = printer.available ? `K2 Pro — ${{printer.print_state || 'ready'}}` : 'K2 Pro — unavailable';
+  }}
+  const setup = document.getElementById('forge-printer-setup');
+  const material = document.getElementById('forge-material-posture');
+  const success = document.getElementById('forge-success-probability');
+  const latestReadiness = pipeline?.latest_readiness || {{}};
+  const latestSlice = pipeline?.latest_slice || {{}};
+  if (setup) setup.textContent = latestSlice?.printer_id ? `Staged on ${{latestSlice.printer_id}} with ${{latestSlice.material || 'default material'}}.` : (printer.available ? `Printer is reachable at ${{printer.host || 'configured host'}}.` : (printer.error || 'Waiting for active model and slice report.'));
+  if (material) material.textContent = latestSlice?.material ? `Current fabrication material: ${{latestSlice.material}}.` : 'PETG for durability, ASA when heat and weather matter, aluminum when production economics justify it.';
+  if (success) {{
+    success.textContent = latestReadiness?.printable
+      ? 'The latest artifact passed inspection and can move toward slicing and approval.'
+      : (Array.isArray(latestReadiness?.warnings) && latestReadiness.warnings[0] ? latestReadiness.warnings[0] : 'Clear constraints and enough capture data keep the reprint loop small.');
+  }}
+}}
+
+function forgeRenderManufacturing(manufacturing) {{
+  const planEl = document.getElementById('forge-manufacture-plan');
+  const estimateEl = document.getElementById('forge-estimate-list');
+  if (planEl) {{
+    const rows = Array.isArray(manufacturing?.plan) ? manufacturing.plan : [];
+    planEl.innerHTML = rows.map(item => `<div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">${{escHtml(item.title || 'Plan')}}<\/strong><span>${{escHtml(item.copy || '')}}<\/span><\/div>`).join('') || '<div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">No live manufacture plan yet</strong><span>Forge will compare output lanes once a project is active.</span></div>';
+  }}
+  if (estimateEl) {{
+    const rows = Array.isArray(manufacturing?.estimates) ? manufacturing.estimates : [];
+    estimateEl.innerHTML = rows.map(item => `<div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">${{escHtml(item.title || 'Estimate')}}<\/strong><span>${{escHtml(item.copy || '')}}<\/span><\/div>`).join('') || '<div class="forge-estimate-row"><strong style="display:block;color:var(--forge-ink);font-size:13px;">No estimate comparison yet</strong><span>Forge needs an active project and artifact before cost and throughput comparisons become meaningful.</span></div>';
+  }}
+}}
+
+function forgeRenderSystems(systems) {{
+  const envEl = document.getElementById('forge-environment-row');
+  if (envEl) {{
+    const items = Array.isArray(systems?.environments) ? systems.environments : [];
+    envEl.innerHTML = items.map(item => `<div class="forge-environment-card"><strong>${{escHtml(item.title || 'Environment')}}<\/strong><span>${{escHtml(item.copy || '')}}<\/span><\/div>`).join('');
+  }}
+}}
+
+function forgeRenderModule(payload) {{
+  _forgeModuleData = payload || {{}};
+  const activeProject = payload?.active_project || null;
+  if (activeProject && activeProject.id) _forgeCurrentProjectId = activeProject.id;
+  forgeRenderProjectStrip(Array.isArray(payload?.projects) ? payload.projects : []);
+  forgeRenderCouncil(payload?.council || {{}});
+  forgeRenderPipeline(payload?.pipeline || {{}});
+  forgeRenderManufacturing(payload?.manufacturing || {{}});
+  forgeRenderSystems(payload?.systems || {{}});
+  const notes = Array.isArray(payload?.availability_notes) ? payload.availability_notes.filter(Boolean) : [];
+  forgeRuntimeNote(notes.length ? notes.join(' • ') : (payload?.summary || 'Forge is live and connected.'));
+  if (activeProject) {{
+    forgeRenderProject(activeProject);
+    const sel = document.getElementById('forge-project-select');
+    if (sel) sel.value = activeProject.id || '';
+  }} else {{
+    const status = document.getElementById('forge-project-status');
+    if (status) {{
+      status.style.display = 'inline-flex';
+      status.textContent = 'NO PROJECT';
+    }}
+  }}
+}}
+
 // ── Init ──────────────────────────────────────────────────────
 async function forgeInit() {{
   syncForgeStoryboard();
   await forgeEnsureThree();
+  await refreshForgeDesktop(false);
+  syncDesktopCardSequence('forge');
+}}
+
+async function refreshForgeDesktop(forceLive = true, projectId = '') {{
+  const requestId = ++_forgeRequestSerial;
+  forgeRuntimeNote(forceLive ? 'Refreshing live Forge surfaces…' : 'Loading Forge surface…');
+  const targetProjectId = String(projectId || _forgeCurrentProjectId || '').trim();
+  const query = targetProjectId ? `?project_id=${{encodeURIComponent(targetProjectId)}}` : '';
+  const response = await forgeFetchJson('/api/forge/module' + query);
+  if (requestId !== _forgeRequestSerial) return;
+  if (!response.ok || !response.payload) {{
+    const detail = response.payload?.detail || response.error?.message || `HTTP ${{response.status}}`;
+    forgeRuntimeNote(`Forge unavailable: ${{detail}}`);
+    await forgeLoadProjectList();
+    return;
+  }}
+  forgeRenderModule(response.payload);
   await forgeLoadProjectList();
 }}
 
@@ -40486,19 +40640,7 @@ async function forgeLoadProject(projectId) {{
     return;
   }}
   _forgeCurrentProjectId = projectId;
-  try {{
-    const res = await fetch('/api/forge/projects/' + encodeURIComponent(projectId));
-    if (!res.ok) {{
-      // Project missing on disk — clear selection and refresh list
-      _forgeCurrentProjectId = null;
-      const sel = document.getElementById('forge-project-select');
-      if (sel) sel.value = '';
-      await forgeLoadProjectList();
-      return;
-    }}
-    const project = await res.json();
-    forgeRenderProject(project);
-  }} catch(e) {{ console.warn('forgeLoadProject', e); }}
+  await refreshForgeDesktop(true, projectId);
 }}
 
 function forgeRenderProject(project) {{
@@ -40781,8 +40923,7 @@ async function forgeUploadFile(file) {{
       const dlBtn = document.getElementById('forge-dl-stl-btn');
       if (dlBtn) dlBtn.style.display = 'inline-block';
     }}
-    forgeLoadProject(_forgeCurrentProjectId);
-    forgeLoadProjectList();
+    await refreshForgeDesktop(true, _forgeCurrentProjectId);
   }} catch(e) {{ showToast('Upload error: ' + e, 'error'); }}
 }}
 
@@ -40807,7 +40948,7 @@ async function forgeUploadPhotos(files) {{
   }} else {{
     showToast(ok + ' uploaded, ' + fail + ' failed', fail === arr.length ? 'error' : 'warn');
   }}
-  forgeLoadProject(_forgeCurrentProjectId);
+  await refreshForgeDesktop(true, _forgeCurrentProjectId);
 }}
 
 async function forgeUploadViewCapture(viewType) {{
@@ -40853,7 +40994,7 @@ async function forgeHandleViewCaptureFiles(files, viewType) {{
   }} else {{
     showToast(ok + ' captured, ' + fail + ' failed', fail === arr.length ? 'error' : 'warn');
   }}
-  forgeLoadProject(_forgeCurrentProjectId);
+  await refreshForgeDesktop(true, _forgeCurrentProjectId);
 }}
 
 async function forgeTriggerReconstruct() {{
@@ -41003,7 +41144,7 @@ async function forgeWowImport(filename) {{
     const data = await res.json();
     if (data.ok) {{
       showToast('Imported ' + filename + ' into project ✓', 'success');
-      forgeLoadProject(_forgeCurrentProjectId);
+      await refreshForgeDesktop(true, _forgeCurrentProjectId);
     }} else {{
       showToast('Import failed: ' + (data.error || 'unknown error'), 'error');
     }}
@@ -41058,7 +41199,7 @@ async function forgeConvertFormat() {{
     if (data.ok) {{
       showToast('Converted: ' + data.filename + ' ✓', 'success');
       forgeConvertPopulateFiles();
-      forgeLoadProject(_forgeCurrentProjectId);
+      await refreshForgeDesktop(true, _forgeCurrentProjectId);
     }} else {{
       showToast('Convert failed: ' + (data.detail || data.error || 'unknown'), 'error');
     }}
@@ -41081,7 +41222,7 @@ async function forgeConvertFormatFromUpload(input) {{
     if (data.ok) {{
       showToast('Converted: ' + data.filename + ' ✓', 'success');
       forgeConvertPopulateFiles();
-      forgeLoadProject(_forgeCurrentProjectId);
+      await refreshForgeDesktop(true, _forgeCurrentProjectId);
     }} else {{
       showToast('Convert failed: ' + (data.detail || data.error || 'unknown'), 'error');
     }}
@@ -41144,7 +41285,7 @@ async function forgeConvertRepair() {{
           '<a href="' + escHtml(data.download_url || '') + '" download style="color:var(--hue);">⬇ Download repaired file</a>';
       }}
       forgeConvertPopulateFiles();
-      forgeLoadProject(_forgeCurrentProjectId);
+      await refreshForgeDesktop(true, _forgeCurrentProjectId);
     }} else {{
       const msg = data.detail || data.error || 'unknown';
       showToast('Repair failed: ' + msg, 'error');
@@ -41196,7 +41337,7 @@ async function forgeConvertScale() {{
           '<a href="' + escHtml(data.download_url || '') + '" download style="color:var(--hue);">⬇ Download scaled file</a>';
       }}
       forgeConvertPopulateFiles();
-      forgeLoadProject(_forgeCurrentProjectId);
+      await refreshForgeDesktop(true, _forgeCurrentProjectId);
     }} else {{
       const msg = data.detail || data.error || 'unknown';
       showToast('Scale failed: ' + msg, 'error');
@@ -41265,7 +41406,7 @@ async function forgeAddMeasurement() {{
     }});
     if (!res.ok) {{ showToast('Measurement error: ' + res.status, 'error'); return; }}
     showToast('Measurement added.', 'info');
-    forgeLoadProject(_forgeCurrentProjectId);
+    refreshForgeDesktop(true, _forgeCurrentProjectId);
   }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
 }}
 
@@ -41287,7 +41428,7 @@ async function forgeInspectActive() {{
     forgeRenderReadiness(data);
     if (data.bounding_box_mm) forgeShowBbox(data.bounding_box_mm);
     showToast(data.printable ? 'Model is printable.' : 'Model has issues — see readiness panel.', data.printable ? 'info' : 'warn');
-    forgeLoadProjectList();
+    refreshForgeDesktop(true, _forgeCurrentProjectId);
   }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
 }}
 
@@ -41310,8 +41451,7 @@ async function forgeStageSlice() {{
     }});
     if (!res.ok) {{ showToast('Slice error: ' + res.status, 'error'); return; }}
     showToast('Slice report staged. Ready for approval.', 'info');
-    forgeLoadProject(_forgeCurrentProjectId);
-    forgeLoadProjectList();
+    refreshForgeDesktop(true, _forgeCurrentProjectId);
   }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
 }}
 
@@ -41328,8 +41468,7 @@ async function forgeApprove() {{
     if (!res.ok) {{ showToast('Approve error: ' + res.status, 'error'); return; }}
     const data = await res.json();
     showToast('Approved. Status: ' + (data.new_status || '').replace(/_/g,' '), 'info');
-    forgeLoadProject(_forgeCurrentProjectId);
-    forgeLoadProjectList();
+    refreshForgeDesktop(true, _forgeCurrentProjectId);
   }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
 }}
 
@@ -41344,7 +41483,7 @@ async function forgeArchive() {{
     if (!res.ok) {{ showToast('Archive error: ' + res.status, 'error'); return; }}
     showToast('Project archived.', 'info');
     _forgeCurrentProjectId = null;
-    forgeLoadProjectList();
+    refreshForgeDesktop(true, '');
   }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
 }}
 
@@ -41418,8 +41557,7 @@ async function forgeHandleSketchUpload(fileInput) {{
       }}
       if (data.generation && data.generation.ok) {{
         summary += '\\n\\n✓ Model generated: ' + (data.generation.filename || '');
-        forgeLoadProject(_forgeCurrentProjectId);
-        forgeLoadProjectList();
+        refreshForgeDesktop(true, _forgeCurrentProjectId);
       }} else if (data.generation && !data.generation.ok) {{
         summary += '\\n\\nModel generation: ' + (data.generation.error || 'not attempted');
       }} else if (!ex.ready_to_generate) {{
@@ -41535,8 +41673,7 @@ async function forgeSubmitDesignCouncil() {{
 
     if (statusEl) statusEl.textContent = data.ok ? '✓ Council complete — model ready for review.' : 'Council complete.';
     if (data.ok) {{
-      forgeLoadProject(_forgeCurrentProjectId);
-      forgeLoadProjectList();
+      refreshForgeDesktop(true, _forgeCurrentProjectId);
     }}
   }} catch(e) {{
     if (statusEl) statusEl.textContent = 'Error: ' + e;
@@ -41558,8 +41695,7 @@ async function forgeHandleChatGeneration(genModel) {{
   }} else {{
     showToast('Model generated (' + ext.toUpperCase() + '): ' + genModel.filename, 'info');
   }}
-  forgeLoadProject(_forgeCurrentProjectId);
-  forgeLoadProjectList();
+  refreshForgeDesktop(true, _forgeCurrentProjectId);
 }}
 
 // ── Timeline ──────────────────────────────────────────────────
@@ -41598,11 +41734,8 @@ async function forgeNewProject() {{
     if (!res.ok) {{ showToast('Create error: ' + res.status, 'error'); return; }}
     const project = await res.json();
     showToast('Project created: ' + project.title, 'info');
-    await forgeLoadProjectList();
-    const sel = document.getElementById('forge-project-select');
-    if (sel) {{ sel.value = project.id; }}
     _forgeCurrentProjectId = project.id;
-    forgeRenderProject(project);
+    await refreshForgeDesktop(true, project.id);
   }} catch(e) {{ showToast('Error: ' + e, 'error'); }}
 }}
 
@@ -41649,7 +41782,7 @@ async function forgeCaptureSnapshot() {{
         body: JSON.stringify({{ filename, view_type: vt }}),
       }});
       showToast('Frame captured: ' + vt, 'info');
-      forgeLoadProject(_forgeCurrentProjectId);
+      await refreshForgeDesktop(true, _forgeCurrentProjectId);
     }} catch(e) {{ showToast('Capture error: ' + e, 'error'); }}
   }}, 'image/jpeg', 0.90);
   forgeCloseCameraModal();

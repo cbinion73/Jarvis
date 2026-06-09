@@ -155,6 +155,22 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("Open Context", html)
         self.assertIn("Open Route", html)
 
+    def test_render_glass_shell_wires_forge_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="forge-runtime-note"', html)
+        self.assertIn("Refresh Forge", html)
+        self.assertIn("function refreshForgeDesktop(", html)
+        self.assertIn("function forgeRenderModule(", html)
+        self.assertIn('id="forge-factor-list"', html)
+        self.assertIn('id="forge-stage-cad"', html)
+        self.assertIn('id="forge-environment-row"', html)
+        self.assertIn("/api/forge/module", html)
+        self.assertIn("/api/forge/wow/status", html)
+        self.assertIn("/api/forge/convert/format", html)
+        self.assertIn("/api/forge/convert/repair", html)
+        self.assertIn("/api/forge/convert/scale", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

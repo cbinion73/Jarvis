@@ -2280,6 +2280,73 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertGreaterEqual(roster_payload["count"], 1)
         self.assertGreaterEqual(len(roster_payload["agents"]), 1)
 
+    def test_forge_routes_expose_module_and_bridge_surfaces(self) -> None:
+        class _JSONRequest:
+            def __init__(self, payload: dict) -> None:
+                self._payload = payload
+
+            async def json(self) -> dict:
+                return self._payload
+
+        wow_export = Path(self.tempdir.name) / "wow-export"
+        wow_export.mkdir(parents=True, exist_ok=True)
+        (wow_export / "paladin.glb").write_bytes(b"glb")
+
+        project_payload = self._json_body(
+            asyncio.run(
+                self._route("/api/forge/projects", "POST")(
+                    _JSONRequest(
+                        {
+                            "title": "Garage Charger Mount",
+                            "description": "Wall mount for garage charger.",
+                            "intake_type": "file_upload",
+                        }
+                    )
+                )
+            )
+        )
+        project_id = project_payload["id"]
+
+        asyncio.run(
+            self._route("/api/forge/wow/config", "POST")(
+                _JSONRequest(
+                    {
+                        "export_folder": str(wow_export),
+                        "wow_install_path": str(wow_export / "wow"),
+                        "blender_path": str(wow_export / "blender"),
+                    }
+                )
+            )
+        )
+
+        module_payload = self._json_body(
+            asyncio.run(self._route("/api/forge/module", "GET")(project_id=project_id))
+        )
+        wow_status = self._json_body(asyncio.run(self._route("/api/forge/wow/status", "GET")()))
+        wow_models = self._json_body(asyncio.run(self._route("/api/forge/wow/models", "GET")()))
+
+        self.assertTrue(module_payload["available"])
+        self.assertIn("active_project", module_payload)
+        self.assertEqual(module_payload["active_project_id"], project_id)
+        self.assertEqual(module_payload["active_project"]["title"], "Garage Charger Mount")
+        self.assertIn("capture", module_payload)
+        self.assertIn("council", module_payload)
+        self.assertIn("pipeline", module_payload)
+        self.assertIn("memory", module_payload)
+        self.assertIn("manufacturing", module_payload)
+        self.assertIn("systems", module_payload)
+        self.assertIn("wow", module_payload)
+        self.assertIn("convert", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/forge/module")
+        self.assertEqual(module_payload["proof_paths"]["wow_status_api"], "/api/forge/wow/status")
+        self.assertEqual(module_payload["proof_paths"]["convert_format_api"], "/api/forge/convert/format")
+
+        self.assertTrue(wow_status["ok"])
+        self.assertTrue(wow_status["export_folder_exists"])
+        self.assertTrue(wow_models["ok"])
+        self.assertEqual(wow_models["count"], 1)
+        self.assertEqual(wow_models["models"][0]["filename"], "paladin.glb")
+
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {
             "ok": True,
