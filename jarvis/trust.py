@@ -814,6 +814,31 @@ class TrustSupport:
                 )
             )
             self.store.save_resource_arenas(arena_records)
+        if "system.agent-sandbox" not in arena_ids:
+            now = _now_iso()
+            arena_records.append(
+                asdict(
+                    ResourceArena(
+                        arena_id="system.agent-sandbox",
+                        name="Agent Self-Improvement Sandbox Arena",
+                        description="Bounded arena for isolated worktree sandbox runs of self-improvement jobs.",
+                        resource_type="self_improvement_sandbox",
+                        linked_zone_id="system_agent",
+                        owner_principal="chris",
+                        risk_class="medium",
+                        resource_refs={"executor": "sandbox_worktree_executor"},
+                        limits={
+                            "action_budget": {"max_jobs_per_day": 10, "max_concurrent_jobs": 2},
+                        },
+                        pause_conditions=["principal_override", "worktree_failure", "repeated_test_failure"],
+                        promotion_eligibility={"enabled": False},
+                        status="active",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+            )
+            self.store.save_resource_arenas(arena_records)
 
     def list_trust_zones(self) -> list[dict]:
         return self.store.list_trust_zones()

@@ -14046,6 +14046,22 @@ class JarvisRuntime:
         route_name = str(mutation_route.get("route", "")).strip() or "sandbox/worktree-only"
         if route_name != "sandbox/worktree-only":
             raise ValueError("This job is not routed to the sandbox/worktree executor.")
+        # Refuse to enqueue if the sandbox arena is paused or suspended.
+        sandbox_arena_id = str(job.get("arena_id") or "system.agent-sandbox").strip()
+        arena = self.trust_support.get_resource_arena(sandbox_arena_id)
+        if arena is not None:
+            arena_status = str(arena.get("status") or "").strip().lower()
+            if arena_status in {"suspended", "paused"}:
+                return {
+                    "ok": True,
+                    "accepted": False,
+                    "job": job,
+                    "queue": self._sandbox_queue_state(),
+                    "message": f"Sandbox arena '{sandbox_arena_id}' is {arena_status}; job cannot be enqueued until the arena is resumed.",
+                    "arena_id": sandbox_arena_id,
+                    "arena_status": arena_status,
+                }
+
         status = str(job.get("status", "")).strip()
         existing_active_run = self.self_improvement_store.get_active_run(job_id)
         if status in {"sandbox-running", "sandbox-stop-requested"} or (
