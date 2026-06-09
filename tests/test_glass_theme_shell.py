@@ -51,6 +51,27 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/health/symptom/triage", html)
         self.assertIn("Health is live and connected.", html)
 
+    def test_render_glass_shell_wires_calendar_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="calendar-runtime-note"', html)
+        self.assertIn('id="calendar-refresh-button"', html)
+        self.assertIn('data-calendar-nav="1"', html)
+        self.assertIn('data-calendar-nav="4"', html)
+        self.assertIn("function calendarRuntimeNote(", html)
+        self.assertIn("function calendarFetchJson(", html)
+        self.assertIn("function calendarSidebarAction(", html)
+        self.assertIn("function calendarHandleAction(", html)
+        self.assertIn("function refreshCalendarDesktop(", html)
+        self.assertIn("function calendarWorkflowPrepare(", html)
+        self.assertIn("function calendarWorkflowRoute(", html)
+        self.assertIn("/api/calendar/module?actor=Chris", html)
+        self.assertIn("/api/calendar/module/action", html)
+        self.assertIn("/api/apple/calendar/events/", html)
+        self.assertIn("/calendar-center", html)
+        self.assertIn("Refresh Calendar", html)
+        self.assertIn("Calendar is live and connected.", html)
+
     def test_render_glass_shell_wires_dining_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

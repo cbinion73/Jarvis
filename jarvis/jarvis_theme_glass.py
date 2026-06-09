@@ -16251,6 +16251,11 @@ body::after {{
   font-size:13px;
   border:1px solid rgba(255,255,255,0.04);
   background:rgba(255,255,255,0.015);
+  cursor:pointer;
+  width:100%;
+  text-align:left;
+  appearance:none;
+  -webkit-appearance:none;
 }}
 .calendar-sidebar-item.active {{
   color:var(--calendar-ink);
@@ -24158,14 +24163,14 @@ body::after {{
           <div class="calendar-sidebar-mark">⌁</div>
         </div>
         <div class="calendar-sidebar-nav">
-          <div class="calendar-sidebar-item active">⌂ Home</div>
-          <div class="calendar-sidebar-item">◷ Daily Brief</div>
-          <div class="calendar-sidebar-item">◫ Mission Board</div>
-          <div class="calendar-sidebar-item">⇄ Travel & Route</div>
-          <div class="calendar-sidebar-item">◉ Family Calendar</div>
-          <div class="calendar-sidebar-item">⧉ Focus Windows</div>
-          <div class="calendar-sidebar-item">☰ Preparation Queue</div>
-          <div class="calendar-sidebar-item">⚙ Settings</div>
+          <button class="calendar-sidebar-item active" type="button" data-calendar-nav="1" onclick="calendarSidebarAction('page', {{ page: 1 }})">⌂ Home</button>
+          <button class="calendar-sidebar-item" type="button" data-calendar-route="briefing" onclick="calendarSidebarAction('route', {{ route: '/briefing-center', fallbackView: 'overview', action: 'Open Daily Brief', detail: 'Calendar opened Daily Brief for fuller agenda context.' }})">◷ Daily Brief</button>
+          <button class="calendar-sidebar-item" type="button" data-calendar-route="mission" onclick="calendarSidebarAction('route', {{ route: '/mission-board', fallbackView: 'notifications', action: 'Open Mission Board', detail: 'Calendar opened Mission Board for linked execution pressure.' }})">◫ Mission Board</button>
+          <button class="calendar-sidebar-item" type="button" data-calendar-route="navigate" onclick="calendarSidebarAction('route', {{ route: '/navigation-center', fallbackView: 'navigate', action: 'Open Travel & Route', detail: 'Calendar opened Navigation for route-sensitive commitments.' }})">⇄ Travel & Route</button>
+          <button class="calendar-sidebar-item" type="button" data-calendar-nav="4" onclick="calendarSidebarAction('page', {{ page: 4 }})">◉ Family Calendar</button>
+          <button class="calendar-sidebar-item" type="button" data-calendar-nav="2" onclick="calendarSidebarAction('page', {{ page: 2 }})">⧉ Focus Windows</button>
+          <button class="calendar-sidebar-item" type="button" data-calendar-nav="5" onclick="calendarSidebarAction('page', {{ page: 5 }})">☰ Preparation Queue</button>
+          <button class="calendar-sidebar-item" type="button" data-calendar-route="settings" onclick="calendarSidebarAction('route', {{ route: '/settings-center', fallbackView: 'home', action: 'Open Calendar Settings', detail: 'Calendar opened Settings because a dedicated calendar settings route is not exposed yet.' }})">⚙ Settings</button>
         </div>
         <div class="calendar-sidebar-status">
           <strong>Calendar Status</strong>
@@ -24175,7 +24180,7 @@ body::after {{
             <div class="calendar-sidebar-row"><span>Conflicts</span><b id="calendar-sidebar-conflicts">0</b></div>
             <div class="calendar-sidebar-row"><span>Last Sync</span><b id="calendar-sidebar-last-sync">—</b></div>
           </div>
-          <button class="calendar-sidebar-btn" onclick="syncAll()">Calendar Settings →</button>
+          <button class="calendar-sidebar-btn" onclick="calendarSidebarAction('route', {{ route: '/settings-center', fallbackView: 'home', action: 'Open Calendar Settings', detail: 'Calendar opened Settings because deeper calendar account controls live there today.' }})">Calendar Settings →</button>
         </div>
       </aside>
 
@@ -24192,10 +24197,12 @@ body::after {{
             </div>
           </div>
           <div class="calendar-nav-actions">
+            <button class="calendar-chip-btn" id="calendar-refresh-button" onclick="refreshCalendarDesktop(true)">Refresh Calendar</button>
             <button class="calendar-nav-btn" disabled aria-label="Previous calendar page">←</button>
             <button class="calendar-nav-btn" disabled aria-label="Next calendar page">→</button>
           </div>
         </div>
+        <div class="calendar-subtitle" id="calendar-runtime-note" style="padding:0 4px 18px 4px;">Calendar is loading live schedule intelligence…</div>
 
         <div class="calendar-grid">
           <div style="display:flex;flex-direction:column;gap:16px;">
@@ -24205,7 +24212,7 @@ body::after {{
                   <strong class="calendar-panel-title">1. Today At A Glance</strong>
                   <span class="calendar-panel-subtitle">The operating picture for the day.</span>
                 </div>
-                <button class="calendar-chip-btn" onclick="loadHomeCalendar()">Refresh</button>
+                <button class="calendar-chip-btn" onclick="refreshCalendarDesktop(true)">Refresh</button>
               </div>
               <div class="calendar-today-list" id="calendarTodayList"></div>
             </section>
@@ -24229,10 +24236,10 @@ body::after {{
                   <span id="calendarWeekLabel">Loading week…</span>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                  <button class="calendar-chip-btn" onclick="calendarToast('Day-mode switching is queued next.')">Day</button>
-                  <button class="calendar-chip-btn" onclick="calendarToast('Week view is active.')">Week</button>
-                  <button class="calendar-chip-btn" onclick="calendarToast('Month view is queued next.')">Month</button>
-                  <button class="calendar-chip-btn" onclick="switchView('navigate')">Route</button>
+                  <button class="calendar-chip-btn" onclick="calendarUnavailable('Day view is not wired as a distinct calendar surface yet in this runtime.')">Day</button>
+                  <button class="calendar-chip-btn" onclick="calendarToast('Week view is active.', 'success')">Week</button>
+                  <button class="calendar-chip-btn" onclick="calendarUnavailable('Month view is not wired as a distinct calendar surface yet in this runtime.')">Month</button>
+                  <button class="calendar-chip-btn" onclick="calendarSidebarAction('route', {{ route: '/navigation-center', fallbackView: 'navigate', action: 'Open Travel & Route', detail: 'Calendar opened Navigation from the week view route control.' }})">Route</button>
                 </div>
               </div>
               <div class="calendar-week-grid" id="calendarWeekGrid"></div>
@@ -24246,7 +24253,7 @@ body::after {{
                   <strong class="calendar-panel-title">5. Attention Routing</strong>
                   <span class="calendar-panel-subtitle">What needs your attention and when.</span>
                 </div>
-                <button class="calendar-chip-btn" onclick="switchView('notifications')">Review All Items →</button>
+                <button class="calendar-chip-btn" onclick="calendarSidebarAction('route', {{ route: '/approval-queue', fallbackView: 'notifications', action: 'Review Schedule Attention', detail: 'Calendar opened the approval and attention lane for deeper review.' }})">Review All Items →</button>
               </div>
               <div class="calendar-attention-list" id="calendarAttentionList"></div>
             </section>
@@ -24277,12 +24284,12 @@ body::after {{
                 </div>
               </div>
               <div class="calendar-quick-grid">
-                <button class="calendar-quick-btn" onclick="calendarToast('Add event flow is queued next.')">Add Event<span>Create a commitment</span></button>
-                <button class="calendar-quick-btn" onclick="calendarToast('Focus block automation is queued next.')">Focus Block<span>Protect deep work</span></button>
-                <button class="calendar-quick-btn" onclick="switchView('navigate')">Travel Plan<span>Open routing intelligence</span></button>
-                <button class="calendar-quick-btn" onclick="calendarToast('Find-time flow is queued next.')">Find Time<span>Resolve the right slot</span></button>
-                <button class="calendar-quick-btn" onclick="calendarToast('Reschedule flow is queued next.')">Reschedule<span>Shift with context</span></button>
-                <button class="calendar-quick-btn" onclick="syncAll()">Sync Sources<span>Refresh connected calendars</span></button>
+                <button class="calendar-quick-btn" onclick="calendarHandleAction('create-event')">Add Event<span>Create a commitment</span></button>
+                <button class="calendar-quick-btn" onclick="calendarHandleAction('focus-block')">Focus Block<span>Protect deep work</span></button>
+                <button class="calendar-quick-btn" onclick="calendarSidebarAction('route', {{ route: '/navigation-center', fallbackView: 'navigate', action: 'Open Travel Plan', detail: 'Calendar handed travel planning into Navigation.' }})">Travel Plan<span>Open routing intelligence</span></button>
+                <button class="calendar-quick-btn" onclick="calendarHandleAction('find-time')">Find Time<span>Resolve the right slot</span></button>
+                <button class="calendar-quick-btn" onclick="calendarHandleAction('reschedule')">Reschedule<span>Shift with context</span></button>
+                <button class="calendar-quick-btn" onclick="calendarHandleAction('sync-sources')">Sync Sources<span>Refresh connected calendars</span></button>
               </div>
             </section>
 
@@ -24305,7 +24312,7 @@ body::after {{
                 <strong class="calendar-panel-title">4. Upcoming Highlights</strong>
                 <span class="calendar-panel-subtitle">The next seven days at a glance.</span>
               </div>
-              <button class="calendar-chip-btn" onclick="switchView('journey')">View Full Timeline →</button>
+              <button class="calendar-chip-btn" onclick="calendarSidebarAction('route', {{ route: '/activity-center', fallbackView: 'journey', action: 'Open Calendar Timeline', detail: 'Calendar opened the shared activity and continuity timeline for deeper review.' }})">View Full Timeline →</button>
             </div>
             <div class="calendar-highlight-strip" id="calendarHighlightStrip"></div>
           </section>
@@ -35901,38 +35908,217 @@ async function loadHomeEmail(unreadOnly) {{
 let _calendarToday = [];
 let _calendarUpcoming = [];
 let _calendarWorkflow = {{}};
+let _calendarModule = null;
+let _calendarRequestSerial = 0;
 
-async function loadHomeCalendar() {{
+function calendarRuntimeNote(text) {{
+  const el = document.getElementById('calendar-runtime-note');
+  if (el) el.textContent = text || 'Calendar is live and connected.';
+}}
+
+function calendarToast(message, level = 'info') {{
+  showToast(message || 'Calendar update recorded.', level);
+}}
+
+function calendarUnavailable(reason) {{
+  calendarToast(reason || 'That Calendar action is not wired yet in this runtime.', 'info');
+}}
+
+async function calendarFetchJson(url, options = undefined) {{
+  const response = await fetch(url, options);
+  let payload = null;
   try {{
-    const [todayRes, upcomingRes, workflowRes] = await Promise.all([
-      fetch('/api/home/calendar/today'),
-      fetch('/api/home/calendar/upcoming?days=7'),
-      fetch('/api/apple/calendar/state')
-    ]);
-    const todayPayload = todayRes.ok ? await todayRes.json() : {{}};
-    const upcomingPayload = upcomingRes.ok ? await upcomingRes.json() : {{}};
-    const workflowPayload = workflowRes.ok ? await workflowRes.json() : {{}};
-    _calendarToday = Array.isArray(todayPayload.events) ? todayPayload.events : [];
-    _calendarUpcoming = Array.isArray(upcomingPayload.events) ? upcomingPayload.events : [];
-    _calendarWorkflow = ((workflowPayload || {{}}).data || {{}});
-    renderCalendarDesktop(todayPayload, upcomingPayload, _calendarWorkflow);
-  }} catch(e) {{
-    console.error('calendar load failed', e);
+    payload = await response.json();
+  }} catch (_error) {{
+    payload = null;
+  }}
+  if (!response.ok) {{
+    const detail = payload && (payload.detail || payload.error || payload.message);
+    throw new Error(detail || `Request failed (${{response.status}})`);
+  }}
+  return payload;
+}}
+
+function calendarCurrentPage() {{
+  return ((_desktopSequenceState.calendar || {{}}).page) || 1;
+}}
+
+function calendarSetPage(page) {{
+  openDesktopCardSequenceModal('calendar', page);
+  const current = calendarCurrentPage();
+  document.querySelectorAll('#view-calendar [data-calendar-nav]').forEach((item) => {{
+    item.classList.toggle('active', Number(item.dataset.calendarNav || 0) === current);
+  }});
+}}
+
+async function calendarRecordAction(action, detail, extra = {{}}) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        domain: 'calendar',
+        action,
+        title: action,
+        detail,
+        why_now: detail || 'Calendar desktop action updated the schedule surface.',
+        result_summary: detail || 'Calendar desktop action recorded.',
+        route: extra.route || '/calendar-center',
+        route_label: extra.routeLabel || 'Open Calendar',
+        related_kind: extra.relatedKind || 'calendar-action',
+        related_label: extra.relatedLabel || action,
+        succeeded: extra.succeeded !== false,
+      }}),
+    }});
+  }} catch (error) {{
+    console.warn('calendarRecordAction failed', error);
   }}
 }}
 
-function calendarToast(message) {{
-  showToast(message || 'Calendar action queued next.', 'info');
+async function calendarOpenRoute(route, fallbackView, action, detail) {{
+  await calendarRecordAction(action || 'Open Calendar Route', detail || 'Calendar opened a related route.', {{
+    route: route || '/calendar-center',
+    routeLabel: 'Open Related Surface',
+    relatedKind: 'calendar-route',
+    relatedLabel: action || fallbackView || 'calendar',
+  }});
+  if (route) {{
+    window.location.href = route;
+    return;
+  }}
+  if (fallbackView) switchView(fallbackView);
 }}
 
-function renderCalendarDesktop(todayPayload, upcomingPayload, workflowData) {{
+function calendarSidebarAction(kind, meta = {{}}) {{
+  if (kind === 'page') {{
+    calendarSetPage(Number(meta.page || 1));
+    return;
+  }}
+  if (kind === 'route') {{
+    calendarOpenRoute(meta.route || '', meta.fallbackView || 'calendar', meta.action || 'Open Calendar Route', meta.detail || 'Calendar opened a related surface.');
+    return;
+  }}
+  if (kind === 'refresh') refreshCalendarDesktop(true);
+}}
+
+async function calendarHandleAction(action) {{
+  const moduleData = _calendarModule || {{}};
+  const actions = Array.isArray(moduleData.trusted_actions) ? moduleData.trusted_actions : [];
+  const actionMeta = actions.find((item) => String(item.id || '') === String(action || '')) || {{}};
+
+  if (action === 'sync-sources') {{
+    if (actionMeta.available === false) {{
+      calendarUnavailable(actionMeta.unavailable_reason || 'Connected calendar sync is not available in this runtime.');
+      return;
+    }}
+    try {{
+      const payload = await calendarFetchJson('/api/calendar/module/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ action }}),
+      }});
+      await calendarRecordAction('Refresh Calendar Sources', payload.message || 'Calendar sources synced.', {{
+        relatedLabel: 'calendar-sync',
+      }});
+      await refreshCalendarDesktop(false);
+      calendarToast(payload.message || 'Calendar sources synced.', 'success');
+    }} catch (error) {{
+      calendarToast(`Calendar sync failed: ${{error.message}}`, 'error');
+    }}
+    return;
+  }}
+
+  if (action === 'create-event' || action === 'focus-block') {{
+    const defaultPrompt = String(actionMeta.prompt_hint || '').trim();
+    const promptLabel = action === 'focus-block'
+      ? 'Describe the focus block to create'
+      : 'Describe the calendar event to create';
+    const promptValue = window.prompt(promptLabel, defaultPrompt);
+    if (!promptValue) return;
+    try {{
+      const payload = await calendarFetchJson('/api/calendar/module/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ action, prompt: promptValue }}),
+      }});
+      await calendarRecordAction(
+        action === 'focus-block' ? 'Protect Focus Block' : 'Add Calendar Event',
+        payload.message || 'Calendar event created.',
+        {{ relatedLabel: promptValue }}
+      );
+      await refreshCalendarDesktop(false);
+      calendarToast(payload.message || 'Calendar event created.', 'success');
+    }} catch (error) {{
+      calendarToast(`Calendar write failed: ${{error.message}}`, 'error');
+    }}
+    return;
+  }}
+
+  if (action === 'find-time') {{
+    calendarUnavailable(actionMeta.unavailable_reason || 'No direct find-time backend route exists yet in this runtime.');
+    await calendarOpenRoute('/command-center', 'chat', 'Open Find Time Boundary', 'Calendar handed the scheduling request to Command because a direct find-time route is not exposed yet.');
+    return;
+  }}
+
+  if (action === 'reschedule') {{
+    calendarUnavailable(actionMeta.unavailable_reason || 'No direct reschedule backend route exists yet in this runtime.');
+    await calendarOpenRoute('/command-center', 'chat', 'Open Reschedule Boundary', 'Calendar handed the reschedule request to Command because a direct mutation route is not exposed yet.');
+    return;
+  }}
+
+  calendarUnavailable('That Calendar action is not available right now.');
+}}
+
+async function refreshCalendarDesktop(showToast = false) {{
+  const requestSerial = ++_calendarRequestSerial;
+  try {{
+    const payload = await calendarFetchJson('/api/calendar/module?actor=Chris');
+    if (requestSerial !== _calendarRequestSerial) return;
+    _calendarModule = payload || {{}};
+    const todayPayload = _calendarModule.today_payload || {{}};
+    const upcomingPayload = _calendarModule.upcoming_payload || {{}};
+    _calendarToday = Array.isArray(todayPayload.events) ? todayPayload.events : [];
+    _calendarUpcoming = Array.isArray(upcomingPayload.events) ? upcomingPayload.events : [];
+    _calendarWorkflow = _calendarModule.workflow || {{}};
+    renderCalendarDesktop(_calendarModule);
+    syncDesktopCardSequence('calendar');
+    calendarSetPage(calendarCurrentPage());
+    if (showToast) calendarToast('Calendar refreshed.', 'success');
+  }} catch (error) {{
+    console.error('calendar load failed', error);
+    _calendarModule = {{
+      runtime_note: `Calendar could not load: ${{error.message}}`,
+      availability_notes: [`Calendar could not load: ${{error.message}}`],
+      today_payload: {{ events: [], total: 0 }},
+      upcoming_payload: {{ events: [], total: 0 }},
+      workflow: {{}},
+      source_rows: [],
+      trusted_actions: [],
+      counts: {{}},
+    }};
+    renderCalendarDesktop(_calendarModule);
+    if (showToast) calendarToast(`Calendar unavailable: ${{error.message}}`, 'error');
+  }}
+}}
+
+async function loadHomeCalendar() {{
+  return refreshCalendarDesktop(false);
+}}
+
+function renderCalendarDesktop(modulePayload) {{
+  const payload = modulePayload || {{}};
+  const todayPayload = payload.today_payload || {{}};
+  const upcomingPayload = payload.upcoming_payload || {{}};
+  const workflow = payload.workflow || {{}};
   const todayEvents = Array.isArray(todayPayload.events) ? todayPayload.events : [];
   const upcomingEvents = Array.isArray(upcomingPayload.events) ? upcomingPayload.events : [];
-  const workflow = workflowData || {{}};
   const attentionFlags = Array.isArray(workflow.attention_flags) ? workflow.attention_flags : [];
   const routeSensitive = Array.isArray(workflow.route_sensitive_events) ? workflow.route_sensitive_events : [];
   const prepCues = Array.isArray(workflow.preparation_cues) ? workflow.preparation_cues : [];
   const allEvents = [...todayEvents, ...upcomingEvents];
+  const sourceRows = Array.isArray(payload.source_rows) ? payload.source_rows : [];
+  const availabilityNotes = Array.isArray(payload.availability_notes) ? payload.availability_notes : [];
 
   const focusEvent = calendarPickFocusEvent(todayEvents);
   const focusHours = calendarEventHours(todayEvents.filter(ev => calendarBucket(ev) === 'focus'));
@@ -35944,13 +36130,15 @@ function renderCalendarDesktop(todayPayload, upcomingPayload, workflowData) {{
   const meetingLoadPct = Math.max(8, Math.min(92, Math.round((meetingHours / totalHours) * 100)));
   const sourceCounts = calendarSourceCounts(allEvents);
   const focusWindow = focusEvent ? calendarEventLabel(focusEvent) : 'Protected window pending';
-  const dateText = todayPayload.date ? calendarPrettyDate(todayPayload.date) : 'Today';
+  const dateText = todayPayload.date ? calendarPrettyDate(todayPayload.date) : calendarPrettyDate(payload.generated_at || new Date().toISOString());
+
+  calendarRuntimeNote(payload.runtime_note || availabilityNotes[0] || 'Calendar is live and connected.');
 
   setEl('calendarDateLabel', dateText);
   setEl('calendar-focus-title', focusEvent ? (focusEvent.title || 'Protected focus lane') : 'Create a protected focus block');
   setEl('calendar-focus-sub', focusEvent
     ? `${{focusWindow}} · ${{calendarBucketLabel(calendarBucket(focusEvent))}}`
-    : 'Today still has room to be shaped intentionally.');
+    : (availabilityNotes[0] || 'Today still has room to be shaped intentionally.'));
   setEl('calendar-stat-scheduled', String(todayEvents.length || 0));
   setEl('calendar-stat-scheduled-sub', todayEvents.length === 1 ? 'event' : 'events');
   setEl('calendar-stat-focus', `${{focusHours.toFixed(1)}}h`);
@@ -35963,8 +36151,8 @@ function renderCalendarDesktop(todayPayload, upcomingPayload, workflowData) {{
   setEl('calendar-stat-energy-sub', focusHours >= 2 ? 'peak 9AM–11AM' : 'protect margin');
   setEl('calendar-stat-health', `${{healthScore}}%`);
   setEl('calendar-stat-health-sub', attentionFlags.length ? 'needs protection' : 'well balanced');
-  setEl('calendar-sidebar-sync', workflow.synced_at ? 'All Synced' : 'Standby');
-  setEl('calendar-sidebar-sources', `${{Object.keys(sourceCounts).length || 1}} connected`);
+  setEl('calendar-sidebar-sync', workflow.synced_at ? 'All Synced' : payload.available === false ? 'Partial' : 'Standby');
+  setEl('calendar-sidebar-sources', `${{sourceRows.length || Object.keys(sourceCounts).length || 0}} connected`);
   setEl('calendar-sidebar-conflicts', String(attentionFlags.length || 0));
   setEl('calendar-sidebar-last-sync', workflow.synced_at ? fmtLocalTime(workflow.synced_at, {{short:true}}) : 'Just now');
   setEl('calendarWeekLabel', calendarWeekRangeLabel(allEvents));
@@ -35980,7 +36168,7 @@ function renderCalendarDesktop(todayPayload, upcomingPayload, workflowData) {{
   renderCalendarHealthList(todayEvents, healthScore, meetingLoadPct, travelMinutes, familyCount);
   renderCalendarHighlights(upcomingEvents);
   renderCalendarPrepQueue(prepCues, routeSensitive);
-  renderCalendarSources(sourceCounts, workflow.synced_at);
+  renderCalendarSources(sourceRows.length ? sourceRows : sourceCounts, workflow.synced_at);
 }}
 
 function calendarPickFocusEvent(events) {{
@@ -36148,7 +36336,7 @@ function renderCalendarAttention(attentionFlags, routeSensitive) {{
       title: event.title || 'Route-sensitive event',
       detail: `${{event.location || 'Location needed'}} · ${{calendarEventTimingLabel(event)}}`,
       severity: 'medium',
-      action: event.id ? `<button class="calendar-chip-btn" onclick="calendarWorkflowRoute('${{String(event.id).replaceAll(\"'\", \"\\\\'\")}}')">Route</button>` : 'Route',
+      action: event.id ? `<button class="calendar-chip-btn" onclick="calendarWorkflowRoute('${{String(event.id).replaceAll(\"'\", \"\\\\'\")}}')">Route</button>` : 'Unavailable',
     }})),
   ];
   if (!items.length) {{
@@ -36237,7 +36425,23 @@ function renderCalendarPrepQueue(prepCues, routeSensitive) {{
 function renderCalendarSources(sourceCounts, syncedAt) {{
   const el = document.getElementById('calendarSourceList');
   if (!el) return;
-  const sourceEntries = Object.entries(sourceCounts);
+  if (Array.isArray(sourceCounts)) {{
+    if (!sourceCounts.length) {{
+      el.innerHTML = '<div class="calendar-empty">Source details will appear after the next sync.</div>';
+      return;
+    }}
+    el.innerHTML = sourceCounts.map((row, idx) => `<div class="calendar-source-item">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+        <div>
+          <div class="calendar-item-title">${{escHtml(String(row.source || 'Calendar'))}}</div>
+          <div class="calendar-item-meta">${{escHtml(String(row.detail || (row.connected ? 'Connected' : 'Partial source state'))) }} · ${{row.updated_at ? escHtml(fmtLocalTime(row.updated_at, {{short:true}})) : (syncedAt ? escHtml(fmtLocalTime(syncedAt, {{short:true}})) : 'Ready')}}</div>
+        </div>
+        <span class="calendar-pill ${{row.connected ? (idx === 0 ? 'good' : 'info') : 'medium'}}">${{escHtml(String(row.count || 0))}} events</span>
+      </div>
+    </div>`).join('');
+    return;
+  }}
+  const sourceEntries = Object.entries(sourceCounts || {{}});
   if (!sourceEntries.length) {{
     el.innerHTML = '<div class="calendar-empty">Source details will appear after the next sync.</div>';
     return;
@@ -40720,6 +40924,9 @@ async function calendarWorkflowPrepare(eventId) {{
       showToast('Could not stage calendar prep', 'error');
       return;
     }}
+    await calendarRecordAction('Stage Calendar Prep', 'Calendar staged live preparation for an upcoming event.', {{
+      relatedLabel: eventId,
+    }});
     showToast('Calendar prep staged', 'success');
     loadHomeCalendar();
     if (currentView === 'notifications') loadNotificationCenter();
@@ -40740,6 +40947,11 @@ async function calendarWorkflowRoute(eventId) {{
     if (data.maps_url) {{
       window.open(data.maps_url, '_blank', 'noopener');
     }}
+    await calendarRecordAction('Open Calendar Route', data.message || 'Calendar opened a real route boundary.', {{
+      relatedLabel: eventId,
+      route: data.maps_url || '/navigation-center',
+      routeLabel: 'Open Route',
+    }});
     showToast('Calendar route ready', 'success');
     if (currentView === 'notifications') loadNotificationCenter();
   }} catch(e) {{

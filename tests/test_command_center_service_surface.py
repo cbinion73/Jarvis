@@ -249,6 +249,9 @@ class _StubRuntime:
         ]
         self._identity_devices = [{"label": "JarvisPhone", "device_id": "device-1"}]
 
+    def _try_handle_calendar_event(self, request: str):
+        return SimpleNamespace(output_text=f"Stub calendar write handled: {request}")
+
     def execute_sandbox_job(self, *, actor_name: str, job_id: str, triggered_by: str) -> dict:
         return {"ok": True, "accepted": True, "job": {"job_id": job_id, "status": "sandbox-queued"}}
 
@@ -2489,6 +2492,38 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIsInstance(module_payload["people"], list)
         self.assertIsInstance(module_payload["queue"], list)
         self.assertIsInstance(module_payload["trusted_actions"], list)
+
+    def test_calendar_routes_expose_module_and_safe_action_boundary(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/calendar/module", "GET")()))
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("today_payload", module_payload)
+        self.assertIn("upcoming_payload", module_payload)
+        self.assertIn("workflow", module_payload)
+        self.assertIn("source_rows", module_payload)
+        self.assertIn("trusted_actions", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_route"], "/calendar-center")
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/calendar/module")
+        self.assertEqual(module_payload["proof_paths"]["today_api"], "/api/home/calendar/today")
+        self.assertEqual(module_payload["proof_paths"]["upcoming_api"], "/api/home/calendar/upcoming?days=7")
+        self.assertEqual(module_payload["proof_paths"]["workflow_api"], "/api/apple/calendar/state")
+        self.assertEqual(module_payload["proof_paths"]["sync_api"], "/api/home/sync")
+        self.assertEqual(module_payload["proof_paths"]["action_api"], "/api/calendar/module/action")
+        self.assertIsInstance(module_payload["trusted_actions"], list)
+        self.assertIsInstance(module_payload["source_rows"], list)
+
+        action_payload = self._json_body(
+            asyncio.run(
+                self._route("/api/calendar/module/action", "POST")(
+                    payload={"action": "focus-block", "prompt": "Block off time for focus work tomorrow at 9am on my calendar"}
+                )
+            )
+        )
+        self.assertTrue(action_payload["ok"])
+        self.assertEqual(action_payload["action"], "focus-block")
+        self.assertIn("Stub calendar write handled", action_payload["message"])
 
     def test_dining_routes_expose_module_and_live_search_surfaces(self) -> None:
         nearby_rows = [

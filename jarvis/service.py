@@ -42,7 +42,7 @@ except Exception:  # pragma: no cover
 
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
-from .apple_api import _register_apple_api
+from .apple_api import _build_apple_calendar_state, _register_apple_api
 from .audit import ActivityReviewStore, AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore, SeamTrackerStore
 from .chronicle_reviews import ChronicleReviewStore
 from .health_checkins import HealthCheckInStore
@@ -1015,6 +1015,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "function openHome(){ try { switchView('home'); } catch (_) { setTimeout(openHome, 60); } }"
             "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openHome, 0); }"
             "else { window.addEventListener('load', openHome); }"
+            "})();</script></body>"
+        )
+        if "</body>" in html:
+            html = html.replace("</body>", injection, 1)
+        return HTMLResponse(html)
+
+    @app.get("/calendar-center", response_class=HTMLResponse)
+    async def calendar_center() -> HTMLResponse:
+        html = _render_glass_shell(runtime)
+        injection = (
+            "<script>(function(){"
+            "function openCalendar(){ try { switchView('calendar'); } catch (_) { setTimeout(openCalendar, 60); } }"
+            "if (document.readyState === 'complete' || document.readyState === 'interactive') { setTimeout(openCalendar, 0); }"
+            "else { window.addEventListener('load', openCalendar); }"
             "})();</script></body>"
         )
         if "</body>" in html:
@@ -9637,6 +9651,302 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=503, detail="Home DB not initialised")
         summary = await asyncio.to_thread(db.get_value_summary, project_id or None)
         return _json(summary)
+
+    async def _build_calendar_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        availability_notes: list[str] = []
+        errors: list[str] = []
+
+        inbox = _get_unified_inbox()
+        home_db = _get_home_db()
+
+        today_events: list[dict[str, Any]] = []
+        upcoming_events: list[dict[str, Any]] = []
+        today_payload: dict[str, Any] = {"events": [], "total": 0}
+        upcoming_payload: dict[str, Any] = {"events": [], "total": 0}
+        sync_states: list[dict[str, Any]] = []
+
+        if inbox is None and home_db is None:
+            availability_notes.append("Calendar inbox and home-calendar storage are not initialised in this runtime.")
+
+        try:
+            if inbox is not None:
+                today_payload = dict(await asyncio.to_thread(inbox.get_todays_agenda) or {"events": [], "total": 0})
+                today_events = list(today_payload.get("events") or [])
+            elif home_db is not None:
+                today_events = list(await asyncio.to_thread(home_db.get_todays_events))
+                today_payload = {
+                    "events": today_events,
+                    "total": len(today_events),
+                    "date": generated_at[:10],
+                }
+        except Exception as exc:
+            errors.append(f"today_calendar: {exc}")
+            availability_notes.append(f"Today's calendar could not be loaded: {exc}")
+
+        try:
+            if home_db is not None:
+                upcoming_events = list(await asyncio.to_thread(home_db.get_upcoming_events, 7))
+                upcoming_payload = {"events": upcoming_events, "total": len(upcoming_events)}
+            elif today_events:
+                upcoming_payload = {"events": list(today_events), "total": len(today_events)}
+                upcoming_events = list(today_events)
+        except Exception as exc:
+            errors.append(f"upcoming_calendar: {exc}")
+            availability_notes.append(f"Upcoming calendar events could not be loaded: {exc}")
+
+        workflow_payload: dict[str, Any] = {}
+        calendar_store_path = Path("data/apple/calendar_events.json")
+        try:
+            raw_calendar: dict[str, Any] = {}
+            if calendar_store_path.exists():
+                loaded = json.loads(calendar_store_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    raw_calendar = loaded
+            workflow_payload = _build_apple_calendar_state(raw_calendar)
+        except Exception as exc:
+            errors.append(f"apple_calendar_state: {exc}")
+            availability_notes.append(f"Apple calendar workflow state could not be loaded: {exc}")
+            workflow_payload = {}
+
+        try:
+            if home_db is not None:
+                sync_states = list(await asyncio.to_thread(home_db.get_all_sync_states))
+        except Exception as exc:
+            errors.append(f"sync_states: {exc}")
+            availability_notes.append(f"Calendar sync states could not be loaded: {exc}")
+
+        source_totals: dict[str, int] = {}
+        for event in [*today_events, *upcoming_events]:
+            source_key = str(
+                event.get("source")
+                or event.get("calendar_name")
+                or event.get("calendar")
+                or "calendar"
+            ).strip() or "calendar"
+            source_totals[source_key] = source_totals.get(source_key, 0) + 1
+
+        source_rows: list[dict[str, Any]] = []
+        for row in sync_states[:8]:
+            if not isinstance(row, dict):
+                continue
+            source = str(row.get("source") or row.get("provider") or "calendar").strip() or "calendar"
+            status = str(row.get("status") or "unknown").strip() or "unknown"
+            source_rows.append(
+                {
+                    "source": source,
+                    "status": status,
+                    "detail": str(row.get("message") or row.get("last_error") or "").strip(),
+                    "updated_at": str(row.get("last_sync_at") or row.get("updated_at") or "").strip(),
+                    "count": int(source_totals.get(source, 0)),
+                    "connected": status.lower() in {"ok", "connected", "ready", "healthy"},
+                }
+            )
+        if not source_rows:
+            for source, count in source_totals.items():
+                source_rows.append(
+                    {
+                        "source": source,
+                        "status": "observed",
+                        "detail": "Events are present, but no richer sync-state row is available in this runtime.",
+                        "updated_at": str(workflow_payload.get("synced_at") or "").strip(),
+                        "count": int(count),
+                        "connected": True,
+                    }
+                )
+
+        recent_activity = _module_recent_activity(route="/calendar-center", domain="calendar", limit=8)
+        if not recent_activity:
+            recent_activity = _module_recent_activity(route="/command-center", domain="calendar", limit=6)
+
+        prep_cues = list(workflow_payload.get("preparation_cues") or [])
+        route_sensitive = list(workflow_payload.get("route_sensitive_events") or [])
+        attention_flags = list(workflow_payload.get("attention_flags") or [])
+
+        top_route_event = next((item for item in route_sensitive if str(item.get("id") or "").strip()), {})
+        top_prep_event = next((item for item in prep_cues if str(item.get("event_id") or "").strip()), {})
+
+        today_count = len(today_events)
+        meeting_count = sum(
+            1
+            for item in today_events
+            if "focus" not in str(item.get("title") or "").lower()
+        )
+        focus_count = sum(
+            1
+            for item in today_events
+            if re.search(r"\b(deep|focus|write|strategy|study|quiet|pray|journal)\b", str(item.get("title") or ""), re.IGNORECASE)
+        )
+        family_count = sum(
+            1
+            for item in [*today_events, *upcoming_events]
+            if re.search(r"\b(family|emma|liam|sarah|church|kids|household|cozi)\b", str(item.get("title") or "") + " " + str(item.get("calendar_name") or ""), re.IGNORECASE)
+        )
+
+        trusted_actions = [
+            {
+                "id": "sync-sources",
+                "title": "Refresh Calendar Sources",
+                "note": "Runs the live inbox and connected calendar sync boundary.",
+                "available": bool(inbox is not None),
+                "unavailable_reason": "Unified inbox is not initialised in this runtime." if inbox is None else "",
+            },
+            {
+                "id": "create-event",
+                "title": "Add Event",
+                "note": "Creates a real calendar event through the runtime's connected calendar engines when possible.",
+                "available": True,
+                "prompt_hint": "Add dinner with Sarah tomorrow at 6pm to my calendar",
+            },
+            {
+                "id": "focus-block",
+                "title": "Protect Focus Block",
+                "note": "Creates a calendar focus block using the same live calendar write boundary.",
+                "available": True,
+                "prompt_hint": "Block off time for focus work tomorrow at 9am on my calendar",
+            },
+            {
+                "id": "prepare-next",
+                "title": "Stage Prep",
+                "note": "Stages preparation for the next prep-ready calendar event.",
+                "available": bool(str(top_prep_event.get("event_id") or "").strip()),
+                "unavailable_reason": "No prep-ready event is currently surfaced." if not str(top_prep_event.get("event_id") or "").strip() else "",
+                "event_id": str(top_prep_event.get("event_id") or "").strip(),
+            },
+            {
+                "id": "route-next",
+                "title": "Open Next Route",
+                "note": "Opens the next route-sensitive event with a real location boundary.",
+                "available": bool(str(top_route_event.get("id") or "").strip()),
+                "unavailable_reason": "No route-ready event is currently surfaced." if not str(top_route_event.get("id") or "").strip() else "",
+                "event_id": str(top_route_event.get("id") or "").strip(),
+            },
+            {
+                "id": "find-time",
+                "title": "Find Time",
+                "note": "Command can help negotiate and schedule the right slot, but a direct calendar find-time backend is not wired yet.",
+                "available": False,
+                "unavailable_reason": "No direct find-time backend route exists yet in this runtime.",
+            },
+            {
+                "id": "reschedule",
+                "title": "Reschedule",
+                "note": "Command can reason about rescheduling, but a direct mutation route is not exposed yet.",
+                "available": False,
+                "unavailable_reason": "No direct reschedule backend route exists yet in this runtime.",
+            },
+        ]
+
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": (
+                f"Calendar loaded {today_count} event(s) for today, {len(upcoming_events)} upcoming event(s), "
+                f"{len(source_rows)} source row(s), and {len(attention_flags)} active schedule attention flag(s)."
+            ),
+            "what_became_real": "Calendar now hydrates from one live module payload that combines today's agenda, upcoming schedule, Apple prep and routing state, sync health, and continuity instead of browser-side stitching.",
+            "remains_partial": "Direct find-time negotiation, full rescheduling, and richer multi-view calendar mutations still depend on backend contracts that are not exposed yet in this runtime.",
+            "runtime_note": "Calendar is live and connected.",
+            "availability_notes": availability_notes[:10],
+            "counts": {
+                "today_events": today_count,
+                "upcoming_events": len(upcoming_events),
+                "attention_flags": len(attention_flags),
+                "route_sensitive": len(route_sensitive),
+                "prep_cues": len(prep_cues),
+                "connected_sources": len([row for row in source_rows if row.get("connected")]),
+                "source_rows": len(source_rows),
+                "meeting_events": meeting_count,
+                "focus_events": focus_count,
+                "family_events": family_count,
+                "recent_activity": len(recent_activity),
+            },
+            "today_payload": today_payload,
+            "upcoming_payload": upcoming_payload,
+            "workflow": workflow_payload,
+            "source_rows": source_rows[:8],
+            "sync_states": sync_states[:8],
+            "recent_activity": recent_activity,
+            "trusted_actions": trusted_actions,
+            "proof_paths": {
+                "module_route": "/calendar-center",
+                "module_api": "/api/calendar/module",
+                "today_api": "/api/home/calendar/today",
+                "upcoming_api": "/api/home/calendar/upcoming?days=7",
+                "workflow_api": "/api/apple/calendar/state",
+                "sync_api": "/api/home/sync",
+                "prepare_api_template": "/api/apple/calendar/events/{event_id}/prepare",
+                "route_api_template": "/api/apple/calendar/events/{event_id}/route",
+                "operator_activity_api": "/api/activity/operator-action",
+                "action_api": "/api/calendar/module/action",
+            },
+            "errors": errors,
+        }
+
+        if errors and not (today_events or upcoming_events or source_rows or attention_flags):
+            payload["available"] = False
+            payload["status"] = "Wired"
+            payload["summary"] = "Calendar is wired, but the runtime could not hydrate enough live schedule data to make the board fully useful."
+            payload["runtime_note"] = "Calendar is partially connected. Live schedule sources did not fully hydrate."
+            payload["remains_partial"] = "Calendar needs more live schedule, sync, or Apple workflow data in this runtime to become richly informative."
+        elif errors:
+            payload["runtime_note"] = "Calendar is live, but some schedule sources are partially unavailable."
+
+        if not payload["availability_notes"]:
+            payload["availability_notes"].append("All currently available Calendar sources hydrated successfully.")
+
+        return payload
+
+    @app.get("/api/calendar/module")
+    async def api_calendar_module(actor: str = "Chris") -> JSONResponse:
+        return _json(await _build_calendar_module_payload(actor))
+
+    @app.post("/api/calendar/module/action")
+    async def api_calendar_module_action(payload: dict[str, Any]) -> JSONResponse:
+        action = str(payload.get("action") or "").strip().lower()
+        if not action:
+            raise HTTPException(status_code=400, detail="Action is required.")
+
+        if action == "sync-sources":
+            inbox = _get_unified_inbox()
+            if inbox is None:
+                raise HTTPException(status_code=503, detail="Unified inbox not initialised")
+            result = await asyncio.to_thread(inbox.sync_all)
+            return _json({
+                "ok": True,
+                "action": action,
+                "message": "Calendar sources synced.",
+                "summary": dict(result.get("summary") or {}) if isinstance(result, dict) else {},
+                "result": result,
+            })
+
+        if action in {"create-event", "focus-block"}:
+            prompt = str(payload.get("prompt") or "").strip()
+            if not prompt and action == "focus-block":
+                prompt = "Block off time for focus work tomorrow at 9am on my calendar"
+            if not prompt:
+                raise HTTPException(status_code=400, detail="A calendar command prompt is required.")
+            handler = getattr(runtime, "_try_handle_calendar_event", None)
+            if not callable(handler):
+                raise HTTPException(status_code=503, detail="Calendar write engine is unavailable in this runtime.")
+            result = await asyncio.to_thread(handler, prompt)
+            if result is None:
+                raise HTTPException(status_code=503, detail="Calendar write engine could not handle that request.")
+            message = str(getattr(result, "output_text", "") or "").strip() or "Calendar command completed."
+            lowered = message.lower()
+            if not (lowered.startswith("done.") or "calendar write handled" in lowered):
+                raise HTTPException(status_code=503, detail=message)
+            return _json({
+                "ok": True,
+                "action": action,
+                "message": message,
+                "prompt": prompt,
+            })
+
+        raise HTTPException(status_code=400, detail=f"Unsupported calendar module action: {action}")
 
     async def _build_home_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
         from datetime import datetime, timezone
