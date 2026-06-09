@@ -2280,6 +2280,27 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertGreaterEqual(roster_payload["count"], 1)
         self.assertGreaterEqual(len(roster_payload["agents"]), 1)
 
+    def test_catalyst_routes_expose_module_and_live_ops_surfaces(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/catalyst/module", "GET")()))
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("builder", module_payload)
+        self.assertIn("execution", module_payload)
+        self.assertIn("governance", module_payload)
+        self.assertIn("intervention", module_payload)
+        self.assertIn("voice", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/catalyst/module")
+        self.assertEqual(module_payload["proof_paths"]["overview_api"], "/api/catalyst-overview")
+        self.assertEqual(module_payload["proof_paths"]["live_state_api"], "/api/catalyst-live-state")
+        self.assertEqual(module_payload["proof_paths"]["ops_api"], "/api/apple/catalyst/ops")
+        self.assertEqual(module_payload["proof_paths"]["activity_api"], "/api/activity/operator-action")
+        self.assertIn("active_workflows", module_payload["counts"])
+        self.assertIsInstance(module_payload["builder"], dict)
+        self.assertIsInstance(module_payload["execution"], dict)
+        self.assertIsInstance(module_payload["voice"], dict)
+
     def test_forge_routes_expose_module_and_bridge_surfaces(self) -> None:
         class _JSONRequest:
             def __init__(self, payload: dict) -> None:

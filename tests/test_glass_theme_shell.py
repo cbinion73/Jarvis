@@ -155,6 +155,24 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("Open Context", html)
         self.assertIn("Open Route", html)
 
+    def test_render_glass_shell_wires_catalyst_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="catalyst-refresh-button"', html)
+        self.assertIn('id="catalyst-runtime-note"', html)
+        self.assertIn('id="catalyst-builder-actions"', html)
+        self.assertIn('id="catalyst-voice-input"', html)
+        self.assertIn("function refreshCatalystDesktop(", html)
+        self.assertIn("function renderCatalystModule(", html)
+        self.assertIn("function catalystHandleAction(", html)
+        self.assertIn("function catalystSendVoicePrompt(", html)
+        self.assertIn("/api/catalyst/module", html)
+        self.assertIn("/api/apple/catalyst/progress-focus", html)
+        self.assertIn("/api/apple/catalyst/approvals/{request_id}/approve", html)
+        self.assertIn("/api/apple/catalyst/recovery-cases/{case_id}/execute", html)
+        self.assertIn("/api/apple/catalyst/agents/{agent_id}/queue-run", html)
+        self.assertIn("/api/activity/operator-action", html)
+
     def test_render_glass_shell_wires_forge_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

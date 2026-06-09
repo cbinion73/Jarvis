@@ -2261,6 +2261,587 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         }
         return payload
 
+    async def _build_catalyst_module_payload() -> dict[str, Any]:
+        from .apple_api import _build_catalyst_ops_overview
+
+        def _items(value: Any) -> list[dict[str, Any]]:
+            return [dict(item) for item in list(value or []) if isinstance(item, dict)]
+
+        def _text(value: Any) -> str:
+            return str(value or "").strip()
+
+        def _short(value: Any, limit: int = 160) -> str:
+            text = _text(value)
+            if len(text) <= limit:
+                return text
+            return text[: max(0, limit - 1)].rstrip() + "…"
+
+        def _title_case(value: Any) -> str:
+            raw = _text(value).replace("_", " ").replace("-", " ")
+            return " ".join(word.capitalize() for word in raw.split())
+
+        catalyst_overview = getattr(runtime, "catalyst_overview", None)
+        overview = await asyncio.to_thread(catalyst_overview) if callable(catalyst_overview) else {}
+        live_workspace = dict((overview or {}).get("live_workspace") or {})
+        try:
+            ops = await asyncio.to_thread(_build_catalyst_ops_overview, runtime)
+        except Exception:
+            ops = {}
+        recent_activity = _module_recent_activity(route="/catalyst/view/home", domain="catalyst", limit=8)
+        catalyst_support = getattr(runtime, "catalyst_support", None)
+        pipeline_state = await asyncio.to_thread(catalyst_support.pipeline_state) if catalyst_support and hasattr(catalyst_support, "pipeline_state") else {}
+        pipeline_reviews = await asyncio.to_thread(catalyst_support.recent_pipeline_reviews, 8) if catalyst_support and hasattr(catalyst_support, "recent_pipeline_reviews") else []
+        work_items = await asyncio.to_thread(catalyst_support.work_lifecycle, 40, actor="Chris") if catalyst_support and hasattr(catalyst_support, "work_lifecycle") else []
+        interface_router = getattr(runtime, "interface_router", None)
+        capability_manifest = interface_router.system_manifest("catalyst") if interface_router and hasattr(interface_router, "system_manifest") else {}
+
+        counts = dict(overview.get("counts") or {})
+        portfolio = dict(pipeline_state.get("portfolio") or {})
+        latest_runs = dict(overview.get("latest_runs") or {})
+        recent_signals = _items(overview.get("recent_signals"))
+        connectors = _items(overview.get("connectors"))
+        live_projects = _items((live_workspace.get("projects") or {}).get("items"))
+        live_tasks = _items((live_workspace.get("tasks") or {}).get("items"))
+        live_calendar = _items((live_workspace.get("calendar") or {}).get("items"))
+        live_email = _items((live_workspace.get("email") or {}).get("items"))
+        approvals = _items(ops.get("approvals"))
+        recovery_cases = _items(ops.get("recovery_cases"))
+        agent_ops = _items(ops.get("agent_ops"))
+        supervision_items = _items(ops.get("supervision_items"))
+        missions = _items(ops.get("missions"))
+        ops_recent = _items(ops.get("recent_activity"))
+        workflow_notes = [str(item).strip() for item in list(overview.get("workflow_notes") or []) if str(item).strip()]
+        enabled_workflows = [str(item).strip() for item in list(overview.get("enabled_workflows") or []) if str(item).strip()]
+
+        active_work = [
+            dict(item)
+            for item in work_items
+            if _text(item.get("status")).lower() not in {"done", "complete", "completed", "archived"}
+        ]
+        active_work.sort(key=lambda item: _text(item.get("updated_at") or item.get("created_at")), reverse=True)
+        selected_work = dict(active_work[0]) if active_work else {}
+        selected_work_title = _text(selected_work.get("title")) or _text((missions[0] if missions else {}).get("title")) or "Catalyst Workflow"
+        selected_lane = _title_case(selected_work.get("lane") or selected_work.get("domain") or "operations")
+        transitions = _items(selected_work.get("transitions"))
+        latest_transition = dict(transitions[-1]) if transitions else {}
+
+        workflow_nodes = []
+        for item in transitions[:6]:
+            workflow_nodes.append(
+                {
+                    "title": _title_case(item.get("stage") or "step"),
+                    "subtitle": _text(item.get("artifact_type") or item.get("source") or "Catalyst artifact"),
+                    "detail": _short(item.get("rationale") or item.get("metadata", {}).get("note") or "Lifecycle stage recorded."),
+                    "status": _text(item.get("status") or "open").lower() or "open",
+                }
+            )
+        if not workflow_nodes:
+            workflow_nodes = [
+                {
+                    "title": _title_case(item),
+                    "subtitle": "Enabled workflow",
+                    "detail": "This workflow is available in the current Catalyst profile.",
+                    "status": "ready",
+                }
+                for item in enabled_workflows[:5]
+            ]
+
+        system_health_score = 100
+        visible_agents = max(1, len(agent_ops))
+        blocked_agents = len([item for item in agent_ops if _text(item.get("status")).lower() in {"blocked", "error"}])
+        waiting_agents = len([item for item in agent_ops if _text(item.get("status")).lower() in {"waiting", "attention"}])
+        degraded_connectors = len([item for item in connectors if _text(item.get("status")).lower() in {"disconnected", "planned", "error"}])
+        system_health_score -= blocked_agents * 12
+        system_health_score -= waiting_agents * 5
+        system_health_score -= min(18, degraded_connectors * 4)
+        system_health_score = max(42, min(98, system_health_score))
+
+        active_workflow_count = len(active_work) or len(live_projects) or int(counts.get("project_briefs", 0) or 0)
+        staged_action_count = len(live_tasks) or len(transitions)
+        queued_automation_count = len(recent_signals) or int(counts.get("signals", 0) or 0)
+        approvals_needed_count = len(approvals) + len(supervision_items)
+
+        recommendation = {}
+        if approvals:
+            lead = approvals[0]
+            recommendation = {
+                "title": _text(lead.get("title")) or "Clear the top approval lane.",
+                "detail": _short(lead.get("detail") or "An approval is waiting before execution can continue."),
+                "button_label": "Review Now",
+                "action": {
+                    "kind": "open-route",
+                    "route": _text(lead.get("related_route") or "/approval-queue"),
+                    "fallback_view": "approvals",
+                    "label": "Review approvals",
+                    "detail": _text(lead.get("detail")),
+                },
+            }
+        elif recovery_cases:
+            lead = recovery_cases[0]
+            recommendation = {
+                "title": _text(lead.get("title")) or "Repair the top recovery lane.",
+                "detail": _short(lead.get("detail") or "A recovery loop is holding the workflow."),
+                "button_label": _text(lead.get("next_action_label") or "Review Recovery"),
+                "action": {
+                    "kind": "recovery-execute",
+                    "case_id": _text(lead.get("case_id")),
+                    "action_type": _text(lead.get("next_action_type") or "retry"),
+                    "label": _text(lead.get("next_action_label") or "Execute retry"),
+                    "detail": _text(lead.get("detail")),
+                },
+            }
+        elif missions:
+            lead = missions[0]
+            recommendation = {
+                "title": _text(lead.get("title")) or "Advance the active mission.",
+                "detail": _short(lead.get("brief") or lead.get("next_step") or "A mission is already active in Catalyst."),
+                "button_label": "Open Mission",
+                "action": {
+                    "kind": "open-route",
+                    "route": _text(lead.get("route") or "/mission-board"),
+                    "fallback_view": "mission",
+                    "label": "Open Mission",
+                    "detail": _text(lead.get("brief") or lead.get("next_step")),
+                },
+            }
+        else:
+            recommendation = {
+                "title": "Catalyst is connected and waiting for the next bounded move.",
+                "detail": "No urgent approval, recovery, or mission pressure is currently dominating the board.",
+                "button_label": "Refresh",
+                "action": {
+                    "kind": "refresh",
+                    "label": "Refresh Catalyst",
+                },
+            }
+
+        live_operations = []
+        for item in missions[:3]:
+            live_operations.append(
+                {
+                    "title": _text(item.get("title")) or "Mission",
+                    "detail": _short(item.get("brief") or item.get("next_step") or "Mission is active."),
+                    "status": _text(item.get("status") or item.get("lane") or "active"),
+                    "route": _text(item.get("route") or "/mission-board"),
+                    "fallback_view": "mission",
+                }
+            )
+        for item in active_work[:3]:
+            live_operations.append(
+                {
+                    "title": _text(item.get("title")) or "Work item",
+                    "detail": _short(item.get("rationale") or item.get("review_level") or item.get("lane") or "Live lifecycle item."),
+                    "status": _text(item.get("status") or item.get("current_stage") or "open"),
+                    "route": "/catalyst/view/tasks",
+                    "fallback_view": "catalyst",
+                }
+            )
+        live_operations = live_operations[:6]
+
+        surfaced_insights = []
+        for item in recent_signals[:4]:
+            surfaced_insights.append(
+                {
+                    "title": _text(item.get("title")) or "Signal",
+                    "reason": _short(item.get("content") or item.get("sender") or "Catalyst captured a fresh signal."),
+                    "route": "/catalyst/view/reports",
+                    "fallback_view": "catalyst",
+                }
+            )
+        for item in ops_recent[:3]:
+            surfaced_insights.append(
+                {
+                    "title": _text(item.get("title")) or "Activity",
+                    "reason": _short(item.get("detail") or item.get("route_label") or "Catalyst recorded a recent action."),
+                    "route": _text(item.get("related_route") or "/activity-center"),
+                    "fallback_view": "activity",
+                }
+            )
+        surfaced_insights = surfaced_insights[:6]
+
+        builder_properties = [
+            {
+                "label": "Workflow",
+                "value": selected_work_title,
+                "detail": selected_lane,
+            },
+            {
+                "label": "Current Stage",
+                "value": _title_case(selected_work.get("current_stage") or latest_transition.get("stage") or "not surfaced"),
+                "detail": _title_case(selected_work.get("status") or latest_transition.get("status") or "open"),
+            },
+            {
+                "label": "Review Level",
+                "value": _title_case(selected_work.get("review_level") or "review as needed"),
+                "detail": _text(selected_work.get("artifact_type") or "No artifact surfaced"),
+            },
+            {
+                "label": "Owner Agent",
+                "value": _text(selected_work.get("owner_agent")) or _text((agent_ops[0] if agent_ops else {}).get("name")) or "Not surfaced",
+                "detail": _text(selected_work.get("source") or "Catalyst lifecycle"),
+            },
+        ]
+        builder_actions = [
+            {
+                "kind": "progress-focus",
+                "label": "Save",
+                "module": "Catalyst",
+                "route": "/catalyst/view/projects",
+                "reason": f"Catalyst saved the current focus on {selected_work_title or 'the workflow builder'}.",
+            },
+            {
+                "kind": "pipeline-review",
+                "label": "Validate",
+                "review_type": "workflow-builder",
+                "note": f"Validated {selected_work_title or 'Catalyst builder'} from the desktop workspace.",
+            },
+        ]
+        if agent_ops:
+            builder_actions.append(
+                {
+                    "kind": "queue-agent",
+                    "label": "Test Run",
+                    "agent_id": _text(agent_ops[0].get("agent_id")),
+                    "detail": f"Queue { _text(agent_ops[0].get('name')) or 'the lead agent' } for a bounded Catalyst run.",
+                }
+            )
+        else:
+            builder_actions.append(
+                {
+                    "kind": "open-route",
+                    "label": "Test Run",
+                    "route": "/agent-ops-center",
+                    "fallback_view": "agents",
+                    "detail": "Open Agent Ops because no live Catalyst worker was surfaced for a bounded run.",
+                }
+            )
+
+        execution_flow = []
+        for item in transitions[:6]:
+            execution_flow.append(
+                {
+                    "title": _title_case(item.get("stage") or "step"),
+                    "detail": _short(item.get("rationale") or item.get("artifact_type") or "Execution stage recorded."),
+                    "status": _text(item.get("status") or "open"),
+                    "active": item is transitions[-1],
+                }
+            )
+        if not execution_flow:
+            for item in live_tasks[:6]:
+                execution_flow.append(
+                    {
+                        "title": _text(item.get("title") or item.get("name") or "Task"),
+                        "detail": _short(item.get("summary") or item.get("description") or "Workspace task"),
+                        "status": _text(item.get("status") or "open"),
+                        "active": False,
+                    }
+                )
+        execution_people = [
+            {"label": "You", "kind": "you"},
+            *[
+                {"label": _text(item.get("name")) or "Agent", "kind": "agent"}
+                for item in agent_ops[:4]
+            ],
+        ][:5]
+        outputs = []
+        latest_briefing = dict(latest_runs.get("briefing") or {})
+        if latest_briefing:
+            outputs.append({"title": "Strategic Brief", "detail": _short(latest_briefing.get("recommendation") or latest_briefing.get("summary") or latest_briefing.get("raw_output"))})
+        latest_project = dict(latest_runs.get("project_brief") or {})
+        if latest_project:
+            outputs.append({"title": "Project Brief", "detail": _short(latest_project.get("problem_statement") or latest_project.get("desired_outcome") or latest_project.get("raw_output"))})
+        latest_hypothesis = dict(latest_runs.get("hypothesis") or {})
+        if latest_hypothesis:
+            outputs.append({"title": "Hypothesis", "detail": _short(latest_hypothesis.get("opportunity") or latest_hypothesis.get("recommendation") or latest_hypothesis.get("raw_output"))})
+        latest_meeting = dict(latest_runs.get("meeting_extraction") or {})
+        if latest_meeting:
+            outputs.append({"title": "Meeting Extraction", "detail": _short(latest_meeting.get("problem_statement") or latest_meeting.get("raw_output"))})
+        outputs = outputs[:4]
+        next_up = approvals[0] if approvals else (recovery_cases[0] if recovery_cases else (supervision_items[0] if supervision_items else {}))
+
+        governance_checks = []
+        for item in approvals[:4]:
+            governance_checks.append(
+                {
+                    "title": _text(item.get("title")) or "Approval",
+                    "detail": _short(item.get("detail") or "Awaiting review."),
+                    "status": _title_case(item.get("risk") or "pending"),
+                }
+            )
+        for item in supervision_items[:2]:
+            governance_checks.append(
+                {
+                    "title": _text(item.get("title")) or "Supervision Review",
+                    "detail": _short(item.get("detail") or "Needs supervision review."),
+                    "status": _title_case(item.get("risk") or "review"),
+                }
+            )
+        governance_checks = governance_checks[:4]
+        governance_actions = []
+        if approvals:
+            governance_actions.append(
+                {
+                    "kind": "approve-approval",
+                    "label": "Promote to Live",
+                    "request_id": _text(approvals[0].get("request_id")),
+                    "title": _text(approvals[0].get("title")) or "Approval",
+                }
+            )
+        else:
+            governance_actions.append(
+                {
+                    "kind": "pipeline-review",
+                    "label": "Promote to Live",
+                    "review_type": "launch-governance",
+                    "note": "Catalyst promoted the current package through a local governance review.",
+                }
+            )
+        if supervision_items:
+            governance_actions.insert(
+                0,
+                {
+                    "kind": "supervision-action",
+                    "label": "Request Changes",
+                    "request_id": _text(supervision_items[0].get("request_id")),
+                    "action": "reject",
+                    "title": _text(supervision_items[0].get("title")) or "Supervision review",
+                    "reason": "Catalyst requested changes from the governance desktop.",
+                },
+            )
+        else:
+            governance_actions.insert(
+                0,
+                {
+                    "kind": "open-route",
+                    "label": "Request Changes",
+                    "route": "/supervision-snapshot",
+                    "fallback_view": "supervision",
+                    "detail": "Open supervision because no direct live governance item is currently staged.",
+                },
+            )
+
+        lead_case = dict(recovery_cases[0]) if recovery_cases else {}
+        intervention_actions = []
+        if lead_case:
+            intervention_actions.append(
+                {
+                    "kind": "recovery-execute",
+                    "label": _text(lead_case.get("next_action_label") or "Run Option A"),
+                    "case_id": _text(lead_case.get("case_id")),
+                    "action_type": _text(lead_case.get("next_action_type") or "retry"),
+                    "detail": _text(lead_case.get("detail")),
+                }
+            )
+            intervention_actions.append(
+                {
+                    "kind": "recovery-remediation",
+                    "label": _text(lead_case.get("remediation_action_label") or "Stage remediation"),
+                    "case_id": _text(lead_case.get("case_id")),
+                    "action_type": _text(lead_case.get("remediation_action_type") or "stage"),
+                    "detail": _text(lead_case.get("detail")),
+                }
+            )
+        else:
+            intervention_actions = [
+                {
+                    "kind": "open-route",
+                    "label": "Run Option A",
+                    "route": "/recovery-center",
+                    "fallback_view": "notifications",
+                    "detail": "Open the recovery center because no direct Catalyst recovery case is currently surfaced.",
+                },
+                {
+                    "kind": "open-route",
+                    "label": "Ask for Input",
+                    "route": "/command-center",
+                    "fallback_view": "chat",
+                    "detail": "Open Command for a human-in-the-loop intervention thread.",
+                },
+            ]
+
+        voice_messages = []
+        if latest_briefing:
+            voice_messages.append(
+                {
+                    "speaker": "Catalyst",
+                    "role": "agent",
+                    "text": _short(latest_briefing.get("recommendation") or latest_briefing.get("summary") or "A Catalyst briefing is available.", 220),
+                }
+            )
+        if latest_hypothesis:
+            voice_messages.append(
+                {
+                    "speaker": "Catalyst",
+                    "role": "agent",
+                    "text": _short(latest_hypothesis.get("recommendation") or latest_hypothesis.get("opportunity") or "A Catalyst opportunity hypothesis is ready.", 220),
+                }
+            )
+        if not voice_messages:
+            voice_messages.append(
+                {
+                    "speaker": "Catalyst",
+                    "role": "agent",
+                    "text": "No recent voice-style Catalyst packet is stored yet. Ask for a briefing, a plan, a hypothesis, or an execution update.",
+                }
+            )
+
+        counts_payload = {
+            "active_workflows": active_workflow_count,
+            "staged_actions": staged_action_count,
+            "queued_automations": queued_automation_count,
+            "approvals_needed": approvals_needed_count,
+            "workers_total": len(agent_ops),
+            "workers_running": len([item for item in agent_ops if _text(item.get("status")).lower() in {"active", "running"}]),
+            "system_health_score": system_health_score,
+            "signals": int(counts.get("signals", 0) or len(recent_signals)),
+            "project_briefs": int(counts.get("project_briefs", 0) or 0),
+            "implementation_plans": int(counts.get("implementation_plans", 0) or 0),
+        }
+
+        availability_notes: list[str] = []
+        if not bool(live_workspace.get("available", False)):
+            availability_notes.append(_text(live_workspace.get("error")) or "Live Catalyst workspace is unavailable.")
+        if degraded_connectors:
+            availability_notes.append(f"{degraded_connectors} Catalyst connector(s) are not fully connected yet.")
+        if not agent_ops:
+            availability_notes.append("No live Catalyst agent roster was surfaced by the ops view.")
+        if not live_projects:
+            availability_notes.append("No live Catalyst workspace projects are currently visible.")
+
+        payload: dict[str, Any] = {
+            "generated_at": _text(ops.get("generated_at")) or _text(live_workspace.get("retrievedAt")) or datetime.now(timezone.utc).isoformat(),
+            "available": True,
+            "status": "Useful",
+            "summary": (
+                f"Catalyst now runs from live workspace, ops, lifecycle, and governance data: "
+                f"{counts_payload['active_workflows']} active workflow(s), "
+                f"{counts_payload['approvals_needed']} approval/supervision gate(s), and "
+                f"{counts_payload['workers_running']} active agent run(s)."
+            ),
+            "what_became_real": "Catalyst is now fed by the live workspace, pipeline lifecycle, ops cockpit, approvals, recovery cases, agent runs, and activity continuity instead of dead wi/* endpoints.",
+            "remains_partial": "Some sections still depend on whichever Catalyst connectors, workspace feed, and runtime roster are available right now, so missing integrations show honest unavailability instead of invented content.",
+            "counts": counts_payload,
+            "recommendation": recommendation,
+            "live_operations": live_operations,
+            "surfaced_insights": surfaced_insights,
+            "builder": {
+                "workflow_title": selected_work_title,
+                "workflow_status": _title_case(selected_work.get("status") or latest_transition.get("status") or "draft"),
+                "blocks": enabled_workflows[:8],
+                "nodes": workflow_nodes[:6],
+                "properties": builder_properties,
+                "actions": builder_actions,
+            },
+            "execution": {
+                "flow": execution_flow[:6],
+                "headline": _text((approvals[0] if approvals else {}).get("title")) or selected_work_title,
+                "headline_status": (
+                    f"Waiting on {len(approvals)} approval gate(s)"
+                    if approvals
+                    else f"{len(agent_ops)} live agent lane(s)"
+                ),
+                "people": execution_people,
+                "reasoning": _short(
+                    _text((approvals[0] if approvals else {}).get("detail"))
+                    or _text((lead_case if lead_case else {}).get("detail"))
+                    or _text(selected_work.get("rationale"))
+                    or "Catalyst is combining live approvals, recovery posture, and current workflow state."
+                , 280),
+                "outputs": outputs,
+                "next_up": {
+                    "title": _text(next_up.get("title")) or "No immediate next-up item surfaced",
+                    "detail": _short(next_up.get("detail") or next_up.get("next_step") or "Catalyst does not currently expose a next-up queue item."),
+                    "route": _text(next_up.get("related_route") or next_up.get("route") or "/command-center"),
+                    "fallback_view": "chat",
+                },
+            },
+            "governance": {
+                "title": _text(selected_work_title) or _text((latest_project or {}).get("project_name")) or "Catalyst package",
+                "status": _title_case((approvals[0] if approvals else {}).get("risk") or selected_work.get("status") or "staged"),
+                "document_title": _text((latest_project or {}).get("project_name")) or selected_work_title or "Catalyst delivery package",
+                "document_subtitle": _short((latest_project or {}).get("desired_outcome") or (latest_project or {}).get("problem_statement") or selected_work.get("rationale") or "Package preview pulled from live Catalyst records."),
+                "checks": governance_checks,
+                "notice": _text((pipeline_reviews[0] if pipeline_reviews else {}).get("note")) or workflow_notes[0] if workflow_notes else "Catalyst governance is ready for a human decision when the right gate is surfaced.",
+                "actions": governance_actions,
+            },
+            "intervention": {
+                "title": _text(lead_case.get("title")) or "No intervention case is currently dominant.",
+                "detail": _short(lead_case.get("detail") or "Catalyst will surface a recovery or intervention lane here when a live issue crosses threshold."),
+                "severity": _text(lead_case.get("status_label") or lead_case.get("status") or "steady"),
+                "recommended_actions": [
+                    {
+                        "title": _text(item.get("title")) or _text(item.get("next_action_label")) or "Action",
+                        "detail": _short(item.get("detail") or item.get("action_label") or "Catalyst recommendation."),
+                        "route": _text(item.get("related_route") or item.get("route") or "/recovery-center"),
+                        "fallback_view": "notifications",
+                        "kind": _text(item.get("kind") or "advice"),
+                    }
+                    for item in ([lead_case] if lead_case else []) + approvals[:2] + supervision_items[:2]
+                    if item
+                ][:6],
+                "why_matters": _short(lead_case.get("detail") or recommendation.get("detail") or "Catalyst is protecting decision quality before work goes live.", 220),
+                "confidence": (
+                    f"{max(38, min(98, 100 - (len(recovery_cases) * 18) - (len(approvals) * 7)))}% derived confidence"
+                    if lead_case or approvals
+                    else "No confidence score is surfaced by the current Catalyst sources."
+                ),
+                "actions": intervention_actions,
+            },
+            "voice": {
+                "messages": voice_messages,
+                "context": [
+                    f"Focus: {_text((ops.get('current_focus') or {}).get('module')) or selected_lane}",
+                    f"Approvals: {len(approvals)}",
+                    f"Live tasks: {len(live_tasks)}",
+                    f"Signals: {len(recent_signals)}",
+                ],
+                "actions": [
+                    {"kind": "voice-prompt", "label": "Send reminder", "prompt": "Send a reminder to the waiting approvers and summarize what is blocking the workflow."},
+                    {"kind": "open-route", "label": "View execution", "route": "/catalyst/view/tasks", "fallback_view": "catalyst", "detail": "Open the live execution lane."},
+                    {"kind": "voice-prompt", "label": "Pause workflow", "prompt": "Explain whether this workflow should pause and what would need to happen before it resumes."},
+                    {"kind": "voice-prompt", "label": "Add owner", "prompt": "Suggest the right owner or agent for the current Catalyst workflow and explain why."},
+                ],
+                "input_placeholder": "Ask Catalyst for a briefing, plan, hypothesis, reminder, or execution update…",
+            },
+            "recent_activity": recent_activity,
+            "availability_notes": availability_notes,
+            "runtime": {
+                "overview": overview,
+                "live_workspace": live_workspace,
+                "ops": ops,
+                "capabilities": capability_manifest,
+                "pipeline_state": pipeline_state,
+                "pipeline_reviews": pipeline_reviews[:6],
+                "work_lifecycle": work_items[:24],
+            },
+            "proof_paths": {
+                "module_route": "/catalyst",
+                "module_api": "/api/catalyst/module",
+                "overview_api": "/api/catalyst-overview",
+                "live_state_api": "/api/catalyst-live-state",
+                "ops_api": "/api/apple/catalyst/ops",
+                "status_api": "/api/catalyst/status",
+                "progress_focus_api": "/api/apple/catalyst/progress-focus",
+                "approval_api": "/api/apple/catalyst/approvals/{request_id}/approve",
+                "recovery_execute_api": "/api/apple/catalyst/recovery-cases/{case_id}/execute",
+                "recovery_remediation_api": "/api/apple/catalyst/recovery-cases/{case_id}/remediation",
+                "recovery_plan_api": "/api/apple/catalyst/recovery-cases/{case_id}/plan/execute-next",
+                "agent_queue_api": "/api/apple/catalyst/agents/{agent_id}/queue-run",
+                "agent_assignment_api": "/api/apple/catalyst/agents/{agent_id}/assignment",
+                "supervision_api": "/api/apple/catalyst/supervision/{request_id}/{action}",
+                "mission_status_api": "/api/apple/catalyst/missions/{mission_id}/status",
+                "briefing_api": "/api/catalyst-briefing",
+                "hypothesis_api": "/api/catalyst-hypothesis",
+                "implementation_plan_api": "/api/catalyst-implementation-plan",
+                "proactive_api": "/api/catalyst-proactive",
+                "activity_api": "/api/activity/operator-action",
+            },
+        }
+        if not live_projects and not active_work and not approvals and not agent_ops:
+            payload["status"] = "Wired"
+            payload["summary"] = "Catalyst routes are live, but the workspace and ops surfaces are only partially hydrated in this runtime."
+        return payload
+
     @app.get("/api/intel/module")
     async def api_intel_module() -> JSONResponse:
         return _json(await _build_intel_module_payload())
@@ -6030,6 +6611,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/catalyst-live-state")
     async def api_catalyst_live_state() -> JSONResponse:
         return _json(runtime.catalyst_live_workspace())
+
+    @app.get("/api/catalyst/module")
+    async def api_catalyst_module() -> JSONResponse:
+        return _json(await _build_catalyst_module_payload())
 
     @app.get("/api/router/capabilities")
     async def api_router_capabilities() -> JSONResponse:

@@ -20992,22 +20992,24 @@ body::after {{
             <div class="catalyst-sidebar-mark">✦</div>
           </div>
           <div class="catalyst-sidebar-nav">
-            <div class="catalyst-sidebar-item active">⌂ Command Center</div>
-            <div class="catalyst-sidebar-item">⌘ Workflows</div>
-            <div class="catalyst-sidebar-item">✦ Agents</div>
-            <div class="catalyst-sidebar-item">▣ Executions</div>
-            <div class="catalyst-sidebar-item">☑ Approvals</div>
-            <div class="catalyst-sidebar-item">↺ Interventions</div>
-            <div class="catalyst-sidebar-item">⌁ Resources</div>
-            <div class="catalyst-sidebar-item">◌ Insights</div>
-            <div class="catalyst-sidebar-item">☷ Audit Log</div>
-            <div class="catalyst-sidebar-item">⚙ Settings</div>
+            <div class="catalyst-sidebar-item active" data-wi-tab="overview" onclick="switchWITab(this, 'overview')">⌂ Command Center</div>
+            <div class="catalyst-sidebar-item" data-wi-tab="projects" onclick="switchWITab(this, 'projects')">⌘ Workflows</div>
+            <div class="catalyst-sidebar-item" data-wi-tab="agents" onclick="switchWITab(this, 'agents')">✦ Agents</div>
+            <div class="catalyst-sidebar-item" data-wi-tab="briefing" onclick="switchWITab(this, 'briefing')">▣ Executions</div>
+            <div class="catalyst-sidebar-item" data-wi-tab="tasks" onclick="switchWITab(this, 'tasks')">☑ Approvals</div>
+            <div class="catalyst-sidebar-item" data-wi-tab="signals" onclick="switchWITab(this, 'signals')">↺ Interventions</div>
+            <div class="catalyst-sidebar-item" onclick="catalystOpenRoute('/command-center', 'chat', 'Open Command', 'Catalyst routed into Command.')">⌁ Resources</div>
+            <div class="catalyst-sidebar-item" onclick="catalystOpenRoute('/activity-center', 'activity', 'Open Activity', 'Catalyst opened the activity lane.')">◌ Insights</div>
+            <div class="catalyst-sidebar-item" onclick="catalystOpenRoute('/supervision-snapshot', 'chat', 'Open Audit Log', 'Catalyst opened the supervision and audit lane.')">☷ Audit Log</div>
+            <div class="catalyst-sidebar-item" onclick="catalystOpenRoute('/settings-center', 'settings', 'Open Settings', 'Catalyst opened settings.')">⚙ Settings</div>
           </div>
           <div class="catalyst-sidebar-foot">
             <div class="catalyst-sidebar-user">
               <strong>Chris</strong>
               Executive Mode
             </div>
+            <div class="catalyst-sidebar-user" id="catalyst-runtime-note" style="font-size:12px;line-height:1.5;">Loading live Catalyst workspace…</div>
+            <button class="catalyst-action-btn" type="button" id="catalyst-refresh-button" onclick="refreshCatalystDesktop(true)">Refresh Catalyst</button>
           </div>
         </aside>
 
@@ -21033,10 +21035,10 @@ body::after {{
               <div class="catalyst-grid-hero">
                 <div class="catalyst-card catalyst-hero-card">
                   <div class="catalyst-hero-visual">
-                    <div class="catalyst-hero-overline">Good morning, Chris. Your operations are orchestrated.</div>
+                    <div class="catalyst-hero-overline" id="catalyst-hero-overline">Good morning, Chris. Your operations are orchestrated.</div>
                     <div>
-                      <div class="catalyst-hero-title">Catalyst is already in motion.</div>
-                      <div class="catalyst-hero-copy">See active work, queued triggers, agent health, and the next high-leverage decision without leaving the desktop board.</div>
+                      <div class="catalyst-hero-title" id="catalyst-hero-title">Catalyst is already in motion.</div>
+                      <div class="catalyst-hero-copy" id="catalyst-hero-copy">See active work, queued triggers, agent health, and the next high-leverage decision without leaving the desktop board.</div>
                     </div>
                     <div class="catalyst-stat-row">
                       <div class="catalyst-metric">
@@ -21056,7 +21058,7 @@ body::after {{
                       </div>
                       <div class="catalyst-metric">
                         <span>Approvals Needed</span>
-                        <strong id="wi-stat-approvals">5</strong>
+                        <strong id="wi-stat-approvals">—</strong>
                         <em>High-impact gates</em>
                       </div>
                     </div>
@@ -21067,20 +21069,20 @@ body::after {{
                     <div class="catalyst-card-heading">
                       <div class="catalyst-card-label">System Health<strong>Agent fleet readiness</strong></div>
                     </div>
-                    <div class="catalyst-ring">97<span>Operational</span></div>
+                    <div class="catalyst-ring" id="catalyst-system-health-score">97<span>Operational</span></div>
                     <div class="wi-status-dots" id="wi-stat-workers" style="margin-top:14px;">—</div>
                     <div class="wi-inline-stat" id="wi-worker-note" style="margin-top:10px;">Checking worker posture…</div>
                   </div>
                   <div class="catalyst-panel">
                     <div class="catalyst-card-heading">
                       <div class="catalyst-card-label">JARVIS Recommendation<strong>Move this board pack forward</strong></div>
-                      <span class="catalyst-chip live">Priority</span>
+                      <span class="catalyst-chip live" id="catalyst-recommendation-chip">Priority</span>
                     </div>
                     <div id="wi-one-rec" style="font-size:13px; line-height:1.7; color:var(--cat-copy-muted);">
                       <div class="skel" style="height:10px;width:90%;margin-bottom:6px;"></div>
                       <div class="skel" style="height:10px;width:70%;"></div>
                     </div>
-                    <button class="catalyst-action-btn primary" type="button" style="margin-top:14px;">Review Now</button>
+                    <button class="catalyst-action-btn primary" type="button" style="margin-top:14px;" id="catalyst-review-button" onclick="catalystRunRecommendation()">Review Now</button>
                   </div>
                 </div>
               </div>
@@ -21105,11 +21107,11 @@ body::after {{
                   </div>
                 </div>
                 <div class="catalyst-side-stack">
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-side-panel-finalizing">
                     <strong>Finalizing</strong>
                     <p>Q2 Board Pack is the next best candidate to push through executive review and packaging.</p>
                   </div>
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-side-panel-window">
                     <strong>Intervention Window</strong>
                     <p>Finance and Comms are the two zones most likely to need a human nudge in the next 20 minutes.</p>
                   </div>
@@ -21123,7 +21125,7 @@ body::after {{
                   <div class="catalyst-card-heading">
                     <div class="catalyst-card-label">Blocks<strong>Workflow primitives</strong></div>
                   </div>
-                  <div class="catalyst-blocks-list">
+                  <div class="catalyst-blocks-list" id="catalyst-blocks-list">
                     <div class="catalyst-block-item"><span class="catalyst-block-icon">↻</span>Trigger</div>
                     <div class="catalyst-block-item"><span class="catalyst-block-icon">⚡</span>Action</div>
                     <div class="catalyst-block-item"><span class="catalyst-block-icon">✦</span>Agent</div>
@@ -21137,10 +21139,10 @@ body::after {{
 
                 <div class="catalyst-panel catalyst-flow-board">
                   <div class="catalyst-card-heading">
-                    <div class="catalyst-card-label">Workflow Builder Studio<strong>Q2 Board Pack Workflow</strong></div>
-                    <span class="catalyst-chip warn">Draft</span>
+                    <div class="catalyst-card-label">Workflow Builder Studio<strong id="catalyst-builder-title">Q2 Board Pack Workflow</strong></div>
+                    <span class="catalyst-chip warn" id="catalyst-builder-status">Draft</span>
                   </div>
-                  <div class="catalyst-flow-layout">
+                  <div class="catalyst-flow-layout" id="catalyst-builder-flow">
                     <div class="catalyst-node-column">
                       <div class="catalyst-node"><span>Trigger</span><strong>Board pack requested</strong><em>Manual kickoff</em></div>
                       <div class="catalyst-node"><span>Strategy Agent</span><strong>Gather key insights</strong><em>Assemble narrative</em></div>
@@ -21161,13 +21163,13 @@ body::after {{
                   <div class="catalyst-card-heading">
                     <div class="catalyst-card-label">Properties<strong>Selected node</strong></div>
                   </div>
-                  <div class="catalyst-properties">
+                  <div class="catalyst-properties" id="catalyst-builder-properties">
                     <div class="catalyst-property-row"><span>Node</span><strong>Condition</strong><em>If confidence is high</em></div>
                     <div class="catalyst-property-row"><span>Expression</span><strong>Confidence Score &gt; 85</strong></div>
                     <div class="catalyst-property-row"><span>True Path</span><strong>Yes</strong></div>
                     <div class="catalyst-property-row"><span>False Path</span><strong>No</strong></div>
                   </div>
-                  <div class="catalyst-action-column" style="margin-top:14px;">
+                  <div class="catalyst-action-column" style="margin-top:14px;" id="catalyst-builder-actions">
                     <button class="catalyst-action-btn primary" type="button">Save</button>
                     <button class="catalyst-action-btn" type="button">Validate</button>
                     <button class="catalyst-action-btn" type="button">Test Run</button>
@@ -21180,9 +21182,9 @@ body::after {{
               <div class="catalyst-execution-grid">
                 <div class="catalyst-panel">
                   <div class="catalyst-card-heading">
-                    <div class="catalyst-card-label">Execution Flow<strong>Q2 Board Pack</strong></div>
+                    <div class="catalyst-card-label">Execution Flow<strong id="catalyst-execution-title">Q2 Board Pack</strong></div>
                   </div>
-                  <div class="catalyst-stage-list">
+                  <div class="catalyst-stage-list" id="catalyst-execution-flow">
                     <div class="catalyst-stage-item"><strong>Trigger</strong><span>Board pack requested · 9:12 AM</span></div>
                     <div class="catalyst-stage-item"><strong>Strategy Agent</strong><span>Gather key insights · 9:13 AM</span></div>
                     <div class="catalyst-stage-item"><strong>Data Agent</strong><span>Assemble metrics · 9:14 AM</span></div>
@@ -21194,10 +21196,10 @@ body::after {{
 
                 <div class="catalyst-panel">
                   <div class="catalyst-card-heading">
-                    <div class="catalyst-card-label">Now Running<strong>Approval: Executive Review</strong></div>
-                    <span class="catalyst-chip live">Waiting on 2 of 5</span>
+                    <div class="catalyst-card-label">Now Running<strong id="catalyst-execution-headline">Approval: Executive Review</strong></div>
+                    <span class="catalyst-chip live" id="catalyst-execution-chip">Waiting on 2 of 5</span>
                   </div>
-                  <div class="catalyst-avatar-row">
+                  <div class="catalyst-avatar-row" id="catalyst-execution-participants">
                     <div class="catalyst-avatar you">You</div>
                     <div class="catalyst-avatar">AL</div>
                     <div class="catalyst-avatar">JD</div>
@@ -21207,16 +21209,16 @@ body::after {{
                   <div class="catalyst-card-heading" style="margin-top:18px;">
                     <div class="catalyst-card-label">Agent Reasoning<strong>What Catalyst sees</strong></div>
                   </div>
-                  <p>All metrics are within expected range. Revenue trend is steady. Risk exposure is low. Recommendation: approve to proceed with communications packaging.</p>
+                  <p id="catalyst-execution-reasoning">All metrics are within expected range. Revenue trend is steady. Risk exposure is low. Recommendation: approve to proceed with communications packaging.</p>
                   <div class="catalyst-wave" style="margin-top:14px;"></div>
-                  <div class="catalyst-score-grid" style="margin-top:14px;">
+                  <div class="catalyst-score-grid" style="margin-top:14px;" id="catalyst-execution-scores">
                     <div class="catalyst-score-card"><span>Confidence</span><strong>91%</strong></div>
                     <div class="catalyst-score-card"><span>Risk</span><strong>No blockers</strong></div>
                   </div>
                 </div>
 
                 <div class="catalyst-side-stack">
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-execution-outputs">
                     <strong>Outputs So Far</strong>
                     <ul>
                       <li>Executive summary ready</li>
@@ -21225,7 +21227,7 @@ body::after {{
                       <li>Market insights ready</li>
                     </ul>
                   </div>
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-execution-nextup">
                     <strong>Next Up</strong>
                     <p>Comms Agent will draft the narrative as soon as executive review clears.</p>
                   </div>
@@ -21237,18 +21239,18 @@ body::after {{
               <div class="catalyst-governance-grid">
                 <div class="catalyst-panel catalyst-document-card">
                   <div class="catalyst-card-heading">
-                    <div class="catalyst-card-label">Draft to Live<strong>Q2 Board Pack</strong></div>
-                    <span class="catalyst-chip warn">Staged</span>
+                    <div class="catalyst-card-label">Draft to Live<strong id="catalyst-governance-title">Q2 Board Pack</strong></div>
+                    <span class="catalyst-chip warn" id="catalyst-governance-status">Staged</span>
                   </div>
-                  <strong>Q2</strong>
-                  <span>Board pack preview package. Review, policy check, then approval into live distribution.</span>
+                  <strong id="catalyst-governance-preview-title">Q2</strong>
+                  <span id="catalyst-governance-preview">Board pack preview package. Review, policy check, then approval into live distribution.</span>
                 </div>
                 <div class="catalyst-panel catalyst-list">
                   <div class="catalyst-card-heading">
                     <div class="catalyst-card-label">Approval Required<strong>Live governance checks</strong></div>
                     <span class="catalyst-chip live">2 of 4</span>
                   </div>
-                  <div class="catalyst-approval-stack">
+                  <div class="catalyst-approval-stack" id="catalyst-governance-checks">
                     <div class="catalyst-approval-item"><strong>Trust Zone</strong><span>Standard · within governance boundary</span></div>
                     <div class="catalyst-approval-item"><strong>Policy Check</strong><span>Passed · all validations satisfied</span></div>
                     <div class="catalyst-approval-item"><strong>Data Sensitivity</strong><span>Internal · no restricted data</span></div>
@@ -21256,11 +21258,11 @@ body::after {{
                   </div>
                 </div>
                 <div class="catalyst-side-stack">
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-governance-notice">
                     <strong>JARVIS Notice</strong>
                     <p>AI checks passed. Recommend approval to promote this package to live.</p>
                   </div>
-                  <div class="catalyst-action-column">
+                  <div class="catalyst-action-column" id="catalyst-governance-actions">
                     <button class="catalyst-action-btn" type="button">Request Changes</button>
                     <button class="catalyst-action-btn primary" type="button">Promote to Live</button>
                   </div>
@@ -21272,10 +21274,10 @@ body::after {{
               <div class="catalyst-pivot-grid">
                 <div class="catalyst-panel catalyst-photo-panel">
                   <div class="catalyst-card-heading">
-                    <div class="catalyst-card-label">Intervention Required<strong>High-impact discrepancy</strong></div>
+                    <div class="catalyst-card-label">Intervention Required<strong id="catalyst-intervention-title">High-impact discrepancy</strong></div>
                     <span class="catalyst-chip risk">High Impact</span>
                   </div>
-                  <p>Vendor API returned inconsistent pricing data for the board pack. Confidence slipped below threshold, so Catalyst is holding before the approval chain advances.</p>
+                  <p id="catalyst-intervention-detail">Vendor API returned inconsistent pricing data for the board pack. Confidence slipped below threshold, so Catalyst is holding before the approval chain advances.</p>
                 </div>
                 <div class="catalyst-panel catalyst-list">
                   <div class="catalyst-card-heading">
@@ -21286,15 +21288,15 @@ body::after {{
                   </div>
                 </div>
                 <div class="catalyst-side-stack">
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-intervention-why">
                     <strong>Why This Matters</strong>
                     <p>This affects revenue projection accuracy, which is a key decision driver for the board.</p>
                   </div>
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-intervention-confidence">
                     <strong>Confidence</strong>
                     <p>62% · low. Enough to recommend a path, not enough to auto-promote the package.</p>
                   </div>
-                  <div class="catalyst-action-column">
+                  <div class="catalyst-action-column" id="catalyst-intervention-actions">
                     <button class="catalyst-action-btn primary" type="button">Run Option A</button>
                     <button class="catalyst-action-btn" type="button">Ask for Input</button>
                   </div>
@@ -21312,7 +21314,7 @@ body::after {{
                       <div style="font-size:11px;color:var(--cat-copy-muted);">Voice Catalyst Consultation</div>
                     </div>
                   </div>
-                  <div class="catalyst-chat-messages">
+                  <div class="catalyst-chat-messages" id="catalyst-voice-messages">
                     <div class="catalyst-chat-bubble user">Launch the Q2 board pack workflow and loop in Finance.</div>
                     <div class="catalyst-chat-bubble agent">Starting Q2 Board Pack workflow. I’m notifying Finance Agent and routing the package into executive review.</div>
                     <div class="catalyst-chat-bubble user">What’s the status of approvals?</div>
@@ -21320,16 +21322,16 @@ body::after {{
                     <div class="catalyst-chat-bubble agent">Reminders sent with high priority. I’ll stay on the workflow and nudge you when the review is complete.</div>
                   </div>
                   <div class="catalyst-chat-footer">
-                    <input class="catalyst-chat-input" type="text" value="Ask JARVIS to orchestrate..." readonly>
-                    <div class="catalyst-wave" style="width:120px; flex:0 0 120px;"></div>
+                    <input class="catalyst-chat-input" type="text" id="catalyst-voice-input" placeholder="Ask JARVIS to orchestrate...">
+                    <button class="catalyst-action-btn primary" type="button" id="catalyst-voice-send" onclick="catalystSendVoicePrompt()">Send</button>
                   </div>
                 </div>
                 <div class="catalyst-side-stack">
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-voice-context">
                     <strong>Context</strong>
                     <p>Workflow: Q2 Board Pack. Progress: 62%. Next step: executive review.</p>
                   </div>
-                  <div class="catalyst-side-panel">
+                  <div class="catalyst-side-panel" id="catalyst-voice-actions">
                     <strong>Actions</strong>
                     <ul>
                       <li>Send reminder</li>
@@ -21360,6 +21362,8 @@ body::after {{
             <div id="wi-proj-count"></div>
             <div id="wi-tasks-count"></div>
             <div id="wi-signals-count"></div>
+            <div id="catalyst-live-operations"></div>
+            <div id="catalyst-surfaced-insights"></div>
           </div>
         </main>
       </div>
@@ -28229,7 +28233,18 @@ async function runKasaScene(sceneId) {{
    WORK INTELLIGENCE (CATALYST VIEW)
 ═══════════════════════════════════════════════════════════════ */
 let _wiCurrentTab = 'overview';
-let _wiBriefingData = null;
+let _catalystModuleData = null;
+let _catalystVoiceTranscript = [];
+let _catalystRequestSerial = 0;
+const CATALYST_PROOF_PATHS = {{
+  module: '/api/catalyst/module',
+  progress_focus: '/api/apple/catalyst/progress-focus',
+  approval: '/api/apple/catalyst/approvals/{{request_id}}/approve',
+  recovery_execute: '/api/apple/catalyst/recovery-cases/{{case_id}}/execute',
+  recovery_remediation: '/api/apple/catalyst/recovery-cases/{{case_id}}/remediation',
+  agent_queue: '/api/apple/catalyst/agents/{{agent_id}}/queue-run',
+  activity: '/api/activity/operator-action',
+}};
 let catalystStoryboardPage = 1;
 const CATALYST_STORYBOARD_TITLES = {{
   1: {{
@@ -28268,6 +28283,7 @@ function catalystPageForTab(tabId) {{
   const map = {{
     overview: 1,
     projects: 2,
+    agents: 3,
     briefing: 3,
     tasks: 4,
     signals: 5,
@@ -28315,278 +28331,683 @@ function switchWITab(btn, tabId) {{
   _wiCurrentTab = tabId;
   catalystStoryboardPage = catalystPageForTab(tabId);
   syncCatalystStoryboard();
-  if      (tabId === 'projects') wiLoadProjects();
-  else if (tabId === 'tasks')    wiLoadTasks();
-  else if (tabId === 'briefing') wiLoadBriefing();
-  else if (tabId === 'signals')  wiLoadSignals();
+}}
+
+function catalystRuntimeNote(text) {{
+  _setTextIfPresent('catalyst-runtime-note', text || 'Catalyst is live and connected.');
+}}
+
+function catalystText(...values) {{
+  for (const value of values) {{
+    const text = String(value || '').trim();
+    if (text) return text;
+  }}
+  return '';
+}}
+
+function catalystTitleCase(value) {{
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\\b\\w/g, (char) => char.toUpperCase())
+    .trim();
+}}
+
+function catalystTone(value) {{
+  const raw = String(value || '').trim().toLowerCase();
+  if (['critical', 'high', 'error', 'blocked', 'risk', 'warn', 'warning', 'degraded'].includes(raw)) return 'high';
+  if (['active', 'good', 'approved', 'healthy', 'complete', 'completed', 'live', 'running', 'operational'].includes(raw)) return 'good';
+  return 'info';
+}}
+
+async function catalystReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_error) {{
+    return null;
+  }}
+}}
+
+async function catalystFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    const payload = await catalystReadJson(response);
+    return {{ ok: response.ok, status: response.status, payload }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
+
+function catalystResponseSummary(payload) {{
+  if (!payload || typeof payload !== 'object') return '';
+  return catalystText(
+    payload.result_summary,
+    payload.summary,
+    payload.detail,
+    payload.message,
+    payload.recommendation,
+    payload.problem_statement,
+    payload.desired_outcome,
+    payload.raw_output,
+    payload.opportunity,
+    payload.status
+  );
+}}
+
+function catalystFallbackView(route = '') {{
+  const map = {{
+    '/approval-queue': 'notifications',
+    '/command-center': 'chat',
+    '/briefing-center': 'overview',
+    '/activity-center': 'journey',
+    '/settings-center': 'settings',
+    '/health-center': 'health',
+    '/navigation-center': 'navigate',
+    '/supervision-snapshot': 'chat',
+    '/mission-board': 'workshop',
+    '/recovery-center': 'notifications',
+    '/chronicle-center': 'chronicle',
+    '/agent-ops-center': 'agents',
+  }};
+  return map[String(route || '').trim()] || '';
+}}
+
+async function catalystRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        domain: 'catalyst',
+        route: '/catalyst',
+        route_label: 'Catalyst',
+        related_kind: payload.related_kind || 'catalyst',
+        related_label: payload.related_label || payload.title || 'Catalyst',
+        succeeded: payload.succeeded !== false,
+        ...payload,
+      }}),
+    }});
+  }} catch (_error) {{
+    // Best-effort continuity logging only.
+  }}
+}}
+
+function catalystOpenRoute(route, fallbackView = '', label = 'Open Catalyst Surface', detail = '') {{
+  catalystRuntimeNote(`Opening ${{label}}…`);
+  catalystRecordAction({{
+    action: label,
+    title: label,
+    detail: detail || `Catalyst opened ${{label}}.`,
+    why_now: 'Catalyst routed a live execution surface into a related operating view.',
+    result_summary: `${{label}} opened from Catalyst.`,
+    related_kind: 'catalyst-route',
+    related_label: label,
+    route: route || '/command-center',
+    route_label: label,
+  }});
+  commandOpenCommandRoute(route || '', fallbackView || catalystFallbackView(route));
+}}
+
+function catalystActionButtonClass(action, tone = '') {{
+  return commandActionButtonClass(tone || catalystTone(action));
+}}
+
+function catalystMetricText(value, suffix = '') {{
+  if (value === null || value === undefined || value === '') return '—';
+  return `${{value}}${{suffix}}`;
+}}
+
+function catalystRenderStatusDots(agentOps = []) {{
+  const host = document.getElementById('wi-stat-workers');
+  const note = document.getElementById('wi-worker-note');
+  if (!host) return;
+  if (!Array.isArray(agentOps) || !agentOps.length) {{
+    host.textContent = '—';
+    if (note) note.textContent = 'No live Catalyst agent roster was surfaced.';
+    return;
+  }}
+  const running = agentOps.filter((item) => ['active', 'running'].includes(String(item.status || '').toLowerCase())).length;
+  const waiting = agentOps.filter((item) => ['waiting', 'attention'].includes(String(item.status || '').toLowerCase())).length;
+  const blocked = agentOps.filter((item) => ['blocked', 'error'].includes(String(item.status || '').toLowerCase())).length;
+  host.innerHTML = agentOps.slice(0, 8).map((item) => {{
+    const status = String(item.status || '').toLowerCase();
+    const cls = status === 'active' || status === 'running'
+      ? 'active'
+      : (status === 'blocked' || status === 'error' ? 'error' : 'paused');
+    return `<span class="wi-status-dot ${{cls}}"></span>`;
+  }}).join('') + ` <span class="wi-inline-stat">${{running}}/${{agentOps.length}} running</span>`;
+  if (note) {{
+    if (blocked) {{
+      note.textContent = `${{blocked}} agent lane(s) are blocked or errored.`;
+    }} else if (waiting) {{
+      note.textContent = `${{waiting}} agent lane(s) are waiting on a handoff or approval.`;
+    }} else {{
+      note.textContent = 'All surfaced Catalyst agent lanes are operational.';
+    }}
+  }}
+}}
+
+function catalystSetHero(payload) {{
+  const recommendation = payload.recommendation || {{}};
+  _setTextIfPresent(
+    'catalyst-hero-overline',
+    catalystText(
+      (payload.hero || {{}}).overline,
+      payload.status ? `Catalyst posture: ${{payload.status}}` : '',
+      'Catalyst posture is live.'
+    )
+  );
+  _setTextIfPresent(
+    'catalyst-hero-title',
+    catalystText(recommendation.title, 'Catalyst is already in motion.')
+  );
+  _setTextIfPresent(
+    'catalyst-hero-copy',
+    catalystText(recommendation.detail, payload.summary, 'Catalyst is waiting for the next bounded move.')
+  );
+  _setTextIfPresent(
+    'catalyst-subtitle',
+    catalystText(payload.what_became_real, payload.summary, 'Catalyst is live.')
+  );
+  const chip = document.getElementById('catalyst-recommendation-chip');
+  if (chip) chip.textContent = catalystTitleCase(recommendation.button_label || recommendation.action?.kind || 'Priority');
+}}
+
+function catalystSetCounts(payload) {{
+  const counts = payload.counts || {{}};
+  _setTextIfPresent('wi-stat-projects', catalystMetricText(counts.active_workflows));
+  _setTextIfPresent('wi-stat-tasks', catalystMetricText(counts.staged_actions));
+  _setTextIfPresent('wi-stat-overdue', catalystMetricText(counts.queued_automations));
+  _setTextIfPresent('wi-stat-approvals', catalystMetricText(counts.approvals_needed));
+  const health = document.getElementById('catalyst-system-health-score');
+  if (health) {{
+    health.innerHTML = `${{catalystMetricText(counts.system_health_score)}}<span>${{counts.system_health_score >= 90 ? 'Operational' : counts.system_health_score >= 70 ? 'Useful' : 'At Risk'}}</span>`;
+  }}
+}}
+
+function catalystRenderOperations(items = []) {{
+  const host = document.getElementById('wi-commitments');
+  const count = document.getElementById('wi-commit-count');
+  if (!host) return;
+  if (count) count.textContent = String(items.length || 0);
+  if (!items.length) {{
+    host.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No live Catalyst operations are currently surfaced.</div></div>';
+    return;
+  }}
+  host.innerHTML = items.map((item) => `
+    <div class="wi-commit-row">
+      <span class="dot ${{catalystTone(item.status) === 'high' ? 'dot-error' : catalystTone(item.status) === 'good' ? 'dot-success' : 'dot-active'}}" style="margin-top:3px;flex-shrink:0;"></span>
+      <div class="wi-commit-text">
+        <strong>${{escHtml(item.title || 'Operation')}}</strong><br>
+        <span style="color:var(--text-2);">${{escHtml(item.detail || '')}}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+        <span class="wi-commit-status ${{catalystTone(item.status) === 'high' ? 'overdue' : 'open'}}">${{escHtml(catalystTitleCase(item.status || 'live'))}}</span>
+        <button class="${{catalystActionButtonClass(item.status)}}" type="button" onclick='catalystOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Operation")}}, ${{JSON.stringify(item.detail || "")}})'>Open</button>
+      </div>
+    </div>
+  `).join('');
+}}
+
+function catalystRenderInsights(items = []) {{
+  const host = document.getElementById('wi-surfaces');
+  if (!host) return;
+  if (!items.length) {{
+    host.innerHTML = '<div style="color:var(--text-3);font-size:12px;">No fresh Catalyst insights are currently surfaced.</div>';
+    return;
+  }}
+  host.innerHTML = items.map((item) => `
+    <div class="wi-surface-item">
+      <div class="wi-surface-title">${{escHtml(item.title || 'Insight')}}</div>
+      <div class="wi-surface-reason">${{escHtml(item.reason || '')}}</div>
+      <button class="${{catalystActionButtonClass('info')}}" type="button" style="margin-top:10px;" onclick='catalystOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Insight")}}, ${{JSON.stringify(item.reason || "")}})'>Open Insight</button>
+    </div>
+  `).join('');
+}}
+
+function catalystRenderBuilder(payload) {{
+  const builder = payload.builder || {{}};
+  _setTextIfPresent('catalyst-builder-title', catalystText(builder.workflow_title, 'Catalyst Workflow'));
+  _setTextIfPresent('catalyst-builder-status', catalystTitleCase(builder.workflow_status || 'Draft'));
+  const blocks = document.getElementById('catalyst-blocks-list');
+  if (blocks) {{
+    const blockItems = Array.isArray(builder.blocks) ? builder.blocks : [];
+    if (blockItems.length) {{
+      blocks.innerHTML = blockItems.map((item) => `<div class="catalyst-block-item"><span class="catalyst-block-icon">✦</span>${{escHtml(catalystTitleCase(item))}}</div>`).join('');
+    }}
+  }}
+  const flow = document.getElementById('catalyst-builder-flow');
+  if (flow) {{
+    const nodes = Array.isArray(builder.nodes) ? builder.nodes : [];
+    flow.innerHTML = nodes.length ? `
+      <div class="catalyst-node-column">
+        ${{
+          nodes.slice(0, 3).map((item) => `
+            <div class="catalyst-node">
+              <span>${{escHtml(item.title || 'Node')}}</span>
+              <strong>${{escHtml(item.subtitle || 'Catalyst block')}}</strong>
+              <em>${{escHtml(item.detail || '')}}</em>
+            </div>
+          `).join('')
+        }}
+      </div>
+      <div class="catalyst-node-column">
+        ${{
+          nodes[3] ? `
+            <div class="catalyst-node decision"><div><span>${{escHtml(nodes[3].title || 'Condition')}}</span><strong>${{escHtml(nodes[3].subtitle || 'Decision')}}</strong><em>${{escHtml(nodes[3].detail || '')}}</em></div></div>
+          ` : ''
+        }}
+      </div>
+      <div class="catalyst-node-column">
+        ${{
+          nodes.slice(4).map((item) => `
+            <div class="catalyst-node">
+              <span>${{escHtml(item.title || 'Node')}}</span>
+              <strong>${{escHtml(item.subtitle || 'Catalyst block')}}</strong>
+              <em>${{escHtml(item.detail || '')}}</em>
+            </div>
+          `).join('')
+        }}
+      </div>
+    ` : '<div style="color:var(--text-3);font-size:12px;">Catalyst has not surfaced workflow nodes yet.</div>';
+  }}
+  const props = document.getElementById('catalyst-builder-properties');
+  if (props) {{
+    const properties = Array.isArray(builder.properties) ? builder.properties : [];
+    props.innerHTML = properties.length ? properties.map((item) => `
+      <div class="catalyst-property-row">
+        <span>${{escHtml(item.label || 'Property')}}</span>
+        <strong>${{escHtml(item.value || '—')}}</strong>
+        ${{item.detail ? `<em>${{escHtml(item.detail)}}</em>` : ''}}
+      </div>
+    `).join('') : '<div class="catalyst-property-row"><span>Selected node</span><strong>Not surfaced</strong></div>';
+  }}
+  const actions = document.getElementById('catalyst-builder-actions');
+  if (actions) {{
+    const items = Array.isArray(builder.actions) ? builder.actions : [];
+    actions.innerHTML = items.map((action, index) => `
+      <button class="catalyst-action-btn ${{index === 0 ? 'primary' : ''}}" type="button" onclick='catalystHandleAction(${{JSON.stringify(action)}})'>${{escHtml(action.label || 'Act')}}</button>
+    `).join('');
+  }}
+}}
+
+function catalystRenderExecution(payload) {{
+  const execution = payload.execution || {{}};
+  const flow = document.getElementById('catalyst-execution-flow');
+  if (flow) {{
+    const items = Array.isArray(execution.flow) ? execution.flow : [];
+    flow.innerHTML = items.length ? items.map((item) => `
+      <div class="catalyst-stage-item ${{item.active ? 'active' : ''}}">
+        <strong>${{escHtml(item.title || 'Stage')}}</strong>
+        <span>${{escHtml(item.detail || item.status || '')}}</span>
+      </div>
+    `).join('') : '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No execution flow is currently surfaced.</div></div>';
+  }}
+  _setTextIfPresent('catalyst-execution-title', catalystText(execution.headline, 'Catalyst Execution'));
+  _setTextIfPresent('catalyst-execution-headline', catalystText(execution.headline, 'Catalyst Execution'));
+  _setTextIfPresent('catalyst-execution-chip', catalystText(execution.headline_status, 'Execution live'));
+  const participants = document.getElementById('catalyst-execution-participants');
+  if (participants) {{
+    const items = Array.isArray(execution.people) ? execution.people : [];
+    participants.innerHTML = items.length ? items.map((item) => `<div class="catalyst-avatar ${{item.kind === 'you' ? 'you' : ''}}">${{escHtml(item.label || 'Agent').slice(0, 2)}}</div>`).join('') : '<div style="color:var(--text-3);font-size:12px;">No live participants surfaced.</div>';
+  }}
+  _setTextIfPresent('catalyst-execution-reasoning', catalystText(execution.reasoning, 'Catalyst has not surfaced a reasoning trace yet.'));
+  const scores = document.getElementById('catalyst-execution-scores');
+  if (scores) {{
+    const confidence = catalystText(payload.intervention?.confidence, payload.counts?.system_health_score ? `${{payload.counts.system_health_score}}% derived confidence` : '');
+    const approvals = payload.counts?.approvals_needed ?? 0;
+    scores.innerHTML = `
+      <div class="catalyst-score-card"><span>Confidence</span><strong>${{escHtml(confidence || 'Not surfaced')}}</strong></div>
+      <div class="catalyst-score-card"><span>Approval Gates</span><strong>${{escHtml(String(approvals))}}</strong></div>
+    `;
+  }}
+  const outputs = document.getElementById('catalyst-execution-outputs');
+  if (outputs) {{
+    const items = Array.isArray(execution.outputs) ? execution.outputs : [];
+    outputs.innerHTML = `<strong>Outputs So Far</strong>${{items.length ? `<ul>${{items.map((item) => `<li><strong>${{escHtml(item.title || 'Output')}}</strong> · ${{escHtml(item.detail || '')}}</li>`).join('')}}</ul>` : '<p>No output packets have been stored yet.</p>'}}`;
+  }}
+  const nextUp = document.getElementById('catalyst-execution-nextup');
+  if (nextUp) {{
+    const item = execution.next_up || {{}};
+    nextUp.innerHTML = `
+      <strong>Next Up</strong>
+      <p>${{escHtml(catalystText(item.title, 'No immediate next step surfaced.'))}}</p>
+      <button class="${{catalystActionButtonClass('info')}}" type="button" onclick='catalystOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Next Up")}}, ${{JSON.stringify(item.detail || "")}})'>Open Execution</button>
+    `;
+  }}
+}}
+
+function catalystRenderGovernance(payload) {{
+  const governance = payload.governance || {{}};
+  _setTextIfPresent('catalyst-governance-title', catalystText(governance.title, 'Catalyst package'));
+  _setTextIfPresent('catalyst-governance-status', catalystTitleCase(governance.status || 'Staged'));
+  _setTextIfPresent('catalyst-governance-preview-title', catalystText(governance.document_title, 'Catalyst package'));
+  _setTextIfPresent('catalyst-governance-preview', catalystText(governance.document_subtitle, 'Catalyst package preview is available.'));
+  const checks = document.getElementById('catalyst-governance-checks');
+  if (checks) {{
+    const items = Array.isArray(governance.checks) ? governance.checks : [];
+    checks.innerHTML = items.length ? items.map((item) => `
+      <div class="catalyst-approval-item">
+        <strong>${{escHtml(item.title || 'Check')}}</strong>
+        <span>${{escHtml(catalystText(item.detail, item.status))}}</span>
+      </div>
+    `).join('') : '<div class="catalyst-approval-item"><strong>No live governance checks surfaced</strong><span>Catalyst will place approvals and supervision gates here.</span></div>';
+  }}
+  const notice = document.getElementById('catalyst-governance-notice');
+  if (notice) {{
+    notice.innerHTML = `<strong>JARVIS Notice</strong><p>${{escHtml(catalystText(governance.notice, 'Catalyst governance is ready for review when a live gate appears.'))}}</p>`;
+  }}
+  const actions = document.getElementById('catalyst-governance-actions');
+  if (actions) {{
+    const items = Array.isArray(governance.actions) ? governance.actions : [];
+    actions.innerHTML = items.map((action, index) => `
+      <button class="catalyst-action-btn ${{index === items.length - 1 ? 'primary' : ''}}" type="button" onclick='catalystHandleAction(${{JSON.stringify(action)}})'>${{escHtml(action.label || 'Act')}}</button>
+    `).join('');
+  }}
+}}
+
+function catalystRenderIntervention(payload) {{
+  const intervention = payload.intervention || {{}};
+  _setTextIfPresent('catalyst-intervention-title', catalystText(intervention.title, 'No intervention case is currently dominant.'));
+  _setTextIfPresent('catalyst-intervention-detail', catalystText(intervention.detail, 'Catalyst will surface the highest-risk intervention lane here.'));
+  const list = document.getElementById('wi-signals-list');
+  if (list) {{
+    const items = Array.isArray(intervention.recommended_actions) ? intervention.recommended_actions : [];
+    list.innerHTML = items.length ? items.map((item) => `
+      <div class="list-row">
+        <span class="dot ${{item.kind === 'advice' ? 'dot-active' : 'dot-gold'}}" style="margin-top:3px;flex-shrink:0;"></span>
+        <div style="flex:1;min-width:0;">
+          <div class="list-row-name">${{escHtml(item.title || 'Recommendation')}}</div>
+          <div class="list-row-sub">${{escHtml(item.detail || '')}}</div>
+        </div>
+        <button class="${{catalystActionButtonClass(item.kind)}}" type="button" onclick='catalystOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Recommendation")}}, ${{JSON.stringify(item.detail || "")}})'>Open</button>
+      </div>
+    `).join('') : '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No intervention options are currently surfaced.</div></div>';
+  }}
+  const why = document.getElementById('catalyst-intervention-why');
+  if (why) why.innerHTML = `<strong>Why This Matters</strong><p>${{escHtml(catalystText(intervention.why_matters, 'Catalyst is protecting decision quality before work goes live.'))}}</p>`;
+  const confidence = document.getElementById('catalyst-intervention-confidence');
+  if (confidence) confidence.innerHTML = `<strong>Confidence</strong><p>${{escHtml(catalystText(intervention.confidence, 'No confidence score is currently surfaced.'))}}</p>`;
+  const actions = document.getElementById('catalyst-intervention-actions');
+  if (actions) {{
+    const items = Array.isArray(intervention.actions) ? intervention.actions : [];
+    actions.innerHTML = items.map((action, index) => `
+      <button class="catalyst-action-btn ${{index === 0 ? 'primary' : ''}}" type="button" onclick='catalystHandleAction(${{JSON.stringify(action)}})'>${{escHtml(action.label || 'Act')}}</button>
+    `).join('');
+  }}
+}}
+
+function catalystRenderVoiceTranscript() {{
+  const host = document.getElementById('catalyst-voice-messages');
+  if (!host) return;
+  const transcript = Array.isArray(_catalystVoiceTranscript) ? _catalystVoiceTranscript : [];
+  host.innerHTML = transcript.length ? transcript.map((item) => `
+    <div class="catalyst-chat-bubble ${{item.role === 'user' ? 'user' : 'agent'}}">${{escHtml(item.text || '')}}</div>
+  `).join('') : '<div class="catalyst-chat-bubble agent">Catalyst is waiting for your first prompt.</div>';
+  host.scrollTop = host.scrollHeight;
+}}
+
+function catalystRenderVoice(payload) {{
+  const voice = payload.voice || {{}};
+  _catalystVoiceTranscript = (Array.isArray(voice.messages) ? voice.messages : []).map((item) => ({{
+    role: item.role === 'user' ? 'user' : 'agent',
+    speaker: item.speaker || (item.role === 'user' ? 'You' : 'Catalyst'),
+    text: catalystText(item.text, item.detail, 'Catalyst packet unavailable.'),
+  }}));
+  catalystRenderVoiceTranscript();
+  const input = document.getElementById('catalyst-voice-input');
+  if (input) input.placeholder = catalystText(voice.input_placeholder, 'Ask JARVIS to orchestrate...');
+  const context = document.getElementById('catalyst-voice-context');
+  if (context) {{
+    const items = Array.isArray(voice.context) ? voice.context : [];
+    context.innerHTML = `<strong>Context</strong>${{items.length ? `<ul>${{items.map((item) => `<li>${{escHtml(item)}}</li>`).join('')}}</ul>` : '<p>No live Catalyst voice context is currently surfaced.</p>'}}`;
+  }}
+  const actions = document.getElementById('catalyst-voice-actions');
+  if (actions) {{
+    const items = Array.isArray(voice.actions) ? voice.actions : [];
+    actions.innerHTML = `<strong>Actions</strong>${{items.length ? `<ul>${{items.map((item) => `<li><button class="${{catalystActionButtonClass(item.kind)}}" type="button" onclick='catalystHandleAction(${{JSON.stringify(item)}})'>${{escHtml(item.label || 'Action')}}</button></li>`).join('')}}</ul>` : '<p>No voice actions surfaced.</p>'}}`;
+  }}
+}}
+
+function renderCatalystModule(payload) {{
+  _catalystModuleData = payload || {{}};
+  catalystSetHero(_catalystModuleData);
+  catalystSetCounts(_catalystModuleData);
+  catalystRenderStatusDots((((_catalystModuleData.runtime || {{}}).ops || {{}}).agent_ops) || []);
+  catalystRenderOperations(_catalystModuleData.live_operations || []);
+  catalystRenderInsights(_catalystModuleData.surfaced_insights || []);
+  catalystRenderBuilder(_catalystModuleData);
+  catalystRenderExecution(_catalystModuleData);
+  catalystRenderGovernance(_catalystModuleData);
+  catalystRenderIntervention(_catalystModuleData);
+  catalystRenderVoice(_catalystModuleData);
+  const recommendation = _catalystModuleData.recommendation || {{}};
+  const reviewButton = document.getElementById('catalyst-review-button');
+  if (reviewButton) reviewButton.textContent = catalystText(recommendation.button_label, 'Review Now');
+  const sideA = document.getElementById('catalyst-side-panel-finalizing');
+  if (sideA) {{
+    sideA.innerHTML = `<strong>Finalizing</strong><p>${{escHtml(catalystText(recommendation.title, _catalystModuleData.summary, 'Catalyst is waiting for the next move.'))}}</p>`;
+  }}
+  const sideB = document.getElementById('catalyst-side-panel-window');
+  if (sideB) {{
+    sideB.innerHTML = `<strong>Intervention Window</strong><p>${{escHtml(catalystText(_catalystModuleData.remains_partial, (_catalystModuleData.availability_notes || [])[0], 'Catalyst is connected with bounded visibility.'))}}</p>`;
+  }}
+}}
+
+async function catalystHandleAction(action) {{
+  const item = action && typeof action === 'object' ? action : {{}};
+  const kind = String(item.kind || '').trim().toLowerCase();
+  if (!kind) return;
+  if (kind === 'open-route') {{
+    catalystOpenRoute(item.route || '', item.fallback_view || item.fallbackView || '', item.label || 'Open Route', item.detail || '');
+    return;
+  }}
+  if (kind === 'refresh') {{
+    await refreshCatalystDesktop(true);
+    return;
+  }}
+  if (kind === 'voice-prompt') {{
+    const input = document.getElementById('catalyst-voice-input');
+    if (input) input.value = item.prompt || '';
+    await catalystSendVoicePrompt(item.prompt || '');
+    return;
+  }}
+  let endpoint = '';
+  let body = null;
+  let successLabel = item.label || catalystTitleCase(kind);
+  if (kind === 'progress-focus') {{
+    endpoint = '/api/apple/catalyst/progress-focus';
+    body = {{
+      actor: 'chris',
+      module: item.module || 'Catalyst',
+      route: item.route || '/progress-center',
+      reason: item.reason || 'Catalyst saved the current progress focus.',
+    }};
+  }} else if (kind === 'pipeline-review') {{
+    endpoint = '/api/pipeline-review/complete';
+    body = {{
+      actor: 'Chris',
+      review_type: item.review_type || 'catalyst',
+      note: item.note || 'Catalyst completed a governance review from the desktop workspace.',
+    }};
+  }} else if (kind === 'queue-agent' && item.agent_id) {{
+    endpoint = `/api/apple/catalyst/agents/${{encodeURIComponent(item.agent_id)}}/queue-run`;
+    body = {{ actor: 'chris' }};
+  }} else if (kind === 'approve-approval' && item.request_id) {{
+    endpoint = `/api/apple/catalyst/approvals/${{encodeURIComponent(item.request_id)}}/approve`;
+    body = {{ actor: 'chris' }};
+  }} else if (kind === 'recovery-execute' && item.case_id) {{
+    endpoint = `/api/apple/catalyst/recovery-cases/${{encodeURIComponent(item.case_id)}}/execute`;
+    body = {{ actor: 'chris', action_type: item.action_type || 'retry', note: item.detail || '' }};
+  }} else if (kind === 'recovery-remediation' && item.case_id) {{
+    endpoint = `/api/apple/catalyst/recovery-cases/${{encodeURIComponent(item.case_id)}}/remediation`;
+    body = {{ actor: 'chris', action_type: item.action_type || 'stage', note: item.detail || '' }};
+  }} else if (kind === 'recovery-plan' && item.case_id) {{
+    endpoint = `/api/apple/catalyst/recovery-cases/${{encodeURIComponent(item.case_id)}}/plan/execute-next`;
+    body = {{ actor: 'chris', note: item.detail || '' }};
+  }} else if (kind === 'supervision-action' && item.request_id && item.action) {{
+    endpoint = `/api/apple/catalyst/supervision/${{encodeURIComponent(item.request_id)}}/${{encodeURIComponent(item.action)}}`;
+    body = {{ actor: 'chris', reason: item.reason || item.detail || 'Catalyst supervision action triggered from the desktop workspace.' }};
+  }}
+  if (!endpoint) {{
+    catalystRuntimeNote(`No live Catalyst action is wired for ${{successLabel}} yet.`);
+    if (typeof showToast === 'function') showToast('Action is not available in this runtime', 'warning');
+    return;
+  }}
+  catalystRuntimeNote(`${{successLabel}}…`);
+  const response = await catalystFetchJson(endpoint, {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: body == null ? undefined : JSON.stringify(body),
+  }});
+  if (!response.ok) {{
+    const detail = catalystText(response.payload?.detail, response.error?.message, `HTTP ${{response.status}}`);
+    catalystRuntimeNote(`Catalyst action failed: ${{detail}}`);
+    if (typeof showToast === 'function') showToast('Catalyst action failed', 'error');
+    return;
+  }}
+  await catalystRecordAction({{
+    action: successLabel,
+    title: successLabel,
+    detail: catalystText(item.detail, catalystResponseSummary(response.payload), `${{successLabel}} completed from Catalyst.`),
+    why_now: 'Catalyst executed a bounded live action from the desktop workspace.',
+    result_summary: catalystText(catalystResponseSummary(response.payload), `${{successLabel}} completed.`),
+    related_kind: 'catalyst-action',
+    related_label: successLabel,
+  }});
+  catalystRuntimeNote(catalystText(catalystResponseSummary(response.payload), `${{successLabel}} completed.`));
+  if (typeof showToast === 'function') showToast(successLabel, 'success');
+  await refreshCatalystDesktop(true);
+}}
+
+function catalystRunRecommendation() {{
+  const action = (_catalystModuleData || {{}}).recommendation?.action;
+  if (action) {{
+    catalystHandleAction(action);
+    return;
+  }}
+  refreshCatalystDesktop(true);
+}}
+
+async function catalystSendVoicePrompt(promptOverride = '') {{
+  const input = document.getElementById('catalyst-voice-input');
+  const prompt = catalystText(promptOverride, input?.value);
+  if (!prompt) {{
+    catalystRuntimeNote('Type a Catalyst prompt first.');
+    return;
+  }}
+  _catalystVoiceTranscript.push({{ role: 'user', speaker: 'You', text: prompt }});
+  catalystRenderVoiceTranscript();
+  if (input) input.value = '';
+  catalystRuntimeNote('Catalyst is thinking…');
+
+  const lower = prompt.toLowerCase();
+  const module = _catalystModuleData || {{}};
+  const approval = (((module.runtime || {{}}).ops || {{}}).approvals || [])[0] || null;
+  const recoveryCase = (((module.runtime || {{}}).ops || {{}}).recovery_cases || [])[0] || null;
+  const agent = (((module.runtime || {{}}).ops || {{}}).agent_ops || [])[0] || null;
+  const activeWorkflow = catalystText(module.builder?.workflow_title, module.execution?.headline, 'Catalyst Workflow');
+  const supportingSignals = (module.surfaced_insights || []).slice(0, 3).map((item) => item.title || '').filter(Boolean);
+
+  let endpoint = '/api/catalyst-proactive';
+  let body = {{
+    actor: 'Chris',
+    horizon: 'today',
+    context: prompt,
+  }};
+  if (lower.includes('approve') && approval?.request_id) {{
+    endpoint = `/api/apple/catalyst/approvals/${{encodeURIComponent(approval.request_id)}}/approve`;
+    body = {{ actor: 'chris' }};
+  }} else if ((lower.includes('run') || lower.includes('launch') || lower.includes('queue')) && agent?.agent_id) {{
+    endpoint = `/api/apple/catalyst/agents/${{encodeURIComponent(agent.agent_id)}}/queue-run`;
+    body = {{ actor: 'chris' }};
+  }} else if ((lower.includes('recover') || lower.includes('retry') || lower.includes('repair')) && recoveryCase?.case_id) {{
+    endpoint = `/api/apple/catalyst/recovery-cases/${{encodeURIComponent(recoveryCase.case_id)}}/execute`;
+    body = {{ actor: 'chris', action_type: recoveryCase.next_action_type || 'retry', note: prompt }};
+  }} else if (lower.includes('brief') || lower.includes('status') || lower.includes('summary')) {{
+    endpoint = '/api/catalyst-briefing';
+    body = {{ actor: 'Chris', user_context: prompt }};
+  }} else if (lower.includes('idea') || lower.includes('hypothesis') || lower.includes('opportunity')) {{
+    endpoint = '/api/catalyst-hypothesis';
+    body = {{
+      actor: 'Chris',
+      focus: prompt,
+      context: catalystText(module.summary, module.what_became_real),
+      lane: catalystText(module.builder?.properties?.[0]?.detail, 'operations'),
+      supporting_signals: supportingSignals,
+    }};
+  }} else if (lower.includes('plan') || lower.includes('workflow') || lower.includes('build')) {{
+    endpoint = '/api/catalyst-implementation-plan';
+    body = {{
+      actor: 'Chris',
+      project_name: activeWorkflow,
+      brief: prompt,
+      constraints: (module.availability_notes || []).join(' | '),
+    }};
+  }}
+
+  const response = await catalystFetchJson(endpoint, {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify(body),
+  }});
+  if (!response.ok) {{
+    const detail = catalystText(response.payload?.detail, response.error?.message, `HTTP ${{response.status}}`);
+    _catalystVoiceTranscript.push({{ role: 'agent', speaker: 'Catalyst', text: `Catalyst could not complete that request: ${{detail}}` }});
+    catalystRenderVoiceTranscript();
+    catalystRuntimeNote(`Voice request failed: ${{detail}}`);
+    if (typeof showToast === 'function') showToast('Catalyst voice request failed', 'error');
+    return;
+  }}
+  const reply = catalystText(
+    catalystResponseSummary(response.payload),
+    response.payload?.continuity?.guidance_lines?.[0],
+    response.payload?.continuity?.hottest_workflow,
+    response.payload?.status,
+    'Catalyst completed the request.'
+  );
+  _catalystVoiceTranscript.push({{ role: 'agent', speaker: 'Catalyst', text: reply }});
+  catalystRenderVoiceTranscript();
+  await catalystRecordAction({{
+    action: 'Catalyst voice request',
+    title: prompt,
+    detail: prompt,
+    why_now: 'Catalyst processed a live voice-style prompt from the desktop workspace.',
+    result_summary: reply,
+    related_kind: 'catalyst-voice',
+    related_label: activeWorkflow,
+  }});
+  catalystRuntimeNote(reply);
+  if (typeof showToast === 'function') showToast('Catalyst responded', 'success');
+  await refreshCatalystDesktop(true);
+}}
+
+async function refreshCatalystDesktop(forceLive = false) {{
+  const requestSerial = ++_catalystRequestSerial;
+  catalystRuntimeNote(forceLive ? 'Refreshing live Catalyst workspace…' : 'Loading live Catalyst workspace…');
+  const response = await catalystFetchJson('/api/catalyst/module');
+  if (requestSerial !== _catalystRequestSerial) return;
+  if (!response.ok || !response.payload) {{
+    const detail = catalystText(response.payload?.detail, response.error?.message, `HTTP ${{response.status}}`);
+    catalystRuntimeNote(`Catalyst could not load: ${{detail}}`);
+    return;
+  }}
+  renderCatalystModule(response.payload);
+  const notes = Array.isArray(response.payload.availability_notes) ? response.payload.availability_notes : [];
+  if (notes.length) {{
+    catalystRuntimeNote(notes[0]);
+  }} else {{
+    catalystRuntimeNote('Catalyst is live and connected.');
+  }}
 }}
 
 async function loadWorkIntelligence() {{
   syncCatalystStoryboard();
-  wiLoadSummary();
-  wiLoadCommitments();
-  wiLoadWorkerStatus();
-  wiLoadSurfaces();
-  wiLoadProjects();
-  wiLoadTasks();
-  wiLoadBriefing();
-  wiLoadSignals();
-}}
-
-async function wiLoadSummary() {{
-  try {{
-    const res = await fetch('/api/wi/summary');
-    if (!res.ok) return;
-    const d = await res.json();
-    const ps = document.getElementById('wi-stat-projects');
-    const ts = document.getElementById('wi-stat-tasks');
-    const os = document.getElementById('wi-stat-overdue');
-    const ap = document.getElementById('wi-stat-approvals');
-    if (ps) ps.textContent = d.active_projects ?? '—';
-    if (ts) ts.textContent = d.open_tasks ?? '—';
-    if (os) os.textContent = d.overdue_commitments ?? '0';
-    if (ap) ap.textContent = d.pending_approvals ?? d.approvals_needed ?? d.overdue_commitments ?? '5';
-    if (d.one_recommendation) {{
-      const el = document.getElementById('wi-one-rec');
-      if (el) el.innerHTML = '<p style="margin:0;">' + escHtml(d.one_recommendation) + '</p>';
-    }}
-  }} catch(e) {{ console.error('wiLoadSummary', e); }}
-}}
-
-async function wiLoadWorkerStatus() {{
-  const el = document.getElementById('wi-stat-workers');
-  const note = document.getElementById('wi-worker-note');
-  if (!el) return;
-  try {{
-    const res = await fetch('/api/wi/workers/status');
-    if (!res.ok) {{ el.textContent = '—'; if (note) note.textContent = 'Worker status unavailable right now.'; return; }}
-    const d = await res.json();
-    const workers = d.workers || [];
-    const running = workers.filter(w => w.status === 'running').length;
-    const errorCount = workers.filter(w => w.status === 'error').length;
-    el.innerHTML = workers.map(w => {{
-      const cls = w.status === 'running' ? 'active' : w.status === 'error' ? 'error' : 'paused';
-      return `<span class="wi-status-dot ${{cls}}"></span>`;
-    }}).join('') + ` <span class="wi-inline-stat">${{running}}/${{workers.length}} running</span>`;
-    if (note) note.textContent = errorCount
-      ? `${{errorCount}} worker${{errorCount === 1 ? '' : 's'}} need attention.`
-      : 'All systems nominal.';
-  }} catch(e) {{
-    el.textContent = '—';
-    if (note) note.textContent = 'Worker status unavailable right now.';
-  }}
-}}
-
-async function wiLoadCommitments() {{
-  const el  = document.getElementById('wi-commitments');
-  const cnt = document.getElementById('wi-commit-count');
-  if (!el) return;
-  try {{
-    const res = await fetch('/api/wi/commitments');
-    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
-    const d = await res.json();
-    const items = d.commitments || [];
-    if (cnt) cnt.textContent = items.length;
-    if (!items.length) {{
-      el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No open commitments</div></div>';
-      return;
-    }}
-    el.innerHTML = items.slice(0, 6).map(c => {{
-      const isOverdue = (c.status || '').toLowerCase() === 'overdue';
-      const statusCls = isOverdue ? 'overdue' : 'open';
-      const dotCls    = isOverdue ? 'dot-error' : 'dot-gold';
-      return `<div class="wi-commit-row">
-        <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
-        <div class="wi-commit-text">${{escHtml(c.description || c.commitment_text || '—')}}</div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-          <span class="wi-commit-status ${{statusCls}}">${{escHtml(c.status || 'open')}}</span>
-          ${{c.due_date ? `<span class="wi-commit-due">${{fmtLocalTime(c.due_date, {{dateOnly:true}})}}</span>` : ''}}
-        </div>
-      </div>`;
-    }}).join('');
-    if (items.length > 6) {{
-      el.innerHTML += `<div class="list-row" style="text-align:right;cursor:pointer;" onclick="switchWITab(document.querySelector('[data-wi-tab=tasks]'),'tasks')">
-        <span style="font-size:11px;color:var(--hue);">${{items.length - 6}} more →</span></div>`;
-    }}
-  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Error loading commitments</div></div>'; }}
-}}
-
-async function wiLoadSurfaces() {{
-  const el = document.getElementById('wi-surfaces');
-  if (!el) return;
-  try {{
-    const res = await fetch('/api/wi/surface', {{
-      method: 'POST',
-      headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{}})
-    }});
-    if (!res.ok) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Nothing to surface right now.</div>'; return; }}
-    const d = await res.json();
-    const items = d.suggestions || d.surfaces || [];
-    if (!items.length) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Nothing to surface right now.</div>'; return; }}
-    el.innerHTML = items.slice(0, 4).map(s =>
-      `<div class="wi-surface-item">
-        <div class="wi-surface-title">${{escHtml(s.title || s.surface || '—')}}</div>
-        ${{s.reason ? `<div class="wi-surface-reason">${{escHtml(s.reason)}}</div>` : ''}}
-      </div>`
-    ).join('');
-  }} catch(e) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Nothing to surface right now.</div>'; }}
-}}
-
-async function wiLoadProjects() {{
-  const el  = document.getElementById('wi-projects-list');
-  const cnt = document.getElementById('wi-proj-count');
-  if (!el) return;
-  el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>';
-  try {{
-    const res = await fetch('/api/wi/projects');
-    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
-    const d = await res.json();
-    const items = d.projects || [];
-    if (cnt) cnt.textContent = items.length;
-    if (!items.length) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No projects yet</div></div>'; return; }}
-    el.innerHTML = items.map(p => {{
-      const health   = (p.health_status || p.status || 'active').toLowerCase().replace('_','-');
-      const badgeCls = health === 'at-risk'   ? 'at-risk' :
-                       health === 'on-track'  ? 'on-track' : 'active';
-      const dotCls   = badgeCls === 'at-risk'  ? 'dot-gold' :
-                       badgeCls === 'on-track' ? 'dot-success' : 'dot-active';
-      return `<div class="wi-project-row">
-        <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
-        <div class="wi-project-info">
-          <div class="wi-project-name">${{escHtml(p.name || p.title || '—')}}</div>
-          ${{p.description ? `<div class="wi-project-sub">${{escHtml(p.description.slice(0, 90))}}</div>` : ''}}
-        </div>
-        <span class="wi-project-badge ${{badgeCls}}">${{escHtml(health)}}</span>
-      </div>`;
-    }}).join('');
-  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Error loading projects</div></div>'; }}
-}}
-
-async function wiLoadTasks() {{
-  const el  = document.getElementById('wi-tasks-list');
-  const cnt = document.getElementById('wi-tasks-count');
-  if (!el) return;
-  el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>';
-  try {{
-    const res = await fetch('/api/wi/tasks');
-    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
-    const d = await res.json();
-    const items = (d.tasks || []).filter(t => t.status !== 'completed');
-    if (cnt) cnt.textContent = items.length;
-    if (!items.length) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">All clear — no open tasks ✓</div></div>'; return; }}
-    el.innerHTML = items.map(t => {{
-      const pri    = parseInt(t.priority) || 3;
-      const priCls = pri <= 1 ? 'p1' : pri === 2 ? 'p2' : 'p3';
-      return `<div class="list-row" id="wi-task-${{t.id}}">
-        <span class="wi-priority-ring ${{priCls}}" style="margin-top:3px;flex-shrink:0;"></span>
-        <div style="flex:1;min-width:0;">
-          <div class="list-row-name">${{escHtml(t.title || t.task_title || '—')}}</div>
-          ${{t.project_name ? `<div class="list-row-sub">${{escHtml(t.project_name)}}</div>` : ''}}
-        </div>
-        <button class="wi-complete-btn" onclick="wiCompleteTask(${{t.id}})">Done</button>
-      </div>`;
-    }}).join('');
-  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Error loading tasks</div></div>'; }}
-}}
-
-async function wiLoadBriefing() {{
-  const el   = document.getElementById('wi-briefing-content');
-  const meta = document.getElementById('wi-briefing-meta');
-  if (!el) return;
-  if (_wiBriefingData) {{ _wiRenderBriefing(_wiBriefingData); return; }}
-  el.innerHTML = '<div class="skel" style="height:10px;width:85%;margin-bottom:6px;"></div><div class="skel" style="height:10px;width:70%;margin-bottom:6px;"></div><div class="skel" style="height:10px;width:60%;"></div>';
-  try {{
-    const res = await fetch('/api/wi/summary');
-    if (!res.ok) throw new Error(res.status);
-    const d = await res.json();
-    if (d.latest_briefing) {{
-      _wiBriefingData = d.latest_briefing;
-      _wiRenderBriefing(d.latest_briefing);
-    }} else {{
-      el.innerHTML = '<div style="color:var(--text-3);font-size:12px;text-align:center;padding:20px 0;">No briefing yet. Workers run daily at the configured hour, or click ↻ Refresh to generate now.</div>';
-    }}
-  }} catch(e) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">Unable to load briefing.</div>'; }}
-}}
-
-async function wiRefreshBriefing() {{
-  const el = document.getElementById('wi-briefing-content');
-  if (el) el.innerHTML = '<div style="text-align:center;padding:20px 0;color:var(--hue);">Generating briefing… <span style="font-family:var(--font-mono);font-size:10px;">(~15s)</span></div>';
-  _wiBriefingData = null;
-  try {{
-    const res = await fetch('/api/wi/briefing/generate', {{
-      method: 'POST',
-      headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{}})
-    }});
-    if (!res.ok) throw new Error(res.status);
-    const d = await res.json();
-    _wiBriefingData = d;
-    _wiRenderBriefing(d);
-    showToast('Briefing generated ✓', 'success');
-  }} catch(e) {{
-    if (el) el.innerHTML = '<div style="color:var(--crimson);font-size:12px;">Generation failed — check worker logs.</div>';
-  }}
-}}
-
-function _wiRenderBriefing(d) {{
-  const el   = document.getElementById('wi-briefing-content');
-  const meta = document.getElementById('wi-briefing-meta');
-  if (!el) return;
-  const narrative = d.narrative || d.briefing_text || d.content || '';
-  if (!narrative) {{ el.innerHTML = '<div style="color:var(--text-3);font-size:12px;">No briefing content available.</div>'; return; }}
-  el.innerHTML = narrative.split('\\n').filter(l => l.trim()).map(line => {{
-    if (/^#+\\s/.test(line))  return `<p style="font-weight:700;color:var(--text-1);margin:12px 0 4px;">${{escHtml(line.replace(/^#+\\s*/,''))}}</p>`;
-    if (/^[-*]\\s/.test(line)) return `<p style="margin:3px 0 3px 10px;color:var(--text-2);">• ${{escHtml(line.replace(/^[-*]\\s*/,''))}}</p>`;
-    return `<p style="margin:4px 0;">${{escHtml(line)}}</p>`;
-  }}).join('');
-  if (meta && d.generated_at) meta.textContent = 'Generated ' + fmtLocalTime(d.generated_at);
-}}
-
-async function wiLoadSignals() {{
-  const el  = document.getElementById('wi-signals-list');
-  const cnt = document.getElementById('wi-signals-count');
-  if (!el) return;
-  el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Loading…</div></div>';
-  try {{
-    const res = await fetch('/api/wi/signals');
-    if (!res.ok) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">Unavailable</div></div>'; return; }}
-    const d = await res.json();
-    const items = d.signals || [];
-    if (cnt) cnt.textContent = items.length;
-    if (!items.length) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--text-3);">No recent signals</div></div>'; return; }}
-    el.innerHTML = items.slice(0, 15).map(s => {{
-      const crit   = (s.criticality || 'STANDARD').toUpperCase();
-      const dotCls = crit === 'CRITICAL' ? 'dot-error' : crit === 'LOW' ? 'dot-standby' : 'dot-active';
-      return `<div class="list-row">
-        <span class="dot ${{dotCls}}" style="margin-top:3px;flex-shrink:0;"></span>
-        <div style="flex:1;min-width:0;">
-          <div class="list-row-name">${{escHtml((s.content || s.signal_text || '—').slice(0, 120))}}</div>
-          <div class="list-row-sub">${{escHtml(s.signal_type || 'unknown')}} · ${{fmtLocalTime(s.created_at, {{short:true}})}}</div>
-        </div>
-        <span class="wi-signal-type">${{escHtml(crit)}}</span>
-      </div>`;
-    }}).join('');
-  }} catch(e) {{ el.innerHTML = '<div class="list-row"><div class="list-row-name" style="color:var(--crimson);">Error loading signals</div></div>'; }}
-}}
-
-async function wiCompleteTask(taskId) {{
-  const row = document.getElementById('wi-task-' + taskId);
-  try {{
-    const res = await fetch('/api/wi/tasks/' + taskId + '/complete', {{method: 'POST'}});
-    if (res.ok) {{
-      if (row) {{
-        row.style.opacity = '0.4';
-        row.style.transition = 'opacity 0.3s';
-        setTimeout(() => row.remove(), 350);
-      }}
-      const cnt = document.getElementById('wi-tasks-count');
-      if (cnt && cnt.textContent) cnt.textContent = Math.max(0, parseInt(cnt.textContent) - 1);
-      const stat = document.getElementById('wi-stat-tasks');
-      if (stat && stat.textContent) stat.textContent = Math.max(0, parseInt(stat.textContent) - 1);
-      showToast('Task completed ✓', 'success');
-    }} else {{ showToast('Could not complete task', 'warning'); }}
-  }} catch(e) {{ showToast('Error completing task', 'error'); }}
+  return refreshCatalystDesktop(false);
 }}
 
 /* ═══════════════════════════════════════════════════════════════
@@ -42213,28 +42634,24 @@ function handlePacket(pkt) {{
       break;
     case 'wi.daily_briefing.ready':
       if (currentView === 'catalyst') {{
-        _wiBriefingData = null;
-        if (_wiCurrentTab === 'briefing') wiLoadBriefing();
-        showToast('Daily briefing ready 📋', 'info');
+        refreshCatalystDesktop(true);
+        showToast('Catalyst briefing packet updated 📋', 'info');
       }}
       break;
     case 'wi.email_sweep.completed':
       if (currentView === 'catalyst') {{
-        wiLoadSummary();
-        if (_wiCurrentTab === 'signals') wiLoadSignals();
+        refreshCatalystDesktop(true);
       }}
       break;
     case 'wi.meeting_prep.ready':
       if (currentView === 'catalyst') {{
-        showToast('Meeting prep ready 📅', 'info');
-        if (_wiCurrentTab === 'briefing') wiLoadBriefing();
+        refreshCatalystDesktop(true);
+        showToast('Catalyst meeting prep ready 📅', 'info');
       }}
       break;
     case 'wi.commitments.updated':
       if (currentView === 'catalyst') {{
-        wiLoadCommitments();
-        wiLoadSummary();
-        if (_wiCurrentTab === 'tasks') wiLoadTasks();
+        refreshCatalystDesktop(true);
       }}
       break;
     case 'agent_roster_updated':
