@@ -10,6 +10,18 @@ if TYPE_CHECKING:
 def render_glass_shell(runtime, initial_packet: str = "") -> str:
     """Return the complete Glass theme HTML document string."""
     import json as _json
+    import re as _re
+
+    def _strip_ordered_html_titles(html: str) -> str:
+        patterns = (
+            r'(<h[1-6]\b[^>]*>\s*)\d+\.\s*',
+            r'(<strong\b[^>]*>\s*)\d+\.\s*',
+            r'(<div\b[^>]*class="[^"]*(?:card-number|card-title|panel-title|topbar-title|nav-title)[^"]*"[^>]*>\s*)\d+\.\s*',
+            r'(<[^>]+\bid="[^"]*page-label[^"]*"[^>]*>\s*)\d+\.\s*',
+        )
+        for pattern in patterns:
+            html = _re.sub(pattern, r"\1", html)
+        return html
 
     try:
         user_name = runtime.config.your_name or "Chris"
@@ -31,7 +43,7 @@ def render_glass_shell(runtime, initial_packet: str = "") -> str:
                 "director": "Office",
                 "household-coordinator": "Kitchen",
                 "student": "Study",
-            }
+                }
             for user in list(users.values())[:5]:
                 role = str(getattr(user, "role", "") or "").strip().lower()
                 home_people_seed.append(
@@ -52,7 +64,7 @@ def render_glass_shell(runtime, initial_packet: str = "") -> str:
     _home_quiet_start_js = _json.dumps(home_quiet_start)
     _home_quiet_end_js = _json.dumps(home_quiet_end)
 
-    return f"""<!DOCTYPE html>
+    html = f"""<!DOCTYPE html>
 <html lang="en" data-domain="overview">
 <head>
   <meta charset="UTF-8">
@@ -1383,6 +1395,19 @@ body::after {{
   margin-top: 4px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}}
+[class*="card-number"],
+[class*="card-title"],
+[class*="panel-title"],
+[class$="topbar-title"],
+[class$="nav-title"],
+[id$="page-label"] {{
+  line-height: 1.24;
+}}
+[class*="card-number"],
+[class*="card-title"],
+[class*="panel-title"] {{
+  letter-spacing: 0.1em;
 }}
 
 /* ── Section label ── */
@@ -4540,6 +4565,30 @@ body::after {{
   color: rgba(244,236,223,0.66);
   font-size: 12px;
   line-height: 1.45;
+}}
+@media (max-width: 2050px) {{
+  .dailybrief-masthead {{
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.95fr) minmax(0, 1fr) minmax(320px, 1fr);
+  }}
+  .dailybrief-top-metrics {{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }}
+  .dailybrief-profile-card {{
+    min-width: 0;
+  }}
+  .dailybrief-brand-copy h1 {{
+    font-size: clamp(26px, 2.35vw, 42px);
+  }}
+  .dailybrief-greeting-card h2 {{
+    font-size: clamp(24px, 2vw, 30px);
+  }}
+  .dailybrief-scripture-card blockquote {{
+    font-size: 16px;
+    line-height: 1.58;
+  }}
+  .dailybrief-top-metric span {{
+    font-size: clamp(26px, 2.1vw, 32px);
+  }}
 }}
 .dailybrief-board {{
   display: grid;
@@ -26648,6 +26697,8 @@ async function init() {{
   }}
 
   await loadCfIdentity();
+  normalizeOrderedTitleNodes(document);
+  ensureOrderedTitleObserver();
   try {{
     const startupView = String(window.__JARVIS_START_VIEW || 'overview');
     switchView(startupView);
@@ -26738,6 +26789,7 @@ function switchView(name) {{
   currentView = name;
   loadViewData(name);
   syncDesktopCardSequence(name);
+  normalizeOrderedTitleNodes(el || document);
   if (_desktopCardFocus.view && _desktopCardFocus.view !== name) closeDesktopCardFocus();
 }}
 
@@ -26912,14 +26964,97 @@ const _desktopSequenceState = {{}};
 const _desktopSequenceCards = {{}};
 const _desktopSequenceBars = {{}};
 const _desktopCardFocus = {{ view: '', index: 0 }};
+let _orderedTitleObserver = null;
+let _orderedTitleNormalizeQueued = false;
+
+function stripOrderedTitlePrefix(raw) {{
+  const text = String(raw || '').replace(/\\s+/g, ' ').trim();
+  return text.replace(/^\\d+\\.\\s*/, '').trim();
+}}
+
+function cleanOrderedTitleCopy(raw) {{
+  return String(raw || '')
+    .replace(/\\bEach numbered\\b/gi, 'Each')
+    .replace(/\\s{2,}/g, ' ')
+    .trim();
+}}
+
+function normalizeOrderedTitleNodes(root = document) {{
+  const scope = root && typeof root.querySelectorAll === 'function' ? root : document;
+  scope.querySelectorAll(
+    [
+      '.view h1',
+      '.view h2',
+      '.view h3',
+      '.view h4',
+      '.view h5',
+      '.view h6',
+      '.view strong',
+      '.view [class*="card-number"]',
+      '.view [class*="card-title"]',
+      '.view [class*="panel-title"]',
+      '.view [class$="topbar-title"]',
+      '.view [class$="nav-title"]',
+      '.view [id$="page-label"]',
+    ].join(', ')
+  ).forEach(function(node) {{
+    const cleaned = stripOrderedTitlePrefix(node.textContent || '');
+    if (cleaned && cleaned !== String(node.textContent || '').trim()) {{
+      node.textContent = cleaned;
+    }}
+  }});
+}}
+
+function queueOrderedTitleNormalization(root = document) {{
+  if (_orderedTitleNormalizeQueued) return;
+  _orderedTitleNormalizeQueued = true;
+  const scope = root;
+  const run = function() {{
+    _orderedTitleNormalizeQueued = false;
+    normalizeOrderedTitleNodes(scope);
+  }};
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {{
+    window.requestAnimationFrame(run);
+  }} else {{
+    setTimeout(run, 0);
+  }}
+}}
+
+function ensureOrderedTitleObserver() {{
+  if (_orderedTitleObserver || typeof MutationObserver === 'undefined' || !document || !document.body) return;
+  _orderedTitleObserver = new MutationObserver(function(mutations) {{
+    for (const mutation of mutations) {{
+      if (mutation.type === 'childList' && ((mutation.addedNodes && mutation.addedNodes.length) || (mutation.removedNodes && mutation.removedNodes.length))) {{
+        queueOrderedTitleNormalization(document);
+        return;
+      }}
+      if (mutation.type === 'characterData') {{
+        queueOrderedTitleNormalization(document);
+        return;
+      }}
+    }}
+  }});
+  _orderedTitleObserver.observe(document.body, {{
+    childList: true,
+    subtree: true,
+    characterData: true,
+  }});
+}}
 
 function desktopSequenceParseTitle(raw) {{
   const text = String(raw || '').trim().replace(/\s+/g, ' ');
   const match = text.match(/^(\d+)\.\s*(.+)$/);
-  if (!match) return null;
+  if (!match) {{
+    if (!text) return null;
+    return {{
+      number: null,
+      title: stripOrderedTitlePrefix(text),
+      raw: text,
+    }};
+  }}
   return {{
     number: Number(match[1]),
-    title: match[2].trim(),
+    title: stripOrderedTitlePrefix(match[2]),
     raw: text,
   }};
 }}
@@ -26937,7 +27072,7 @@ function ensureDesktopCardFocusOverlay() {{
     +     '<div class="desktop-card-focus-copy">'
     +       '<div class="desktop-card-focus-kicker" id="desktop-card-focus-kicker">Desktop Sequence</div>'
     +       '<strong class="desktop-card-focus-title" id="desktop-card-focus-title">Focused Page</strong>'
-    +       '<span class="desktop-card-focus-subtitle" id="desktop-card-focus-subtitle">Each numbered card can be reviewed on its own.</span>'
+    +       '<span class="desktop-card-focus-subtitle" id="desktop-card-focus-subtitle">Each card can be reviewed on its own.</span>'
     +     '</div>'
     +     '<div class="desktop-card-focus-actions">'
     +       '<button class="desktop-sequence-btn" id="desktop-card-focus-prev" type="button" aria-label="Previous focused card">←</button>'
@@ -26993,6 +27128,7 @@ function getDesktopSequenceCards(viewName) {{
   titleNodes.forEach(function(titleNode, idx) {{
     const parsed = desktopSequenceParseTitle(titleNode.textContent || '');
     if (!parsed) return;
+    if (parsed.title) titleNode.textContent = parsed.title;
     const card = titleNode.closest(config.cardSelector);
     if (!card || seen.has(card)) return;
     seen.add(card);
@@ -27128,7 +27264,7 @@ function syncDesktopCardSequence(viewName) {{
   if (bar.count) bar.count.textContent = 'Page ' + page + ' of ' + cards.length;
   if (bar.label) bar.label.textContent = current.title;
   if (bar.title) bar.title.textContent = current.title;
-  if (bar.subtitle) bar.subtitle.textContent = config.subtitle || ('Each numbered ' + (config.label || 'desktop') + ' card is now its own in-experience page.');
+  if (bar.subtitle) bar.subtitle.textContent = cleanOrderedTitleCopy(config.subtitle || ('Each ' + (config.label || 'desktop') + ' card is now its own in-experience page.'));
   if (bar.prev) {{
     bar.prev.disabled = page === 1;
     bar.prev.onclick = function() {{ stepDesktopCardSequence(viewName, -1); }};
@@ -29021,7 +29157,7 @@ function syncCatalystStoryboard() {{
 
   const pageMeta = CATALYST_STORYBOARD_TITLES[catalystStoryboardPage];
   const title = document.getElementById('catalyst-nav-title');
-  if (title) title.textContent = pageMeta?.title || `Page ${{catalystStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(pageMeta?.title || `Page ${{catalystStoryboardPage}}`);
 
   const subtitle = document.getElementById('catalyst-nav-subtitle');
   if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
@@ -31429,7 +31565,7 @@ function syncPublishStoryboard() {{
   }});
   const pageMeta = PUBLISH_STORYBOARD_TITLES[publishStoryboardPage];
   const title = document.getElementById('publish-nav-title');
-  if (title) title.textContent = pageMeta?.title || `Page ${{publishStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(pageMeta?.title || `Page ${{publishStoryboardPage}}`);
   const subtitle = document.getElementById('publish-nav-subtitle');
   if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
   const count = document.getElementById('publish-page-count');
@@ -34880,7 +35016,7 @@ function syncFaithStoryboard() {{
 
   const pageMeta = FAITH_STORYBOARD_TITLES[faithStoryboardPage];
   const title = document.getElementById('faith-nav-title');
-  if (title) title.textContent = pageMeta?.title || `Page ${{faithStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(pageMeta?.title || `Page ${{faithStoryboardPage}}`);
 
   const subtitle = document.getElementById('faith-nav-subtitle');
   if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
@@ -35779,7 +35915,7 @@ function syncLegacyStoryboard() {{
 
   const title = document.getElementById('legacy-nav-title');
   const pageMeta = LEGACY_STORYBOARD_TITLES[legacyStoryboardPage];
-  if (title) title.textContent = pageMeta?.title || `Page ${{legacyStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(pageMeta?.title || `Page ${{legacyStoryboardPage}}`);
 
   const subtitle = document.getElementById('legacy-nav-subtitle');
   if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
@@ -36648,7 +36784,7 @@ function syncFoundryStoryboard() {{
   const label = document.getElementById('foundry-page-label');
   const prev = document.getElementById('foundry-nav-prev');
   const next = document.getElementById('foundry-nav-next');
-  if (title) title.textContent = meta?.title || `Page ${{foundryStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(meta?.title || `Page ${{foundryStoryboardPage}}`);
   if (subtitle) subtitle.textContent = meta?.subtitle || '';
   if (count) count.textContent = `Page ${{foundryStoryboardPage}} of ${{pageCount}}`;
   if (label) label.textContent = meta?.label || `Page ${{foundryStoryboardPage}}`;
@@ -37012,7 +37148,7 @@ function _workshopSet(id, value) {{
 
 function syncWorkshopStoryboard() {{
   const meta = WORKSHOP_STORYBOARD_TITLES[1];
-  _workshopSet('workshop-nav-title', meta.title);
+  _workshopSet('workshop-nav-title', stripOrderedTitlePrefix(meta.title));
   _workshopSet('workshop-nav-subtitle', meta.subtitle);
   _workshopSet('workshop-page-count', 'Page 1 of 1');
   _workshopSet('workshop-page-label', meta.label);
@@ -37717,7 +37853,7 @@ function syncAgentsStoryboard() {{
   const label = document.getElementById('agents-page-label');
   if (label) label.textContent = meta.label;
   const title = document.getElementById('agents-nav-title');
-  if (title) title.textContent = meta.title;
+  if (title) title.textContent = stripOrderedTitlePrefix(meta.title);
   const subtitle = document.getElementById('agents-nav-subtitle');
   if (subtitle) subtitle.textContent = meta.subtitle;
   syncDesktopCardSequence('agents');
@@ -38644,7 +38780,7 @@ function syncHuddleStoryboard() {{
   }});
   const pageMeta = HUDDLE_STORYBOARD_TITLES[huddleStoryboardPage];
   const title = document.getElementById('huddle-nav-title');
-  if (title) title.textContent = pageMeta?.title || `Page ${{huddleStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(pageMeta?.title || `Page ${{huddleStoryboardPage}}`);
   const subtitle = document.getElementById('huddle-nav-subtitle');
   if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
   const count = document.getElementById('huddle-page-count');
@@ -42677,7 +42813,7 @@ function syncForgeStoryboard() {{
   const label = document.getElementById('forge-page-label');
   const prev = document.getElementById('forge-nav-prev');
   const next = document.getElementById('forge-nav-next');
-  if (title) title.textContent = meta?.title || `Page ${{forgeStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(meta?.title || `Page ${{forgeStoryboardPage}}`);
   if (subtitle) subtitle.textContent = meta?.subtitle || '';
   if (count) count.textContent = `Page ${{forgeStoryboardPage}} of ${{pageCount}}`;
   if (label) label.textContent = meta?.label || `Page ${{forgeStoryboardPage}}`;
@@ -45767,7 +45903,7 @@ function syncHealthStoryboard() {{
 
   const pageMeta = HEALTH_STORYBOARD_TITLES[healthStoryboardPage];
   const title = document.getElementById('health-nav-title');
-  if (title) title.textContent = pageMeta?.title || `Page ${{healthStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(pageMeta?.title || `Page ${{healthStoryboardPage}}`);
 
   const subtitle = document.getElementById('health-nav-subtitle');
   if (subtitle) subtitle.textContent = pageMeta?.subtitle || '';
@@ -49981,7 +50117,7 @@ function syncNavigationStoryboard() {{
 
   const meta = NAVIGATION_STORYBOARD_TITLES[navigationStoryboardPage];
   const title = document.getElementById('navigation-nav-title');
-  if (title) title.textContent = meta?.title || `Page ${{navigationStoryboardPage}}`;
+  if (title) title.textContent = stripOrderedTitlePrefix(meta?.title || `Page ${{navigationStoryboardPage}}`);
 
   const subtitle = document.getElementById('navigation-nav-subtitle');
   if (subtitle) subtitle.textContent = meta?.subtitle || '';
@@ -51271,3 +51407,4 @@ function _navDarkMapStyles() {{
 
 </body>
 </html>"""
+    return _strip_ordered_html_titles(html)

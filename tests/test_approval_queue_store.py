@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from jarvis.approvals import ApprovalQueue, ApprovalRequest, RiskTier
@@ -19,6 +20,7 @@ class ApprovalQueueStoreTests(unittest.TestCase):
         ApprovalQueue.ROOT = self.original_root
 
     def _request(self, request_id: str, *, status: str = "pending") -> ApprovalRequest:
+        now = datetime.now(timezone.utc)
         return ApprovalRequest(
             request_id=request_id,
             agent_id="pepper",
@@ -29,8 +31,8 @@ class ApprovalQueueStoreTests(unittest.TestCase):
             payload={"value": 1},
             risk_tier=RiskTier.MEDIUM.value,
             actor_id="chris",
-            requested_at="2026-06-02T10:00:00+00:00",
-            expires_at="2026-06-03T10:00:00+00:00",
+            requested_at=now.isoformat(),
+            expires_at=(now + timedelta(days=1)).isoformat(),
             status=status,
         )
 

@@ -7,6 +7,7 @@ import sys
 import tempfile
 import types
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -255,6 +256,7 @@ class ApprovalQueueServiceSurfaceTests(unittest.TestCase):
         return json.loads(response.body.decode("utf-8"))
 
     def _request(self, request_id: str, *, title: str) -> ApprovalRequest:
+        now = datetime.now(timezone.utc)
         return ApprovalRequest(
             request_id=request_id,
             agent_id="sam",
@@ -265,8 +267,8 @@ class ApprovalQueueServiceSurfaceTests(unittest.TestCase):
             payload={"calendar_id": "family"},
             risk_tier=RiskTier.MEDIUM,
             actor_id="chris",
-            requested_at="2026-06-03T11:00:00+00:00",
-            expires_at="2026-06-04T11:00:00+00:00",
+            requested_at=now.isoformat(),
+            expires_at=(now + timedelta(days=1)).isoformat(),
             status="pending",
             priority=2,
             tags=["calendar"],

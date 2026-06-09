@@ -1250,7 +1250,7 @@ struct CatalystView: View {
         if route == "/mission-board" || kind.contains("mission") { return "Mission Board" }
         if route == "/agent-ops-center" || kind.contains("agent") { return "Agent Ops" }
         if route == "/briefing-center" || kind.contains("brief") { return "Daily Brief" }
-        if route == "/chronicle-center" || kind.contains("chronicle") { return "Chronicle" }
+        if route == "/chronicle-center" || kind.contains("chronicle") { return "Legacy" }
         if route == "/health-center" || kind.contains("health") { return "Health" }
         if route == "/navigation-center" || kind.contains("navigation") || kind.contains("route") { return "Navigation" }
         if route == "/publish" || kind.contains("publish") { return "Publish" }

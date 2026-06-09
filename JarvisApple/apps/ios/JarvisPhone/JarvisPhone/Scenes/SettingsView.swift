@@ -1372,7 +1372,7 @@ struct SettingsView: View {
                                 HStack(spacing: 10) {
                                     systemsMetric("Approvals", approvalsAlertsEnabled ? "Alerts On" : "Alerts Off")
                                     systemsMetric("Health", healthAlertsEnabled ? "Alerts On" : "Alerts Off")
-                                    systemsMetric("Chronicle", privateChronicleEnabled ? "Private" : "Shareable")
+                                    systemsMetric("Legacy", privateChronicleEnabled ? "Private" : "Shareable")
                                 }
                                 if let profileSettings {
                                     SysRow(label: "Updated") {
@@ -1383,7 +1383,7 @@ struct SettingsView: View {
                                 }
                                 settingsToggleRow("Approval alerts", isOn: $approvalsAlertsEnabled)
                                 settingsToggleRow("Health alerts", isOn: $healthAlertsEnabled)
-                                settingsToggleRow("Private Chronicle", isOn: $privateChronicleEnabled)
+                                settingsToggleRow("Private Legacy", isOn: $privateChronicleEnabled)
                                 settingsToggleRow("Share health with family", isOn: $shareHealthWithFamilyEnabled)
                                 settingsToggleRow("Show health dashboard", isOn: $showHealthDashboardEnabled)
                                 settingsToggleRow("Show publishing dashboard", isOn: $showPublishingDashboardEnabled)

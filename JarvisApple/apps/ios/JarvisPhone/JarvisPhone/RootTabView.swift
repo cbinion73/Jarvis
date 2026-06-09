@@ -17,7 +17,7 @@ enum JARVISTab: Int, CaseIterable, Identifiable {
         case .weather:   return "Weather"
         case .home:      return "Home"
         case .catalyst:  return "Catalyst"
-        case .chronicle: return "Chronicle"
+        case .chronicle: return "Legacy"
         case .faith:     return "Faith"
         case .publish:   return "Publish"
         case .huddle:    return "Huddle"
@@ -266,7 +266,7 @@ struct RootTabView: View {
         case .catalyst:
             return "Execution systems, catalysts, and momentum."
         case .chronicle:
-            return "Chronicle memory, notes, and review surfaces."
+            return "Legacy memory, notes, and review surfaces."
         case .faith:
             return "Faith rhythms, reflection, and grounded intention."
         case .publish:

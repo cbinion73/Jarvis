@@ -527,7 +527,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
 
             let chronicleSummary = overview.chronicleSummary
             let chronicleSummaryItem = CPListItem(
-                text: "Chronicle Chamber",
+                text: "Legacy Chamber",
                 detailText: chronicleSummary.headline
             )
             chronicleSummaryItem.setImage(
@@ -535,7 +535,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     .withTintColor(.systemYellow, renderingMode: .alwaysOriginal)
             )
             let chroniclePromptItem = CPListItem(
-                text: chronicleSummary.latestTitle.isEmpty ? "No Chronicle thread ready" : chronicleSummary.latestTitle,
+                text: chronicleSummary.latestTitle.isEmpty ? "No Legacy thread ready" : chronicleSummary.latestTitle,
                 detailText: chronicleSummary.studyTitle.isEmpty
                     ? "\(chronicleSummary.activePrayerCount) active prayer(s) · \(chronicleSummary.reviewCount) review thread(s)"
                     : "\(chronicleSummary.studyTitle) · \(chronicleSummary.reviewCount) review thread(s)"
@@ -544,11 +544,11 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "text.book.closed.fill")?
                     .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [chronicleSummaryItem, chroniclePromptItem], header: "9. Chronicle Chamber", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [chronicleSummaryItem, chroniclePromptItem], header: "9. Legacy Chamber", sectionIndexTitle: nil))
 
             let chronicleReviewItems: [CPListItem]
             if overview.chronicleReviews.isEmpty {
-                let item = CPListItem(text: "No Chronicle review waiting", detailText: "Move a memory thread into study or family handoff from the phone.")
+                let item = CPListItem(text: "No Legacy review waiting", detailText: "Move a memory thread into study or family handoff from the phone.")
                 item.setImage(
                     UIImage(systemName: "checkmark.circle.fill")?
                         .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
@@ -567,7 +567,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     return item
                 }
             }
-            sections.append(CPListSection(items: chronicleReviewItems, header: "10. Chronicle Reviews", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: chronicleReviewItems, header: "10. Legacy Reviews", sectionIndexTitle: nil))
 
             let missionHeadline = overview.missionSummary.headline.isEmpty
                 ? "\(overview.missionSummary.activeCount) active mission(s) are flowing through JARVIS."
@@ -802,12 +802,12 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             presentCarPlayHuddleIdeaAlert(for: overview.huddleIdeas[indexPath.item])
             return
         }
-        let chronicleSectionIndex = opsTemplate.sections.firstIndex { $0.header == "9. Chronicle Chamber" }
+        let chronicleSectionIndex = opsTemplate.sections.firstIndex { $0.header == "9. Legacy Chamber" }
         if let chronicleSectionIndex, indexPath.section == chronicleSectionIndex {
             presentCarPlayChronicleSummaryAlert(summary: overview.chronicleSummary)
             return
         }
-        let chronicleReviewSectionIndex = opsTemplate.sections.firstIndex { $0.header == "10. Chronicle Reviews" }
+        let chronicleReviewSectionIndex = opsTemplate.sections.firstIndex { $0.header == "10. Legacy Reviews" }
         if let chronicleReviewSectionIndex, indexPath.section == chronicleReviewSectionIndex, indexPath.item < overview.chronicleReviews.count {
             presentCarPlayChronicleReviewAlert(for: overview.chronicleReviews[indexPath.item])
         }
@@ -1155,16 +1155,16 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             guard let self else { return }
             Task {
                 _ = try? await self.client.saveCarPlayOpsFocus(
-                    module: "Chronicle",
+                    module: "Legacy",
                     route: "/chronicle-center",
-                    reason: "CarPlay elevated Chronicle as the next live operating focus."
+                    reason: "CarPlay elevated Legacy as the next live operating focus."
                 )
                 await self.loadOps()
             }
         }
         let closeAction = CPAlertAction(title: "Close", style: .cancel) { _ in }
         let alert = CPAlertTemplate(
-            titleVariants: ["Chronicle Chamber", summary.headline],
+            titleVariants: ["Legacy Chamber", summary.headline],
             actions: [focusAction, closeAction]
         )
         interfaceController.presentTemplate(alert, animated: true, completion: nil)

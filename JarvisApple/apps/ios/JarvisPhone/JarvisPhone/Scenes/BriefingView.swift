@@ -957,7 +957,7 @@ struct BriefingView: View {
 
                     if let chronicle {
                         overviewCard(
-                            title: "Chronicle",
+                            title: "Legacy",
                             icon: "book.closed.fill",
                             accent: .mint,
                             metric: chronicleMetric(chronicle),

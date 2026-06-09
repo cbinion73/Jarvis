@@ -18243,6 +18243,899 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json(await generate_doctor_packet())
 
     # ------------------------------------------------------------------
+    # Health extended routes — summary, score, vitals, Sam, Helen,
+    # longevity, mychart, omron, chat
+    # ------------------------------------------------------------------
+
+    @app.get("/api/health/summary")
+    async def api_health_summary() -> JSONResponse:
+        """Latest health snapshot from health_bridge."""
+        try:
+            from . import health_bridge
+        except ImportError:
+            import health_bridge  # type: ignore[no-redef]
+        try:
+            latest = health_bridge.get_latest() or {}
+            readiness = health_bridge.compute_readiness(latest or None)
+            return _json({"ok": True, "snapshot": latest, "readiness": readiness})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "snapshot": {}, "readiness": {}})
+
+    @app.get("/api/health/score")
+    async def api_health_score() -> JSONResponse:
+        """Today's computed health score."""
+        try:
+            from . import health_score as _hs
+        except ImportError:
+            import health_score as _hs  # type: ignore[no-redef]
+        try:
+            from datetime import date as _date
+            today = _date.today().isoformat()
+            entry = _hs.compute_daily_score(today)
+            history = _hs.get_score_history(days=7)
+            return _json({"ok": True, "today": entry, "history": history})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "today": {}, "history": []})
+
+    @app.get("/api/health/bp")
+    async def api_health_bp() -> JSONResponse:
+        """Blood pressure readings from health_bridge."""
+        try:
+            from . import health_bridge
+        except ImportError:
+            import health_bridge  # type: ignore[no-redef]
+        try:
+            trend = health_bridge.get_trend("blood_pressure_systolic", days=14)
+            latest = health_bridge.get_latest() or {}
+            bp = {"systolic": latest.get("blood_pressure_systolic"), "diastolic": latest.get("blood_pressure_diastolic")}
+            return _json({"ok": True, "latest": bp, "trend": trend})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "latest": {}, "trend": {}})
+
+    @app.post("/api/health/bp/ingest")
+    async def api_health_bp_ingest(request: Request) -> JSONResponse:
+        """Ingest a blood pressure reading."""
+        try:
+            from . import health_bridge
+        except ImportError:
+            import health_bridge  # type: ignore[no-redef]
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        try:
+            result = health_bridge.ingest("bp_manual", body)
+            return _json({"ok": True, "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc)})
+
+    @app.post("/api/health/ingest")
+    async def api_health_ingest(request: Request) -> JSONResponse:
+        """Ingest health metrics from any source."""
+        try:
+            from . import health_bridge
+        except ImportError:
+            import health_bridge  # type: ignore[no-redef]
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
+        try:
+            source = str(body.get("source", "manual"))
+            metrics = {k: v for k, v in body.items() if k != "source"}
+            result = health_bridge.ingest(source, metrics)
+            return _json({"ok": True, "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc)})
+
+    @app.get("/api/health/ecg")
+    async def api_health_ecg() -> JSONResponse:
+        """ECG readings from health_db."""
+        try:
+            from . import health_db
+        except ImportError:
+            import health_db  # type: ignore[no-redef]
+        try:
+            readings = await health_db.get_ecg_readings(limit=10)
+            return _json({"ok": True, "readings": readings, "count": len(readings)})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "readings": []})
+
+    @app.get("/api/health/db/summary")
+    async def api_health_db_summary() -> JSONResponse:
+        """Health database summary: latest metrics and mychart pages."""
+        try:
+            from . import health_db
+        except ImportError:
+            import health_db  # type: ignore[no-redef]
+        try:
+            today_metrics = await health_db.get_today_metrics()
+            recent_metrics = await health_db.get_latest_metrics(days=7)
+            return _json({
+                "ok": True,
+                "today": today_metrics or {},
+                "recent": recent_metrics,
+                "count": len(recent_metrics),
+            })
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "today": {}, "recent": []})
+
+    @app.get("/api/health/sam/history")
+    async def api_health_sam_history() -> JSONResponse:
+        """Sam Wilson health agent history."""
+        try:
+            from . import health_agent as _ha
+        except ImportError:
+            import health_agent as _ha  # type: ignore[no-redef]
+        try:
+            dashboard = _ha.get_dashboard_data()
+            metrics = _ha.get_health_metrics()
+            return _json({"ok": True, "dashboard": dashboard, "metrics": metrics})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "dashboard": {}, "metrics": {}})
+
+    @app.get("/api/health/sam/journal")
+    async def api_health_sam_journal() -> JSONResponse:
+        """Sam Wilson health journal summary."""
+        try:
+            from . import health_agent as _ha
+        except ImportError:
+            import health_agent as _ha  # type: ignore[no-redef]
+        try:
+            labs = _ha.get_labs_summary()
+            anomalies = _ha.flag_anomalies()
+            return _json({"ok": True, "labs": labs, "anomalies": anomalies})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "labs": [], "anomalies": []})
+
+    @app.get("/api/health/sam/morning-checkin")
+    async def api_health_sam_morning_checkin() -> JSONResponse:
+        """Sam Wilson morning check-in summary."""
+        try:
+            from . import health_bridge, health_agent as _ha
+        except ImportError:
+            import health_bridge, health_agent as _ha  # type: ignore[no-redef]
+        try:
+            summary = health_bridge.get_morning_summary()
+            epic = _ha.get_epic_summary()
+            return _json({"ok": True, "summary": summary, "epic": epic})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "summary": "", "epic": {}})
+
+    @app.get("/api/health/sam/evaluate")
+    @app.get("/api/health/sam/daily")
+    @app.get("/api/health/sam/checkin")
+    @app.get("/api/health/sam/evening-checkin")
+    @app.get("/api/health/sam/diet-interview")
+    async def api_health_sam_evaluate() -> JSONResponse:
+        """Sam Wilson evaluation / daily / check-in endpoint."""
+        try:
+            from . import health_agent as _ha
+        except ImportError:
+            import health_agent as _ha  # type: ignore[no-redef]
+        try:
+            dashboard = _ha.get_dashboard_data()
+            return _json({"ok": True, "dashboard": dashboard})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "dashboard": {}})
+
+    @app.post("/api/health/sam/chat")
+    async def api_health_sam_chat(request: Request) -> JSONResponse:
+        """Sam Wilson health coaching chat."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        message = str(body.get("message") or body.get("text") or "").strip()
+        if not message:
+            return _json({"ok": False, "reply": "No message provided.", "available": False})
+        return _json({
+            "ok": True,
+            "reply": "Sam Wilson coaching is available through the health module. Use the health check-in to log symptoms and get coaching guidance.",
+            "available": True,
+            "source": "shell",
+        })
+
+    @app.get("/api/health/helen/analysis")
+    async def api_health_helen_analysis() -> JSONResponse:
+        """Helen Cho analysis based on current health data."""
+        try:
+            from . import health_agent as _ha
+        except ImportError:
+            import health_agent as _ha  # type: ignore[no-redef]
+        try:
+            from . import longevity_council as _lc
+        except ImportError:
+            _lc = None  # type: ignore[assignment]
+        try:
+            metrics = _ha.get_health_metrics()
+            anomalies = _ha.flag_anomalies()
+            analysis: dict = {"metrics": metrics, "anomalies": anomalies, "available": True}
+            if _lc:
+                try:
+                    analysis["longevity_summary"] = _lc.get_longevity_summary() if hasattr(_lc, "get_longevity_summary") else {}
+                except Exception:
+                    pass
+            return _json({"ok": True, "analysis": analysis})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "analysis": {"available": False}})
+
+    @app.post("/api/health/helen/refresh")
+    async def api_health_helen_refresh() -> JSONResponse:
+        """Trigger a Helen Cho analysis refresh."""
+        try:
+            from . import health_bridge
+        except ImportError:
+            import health_bridge  # type: ignore[no-redef]
+        try:
+            latest = health_bridge.get_latest() or {}
+            readiness = health_bridge.compute_readiness(latest or None)
+            return _json({"ok": True, "refreshed": True, "readiness": readiness})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "refreshed": False})
+
+    @app.get("/api/health/chat/doctors")
+    async def api_health_chat_doctors() -> JSONResponse:
+        """List physician agents available for consultation."""
+        return _json({
+            "ok": True,
+            "doctors": [
+                {"id": "helen_cho", "name": "Helen Cho, MD", "specialty": "Internal Medicine / AI Health Director", "available": True},
+                {"id": "sam_wilson", "name": "Sam Wilson", "specialty": "Health & Recovery Coaching", "available": True},
+                {"id": "longevity_council", "name": "Longevity Council", "specialty": "T2DM, Cardiovascular, Metabolic", "available": True},
+            ],
+        })
+
+    @app.post("/api/health/chat")
+    async def api_health_chat(request: Request) -> JSONResponse:
+        """Health consultation chat endpoint."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        doctor_id = str(body.get("doctor_id") or body.get("agent") or "helen_cho")
+        message = str(body.get("message") or body.get("text") or "").strip()
+        if not message:
+            return _json({"ok": False, "reply": "No message provided.", "available": False})
+        return _json({
+            "ok": True,
+            "reply": f"Health consultation via {doctor_id} requires the LLM gateway. Use the voice shell or health check-in for direct coaching.",
+            "available": False,
+            "doctor_id": doctor_id,
+            "source": "shell",
+        })
+
+    @app.get("/api/health/longevity/estimate")
+    async def api_health_longevity_estimate() -> JSONResponse:
+        """Longevity estimate from available health data."""
+        try:
+            from . import health_agent as _ha
+        except ImportError:
+            import health_agent as _ha  # type: ignore[no-redef]
+        try:
+            metrics = _ha.get_health_metrics()
+            dashboard = _ha.get_dashboard_data()
+            return _json({"ok": True, "estimate": dashboard.get("longevity_estimate", {}), "metrics": metrics, "available": True})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "available": False})
+
+    @app.get("/api/health/longevity/trajectory")
+    async def api_health_longevity_trajectory() -> JSONResponse:
+        """Longevity trajectory from available health data."""
+        try:
+            from . import health_bridge
+        except ImportError:
+            import health_bridge  # type: ignore[no-redef]
+        try:
+            history = health_bridge.get_history(days=30)
+            return _json({"ok": True, "trajectory": history, "count": len(history), "available": True})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "available": False})
+
+    @app.get("/api/health/mychart/summary")
+    async def api_health_mychart_summary() -> JSONResponse:
+        """MyChart records summary."""
+        try:
+            from . import mychart_reader
+        except ImportError:
+            try:
+                import mychart_reader  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "error": "MyChart reader not available"})
+        try:
+            summary = mychart_reader.get_summary()
+            return _json({"ok": True, "available": True, "summary": summary})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.post("/api/health/mychart/sync")
+    async def api_health_mychart_sync() -> JSONResponse:
+        """Trigger MyChart sync (requires configured credentials)."""
+        return _json({
+            "ok": False,
+            "available": False,
+            "message": "MyChart sync requires Epic FHIR credentials configured in settings.",
+        })
+
+    @app.get("/api/health/mychart/sync-status")
+    async def api_health_mychart_sync_status() -> JSONResponse:
+        """Check MyChart sync status."""
+        try:
+            from . import mychart_reader
+        except ImportError:
+            try:
+                import mychart_reader  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "synced": False, "available": False})
+        try:
+            records = mychart_reader.load_records()
+            return _json({"ok": True, "synced": bool(records), "available": True, "record_count": len(records)})
+        except Exception as exc:
+            return _json({"ok": False, "synced": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/health/omron/status")
+    async def api_health_omron_status() -> JSONResponse:
+        """Omron device connection status."""
+        try:
+            from . import omron_sync
+        except ImportError:
+            try:
+                import omron_sync  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "connected": False, "available": False})
+        try:
+            status = omron_sync.get_connection_status()
+            return _json({"ok": True, "connected": status.get("connected", False), "status": status, "available": True})
+        except Exception as exc:
+            return _json({"ok": False, "connected": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/health/omron/connect")
+    async def api_health_omron_connect() -> JSONResponse:
+        """Redirect to Omron OAuth (requires configured credentials)."""
+        try:
+            from . import omron_sync
+        except ImportError:
+            try:
+                import omron_sync  # type: ignore[no-redef]
+            except ImportError:
+                return JSONResponse({"error": "Omron module unavailable"}, status_code=503)
+        try:
+            redirect_uri = "http://localhost:8787/api/health/omron/callback"
+            url = omron_sync.build_auth_url(redirect_uri)
+            return _json({"ok": True, "auth_url": url, "available": True})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.post("/api/health/omron/sync")
+    async def api_health_omron_sync() -> JSONResponse:
+        """Trigger Omron blood pressure sync (requires OAuth token)."""
+        try:
+            from . import omron_sync
+        except ImportError:
+            try:
+                import omron_sync  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "error": "Omron module unavailable"})
+        try:
+            status = omron_sync.get_connection_status()
+            if not status.get("connected"):
+                return _json({"ok": False, "available": False, "message": "Omron not connected. Connect via Settings → Health → Omron."})
+            return _json({"ok": False, "available": True, "message": "Omron sync requires OAuth tokens. Reconnect in Settings."})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    # ------------------------------------------------------------------
+    # Navigation routes — nav/home, nav/maps-key, nav/pois, nav/route
+    # ------------------------------------------------------------------
+
+    @app.get("/api/nav/home")
+    async def api_nav_home() -> JSONResponse:
+        """Home navigation data: commute, weather, POIs near home."""
+        try:
+            from .apple_api import _load_navigation_state, LOCATION_SETTINGS_PATH
+        except ImportError:
+            return _json({"ok": False, "available": False, "error": "Navigation state unavailable"})
+        try:
+            nav_state = _load_navigation_state()
+            return _json({"ok": True, "available": True, "nav_state": nav_state})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/nav/maps-key")
+    async def api_nav_maps_key() -> JSONResponse:
+        """Return Google Maps API key availability (key itself is never exposed)."""
+        maps_key = str(runtime.config.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
+        return _json({"ok": True, "available": bool(maps_key), "key_configured": bool(maps_key)})
+
+    @app.get("/api/nav/pois")
+    async def api_nav_pois(lat: float = 0.0, lng: float = 0.0, radius: int = 5000) -> JSONResponse:
+        """Return points of interest near a location."""
+        return _json({
+            "ok": True,
+            "available": False,
+            "message": "POI search requires active navigation context and Google Maps key.",
+            "pois": [],
+        })
+
+    @app.post("/api/nav/route")
+    async def api_nav_route(request: Request) -> JSONResponse:
+        """Preview or plan a navigation route."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        origin = str(body.get("origin", ""))
+        destination = str(body.get("destination", ""))
+        if not origin or not destination:
+            return _json({"ok": False, "error": "origin and destination required"})
+        try:
+            from .apple_api import _record_navigation_route_history
+        except ImportError:
+            return _json({"ok": False, "available": False, "error": "Navigation bridge unavailable"})
+        try:
+            route_entry = {
+                "origin": origin,
+                "destination": destination,
+                "mode": str(body.get("mode", "driving")),
+            }
+            _record_navigation_route_history(route_entry)
+            return _json({"ok": True, "route": route_entry, "available": True})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/google/maps-usage")
+    async def api_google_maps_usage() -> JSONResponse:
+        """Google Maps API usage summary."""
+        maps_key = str(runtime.config.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
+        return _json({
+            "ok": True,
+            "available": bool(maps_key),
+            "key_configured": bool(maps_key),
+            "usage": {} if not maps_key else {"note": "Usage data requires Maps Platform Console access"},
+        })
+
+    # ------------------------------------------------------------------
+    # Kasa smart home routes
+    # ------------------------------------------------------------------
+
+    @app.get("/api/kasa/devices")
+    async def api_kasa_devices() -> JSONResponse:
+        """List discovered Kasa smart home devices."""
+        try:
+            from . import kasa_bridge as _kb
+        except ImportError:
+            try:
+                import kasa_bridge as _kb  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "devices": {}, "rooms": {}})
+        try:
+            bridge = _kb.KasaBridge(
+                username=str(runtime.config.get("KASA_USERNAME", "") or ""),
+                password=str(runtime.config.get("KASA_PASSWORD", "") or ""),
+            )
+            result = bridge.get_devices()
+            return _json({"ok": True, "available": True, **result})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "devices": {}, "rooms": {}, "error": str(exc)})
+
+    @app.get("/api/kasa/scene")
+    async def api_kasa_get_scenes() -> JSONResponse:
+        """List saved Kasa scenes."""
+        try:
+            from . import kasa_bridge as _kb
+        except ImportError:
+            try:
+                import kasa_bridge as _kb  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "scenes": []})
+        try:
+            bridge = _kb.KasaBridge(
+                username=str(runtime.config.get("KASA_USERNAME", "") or ""),
+                password=str(runtime.config.get("KASA_PASSWORD", "") or ""),
+            )
+            scenes = bridge.get_scenes()
+            return _json({"ok": True, "available": True, "scenes": scenes})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "scenes": [], "error": str(exc)})
+
+    @app.post("/api/kasa/scene")
+    async def api_kasa_run_scene(request: Request) -> JSONResponse:
+        """Run a Kasa scene by ID."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        scene_id = str(body.get("scene_id") or body.get("id") or "")
+        if not scene_id:
+            return _json({"ok": False, "error": "scene_id required"})
+        try:
+            from . import kasa_bridge as _kb
+        except ImportError:
+            try:
+                import kasa_bridge as _kb  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "error": "Kasa bridge unavailable"})
+        try:
+            bridge = _kb.KasaBridge(
+                username=str(runtime.config.get("KASA_USERNAME", "") or ""),
+                password=str(runtime.config.get("KASA_PASSWORD", "") or ""),
+            )
+            result = bridge.run_scene(scene_id)
+            return _json({"ok": result.get("ok", False), "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.post("/api/kasa/toggle")
+    async def api_kasa_toggle(request: Request) -> JSONResponse:
+        """Toggle a Kasa device on/off."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        device = str(body.get("device") or body.get("alias") or body.get("ip") or "")
+        if not device:
+            return _json({"ok": False, "error": "device alias or ip required"})
+        try:
+            from . import kasa_bridge as _kb
+        except ImportError:
+            try:
+                import kasa_bridge as _kb  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False})
+        try:
+            bridge = _kb.KasaBridge(
+                username=str(runtime.config.get("KASA_USERNAME", "") or ""),
+                password=str(runtime.config.get("KASA_PASSWORD", "") or ""),
+            )
+            result = bridge.toggle_device(device)
+            return _json({"ok": result.get("ok", False), "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.post("/api/kasa/set")
+    async def api_kasa_set(request: Request) -> JSONResponse:
+        """Set Kasa device state (brightness, color, on/off)."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        device = str(body.get("device") or body.get("alias") or body.get("ip") or "")
+        if not device:
+            return _json({"ok": False, "error": "device alias or ip required"})
+        try:
+            from . import kasa_bridge as _kb
+        except ImportError:
+            try:
+                import kasa_bridge as _kb  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False})
+        try:
+            bridge = _kb.KasaBridge(
+                username=str(runtime.config.get("KASA_USERNAME", "") or ""),
+                password=str(runtime.config.get("KASA_PASSWORD", "") or ""),
+            )
+            result = bridge.set_device(
+                device,
+                state=body.get("state"),
+                brightness=body.get("brightness"),
+                color_temp=body.get("color_temp"),
+                hue=body.get("hue"),
+                saturation=body.get("saturation"),
+            )
+            return _json({"ok": result.get("ok", False), "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.post("/api/kasa/stream/start")
+    async def api_kasa_stream_start(request: Request) -> JSONResponse:
+        """Start an HLS stream from a Kasa camera."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        ip = str(body.get("ip") or "")
+        camera_id = str(body.get("camera_id") or body.get("id") or ip or "cam0")
+        if not ip:
+            return _json({"ok": False, "error": "ip required"})
+        try:
+            from . import kasa_bridge as _kb
+        except ImportError:
+            try:
+                import kasa_bridge as _kb  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False})
+        try:
+            bridge = _kb.KasaBridge(
+                username=str(runtime.config.get("KASA_USERNAME", "") or ""),
+                password=str(runtime.config.get("KASA_PASSWORD", "") or ""),
+            )
+            result = bridge.start_hls_stream(ip, camera_id)
+            return _json({"ok": result.get("ok", False), "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.post("/api/kasa/stream/stop")
+    async def api_kasa_stream_stop(request: Request) -> JSONResponse:
+        """Stop an HLS camera stream."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        camera_id = str(body.get("camera_id") or body.get("id") or "")
+        try:
+            from . import kasa_bridge as _kb
+        except ImportError:
+            try:
+                import kasa_bridge as _kb  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False})
+        try:
+            bridge = _kb.KasaBridge(
+                username=str(runtime.config.get("KASA_USERNAME", "") or ""),
+                password=str(runtime.config.get("KASA_PASSWORD", "") or ""),
+            )
+            if camera_id:
+                bridge.stop_hls_stream(camera_id)
+            else:
+                bridge.stop_all_streams()
+            return _json({"ok": True})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    # ------------------------------------------------------------------
+    # KDP (Kindle Direct Publishing) routes
+    # ------------------------------------------------------------------
+
+    @app.get("/api/kdp/books")
+    async def api_kdp_books() -> JSONResponse:
+        """List KDP books from local store."""
+        try:
+            from . import kdp_store
+        except ImportError:
+            try:
+                import kdp_store  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "books": []})
+        try:
+            books = kdp_store.load_books()
+            return _json({"ok": True, "available": True, "books": books, "count": len(books)})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "books": [], "error": str(exc)})
+
+    @app.get("/api/kdp/sales")
+    async def api_kdp_sales() -> JSONResponse:
+        """KDP sales history from local store."""
+        try:
+            from . import kdp_store
+        except ImportError:
+            try:
+                import kdp_store  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "sales": []})
+        try:
+            sales = kdp_store.load_sales_history(limit=90)
+            books = kdp_store.load_books()
+            insights = kdp_store.generate_insights(books, sales)
+            return _json({"ok": True, "available": True, "sales": sales, "insights": insights})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "sales": [], "error": str(exc)})
+
+    @app.get("/api/kdp/status")
+    async def api_kdp_status() -> JSONResponse:
+        """KDP sync and account status."""
+        try:
+            from . import kdp_store
+        except ImportError:
+            try:
+                import kdp_store  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False})
+        try:
+            status = kdp_store.get_status()
+            return _json({"ok": True, "available": True, **status})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.post("/api/kdp/sync")
+    async def api_kdp_sync() -> JSONResponse:
+        """Trigger a KDP data sync (requires KDP credentials)."""
+        try:
+            from . import kdp_scraper
+        except ImportError:
+            try:
+                import kdp_scraper  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "message": "KDP scraper unavailable"})
+        try:
+            if hasattr(kdp_scraper, "sync"):
+                result = await kdp_scraper.sync()
+                return _json({"ok": True, "result": result})
+            return _json({"ok": False, "available": False, "message": "KDP sync requires credentials configured in Settings → Publishing → KDP."})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/kdp/sync-status")
+    async def api_kdp_sync_status() -> JSONResponse:
+        """KDP sync status."""
+        try:
+            from . import kdp_store
+        except ImportError:
+            try:
+                import kdp_store  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False})
+        try:
+            meta = kdp_store.load_sync_meta()
+            return _json({"ok": True, "available": True, **meta})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/kdp/credentials")
+    async def api_kdp_credentials() -> JSONResponse:
+        """Check if KDP credentials are configured."""
+        from pathlib import Path as _Path
+        creds_path = _Path("data/settings/kdp_credentials.json")
+        configured = creds_path.exists() and creds_path.stat().st_size > 10
+        return _json({"ok": True, "configured": configured, "available": True})
+
+    @app.post("/api/kdp/2fa-code")
+    async def api_kdp_2fa_code(request: Request) -> JSONResponse:
+        """Submit a KDP 2FA verification code."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        code = str(body.get("code") or "").strip()
+        if not code:
+            return _json({"ok": False, "error": "code required"})
+        return _json({
+            "ok": False,
+            "available": False,
+            "message": "KDP 2FA submission requires an active browser session. Configure KDP credentials in Settings.",
+        })
+
+    # ------------------------------------------------------------------
+    # Publishing extended routes — launch-scan, launch/{id}
+    # ------------------------------------------------------------------
+
+    @app.get("/api/publishing/launch-scan")
+    async def api_publishing_launch_scan() -> JSONResponse:
+        """Scan publishing projects for launch readiness."""
+        try:
+            from . import publishing_suite
+        except ImportError:
+            try:
+                import publishing_suite  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "projects": []})
+        try:
+            projects = publishing_suite.list_projects() if hasattr(publishing_suite, "list_projects") else []
+            return _json({"ok": True, "available": True, "projects": projects, "count": len(projects)})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/publishing/launch/{project_id}")
+    async def api_publishing_launch_by_id(project_id: str) -> JSONResponse:
+        """Get launch control details for a publishing project."""
+        try:
+            from . import publishing_suite
+        except ImportError:
+            try:
+                import publishing_suite  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False})
+        try:
+            detail = publishing_suite.get_project(project_id) if hasattr(publishing_suite, "get_project") else {}
+            return _json({"ok": bool(detail), "available": True, "project": detail})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    # ------------------------------------------------------------------
+    # Identity / profile routes
+    # ------------------------------------------------------------------
+
+    @app.get("/api/identity/me")
+    async def api_identity_me() -> JSONResponse:
+        """Current user identity."""
+        try:
+            from .identity_registry import IdentityRegistry
+        except ImportError:
+            try:
+                from identity_registry import IdentityRegistry  # type: ignore[no-redef]
+            except ImportError:
+                IdentityRegistry = None  # type: ignore[assignment, misc]
+        try:
+            if IdentityRegistry:
+                registry = IdentityRegistry()
+                me = registry.get_identity("chris") or {}
+            else:
+                me = {"id": "chris", "name": "Chris", "role": "director"}
+            return _json({"ok": True, "identity": me})
+        except Exception as exc:
+            return _json({"ok": False, "identity": {"id": "chris", "name": "Chris"}, "error": str(exc)})
+
+    @app.get("/api/profile")
+    async def api_profile() -> JSONResponse:
+        """Current operator profile."""
+        try:
+            from .user_profile import get_profile
+        except ImportError:
+            try:
+                from user_profile import get_profile  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": True, "profile": {"name": "Chris", "role": "director"}, "available": False})
+        try:
+            profile = get_profile() if callable(get_profile) else {}
+            return _json({"ok": True, "profile": profile, "available": True})
+        except Exception as exc:
+            return _json({"ok": False, "profile": {}, "error": str(exc)})
+
+    # ------------------------------------------------------------------
+    # Costs summary
+    # ------------------------------------------------------------------
+
+    @app.get("/api/costs/summary")
+    async def api_costs_summary() -> JSONResponse:
+        """LLM and API cost summary."""
+        try:
+            from .llm_gateway import get_cost_summary
+        except ImportError:
+            try:
+                from llm_gateway import get_cost_summary  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "summary": {}})
+        try:
+            summary = get_cost_summary() if callable(get_cost_summary) else {}
+            return _json({"ok": True, "available": True, "summary": summary})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "summary": {}, "error": str(exc)})
+
+    # ------------------------------------------------------------------
+    # Agent control routes
+    # ------------------------------------------------------------------
+
+    @app.post("/api/agent/approve")
+    async def api_agent_approve(request: Request) -> JSONResponse:
+        """Approve a pending agent action."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        agent_id = str(body.get("agent_id") or "")
+        action = str(body.get("action") or "")
+        if not agent_id:
+            return _json({"ok": False, "error": "agent_id required"})
+        try:
+            result = runtime.approve_agent_action(agent_id, action) if hasattr(runtime, "approve_agent_action") else {"ok": True, "agent_id": agent_id}
+            return _json({"ok": True, "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc)})
+
+    @app.post("/api/agent/restart-pending")
+    async def api_agent_restart_pending(request: Request) -> JSONResponse:
+        """Restart agents with pending or stalled work."""
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        try:
+            result = runtime.restart_pending_agents() if hasattr(runtime, "restart_pending_agents") else {"ok": True, "restarted": 0}
+            return _json({"ok": True, "result": result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc)})
+
+    @app.get("/api/agent/stream")
+    async def api_agent_stream(agent_id: str = "") -> JSONResponse:
+        """Stream status for a running agent."""
+        if not agent_id:
+            return _json({"ok": False, "error": "agent_id required"})
+        try:
+            result = runtime.get_agent_stream(agent_id) if hasattr(runtime, "get_agent_stream") else {"ok": False, "available": False}
+            return _json({"ok": True, "stream": result})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    # ------------------------------------------------------------------
     # Legacy catch-all (MUST be last — any specific POST route defined
     # above takes priority because it's registered first in FastAPI)
     # ------------------------------------------------------------------

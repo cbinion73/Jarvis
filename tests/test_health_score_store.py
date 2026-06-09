@@ -45,6 +45,8 @@ class HealthScoreStoreTests(unittest.TestCase):
                 self.assertEqual(sleep["sleep_quality"], 8)
 
     def test_replays_score_history_from_state_log_when_snapshot_is_blank(self) -> None:
+        from datetime import date as _date
+        today_str = _date.today().isoformat()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             score_path = root / "health_scores.jsonl"
@@ -56,7 +58,7 @@ class HealthScoreStoreTests(unittest.TestCase):
                     {
                         "records": [
                             {
-                                "date": "2026-06-02",
+                                "date": today_str,
                                 "score": 84,
                                 "grade": "B",
                                 "color": "#22c55e",

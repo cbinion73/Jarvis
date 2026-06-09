@@ -2,7 +2,7 @@ import SwiftUI
 import JarvisKit
 
 // MARK: - ChronicleView  "The Journal"
-// Disciple · Chronicle & Reflection
+// Disciple · Legacy & Reflection
 
 struct ChronicleView: View {
 
@@ -36,7 +36,7 @@ struct ChronicleView: View {
 
     private var storyboardStages: [ChronicleStoryboardStage] {
         [
-            .init(id: "home", number: "1", title: "Chronicle Home / Memory Hub", detail: "Your memory center. Recent entries, life themes, memory lanes, and prompts."),
+            .init(id: "home", number: "1", title: "Legacy Home / Memory Hub", detail: "Your memory center. Recent entries, life themes, memory lanes, and prompts."),
             .init(id: "capture", number: "2", title: "Memory Capture", detail: "Capture the moment with photo, audio, voice, text, and rich context."),
             .init(id: "thread", number: "3", title: "Story Thread", detail: "See how moments connect. Follow the timeline of a story across time and themes."),
             .init(id: "family", number: "4", title: "Family History", detail: "Explore generations, key people, important dates, and legacy stories."),
@@ -82,7 +82,7 @@ struct ChronicleView: View {
                     if capturing { captureRow }
                 }
             }
-            .navigationTitle("Chronicle")
+            .navigationTitle("Legacy")
             .navigationBarTitleDisplayMode(.large)
             .sheet(item: $selectedPrayer) { prayer in
                 prayerActionSheet(prayer)
@@ -174,7 +174,7 @@ struct ChronicleView: View {
                     .padding(32)
                     .background(panelCard(cornerRadius: 24))
                 } else {
-                    sectionHeader("Recent Entries", subtitle: "\(ov.entries.count) loaded from live Chronicle", number: nil)
+                    sectionHeader("Recent Entries", subtitle: "\(ov.entries.count) loaded from live Legacy", number: nil)
                     ForEach(ov.entries) { entry in
                         EntryCard(entry: entry, amber: amber) { status in
                             await reviewEntry(entry, status: status)
@@ -189,7 +189,7 @@ struct ChronicleView: View {
 
     @ViewBuilder
     private func memoryHubSection(_ ov: ChronicleOverview) -> some View {
-        sectionHeader("Chronicle Home / Memory Hub", subtitle: "Your memory center. Recent entries, life themes, memory lanes, and prompts.", number: "1")
+        sectionHeader("Legacy Home / Memory Hub", subtitle: "Your memory center. Recent entries, life themes, memory lanes, and prompts.", number: "1")
         VStack(alignment: .leading, spacing: 14) {
             heroMemoryCard
 
@@ -294,7 +294,7 @@ struct ChronicleView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("JARVIS Chronicle Experience")
+                    Text("JARVIS Legacy Experience")
                         .font(.system(size: 34, weight: .semibold, design: .serif))
                         .foregroundStyle(.white)
                     Text("Concept Storyboard")
@@ -408,7 +408,7 @@ struct ChronicleView: View {
                 Text("Good evening, Chris.")
                     .font(.system(size: 28, weight: .semibold, design: .serif))
                     .foregroundStyle(.white)
-                Text(entryTitle ?? "Chronicle")
+                Text(entryTitle ?? "Legacy")
                     .font(.system(size: 15, weight: .medium, design: .serif))
                     .foregroundStyle(softText)
                 Text(subtitle ?? "")
@@ -661,7 +661,7 @@ struct ChronicleView: View {
 
     @ViewBuilder
     private func reviewLaneSection(_ reviews: [ChronicleReviewEntry]) -> some View {
-        sectionHeader("Review Lane", subtitle: "\(reviews.count) Chronicle thread\(reviews.count == 1 ? "" : "s") with durable follow-up", number: nil)
+        sectionHeader("Review Lane", subtitle: "\(reviews.count) Legacy thread\(reviews.count == 1 ? "" : "s") with durable follow-up", number: nil)
         VStack(alignment: .leading, spacing: 10) {
             ForEach(reviews.prefix(4)) { review in
                 VStack(alignment: .leading, spacing: 6) {
@@ -1085,7 +1085,7 @@ struct ChronicleView: View {
                         .padding(12)
                         .background(panelRaised, in: RoundedRectangle(cornerRadius: 14))
 
-                    Button("Save to Chronicle") {
+                    Button("Save to Legacy") {
                         Task {
                             let title = workspace.title.isEmpty ? "Bible Study" : workspace.title
                             _ = try? await AppleAPIClient.shared.saveChronicleStudy(
@@ -1126,7 +1126,7 @@ struct ChronicleView: View {
         VStack(spacing: 16) {
             Image(systemName: "book.closed.fill")
                 .font(.system(size: 44)).foregroundStyle(amber.opacity(0.4))
-            Text("Chronicle unavailable").font(.headline).foregroundStyle(.white)
+            Text("Legacy unavailable").font(.headline).foregroundStyle(.white)
             Text(msg).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             Button("Retry") { Task { await load() } }
                 .buttonStyle(.borderedProminent).tint(amber)
@@ -1146,7 +1146,7 @@ struct ChronicleView: View {
     private func reviewEntry(_ entry: ChronicleEntry, status: String) async {
         let payload = ChronicleReviewPayload(
             status: status,
-            title: entry.title.isEmpty ? "Chronicle entry" : entry.title,
+            title: entry.title.isEmpty ? "Legacy entry" : entry.title,
             entryType: entry.type
         )
         _ = try? await AppleAPIClient.shared.reviewChronicleEntry(entry.id, payload: payload)
