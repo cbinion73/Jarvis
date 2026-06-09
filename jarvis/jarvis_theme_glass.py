@@ -24916,17 +24916,21 @@ body::after {{
             <div class="navigation-pulse">&#10148;</div>
           </div>
           <div class="navigation-side-nav">
-            <div class="navigation-side-link active">&#128506; Command Center</div>
-            <div class="navigation-side-link">&#128506; Map</div>
-            <div class="navigation-side-link">&#128205; Trips</div>
-            <div class="navigation-side-link">&#9733; Smart Stops</div>
-            <div class="navigation-side-link">&#9729; Weather</div>
-            <div class="navigation-side-link">&#128663; Vehicle</div>
-            <div class="navigation-side-link">&#9881; Settings</div>
+            <button class="navigation-side-link active" type="button" data-navigation-page-link="1" onclick="setNavigationPage(1)">&#128506; Command Center</button>
+            <button class="navigation-side-link" type="button" data-navigation-page-link="2" onclick="setNavigationPage(2)">&#128506; Map</button>
+            <button class="navigation-side-link" type="button" data-navigation-page-link="3" onclick="setNavigationPage(3)">&#9733; Smart Stops</button>
+            <button class="navigation-side-link" type="button" data-navigation-page-link="4" onclick="setNavigationPage(4)">&#128205; Stop Detail</button>
+            <button class="navigation-side-link" type="button" data-navigation-page-link="5" onclick="setNavigationPage(5)">&#9729; Travel Plan</button>
+            <button class="navigation-side-link" type="button" data-navigation-page-link="6" onclick="setNavigationPage(6)">&#128663; Voice</button>
+            <button class="navigation-side-link" type="button" onclick="navigationSidebarAction('settings')">&#9881; Settings</button>
           </div>
           <div class="navigation-side-footer">
             <strong>Travel Context</strong>
-            <p>Home base: Alexandria, KY. Prioritize lower-friction timing, family-aware stops, and route changes that preserve the day instead of hijacking it.</p>
+            <p id="navigation-runtime-note">Navigation is live and connected.</p>
+            <div class="navigation-consult-actions" style="margin-top:12px;">
+              <button type="button" id="navigation-refresh-button" onclick="refreshNavigateDesktop()">Refresh Navigation</button>
+              <button type="button" onclick="navigationSidebarAction('module-route')">Open Navigation Center</button>
+            </div>
           </div>
         </aside>
 
@@ -25011,21 +25015,11 @@ body::after {{
                   </div>
                   <div class="navigation-card">
                     <h4>Recent Trips</h4>
-                    <div class="navigation-recent-grid">
-                      <div class="navigation-recent-card"><strong>Washington, DC</strong><span>Board day timing</span></div>
-                      <div class="navigation-recent-card"><strong>Charlottesville, VA</strong><span>Family weekend route</span></div>
-                      <div class="navigation-recent-card"><strong>Harrisonburg, VA</strong><span>Reliable coffee stop corridor</span></div>
-                      <div class="navigation-recent-card"><strong>Shenandoah NP</strong><span>Nature and scenic detour memory</span></div>
-                    </div>
+                    <div class="navigation-recent-grid" id="navigation-recent-grid"></div>
                   </div>
                   <div class="navigation-card">
                     <h4>Saved Places</h4>
-                    <div class="navigation-saved-grid">
-                      <div class="navigation-saved-card"><strong>Work</strong><span>Alexandria, VA</span></div>
-                      <div class="navigation-saved-card"><strong>Mom&apos;s House</strong><span>Luray, VA</span></div>
-                      <div class="navigation-saved-card"><strong>Starbucks Favorites</strong><span>Reliable quick stops</span></div>
-                      <div class="navigation-saved-card"><strong>Shenandoah NP</strong><span>Family outdoor anchor</span></div>
-                    </div>
+                    <div class="navigation-saved-grid" id="navigation-saved-grid"></div>
                   </div>
                 </div>
               </div>
@@ -25114,9 +25108,9 @@ body::after {{
                   <div class="navigation-card">
                     <h4>Stop Fit</h4>
                     <div class="navigation-mini-grid">
-                      <div class="navigation-mini-card"><strong>+1 min</strong><span>Fast coffee options</span></div>
-                      <div class="navigation-mini-card"><strong>+6 min</strong><span>Meal-quality stops</span></div>
-                      <div class="navigation-mini-card"><strong>+18 min</strong><span>Scenic recovery detours</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-stop-fit-fast">--</strong><span id="nav-stop-fit-fast-copy">Fast-stop posture will appear here.</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-stop-fit-meal">--</strong><span id="nav-stop-fit-meal-copy">Meal-stop posture will appear here.</span></div>
+                      <div class="navigation-mini-card"><strong id="nav-stop-fit-scenic">--</strong><span id="nav-stop-fit-scenic-copy">Scenic-stop posture will appear here.</span></div>
                     </div>
                   </div>
                   <div class="navigation-card">
@@ -25125,11 +25119,7 @@ body::after {{
                   </div>
                   <div class="navigation-card">
                     <h4>Route Memory</h4>
-                    <div class="navigation-related-grid">
-                      <div class="navigation-related-card"><strong>Shenandoah</strong><span>Favored family stretch stop</span></div>
-                      <div class="navigation-related-card"><strong>Harrisonburg</strong><span>Reliable quick coffee corridor</span></div>
-                      <div class="navigation-related-card"><strong>Harpers Ferry</strong><span>Historic detour candidate</span></div>
-                    </div>
+                    <div class="navigation-related-grid" id="navigation-related-grid"></div>
                   </div>
                 </div>
               </div>
@@ -25159,18 +25149,11 @@ body::after {{
                 <div class="navigation-command-side">
                   <div class="navigation-card">
                     <h4>Route Actions</h4>
-                    <div class="navigation-stop-actions">
-                      <div class="navigation-stop-chip"><strong>Add to Route</strong><span>Keep current timing with a quick stop.</span></div>
-                      <div class="navigation-stop-chip"><strong>Re-optimize</strong><span>Let JARVIS rebalance the drive after the stop.</span></div>
-                    </div>
+                    <div class="navigation-stop-actions" id="navigation-stop-actions"></div>
                   </div>
                   <div class="navigation-card">
                     <h4>Compare Alternatives</h4>
-                    <div class="navigation-alt-grid">
-                      <div class="navigation-alt-card"><strong>Dunkin&apos;</strong><span>0.6 mi off route · +2 min</span></div>
-                      <div class="navigation-alt-card"><strong>Panera</strong><span>1.2 mi off route · +5 min</span></div>
-                      <div class="navigation-alt-card"><strong>Wawa</strong><span>0.5 mi off route · +3 min</span></div>
-                    </div>
+                    <div class="navigation-alt-grid" id="navigation-alt-grid"></div>
                   </div>
                   <div class="navigation-card">
                     <h4>Why this stop works</h4>
@@ -25191,41 +25174,21 @@ body::after {{
                   </div>
                   <div class="navigation-card" style="margin-top:16px; padding:16px;">
                     <h4 style="margin-bottom:10px;">Trip timeline</h4>
-                    <div class="navigation-timeline">
-                      <div class="navigation-timeline-step"><i></i><div><strong style="display:block; margin-bottom:4px;">Departure window</strong><span style="color:var(--nav-copy-muted); font-size:12px;">Leave before traffic hardens and before weather confidence slips.</span></div></div>
-                      <div class="navigation-timeline-step"><i></i><div><strong style="display:block; margin-bottom:4px;">Mid-route buffer</strong><span style="color:var(--nav-copy-muted); font-size:12px;">Use a low-friction stop only if energy or meeting prep needs a reset.</span></div></div>
-                      <div class="navigation-timeline-step"><i></i><div><strong style="display:block; margin-bottom:4px;">Arrival protection</strong><span style="color:var(--nav-copy-muted); font-size:12px;">Maintain margin so the next event does not inherit road volatility.</span></div></div>
-                    </div>
+                    <div class="navigation-timeline" id="navigation-plan-timeline"></div>
                   </div>
                 </div>
                 <div class="navigation-command-side">
                   <div class="navigation-card">
                     <h4>Travelers</h4>
-                    <div class="navigation-travelers">
-                      <div class="navigation-avatars">
-                        <div class="navigation-avatar you">You</div>
-                        <div class="navigation-avatar alex">A</div>
-                        <div class="navigation-avatar jordan">J</div>
-                        <div class="navigation-avatar plus">+</div>
-                      </div>
-                      <span style="color:var(--nav-copy-muted); font-size:12px;">Coordinate schedule alignment, rider timing, and stop tolerance.</span>
-                    </div>
+                    <div class="navigation-travelers" id="navigation-travelers-card"></div>
                   </div>
                   <div class="navigation-card">
                     <h4>Constraints</h4>
-                    <div class="navigation-constraints-grid">
-                      <div class="navigation-constraint-card"><strong>Avoid heavy traffic</strong><span>Preserve morning decision bandwidth.</span></div>
-                      <div class="navigation-constraint-card"><strong>Minimize tolls</strong><span>Use only when time recovery matters.</span></div>
-                      <div class="navigation-constraint-card"><strong>Kid-friendly stop</strong><span>Route can flex toward easier household travel.</span></div>
-                    </div>
+                    <div class="navigation-constraints-grid" id="navigation-constraints-grid"></div>
                   </div>
                   <div class="navigation-card">
                     <h4>Weather Along Route</h4>
-                    <div class="navigation-weather-grid">
-                      <div class="navigation-weather-card"><strong>Now</strong><span>72&deg; · partly cloudy</span></div>
-                      <div class="navigation-weather-card"><strong>11 AM</strong><span>74&deg; · stable</span></div>
-                      <div class="navigation-weather-card"><strong>1 PM</strong><span>68&deg; · rain risk</span></div>
-                    </div>
+                    <div class="navigation-weather-grid" id="navigation-weather-grid"></div>
                   </div>
                 </div>
               </div>
@@ -25235,17 +25198,12 @@ body::after {{
               <div class="navigation-voice-grid">
                 <div class="navigation-card">
                   <h4>Voice navigation consultation</h4>
-                  <div class="navigation-chat">
-                    <div class="navigation-chat-bubble user">Where is the next good coffee stop?</div>
-                    <div class="navigation-chat-bubble jarvis">The best option is a Starbucks in Harrisonburg, 0.2 miles off your route. It adds about a minute and preserves your arrival window.</div>
-                    <div class="navigation-chat-bubble user">Should I leave earlier?</div>
-                    <div class="navigation-chat-bubble jarvis">Leaving by 9:38 AM is ideal. You avoid I-81 construction pressure and keep your arrival confidence above 90%.</div>
-                  </div>
+                  <div class="navigation-chat" id="navigation-voice-chat"></div>
                   <div class="navigation-consult-actions">
-                    <button type="button">Find food</button>
-                    <button type="button">Check weather</button>
-                    <button type="button">Avoid tolls</button>
-                    <button type="button">More options</button>
+                    <button type="button" onclick="navigationVoicePrompt('coffee')">Find coffee</button>
+                    <button type="button" onclick="navigationVoicePrompt('weather')">Check weather</button>
+                    <button type="button" onclick="navigationVoicePrompt('timing')">Leave-time advice</button>
+                    <button type="button" onclick="navigationVoicePrompt('resume')">Resume route</button>
                   </div>
                   <div class="navigation-card" style="margin-top:16px; padding:0; background:transparent; border:none; box-shadow:none;">
                     <div class="nav-hud" id="nav-hud" style="display:none">
@@ -25304,6 +25262,10 @@ body::after {{
                       <strong id="nav-voice-action-title">Leave by 9:38 AM</strong>
                       <span id="nav-voice-action-copy">Best control point before the corridor starts adding uncertainty to the rest of the day.</span>
                     </div>
+                  </div>
+                  <div class="navigation-card">
+                    <h4>Recent Route Continuity</h4>
+                    <div class="navigation-related-grid" id="navigation-voice-activity"></div>
                   </div>
                 </div>
               </div>
@@ -48621,6 +48583,113 @@ const NAVIGATION_STORYBOARD_TITLES = {{
   }},
 }};
 
+let _navigateDesktopState = null;
+let _navigateDesktopRequestSerial = 0;
+
+function navigationRuntimeNote(text) {{
+  _setText('navigation-runtime-note', text || 'Navigation is live and connected.');
+}}
+
+function navigationText(...values) {{
+  for (const value of values) {{
+    const text = String(value || '').trim();
+    if (text) return text;
+  }}
+  return '';
+}}
+
+function navigationTitleCase(value) {{
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\\b\\w/g, (char) => char.toUpperCase())
+    .trim();
+}}
+
+function navigationRelativeTime(value) {{
+  const raw = String(value || '').trim();
+  if (!raw) return 'Saved recently';
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  const diffMinutes = Math.max(1, Math.round((Date.now() - parsed.getTime()) / 60000));
+  if (diffMinutes < 60) return `${{diffMinutes}} min ago`;
+  const hours = Math.round(diffMinutes / 60);
+  if (hours < 24) return `${{hours}} hr ago`;
+  const days = Math.round(hours / 24);
+  return `${{days}} day${{days === 1 ? '' : 's'}} ago`;
+}}
+
+async function navigationReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_error) {{
+    return null;
+  }}
+}}
+
+async function navigationFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    return {{ ok: response.ok, status: response.status, payload: await navigationReadJson(response) }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
+
+async function navigationRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: (typeof dailyBriefName === 'function' && dailyBriefName()) || 'Chris',
+        domain: 'navigation',
+        route: '/navigation-center',
+        route_label: 'Open Navigation',
+        ...payload,
+      }}),
+    }});
+  }} catch (_error) {{
+    // Best-effort continuity only.
+  }}
+}}
+
+function setNavigationPage(page) {{
+  navigationStoryboardPage = Number(page) || 1;
+  syncNavigationStoryboard();
+}}
+
+function navigationSidebarAction(action) {{
+  if (action === 'settings') {{
+    navigationRuntimeNote('Opening Navigation settings…');
+    navigationRecordAction({{
+      action: 'Open Navigation Settings',
+      title: 'Open Navigation Settings',
+      detail: 'Navigation opened Settings from the desktop rail.',
+      why_now: 'Navigation surfaced a direct settings handoff.',
+      result_summary: 'Settings opened from Navigation.',
+      related_kind: 'navigation-route',
+      related_label: 'Settings',
+      route: '/settings-center',
+      route_label: 'Open Settings',
+      succeeded: true,
+    }});
+    if (typeof commandOpenCommandRoute === 'function') {{
+      commandOpenCommandRoute('/settings-center', 'settings');
+    }} else {{
+      switchView('settings');
+    }}
+    return;
+  }}
+  if (action === 'module-route') {{
+    navigationRuntimeNote('Opening Navigation Center…');
+    window.open('/navigation-center', '_blank', 'noopener');
+  }}
+}}
+
 function syncNavigationStoryboard() {{
   const panels = Array.from(document.querySelectorAll('#view-navigate .navigation-page'));
   if (!panels.length) return;
@@ -48648,6 +48717,10 @@ function syncNavigationStoryboard() {{
   const next = document.getElementById('navigation-nav-next');
   if (prev) prev.disabled = navigationStoryboardPage === 1;
   if (next) next.disabled = navigationStoryboardPage === pageCount;
+
+  document.querySelectorAll('[data-navigation-page-link]').forEach((el) => {{
+    el.classList.toggle('active', Number(el.getAttribute('data-navigation-page-link') || '0') === navigationStoryboardPage);
+  }});
 
   if (navigationStoryboardPage === 2 && _navMap && window.google && google.maps && google.maps.event) {{
     setTimeout(function() {{
@@ -48715,6 +48788,7 @@ function updateNavigationReadouts(route, pois) {{
     ? `Leave now to arrive around ${{eta}}. JARVIS will keep watching traffic and stop quality as conditions change.`
     : 'Plan the route first so JARVIS can calculate the best departure window.';
   _setText('nav-voice-action-copy', leaveCopy);
+  navigationRuntimeNote(`Detailed route loaded: ${{distance}} · ${{duration}}.`);
 }}
 
 var _navMap = null;
@@ -48736,12 +48810,262 @@ var _navGoogleMapsLoaded = false;
 var _navParksRadius = 25;
 var _navHomeAddress = '8384 Riley Rd, Alexandria, KY 41001';
 
+async function navigationPersistState(patch, runtimeCopy = '') {{
+    var response = await navigationFetchJson('/api/navigation/module/state', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify(patch && typeof patch === 'object' ? patch : {{}}),
+    }});
+    if (response.ok && response.payload && _navigateDesktopState) {{
+        _navigateDesktopState.navigation_state = response.payload;
+    }}
+    if (response.ok && runtimeCopy) navigationRuntimeNote(runtimeCopy);
+    return response;
+}}
+
+function navigationPrimarySection(payload) {{
+    var sections = Array.isArray(payload?.route_preview?.sections) ? payload.route_preview.sections : [];
+    for (var i = 0; i < sections.length; i++) {{
+        if (Array.isArray(sections[i].items) && sections[i].items.length) return sections[i];
+    }}
+    return null;
+}}
+
+function navigationLeadStop(payload) {{
+    var section = navigationPrimarySection(payload);
+    if (!section || !Array.isArray(section.items) || !section.items.length) return null;
+    return section.items[0];
+}}
+
+function renderNavigateModule(payload) {{
+    _navigateDesktopState = payload || null;
+    var state = payload?.navigation_state || {{}};
+    var preview = payload?.route_preview || {{}};
+    var locations = Array.isArray(payload?.saved_locations) ? payload.saved_locations : [];
+    var routeHistory = Array.isArray(payload?.route_history) ? payload.route_history : [];
+    var recentActivity = Array.isArray(payload?.recent_activity) ? payload.recent_activity : [];
+    var sections = Array.isArray(preview.sections) ? preview.sections : [];
+    var leadSection = navigationPrimarySection(payload);
+    var leadStop = navigationLeadStop(payload);
+    var previewRoute = preview.route || {{}};
+    var previewDistance = previewRoute.distance_miles ? Number(previewRoute.distance_miles).toFixed(0) + ' mi' : '--';
+    var previewDuration = previewRoute.duration_minutes ? Math.max(1, Math.round(Number(previewRoute.duration_minutes))) + ' min' : '--';
+    var trafficPosture = preview.hazard_active ? 'Watch' : (sections.some(function(section) {{ return (section.items || []).length > 4; }}) ? 'Active' : 'Light');
+    var weatherPosture = preview.hazard_active ? 'Hazard' : (preview.warning ? 'Mixed' : 'Stable');
+    var runtimeText = navigationText(payload?.summary, payload?.remains_partial, 'Navigation is live and connected.');
+
+    navigationRuntimeNote(runtimeText);
+    _setText('nav-brief-recommendation', navigationText(
+        preview.summary,
+        routeHistory[0] ? 'Resume ' + (routeHistory[0].destination || 'your last route') + ' to continue where you left off.' : '',
+        'Plan a route to get live departure guidance.'
+    ));
+    _setText('nav-brief-window', navigationText(
+        preview.warning,
+        payload?.remains_partial,
+        routeHistory[0] ? 'Last route updated ' + navigationRelativeTime(routeHistory[0].last_previewed_at || routeHistory[0].saved_at) + '.' : '',
+        'Persisted route history and smart stops are available once a live route is previewed.'
+    ));
+    _setText('nav-hero-eta', previewDuration);
+    _setText('nav-hero-traffic', trafficPosture);
+    _setText('nav-hero-weather', weatherPosture);
+    _setText('nav-overview-destination', navigationText((state.last_route || {{}}).destination, preview.destination, 'Destination'));
+    _setText('nav-overview-destination-copy', navigationText(
+        preview.summary,
+        routeHistory[0] ? 'Saved route from ' + (routeHistory[0].origin || 'Origin') + ' to ' + (routeHistory[0].destination || 'Destination') + '.' : '',
+        'No route has been previewed yet.'
+    ));
+    _setText('nav-map-summary-home', navigationText((state.last_route || {{}}).origin, document.getElementById('nav-origin')?.value, 'Origin'));
+    _setText('nav-map-summary-destination', navigationText((state.last_route || {{}}).destination, document.getElementById('nav-dest')?.value, 'Destination'));
+    _setText('nav-map-summary-incidents', String((preview.hazard_active ? 1 : 0) + (Array.isArray(payload?.errors) ? payload.errors.length : 0)));
+    _setText('nav-map-summary-cost', previewDistance);
+    _setText('nav-risk-traffic', trafficPosture);
+    _setText('nav-risk-weather', weatherPosture);
+    _setText('nav-plan-distance', previewDistance);
+    _setText('nav-plan-arrive', previewDuration);
+    _setText('nav-voice-origin', navigationText((state.last_route || {{}}).origin, 'Origin'));
+    _setText('nav-voice-destination', navigationText((state.last_route || {{}}).destination, 'Destination'));
+    _setText('nav-voice-eta', previewDuration);
+    _setText('nav-voice-distance', previewDistance);
+    _setText('nav-voice-traffic', trafficPosture);
+    _setText('nav-voice-action-title', routeHistory[0] ? 'Resume ' + (routeHistory[0].destination || 'Route') : 'Preview a route');
+    _setText('nav-voice-action-copy', navigationText(
+        preview.summary,
+        routeHistory[0] ? 'Stored route is ready to resume from ' + (routeHistory[0].origin || 'Origin') + '.' : '',
+        'Run a live route preview to activate voice-ready continuity.'
+    ));
+
+    var recentGrid = document.getElementById('navigation-recent-grid');
+    if (recentGrid) {{
+        recentGrid.innerHTML = routeHistory.length ? routeHistory.slice(0, 4).map(function(item) {{
+            return '<button type="button" class="navigation-recent-card" onclick="navigationResumeRoute('
+                + JSON.stringify(item.route_id || '') + ','
+                + JSON.stringify((item.origin || 'Origin') + ' -> ' + (item.destination || 'Destination')) + ')">'
+                + '<strong>' + escHtml(item.destination || 'Stored route') + '</strong>'
+                + '<span>' + escHtml((item.origin || 'Origin') + ' · ' + navigationRelativeTime(item.last_previewed_at || item.saved_at)) + '</span>'
+                + '</button>';
+        }}).join('') : '<div class="navigation-recent-card"><strong>No recent routes</strong><span>Preview a route and it will become resume-ready here.</span></div>';
+    }}
+
+    var savedGrid = document.getElementById('navigation-saved-grid');
+    if (savedGrid) {{
+        savedGrid.innerHTML = locations.length ? locations.slice(0, 6).map(function(item) {{
+            return '<button type="button" class="navigation-saved-card" onclick="navigationSelectSavedLocation('
+                + JSON.stringify(item.address || item.label || '') + ','
+                + JSON.stringify(item.label || 'Saved Place') + ')">'
+                + '<strong>' + escHtml(item.label || 'Saved place') + '</strong>'
+                + '<span>' + escHtml(item.address || item.geography || item.source || 'Saved navigation place') + '</span>'
+                + '</button>';
+        }}).join('') : '<div class="navigation-saved-card"><strong>No saved places</strong><span>Saved navigation locations will appear here when populated.</span></div>';
+    }}
+
+    _setText('nav-stop-fit-fast', leadStop ? '+1 min' : '--');
+    _setText('nav-stop-fit-fast-copy', leadStop ? (leadSection?.label || 'Fast stop') + ' is the current best low-friction option.' : 'Fast-stop posture appears after route preview.');
+    _setText('nav-stop-fit-meal', sections.find(function(section) {{ return String(section.id || '').indexOf('food') >= 0; }}) ? '+6 min' : '--');
+    _setText('nav-stop-fit-meal-copy', sections.find(function(section) {{ return String(section.id || '').indexOf('food') >= 0; }}) ? 'Food options are tied to the active route corridor.' : 'Meal-stop posture appears after route preview.');
+    _setText('nav-stop-fit-scenic', sections.find(function(section) {{ return ['parks', 'historic'].includes(String(section.id || '')); }}) ? '+18 min' : '--');
+    _setText('nav-stop-fit-scenic-copy', sections.find(function(section) {{ return ['parks', 'historic'].includes(String(section.id || '')); }}) ? 'Scenic and historic detours are available on this corridor.' : 'Scenic-stop posture appears after route preview.');
+    _setText('nav-stop-optimizer-copy', navigationText(
+      leadStop ? ((leadSection?.label || 'Route-fit') + ' stops are live. JARVIS is balancing detour cost against arrival confidence.') : '',
+      payload?.remains_partial,
+      'Stop optimization appears after route preview.'
+    ));
+    _setText('nav-detail-detour', leadStop?.distance_from_route_miles != null ? Number(leadStop.distance_from_route_miles).toFixed(1) + ' mi' : '0.0 mi');
+    _setText('nav-detail-time-impact', leadStop ? '+1 min' : '0 min');
+    _setText('nav-detail-arrival', previewDuration);
+    _setText('nav-stop-fit-copy', navigationText(
+      leadStop ? ((leadStop.name || 'This stop') + ' is the best current fit because it stays close to the active corridor.') : '',
+      payload?.remains_partial,
+      'Route-fit reasoning will appear once a live stop candidate is available.'
+    ));
+
+    var routeMemory = document.getElementById('navigation-related-grid');
+    if (routeMemory) {{
+        routeMemory.innerHTML = routeHistory.length ? routeHistory.slice(0, 3).map(function(item) {{
+            return '<div class="navigation-related-card"><strong>' + escHtml(item.destination || 'Stored route') + '</strong><span>'
+                + escHtml((item.origin || 'Origin') + ' · resumed ' + (item.resume_count || 0) + 'x') + '</span></div>';
+        }}).join('') : '<div class="navigation-related-card"><strong>No route memory yet</strong><span>Recent routes will surface here after the first preview.</span></div>';
+    }}
+
+    var stopActions = document.getElementById('navigation-stop-actions');
+    if (stopActions) {{
+        stopActions.innerHTML = leadStop
+            ? '<button type="button" class="navigation-stop-chip" onclick="navigationVoicePrompt(&quot;coffee&quot;)"><strong>Ask About Stops</strong><span>Use voice guidance to compare route-fit options.</span></button>'
+              + '<button type="button" class="navigation-stop-chip" onclick="navGetRoute()"><strong>Re-optimize</strong><span>Refresh the detailed route after stop review.</span></button>'
+            : '<div class="navigation-stop-chip"><strong>No active stop</strong><span>Preview a route to unlock live stop actions.</span></div>';
+    }}
+
+    var altGrid = document.getElementById('navigation-alt-grid');
+    if (altGrid) {{
+        var alternatives = leadSection && Array.isArray(leadSection.items) ? leadSection.items.slice(1, 4) : [];
+        altGrid.innerHTML = alternatives.length ? alternatives.map(function(item) {{
+            return '<div class="navigation-alt-card"><strong>' + escHtml(item.name || 'Alternative') + '</strong><span>'
+                + escHtml(item.address || ('Around mile ' + Math.round(Number(item.route_mile_marker || 0)))) + '</span></div>';
+        }}).join('') : '<div class="navigation-alt-card"><strong>No live alternatives</strong><span>Additional route-fit options appear after preview.</span></div>';
+    }}
+
+    _setText('nav-plan-leave', routeHistory[0] ? 'Resume-ready now' : 'Preview route');
+    var planTimeline = document.getElementById('navigation-plan-timeline');
+    if (planTimeline) {{
+        var rows = [
+            {{ title: 'Route continuity', copy: navigationText(preview.summary, 'No route summary saved yet.') }},
+            {{ title: 'Saved origin mode', copy: 'Current origin mode: ' + navigationTitleCase(state.selected_origin_mode || 'home') + '.' }},
+            {{ title: 'Resume posture', copy: routeHistory[0] ? ('Last route to ' + (routeHistory[0].destination || 'Destination') + ' was updated ' + navigationRelativeTime(routeHistory[0].last_previewed_at || routeHistory[0].saved_at) + '.') : 'No resume-ready route has been stored yet.' }},
+        ];
+        planTimeline.innerHTML = rows.map(function(row) {{
+            return '<div class="navigation-timeline-step"><i></i><div><strong style="display:block; margin-bottom:4px;">'
+                + escHtml(row.title) + '</strong><span style="color:var(--nav-copy-muted); font-size:12px;">'
+                + escHtml(row.copy) + '</span></div></div>';
+        }}).join('');
+    }}
+
+    var travelers = document.getElementById('navigation-travelers-card');
+    if (travelers) {{
+        var sourceTags = locations.slice(0, 4).map(function(item) {{
+            return '<div class="navigation-avatar">' + escHtml((item.label || 'P').slice(0, 2)) + '</div>';
+        }}).join('');
+        travelers.innerHTML = '<div class="navigation-avatars">' + (sourceTags || '<div class="navigation-avatar you">No</div>') + '</div>'
+            + '<span style="color:var(--nav-copy-muted); font-size:12px;">'
+            + escHtml(locations.length ? (locations.length + ' saved location(s) are available for family-aware route planning.') : 'Saved travel places will appear here when the runtime is populated.')
+            + '</span>';
+    }}
+
+    var constraints = document.getElementById('navigation-constraints-grid');
+    if (constraints) {{
+        var constraintRows = [
+            {{ title: 'Origin Mode', copy: navigationTitleCase(state.selected_origin_mode || 'home') }},
+            {{ title: 'Parks / Historic Radius', copy: (state.parks_historic_radius_miles || 25) + ' mile search window' }},
+            {{ title: 'Hazard Posture', copy: preview.hazard_active ? 'Watch active route risks' : 'No active route hazard' }},
+        ];
+        constraints.innerHTML = constraintRows.map(function(row) {{
+            return '<div class="navigation-constraint-card"><strong>' + escHtml(row.title) + '</strong><span>' + escHtml(row.copy) + '</span></div>';
+        }}).join('');
+    }}
+
+    var weatherGrid = document.getElementById('navigation-weather-grid');
+    if (weatherGrid) {{
+        var weatherRows = [
+            {{ title: 'Route', copy: navigationText(preview.summary, preview.warning, 'Route weather context will appear after a preview.') }},
+            {{ title: 'Hazard', copy: preview.hazard_active ? 'Active route hazard surfaced.' : 'No active hazard surfaced.' }},
+            {{ title: 'Stops', copy: sections.reduce(function(total, section) {{ return total + ((section.items || []).length || 0); }}, 0) + ' route-fit stop suggestions.' }},
+        ];
+        weatherGrid.innerHTML = weatherRows.map(function(row) {{
+            return '<div class="navigation-weather-card"><strong>' + escHtml(row.title) + '</strong><span>' + escHtml(row.copy) + '</span></div>';
+        }}).join('');
+    }}
+
+    var voiceChat = document.getElementById('navigation-voice-chat');
+    if (voiceChat) {{
+        var items = [];
+        if (preview.summary) items.push('<div class="navigation-chat-bubble jarvis">' + escHtml(preview.summary) + '</div>');
+        if (leadStop?.name) {{
+            items.push('<div class="navigation-chat-bubble user">What is the best stop on this route?</div>');
+            items.push('<div class="navigation-chat-bubble jarvis">' + escHtml((leadStop.name || 'The top stop') + ' is the best current option from the ' + (leadSection?.label || 'live') + ' lane.') + '</div>');
+        }}
+        if (routeHistory[0]) {{
+            items.push('<div class="navigation-chat-bubble user">Can I resume my last route?</div>');
+            items.push('<div class="navigation-chat-bubble jarvis">' + escHtml('Yes. The last route to ' + (routeHistory[0].destination || 'Destination') + ' was updated ' + navigationRelativeTime(routeHistory[0].last_previewed_at || routeHistory[0].saved_at) + '.') + '</div>');
+        }}
+        voiceChat.innerHTML = items.length ? items.join('') : '<div class="navigation-chat-bubble jarvis">Preview a route or resume a stored trip to give voice navigation live travel context.</div>';
+    }}
+
+    var voiceActivity = document.getElementById('navigation-voice-activity');
+    if (voiceActivity) {{
+        voiceActivity.innerHTML = recentActivity.length ? recentActivity.slice(0, 3).map(function(item) {{
+            return '<div class="navigation-related-card"><strong>' + escHtml(item.title || 'Navigation activity') + '</strong><span>'
+                + escHtml(item.detail || item.subtitle || 'Operator continuity recorded.') + '</span></div>';
+        }}).join('') : '<div class="navigation-related-card"><strong>No recent continuity</strong><span>Navigation activity will appear here after a live action.</span></div>';
+    }}
+
+    if (!_navRouteData && state?.last_route?.origin && state?.last_route?.destination) {{
+        navFetchDetailedRoute(state.last_route.origin, state.last_route.destination, {{ quiet: true, persistModule: false }}).catch(function() {{}});
+    }}
+}}
+
+async function loadNavigateDesktop() {{
+    var requestSerial = ++_navigateDesktopRequestSerial;
+    navigationRuntimeNote('Loading Navigation…');
+    var response = await navigationFetchJson('/api/navigation/module');
+    if (requestSerial !== _navigateDesktopRequestSerial) return;
+    if (!response.ok || !response.payload) {{
+        navigationRuntimeNote('Navigation module is unavailable right now.');
+        return;
+    }}
+    renderNavigateModule(response.payload);
+}}
+
+async function refreshNavigateDesktop(skipToast = false) {{
+    if (!skipToast) showToast('Refreshing navigation...');
+    await loadNavigateDesktop();
+}}
+
 function navSetHome() {{
     var el = document.getElementById('nav-origin');
     if (el) {{
         el.value = _navHomeAddress;
         document.getElementById('nav-origin-results').innerHTML = '';
     }}
+    navigationPersistState({{ selected_origin_mode: 'home' }}, 'Origin mode saved as Home.').catch(function() {{}});
 }}
 
 function navUseCurrentLocation() {{
@@ -48749,6 +49073,7 @@ function navUseCurrentLocation() {{
     navigator.geolocation.getCurrentPosition(function(pos) {{
         var el = document.getElementById('nav-origin');
         if (el) el.value = pos.coords.latitude.toFixed(6) + ',' + pos.coords.longitude.toFixed(6);
+        navigationPersistState({{ selected_origin_mode: 'current' }}, 'Origin mode saved as current location.').catch(function() {{}});
     }}, function() {{ showToast('Could not get your location'); }});
 }}
 
@@ -48762,11 +49087,15 @@ function navUpdateParksRadius(val) {{
         var pct = ((_navParksRadius - 5) / 95 * 100).toFixed(1);
         slider.style.background = 'linear-gradient(to right, #4CAF50 0%, #4CAF50 ' + pct + '%, rgba(255,255,255,0.15) ' + pct + '%)';
     }}
+    if (_navigateDesktopState) {{
+        navigationPersistState({{ parks_historic_radius_miles: _navParksRadius }}).catch(function() {{}});
+    }}
 }}
 
 function initNavView() {{
     syncNavigationStoryboard();
     navUpdateParksRadius(_navParksRadius);
+    loadNavigateDesktop();
     if (_navMap) return;
     // Load home address from server
     fetch('/api/nav/home').then(function(r) {{ return r.json(); }}).then(function(d) {{
@@ -48836,22 +49165,67 @@ function navSwapInputs() {{
     document.getElementById('nav-dest').value = o;
 }}
 
-function navGetRoute() {{
-    var origin = document.getElementById('nav-origin').value;
-    var dest = document.getElementById('nav-dest').value;
-    if (!origin || !dest) {{ showToast('Enter origin and destination'); return; }}
-    showToast('Getting route...');
-    fetch('/api/nav/route', {{
-        method: 'POST',
-        headers: {{'Content-Type':'application/json'}},
-        body: JSON.stringify({{origin: origin, destination: dest}})
-    }}).then(function(r) {{ return r.json(); }}).then(function(data) {{
+async function navFetchDetailedRoute(origin, dest, options = undefined) {{
+    var opts = options || {{}};
+    if (!origin || !dest) {{ showToast('Enter origin and destination'); return null; }}
+    if (!opts.quiet) {{
+        showToast('Getting route...');
+        navigationRuntimeNote('Planning route from ' + origin + ' to ' + dest + '…');
+    }}
+    try {{
+        var response = await fetch('/api/nav/route', {{
+            method: 'POST',
+            headers: {{'Content-Type':'application/json'}},
+            body: JSON.stringify({{origin: origin, destination: dest}})
+        }});
+        var data = await response.json();
         if (data.error || !data.routes || !data.routes.length) {{
-            showToast('Route not found'); return;
+            if (!opts.quiet) showToast('Route not found');
+            navigationRuntimeNote('Navigation route preview is unavailable right now.');
+            return null;
         }}
         _navRouteData = data;
         renderNavRoute(data);
         loadNavPOIs(data);
+        if (opts.persistModule !== false) {{
+            await navigationFetchJson('/api/navigation/module/route', {{
+                method: 'POST',
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{
+                    origin: origin,
+                    destination: dest,
+                    parks_historic_radius_miles: _navParksRadius
+                }})
+            }});
+            await navigationPersistState({{
+                last_route: {{ origin: origin, destination: dest }},
+                parks_historic_radius_miles: _navParksRadius
+            }});
+            await navigationRecordAction({{
+                action: 'Preview Route Intelligence',
+                title: origin + ' -> ' + dest,
+                detail: 'Detailed route and navigation module preview were refreshed from the desktop shell.',
+                why_now: 'Navigation persisted a route preview from the live desktop experience.',
+                result_summary: 'Detailed route preview refreshed.',
+                related_kind: 'route-preview',
+                related_label: dest,
+                succeeded: true
+            }});
+            await refreshNavigateDesktop(true);
+        }}
+        return data;
+    }} catch (_error) {{
+        navigationRuntimeNote('Navigation route preview failed.');
+        if (!opts.quiet) showToast('Route not found');
+        return null;
+    }}
+}}
+
+function navGetRoute() {{
+    var origin = document.getElementById('nav-origin').value;
+    var dest = document.getElementById('nav-dest').value;
+    navFetchDetailedRoute(origin, dest).catch(function() {{
+        navigationRuntimeNote('Navigation route preview failed.');
     }});
 }}
 
@@ -49106,6 +49480,7 @@ function startNavigation() {{
         var first = _navSteps[0].html_instructions.replace(/<[^>]+>/g,' ').trim();
         _navSpeak('Starting navigation. ' + first);
     }}
+    navigationRuntimeNote('Live navigation session started.');
 }}
 
 function stopNavigation() {{
@@ -49116,6 +49491,82 @@ function stopNavigation() {{
     document.getElementById('nav-start-btn').style.display = 'block';
     if (_navUserMarker) {{ _navUserMarker.setMap(null); _navUserMarker = null; }}
     updateNavigationReadouts(_navRouteData && _navRouteData.routes ? _navRouteData.routes[0] : null);
+    navigationRuntimeNote('Live navigation session stopped.');
+}}
+
+function navigationSelectSavedLocation(address, label) {{
+    var dest = document.getElementById('nav-dest');
+    if (dest) dest.value = address || label || '';
+    navigationRuntimeNote((label || 'Saved place') + ' loaded into destination.');
+}}
+
+async function navigationResumeRoute(routeId, label) {{
+    navigationRuntimeNote('Resuming ' + (label || 'stored route') + '…');
+    var response = await navigationFetchJson('/api/navigation/module/resume', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+            route_id: routeId,
+            actor: (typeof dailyBriefName === 'function' && dailyBriefName()) || 'Chris'
+        }})
+    }});
+    if (!response.ok || !response.payload) {{
+        navigationRuntimeNote('Could not resume ' + (label || 'stored route') + '.');
+        showToast('Could not resume route');
+        return;
+    }}
+    var resumed = response.payload.route || {{}};
+    var origin = resumed.origin || '';
+    var destination = resumed.destination || '';
+    if (document.getElementById('nav-origin')) document.getElementById('nav-origin').value = origin;
+    if (document.getElementById('nav-dest')) document.getElementById('nav-dest').value = destination;
+    await navFetchDetailedRoute(origin, destination, {{ quiet: true, persistModule: false }});
+    await refreshNavigateDesktop(true);
+    navigationRuntimeNote('Resumed ' + (label || destination || 'stored route') + '.');
+}}
+
+function navigationVoicePrompt(mode) {{
+    var payload = _navigateDesktopState || {{}};
+    var preview = payload.route_preview || {{}};
+    var leadStop = navigationLeadStop(payload);
+    var routeHistory = Array.isArray(payload.route_history) ? payload.route_history : [];
+    var text = '';
+    var action = 'Navigation Voice Prompt';
+    if (mode === 'coffee') {{
+        text = leadStop ? (leadStop.name || 'The top stop') + ' is the best current route-fit option.' : 'No route-fit coffee stop is surfaced yet. Preview a route first.';
+        action = 'Find Coffee';
+    }} else if (mode === 'weather') {{
+        text = navigationText(preview.summary, preview.warning, 'No live route weather context is available yet.');
+        action = 'Check Route Weather';
+    }} else if (mode === 'timing') {{
+        text = routeHistory[0] ? ('Your latest route was updated ' + navigationRelativeTime(routeHistory[0].last_previewed_at || routeHistory[0].saved_at) + '.') : 'No persisted route timing is available yet.';
+        action = 'Check Leave Time';
+    }} else if (mode === 'resume') {{
+        if (routeHistory[0]?.route_id) {{
+            navigationResumeRoute(routeHistory[0].route_id, (routeHistory[0].origin || 'Origin') + ' -> ' + (routeHistory[0].destination || 'Destination')).catch(function() {{
+                navigationRuntimeNote('Could not resume the latest route.');
+            }});
+            return;
+        }}
+        text = 'There is no stored route to resume yet.';
+        action = 'Resume Route';
+    }}
+    var chat = document.getElementById('navigation-voice-chat');
+    if (chat) {{
+        chat.innerHTML += '<div class="navigation-chat-bubble user">' + escHtml(action) + '</div>'
+            + '<div class="navigation-chat-bubble jarvis">' + escHtml(text) + '</div>';
+    }}
+    navigationRuntimeNote(text);
+    navigationRecordAction({{
+        action: action,
+        title: action,
+        detail: text,
+        why_now: 'Navigation voice consultation answered from the live route context.',
+        result_summary: text,
+        related_kind: 'voice-consult',
+        related_label: mode,
+        succeeded: true
+    }});
 }}
 
 function _navGPSUpdate(pos) {{

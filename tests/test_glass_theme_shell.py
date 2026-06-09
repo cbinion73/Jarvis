@@ -66,6 +66,29 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/dining/reservation-intent", html)
         self.assertIn("Refresh Dining", html)
 
+    def test_render_glass_shell_wires_navigation_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="navigation-refresh-button"', html)
+        self.assertIn('id="navigation-runtime-note"', html)
+        self.assertIn('data-navigation-page-link="1"', html)
+        self.assertIn('data-navigation-page-link="6"', html)
+        self.assertIn("function setNavigationPage(", html)
+        self.assertIn("function navigationSidebarAction(", html)
+        self.assertIn("function navigationFetchJson(", html)
+        self.assertIn("function renderNavigateModule(", html)
+        self.assertIn("function loadNavigateDesktop(", html)
+        self.assertIn("function refreshNavigateDesktop(", html)
+        self.assertIn("function navigationResumeRoute(", html)
+        self.assertIn("function navigationVoicePrompt(", html)
+        self.assertIn("/api/navigation/module", html)
+        self.assertIn("/api/navigation/module/route", html)
+        self.assertIn("/api/navigation/module/state", html)
+        self.assertIn("/api/navigation/module/resume", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Refresh Navigation", html)
+        self.assertIn("Open Navigation Center", html)
+
     def test_render_glass_shell_wires_daily_brief_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 
