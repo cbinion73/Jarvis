@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Level 3 exit gate complete; 550 tests passing)
+Last updated: 2026-06-09 (Level 5 presence routing complete; 574 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -17,9 +17,10 @@ Last updated: 2026-06-09 (Level 3 exit gate complete; 550 tests passing)
   promotion engine, sandbox execution, email draft staging, agent registry
   contract all exist; all 10 governed action types enforce sequence gating;
   negative-path tests cover deny/stage/allow across all bootstrapped zones
-- Level 5 (Ambient): ~55% — event fabric autonomous (GAP-2 resolved), all 6
-  delivery postures live (GAP-6 resolved), interruption decisions recorded;
-  presence-aware routing and background-to-foreground escalation still missing
+- Level 5 (Ambient): ~80% — event fabric autonomous, all 6 delivery postures
+  live, interruption decisions recorded; presence override store live with TTL
+  (suppress/escalate/clear via POST /api/apple/presence-override); background→
+  foreground push escalation via _maybe_fire_escalation_push() debounced 5 min
 - Level 6 (Memory/Continuity): ~60% — partitioned memory with enforced
   viewer access, memory genuinely read in chat/briefing context, learning
   review live; retrieval is keyword-match not situation retrieval (GAP-7)
@@ -185,12 +186,12 @@ safety, stray .tmp recovery, lock file creation. All pass.
 
 ## Next 3 Work Items
 
-1. Level 5 gaps: presence-aware routing and background-to-foreground escalation
-   are the two remaining ~45% items. Presence signals are read from watch_status
-   (already exists in apple_api.py) but not used to gate delivery-mode decisions
-   outside of the interruption posture. Escalation path from background to
-   foreground alert is not implemented.
-2. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
-3. Level 7 season detection: _current_season() exists (service.py) but is not
+1. Level 7 season detection: _current_season() exists (service.py) but is not
    wired to formation content (daily word, faith context, stewardship card type).
    Season should influence which formation templates are selected.
+2. Level 5 remaining: CarPlay/watch presence signal ingestion — JARVIS doesn't
+   know when Chris is actively looking at the phone vs. background. The
+   presence-override endpoint exists but requires the Watch/app to call it.
+   Consider a lightweight heartbeat endpoint the Watch can ping to signal
+   foreground presence.
+3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
