@@ -20159,7 +20159,7 @@ class JarvisRuntime:
         current_sequence = int(current_stage.get("sequence") or 0)
         requested_sequence = int(requested.get("sequence") or current_sequence)
 
-        if action_type in {"home_control", "calendar_route", "signal_resolution", "notification_workflow", "reminder_workflow", "publishing_review", "focus_workflow", "huddle_workflow"} and current_sequence < requested_sequence:
+        if action_type in {"home_control", "calendar_route", "signal_resolution", "notification_workflow", "reminder_workflow", "publishing_review", "focus_workflow", "huddle_workflow", "stewardship_lane_review", "foundry_proposal_review"} and current_sequence < requested_sequence:
             return {
                 "decision": "stage",
                 "reason": f"{zone_id} is at {current_stage_id} and must promote before live {action_type} actions.",

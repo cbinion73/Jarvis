@@ -256,7 +256,7 @@ class TestBoundarySequenceEnforcement(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Non-restricted action type (stewardship_lane_review call site)
+# stewardship_lane_review call site — now in the restricted set (fixed gap)
 # ---------------------------------------------------------------------------
 
 class TestNonRestrictedActionType(unittest.TestCase):
@@ -268,16 +268,16 @@ class TestNonRestrictedActionType(unittest.TestCase):
         self.ts = _make_trust_support(self.root)
         self.runtime = _make_runtime(self.ts)
 
-    def test_non_restricted_action_allows_at_observe(self):
-        """stewardship_lane_review is not in the restricted set — zone at observe still allows."""
+    def test_stewardship_lane_review_stages_at_observe(self):
+        """stewardship_lane_review is now in the restricted set — observe zones must be staged."""
         _add_zone(self.ts, zone_id="test_stewardship_zone", authority_stage="observe")
         result = self.runtime.assess_action_boundary(
             zone_id="test_stewardship_zone",
             action_type="stewardship_lane_review",
             requested_stage="sandbox_live",
         )
-        self.assertEqual(result["decision"], "allow",
-                         "Non-restricted action types bypass sequence enforcement")
+        self.assertEqual(result["decision"], "stage",
+                         "stewardship_lane_review must be staged at observe level")
 
     def test_non_restricted_action_result_contains_zone_id(self):
         _add_zone(self.ts, zone_id="test_stewardship_zone2", authority_stage="stage_alert")
