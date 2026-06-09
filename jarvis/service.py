@@ -8872,7 +8872,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/api/stewardship-lanes")
     async def api_stewardship_lanes() -> JSONResponse:
-        return _json({"lanes": runtime.list_stewardship_lanes()})
+        try:
+            return _json({"lanes": runtime.list_stewardship_lanes(), "status": "ok"})
+        except Exception as exc:
+            import logging as _lg; _lg.getLogger("jarvis.service").warning("stewardship-lanes failed: %s", exc)
+            return _json({"status": "unavailable", "lanes": [], "error": str(exc)})
 
     # ------------------------------------------------------------------
     # GET /api/stewardship/daily  — today's day card + season
@@ -8920,7 +8924,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _json({**card, "season": season, "status": "ok"})
         except Exception as exc:
             import logging as _lg; _lg.getLogger("jarvis.service").warning("stewardship/daily/morning failed: %s", exc)
-            raise HTTPException(status_code=500, detail=f"Morning check-in failed: {exc}") from exc
+            return _json({"status": "unavailable", "error": str(exc), "season": _current_season()})
 
     @app.post("/api/stewardship/daily/complete")
     async def api_stewardship_complete(payload: dict[str, Any] = {}) -> JSONResponse:
@@ -8937,7 +8941,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _json({**review, "status": "ok"})
         except Exception as exc:
             import logging as _lg; _lg.getLogger("jarvis.service").warning("stewardship/daily/complete failed: %s", exc)
-            raise HTTPException(status_code=500, detail=f"Evening review failed: {exc}") from exc
+            return _json({"status": "unavailable", "error": str(exc)})
 
     @app.get("/api/agent-supervision/contracts")
     async def api_agent_supervision_contracts() -> JSONResponse:

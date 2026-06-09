@@ -268,11 +268,12 @@ class TestStewardshipMorning(_ServiceTestBase):
             self._post({"context": "feeling tired"})
         mock_fn.assert_called_once_with(context="feeling tired")
 
-    def test_500_on_exception(self):
+    def test_unavailable_on_exception(self):
         with patch("jarvis.daily_stewardship.run_morning_checkin", new=AsyncMock(side_effect=RuntimeError("no health db"))):
-            with self.assertRaises(HTTPException) as ctx:
-                self._post()
-        self.assertEqual(ctx.exception.status_code, 500)
+            resp = self._post()
+        body = self._body(resp)
+        self.assertEqual(body.get("status"), "unavailable")
+        self.assertIn("no health db", body.get("error", ""))
 
 
 # ---------------------------------------------------------------------------
@@ -300,11 +301,12 @@ class TestStewardshipComplete(_ServiceTestBase):
             self._post({"wins": "hit all moves", "struggles": "late night", "energy": 7})
         mock_fn.assert_called_once_with(wins="hit all moves", struggles="late night", energy=7)
 
-    def test_500_on_exception(self):
+    def test_unavailable_on_exception(self):
         with patch("jarvis.daily_stewardship.run_evening_review", new=AsyncMock(side_effect=ValueError("bad data"))):
-            with self.assertRaises(HTTPException) as ctx:
-                self._post()
-        self.assertEqual(ctx.exception.status_code, 500)
+            resp = self._post()
+        body = self._body(resp)
+        self.assertEqual(body.get("status"), "unavailable")
+        self.assertIn("bad data", body.get("error", ""))
 
     def test_empty_payload_passes_defaults(self):
         mock_review = {"date": "2026-06-09", "day_score": 5}
