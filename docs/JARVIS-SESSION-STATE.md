@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (GAP-9 resolved; stewardship HTTP routes live)
+Last updated: 2026-06-09 (GAP-11 resolved; 463 tests passing; session complete)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -110,12 +110,13 @@ current calendar month via _current_season() — winter/spring/summer/autumn.
 
 ### GAP-10 — SQLite migration not started [P4, optional accelerant]
 data/system/jarvis.db does not exist; all core persistence is JSON/JSONL
-via jarvis/persistence.py (fcntl flock — real, but no concurrency tests).
+via jarvis/persistence.py (fcntl flock — proven safe under concurrency, see GAP-11).
 JARVIS-DATA-ARCHITECTURE-v1 phases A–D unimplemented.
 
-### GAP-11 — No concurrency/restart tests beyond kernel [P3]
-Only runtime kernel has a state-log replay test. No tests for concurrent
-writers or multi-process contention on persistence.py.
+### GAP-11 — No concurrency/restart tests beyond kernel [RESOLVED 2026-06-09]
+10 concurrency tests added for jarvis/persistence.py: concurrent appenders
+(N*M data loss), atomic write correctness under contention, read-during-write
+safety, stray .tmp recovery, lock file creation. All pass.
 
 ## Key Verified Facts (do not re-audit)
 
@@ -170,6 +171,6 @@ writers or multi-process contention on persistence.py.
 
 ## Next 3 Work Items
 
-1. GAP-11: add concurrency tests for jarvis/persistence.py — concurrent writers, read+write contention, recovery after interrupted write.
-2. Phase 3 Slice 2: verify/add POST /api/apple/notifications/{id}/escalate; verify/add reminders defer and stage endpoints.
-3. Phase B audit: verify all four trust zones enforced in code with negative-path tests; audit assess_action_boundary coverage.
+1. Phase 3 Slice 2: verify/add POST /api/apple/notifications/{id}/escalate; verify/add POST /api/apple/reminders/{id}/defer and /stage endpoints.
+2. Phase B audit: verify all four trust zones enforced in code with negative-path tests; audit assess_action_boundary coverage across non-apple_api paths.
+3. Phase C — GAP-8 partial: add foundry proposal pipeline (POST/GET /api/foundry/proposals, POST /api/foundry/proposals/{id}/approve); no agent generation yet.
