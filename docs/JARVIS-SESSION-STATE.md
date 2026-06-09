@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Level 5 presence routing complete; 574 tests passing)
+Last updated: 2026-06-09 (Level 7 season formation complete; 595 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -24,8 +24,9 @@ Last updated: 2026-06-09 (Level 5 presence routing complete; 574 tests passing)
 - Level 6 (Memory/Continuity): ~60% — partitioned memory with enforced
   viewer access, memory genuinely read in chat/briefing context, learning
   review live; retrieval is keyword-match not situation retrieval (GAP-7)
-- Level 7 (Formation): ~30% — faith and health loops real; season detection
-  missing; daily stewardship loop not routed (GAP-9)
+- Level 7 (Formation): ~60% — faith and health loops real; season now wired
+  into Three Moves (LLM prompt + seasonal fallback moves) and daily faith word
+  prompt; season field in day card and daily_word result; GAP-9 resolved
 - Level 8 (Bounded Autonomy): ~50% — sandbox execution + promotion engine +
   draft-only email staging real; recursive foundry is a read-only dashboard
   (GAP-8)
@@ -186,12 +187,12 @@ safety, stray .tmp recovery, lock file creation. All pass.
 
 ## Next 3 Work Items
 
-1. Level 7 season detection: _current_season() exists (service.py) but is not
-   wired to formation content (daily word, faith context, stewardship card type).
-   Season should influence which formation templates are selected.
-2. Level 5 remaining: CarPlay/watch presence signal ingestion — JARVIS doesn't
-   know when Chris is actively looking at the phone vs. background. The
-   presence-override endpoint exists but requires the Watch/app to call it.
-   Consider a lightweight heartbeat endpoint the Watch can ping to signal
-   foreground presence.
+1. Level 8 deeper: foundry proposal approval is blocked at stage_alert (correct)
+   but there is no promotion path to advance system_agent zone to sandbox_live.
+   Promote system_agent to sandbox_live so proposal approval can actually execute.
+   Wire /api/promotion-request to system_agent zone and add test coverage.
+2. Level 5 remaining: CarPlay/watch presence heartbeat — JARVIS can now be told
+   to suppress/escalate but doesn't know foreground vs background from the device.
+   Add POST /api/apple/presence-heartbeat: sets a short-TTL (5 min) "foreground"
+   signal so routing decisions know the user is actively watching.
 3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
