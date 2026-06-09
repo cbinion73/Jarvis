@@ -23054,7 +23054,12 @@ body::after {{
       <aside class="intel-sidebar">
         <div class="intel-side-title">Intel Engine Status</div>
         <div class="intel-side-list" id="intel-sidebar-list"></div>
+        <button class="intel-side-cta" id="intel-refresh-button" onclick="refreshIntelDesktop()">Refresh Intel ↻</button>
         <button class="intel-side-cta" onclick="switchView('settings')">Intel Settings →</button>
+        <div class="agents-status-card" style="margin-top:12px;">
+          <strong>Runtime Note</strong>
+          <span id="intel-runtime-note">Loading live Intel context…</span>
+        </div>
       </aside>
 
       <div class="intel-grid">
@@ -28598,63 +28603,191 @@ async function checkMcpStatus() {{
 setTimeout(checkMcpStatus, 3000);
 
 async function loadStatus() {{
-  try {{
-    const [statusRes, commandRes] = await Promise.all([
-      fetch('/api/status'),
-      fetch('/api/command-center'),
-    ]);
-    if (!statusRes.ok || !commandRes.ok) {{ console.warn('loadStatus', statusRes.status, commandRes.status); return; }}
-    const services = await statusRes.json();
-    const command = await commandRes.json();
-    renderIntelDashboard(Array.isArray(services) ? services : [], command || {{}});
-  }} catch(e) {{ console.error('loadStatus failed', e); }}
+  return refreshIntelDesktop();
 }}
 
-function renderIntelDashboard(services, command) {{
-  const lane = command.lane_progress || {{}};
-  const cockpit = command.needs_cockpit || {{}};
-  const motion = (command.needs_motion && Array.isArray(command.needs_motion.entries)) ? command.needs_motion.entries : [];
-  const needs = Array.isArray(command.what_needs_me) ? command.what_needs_me : [];
-  const activity = Array.isArray(command.activity_feed) ? command.activity_feed : [];
-  const recentCommits = Array.isArray(lane.recent_commits) ? lane.recent_commits : [];
-  const connected = services.filter(item => item.ok).length;
-  const disconnected = services.filter(item => !item.ok).length;
-  const critical = (cockpit.critical_count || 0);
-  const high = (cockpit.high_count || 0);
-  const signals = services.length * 18 + activity.length + needs.length;
-  const correlations = activity.length + recentCommits.length + connected;
-  const truths = cockpit.total || needs.length;
-  const escalations = critical + high;
-  const patterns = recentCommits.length + activity.length;
-  const confidence = Math.max(72, Math.min(96, 92 - (disconnected * 4) + connected));
+let _intelRequestSerial = 0;
+let _intelModuleData = null;
 
-  _intelSetText('intel-generated-at', `Updated ${{intelRelativeTime(command.generated_at || new Date().toISOString())}}`);
-  _intelSetText('intel-stat-signals', String(signals));
-  _intelSetText('intel-stat-signals-sub', `${{services.length}} service lanes`);
-  _intelSetText('intel-stat-correlations', String(correlations));
-  _intelSetText('intel-stat-correlations-sub', `${{recentCommits.length}} recent commits`);
-  _intelSetText('intel-stat-truths', String(truths));
-  _intelSetText('intel-stat-truths-sub', `${{needs.length}} truths surfaced`);
-  _intelSetText('intel-stat-escalations', String(escalations));
-  _intelSetText('intel-stat-escalations-sub', `${{critical}} critical · ${{high}} high`);
-  _intelSetText('intel-stat-patterns', String(patterns));
-  _intelSetText('intel-stat-patterns-sub', `${{activity.length}} fresh events`);
-  _intelSetText('intel-stat-confidence', `${{confidence}}%`);
-  _intelSetText('intel-stat-confidence-sub', disconnected ? 'Mixed' : 'High');
+function intelRuntimeNote(text) {{
+  _intelSetText('intel-runtime-note', text || 'Intel is live.');
+}}
 
-  renderIntelSidebar(services, lane, cockpit, command);
-  renderIntelSignals(services, command);
-  renderIntelCorrelationMap(services, command);
-  renderIntelTruths(command);
-  renderIntelRoutes(services, command);
-  renderIntelContinuity(command, services);
-  renderIntelSummary(command, services);
-  renderIntelInsights(command);
-  renderIntelPatterns(command, services);
-  renderIntelTimeline(activity, motion);
-  renderIntelDoctrine(command, services);
-  renderIntelTeach();
-  renderIntelFooter();
+function intelTitleCase(value) {{
+  return String(value || '')
+    .replaceAll('_', ' ')
+    .replaceAll('-', ' ')
+    .replace(/\\b\\w/g, (char) => char.toUpperCase())
+    .trim();
+}}
+
+async function intelReadJson(response) {{
+  try {{
+    return await response.json();
+  }} catch (_) {{
+    return null;
+  }}
+}}
+
+async function intelFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    if (!response.ok) {{
+      return {{ ok: false, status: response.status, payload: await intelReadJson(response) }};
+    }}
+    return {{ ok: true, status: response.status, payload: await intelReadJson(response) }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
+
+function intelActionButtonClass(value) {{
+  const raw = String(value || '').toLowerCase();
+  if (['critical', 'high', 'urgent', 'blocked', 'error', 'failed'].includes(raw)) return 'dailybrief-button warn';
+  if (['good', 'connected', 'healthy', 'active', 'success'].includes(raw)) return 'dailybrief-button good';
+  if (['low', 'ambient', 'quiet', 'info'].includes(raw)) return 'dailybrief-button secondary';
+  return 'dailybrief-button secondary';
+}}
+
+async function intelRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: dailyBriefName(),
+        domain: 'intel',
+        route: '/command-center',
+        route_label: 'Open Intel',
+        related_kind: 'intel',
+        ...payload,
+      }}),
+    }});
+  }} catch (_) {{}}
+}}
+
+function intelOpenRoute(route, fallbackView = '', label = '', note = '') {{
+  const raw = String(route || '').trim();
+  const routeMap = {{
+    '/briefing-center': 'overview',
+    '/command-center': 'chat',
+    '/approval-queue': 'approvals',
+    '/activity-center': 'activity',
+    '/recovery-center': 'chat',
+    '/progress-center': 'activity',
+    '/journey': 'journey',
+    '/vision': 'vision',
+    '/chronicle-center': 'chronicle',
+    '/settings-center': 'settings',
+    '/mission-board': 'workshop',
+    '/calendar-center': 'calendar',
+    '/home-center': 'home',
+    '/health-center': 'health',
+    '/navigation-center': 'navigate',
+  }};
+  if (note) intelRuntimeNote(note);
+  if (!raw) {{
+    if (fallbackView) switchView(fallbackView);
+    return;
+  }}
+  if (routeMap[raw]) {{
+    switchView(routeMap[raw]);
+    return;
+  }}
+  if (fallbackView) {{
+    switchView(fallbackView);
+    return;
+  }}
+  if (raw.startsWith('/') && !raw.startsWith('/api/')) {{
+    window.location.href = raw;
+  }}
+}}
+
+async function intelTeachAction(actionId, title) {{
+  const item = (Array.isArray(_intelModuleData?.teach_actions) ? _intelModuleData.teach_actions : []).find(entry => String(entry.id || '') === String(actionId || ''));
+  const label = title || item?.title || 'Intel feedback';
+  intelRuntimeNote(`Recording "${{label}}"…`);
+  await intelRecordAction({{
+    action: label,
+    title: label,
+    detail: item?.detail || 'Intel feedback recorded from the desktop sensemaking floor.',
+    why_now: item?.detail || 'Operator used the Intel feedback loop.',
+    result_summary: `Intel feedback recorded: ${{label}}`,
+    related_route: '/command-center',
+    related_label: label,
+    succeeded: true,
+  }});
+  showToast(`Intel feedback recorded: ${{label}}`, 'success');
+  intelRuntimeNote(`Recorded "${{label}}" for Intel learning.`);
+}}
+
+async function refreshIntelDesktop(forceLive = false) {{
+  const requestSerial = ++_intelRequestSerial;
+  intelRuntimeNote(forceLive ? 'Refreshing live Intel signals…' : 'Loading Intel surface…');
+  const intelResponse = await intelFetchJson('/api/intel/module');
+  if (requestSerial !== _intelRequestSerial) return;
+  if (!intelResponse.ok || !intelResponse.payload) {{
+    const detail = intelResponse.payload?.detail || intelResponse.error?.message || `HTTP ${{intelResponse.status}}`;
+    renderIntelDashboard({{
+      generated_at: new Date().toISOString(),
+      signal_sources: [],
+      sidebar: [],
+      correlations: [],
+      truths: [],
+      routing: [],
+      continuity: [],
+      summary_cards: [],
+      insights: [],
+      patterns: [],
+      timeline: [],
+      doctrine: [],
+      teach_actions: [],
+      radar: {{ risks: [], opportunities: [] }},
+      counts: {{ signals: 0, correlations: 0, truths: 0, escalations: 0, patterns: 0, confidence: 72, connected_service_count: 0, disconnected_service_count: 0 }},
+      availability_notes: [detail],
+    }});
+    intelRuntimeNote(`Intel unavailable: ${{detail}}`);
+    return;
+  }}
+  _intelModuleData = intelResponse.payload;
+  renderIntelDashboard(intelResponse.payload);
+  const availability = Array.isArray(intelResponse.payload.availability_notes) ? intelResponse.payload.availability_notes.filter(Boolean) : [];
+  intelRuntimeNote(availability.length ? availability.join(' • ') : (intelResponse.payload.summary || 'Intel is live and connected.'));
+}}
+
+function renderIntelDashboard(payload) {{
+  const counts = payload.counts || {{}};
+  _intelSetText('intel-generated-at', `Updated ${{intelRelativeTime(payload.generated_at || new Date().toISOString())}}`);
+  _intelSetText('intel-stat-signals', String(counts.signals ?? 0));
+  _intelSetText('intel-stat-signals-sub', `${{counts.connected_service_count ?? 0}} connected · ${{counts.disconnected_service_count ?? 0}} degraded`);
+  _intelSetText('intel-stat-correlations', String(counts.correlations ?? 0));
+  _intelSetText('intel-stat-correlations-sub', `${{(payload.correlations || []).length}} active links`);
+  _intelSetText('intel-stat-truths', String(counts.truths ?? 0));
+  _intelSetText('intel-stat-truths-sub', `${{(payload.truths || []).length}} truths surfaced`);
+  _intelSetText('intel-stat-escalations', String(counts.escalations ?? 0));
+  _intelSetText('intel-stat-escalations-sub', `${{(payload.routing || []).find(item => item.title === 'Interrupt Immediately')?.count || 0}} immediate`);
+  _intelSetText('intel-stat-patterns', String(counts.patterns ?? 0));
+  _intelSetText('intel-stat-patterns-sub', `${{(payload.patterns || []).length}} updated lanes`);
+  _intelSetText('intel-stat-confidence', `${{counts.confidence ?? 72}}%`);
+  _intelSetText('intel-stat-confidence-sub', (counts.disconnected_service_count || 0) ? 'Mixed' : 'High');
+
+  renderIntelSidebar(payload.sidebar || []);
+  renderIntelSignals(payload.signal_sources || []);
+  renderIntelCorrelationMap(payload.correlations || []);
+  renderIntelTruths(payload.truths || []);
+  renderIntelRoutes(payload.routing || []);
+  renderIntelContinuity(payload.continuity || []);
+  renderIntelSummary(payload.summary_cards || []);
+  renderIntelInsights(payload.insights || []);
+  renderIntelRadar(payload.radar || {{}});
+  renderIntelPatterns(payload.patterns || []);
+  renderIntelTimeline(payload.timeline || []);
+  renderIntelDoctrine(payload.doctrine || []);
+  renderIntelTeach(payload.teach_actions || []);
+  renderIntelFooter(payload);
 }}
 
 function _intelSetText(id, value) {{
@@ -28683,137 +28816,101 @@ function intelTone(item) {{
   return 'info';
 }}
 
-function renderIntelSidebar(services, lane, cockpit, command) {{
+function renderIntelSidebar(items) {{
   const el = document.getElementById('intel-sidebar-list');
   if (!el) return;
-  const cards = [
-    ['Perception', services.length, 'Signal lanes'],
-    ['Correlation', (lane.recent_commits || []).length, 'Recent linkages'],
-    ['Compression', cockpit.total || 0, 'Truths condensed'],
-    ['Escalation', cockpit.critical_count || 0, 'Raised upward'],
-    ['Continuity', lane.what_needs_me_count || 0, 'Needs to remember'],
-    ['Last Update', intelRelativeTime(lane.generated_at || command?.generated_at || new Date().toISOString()), 'Freshness'],
-  ];
-  el.innerHTML = cards.map(([title, count, copy]) => `
+  el.innerHTML = items.map(item => `
     <div class="intel-side-item">
-      <div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>
-      <span class="intel-side-badge">${{escHtml(String(count))}}</span>
+      <div><strong>${{escHtml(item.title || 'Intel')}}</strong><span>${{escHtml(item.copy || '')}}</span></div>
+      <span class="intel-side-badge">${{escHtml(String(item.count ?? '—'))}}</span>
     </div>`).join('');
 }}
 
-function renderIntelSignals(services, command) {{
+function renderIntelSignals(items) {{
   const el = document.getElementById('intel-signal-grid');
   if (!el) return;
-  const cards = services.map(item => {{
+  const cards = items.map(item => {{
     const tone = intelTone(item);
     return `<div class="intel-signal-card">
-      <strong>${{escHtml(String(item.name || 'service').replaceAll('-', ' '))}}</strong>
+      <strong>${{escHtml(item.title || String(item.name || 'service').replaceAll('-', ' '))}}</strong>
       <span>${{escHtml(item.detail || '')}}</span>
       <div class="intel-signal-count">${{item.ok ? '↑' : '•'}} ${{escHtml(String(item.state || 'unknown').toUpperCase())}}</div>
-      <div class="intel-pill ${{tone}}" style="margin-top:10px;">${{escHtml(String(item.state || item.ok ? 'connected' : 'unknown'))}}</div>
+      <div class="intel-pill ${{tone}}" style="margin-top:10px;">${{escHtml(String(item.state || (item.ok ? 'connected' : 'unknown')))}}</div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="${{intelActionButtonClass(item.state)}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Signal")}}, ${{JSON.stringify(`Opening ${{item.title || 'signal'}}…`)}})'>Open Lane</button>
+      </div>
     </div>`;
   }});
-  el.innerHTML = cards.join('');
+  el.innerHTML = cards.length ? cards.join('') : '<div class="service-card"><strong>No live signal sources</strong><span>Intel will show connected service lanes here when the runtime is available.</span></div>';
 }}
 
-function renderIntelCorrelationMap(services, command) {{
-  const names = [
-    command.needs_cockpit?.headline || 'Decision Risk',
-    services.find(s => !s.ok)?.name?.replaceAll('-', ' ') || 'Service Drift',
-    'Calendar Overload',
-    'Household Drift',
-    'Approval Load',
-    'Recovery Strain',
-  ];
-  _intelSetText('intel-node-top', names[0]);
-  _intelSetText('intel-node-right', names[1]);
-  _intelSetText('intel-node-bottom', names[2]);
-  _intelSetText('intel-node-left', names[3]);
-  _intelSetText('intel-node-tl', names[4]);
-  _intelSetText('intel-node-br', names[5]);
+function renderIntelCorrelationMap(items) {{
+  const ids = ['intel-node-top', 'intel-node-right', 'intel-node-bottom', 'intel-node-left', 'intel-node-tl', 'intel-node-br'];
+  ids.forEach((id, index) => {{
+    const entry = items[index] || {{}};
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = entry.label || 'Intel Link';
+    el.onclick = () => intelOpenRoute(entry.route || '', entry.fallback_view || '', entry.label || 'Intel Link', `Opening ${{entry.label || 'linked signal'}}…`);
+  }});
 }}
 
-function renderIntelTruths(command) {{
+function renderIntelTruths(items) {{
   const el = document.getElementById('intel-truth-list');
   if (!el) return;
-  const cockpit = command.needs_cockpit || {{}};
-  const items = [
-    ['What Changed', `${{command.branch || 'main'}} @ ${{command.head || '—'}}`, cockpit.total || 0],
-    ['What Matters', cockpit.headline || 'No dominant pressure signal', cockpit.high_count || 0],
-    ['What’s Heating Up', `${{cockpit.failure_count || 0}} failures need repair`, cockpit.critical_count || 0],
-    ['What’s Noise', `${{cockpit.notification_count || 0}} low-signal notifications`, Math.max(0, (cockpit.total || 0) - (cockpit.critical_count || 0))],
-    ['What Needs Review', `${{command.what_needs_me?.length || 0}} items`, cockpit.high_count || 0],
-  ];
-  el.innerHTML = items.map(([title, copy, count]) => `
+  el.innerHTML = items.map(item => `
     <div class="intel-truth-item">
-      <strong>${{escHtml(title)}}</strong>
-      <span>${{escHtml(copy)}}</span>
-      <div class="intel-route-count">${{escHtml(String(count))}}</div>
+      <strong>${{escHtml(item.title || 'Truth')}}</strong>
+      <span>${{escHtml(item.detail || '')}}</span>
+      <div class="intel-route-count">${{escHtml(String(item.count ?? 0))}}</div>
+      <div style="margin-top:10px;">
+        <button class="${{intelActionButtonClass('info')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Truth")}}, ${{JSON.stringify(`Opening ${{item.title || 'truth'}}…`)}})'>Open Context</button>
+      </div>
     </div>`).join('');
 }}
 
-function renderIntelRoutes(services, command) {{
+function renderIntelRoutes(items) {{
   const el = document.getElementById('intel-route-list');
   if (!el) return;
-  const disconnected = services.filter(s => !s.ok).length;
-  const cockpit = command.needs_cockpit || {{}};
-  const rows = [
-    ['Stay Ambient', `${{Math.max(0, services.length - disconnected)}}`, 'Observed and understood. No action.'],
-    ['Stage for Daily Brief', `${{command.what_needs_me?.length || 0}}`, 'Important, but not urgent.'],
-    ['Queue for Needs You', `${{cockpit.high_count || 0}}`, 'Requires decision or presence.'],
-    ['Escalate to Command', `${{cockpit.critical_count || 0}}`, 'Authority level decision needed.'],
-    ['Interrupt Immediately', `${{disconnected ? 1 : 0}}`, 'High risk or time critical.'],
-    ['Suppressed / Duplicate', `${{Math.max(0, (command.activity_feed?.length || 0) - 5)}}`, 'Already known or addressed.'],
-  ];
-  el.innerHTML = rows.map(([title, count, copy], idx) => `
+  el.innerHTML = items.map(item => `
     <div class="intel-route-item">
-      <strong>${{escHtml(title)}}</strong>
-      <span>${{escHtml(copy)}}</span>
-      <div class="intel-route-count">${{escHtml(String(count))}}</div>
+      <strong>${{escHtml(item.title || 'Route')}}</strong>
+      <span>${{escHtml(item.detail || '')}}</span>
+      <div class="intel-route-count">${{escHtml(String(item.count ?? 0))}}</div>
+      <div style="margin-top:10px;">
+        <button class="${{intelActionButtonClass(item.title === 'Interrupt Immediately' ? 'high' : 'info')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Route")}}, ${{JSON.stringify(`Opening ${{item.title || 'route'}}…`)}})'>Open Route</button>
+      </div>
     </div>`).join('');
 }}
 
-function renderIntelContinuity(command, services) {{
+function renderIntelContinuity(items) {{
   const el = document.getElementById('intel-continuity-list');
   if (!el) return;
-  const lane = command.lane_progress || {{}};
-  const needs = command.what_needs_me || [];
-  const items = [
-    ['Recurring Pattern', lane.return_brief_summary || 'No continuity signal', 'High relevance'],
-    ['Previous Resolution', (lane.recent_commits || [])[0] || 'No recent commits', 'Recurred'],
-    ['Health Baseline', services.find(s => String(s.name) === 'openai-api')?.detail || 'No baseline', 'Operational'],
-    ['Mission Context', `${{needs.length}} needs currently open`, 'Mission impact'],
-    ['Household Context', services.find(s => String(s.name) === 'family-calendar')?.detail || 'No household signal', 'Environment'],
-  ];
-  el.innerHTML = items.map(([title, copy, tag]) => `
+  el.innerHTML = items.map(item => `
     <div class="intel-continuity-item">
-      <strong>${{escHtml(title)}}</strong>
-      <span>${{escHtml(copy)}}</span>
-      <div class="intel-pill info" style="margin-top:10px;">${{escHtml(tag)}}</div>
+      <strong>${{escHtml(item.title || 'Continuity')}}</strong>
+      <span>${{escHtml(item.detail || '')}}</span>
+      <div class="intel-pill info" style="margin-top:10px;">${{escHtml(item.tag || 'Context')}}</div>
+      <div style="margin-top:10px;">
+        <button class="${{intelActionButtonClass('info')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Continuity")}}, ${{JSON.stringify(`Opening ${{item.title || 'continuity'}}…`)}})'>Open Dossier</button>
+      </div>
     </div>`).join('');
 }}
 
-function renderIntelSummary(command, services) {{
+function renderIntelSummary(items) {{
   const el = document.getElementById('intel-summary-grid');
   if (!el) return;
-  const cards = [
-    ['Signals Processed', `${{services.length * 144}}`, 'Service and attention sources'],
-    ['Correlations Made', `${{(command.activity_feed?.length || 0) + (command.what_needs_me?.length || 0)}}`, 'Cross-domain links'],
-    ['Insights Generated', `${{command.needs_cockpit?.total || 0}}`, 'Surfaced into cockpit'],
-    ['Actions Taken', `${{command.needs_motion?.count || 0}}`, 'Moved through motion lane'],
-  ];
-  el.innerHTML = cards.map(([title, value, copy]) => `
+  el.innerHTML = items.map(item => `
     <div class="intel-summary-card">
-      <strong>${{escHtml(title)}}</strong>
-      <span>${{escHtml(value)}}</span>
-      <span>${{escHtml(copy)}}</span>
+      <strong>${{escHtml(item.title || 'Summary')}}</strong>
+      <span>${{escHtml(item.value || '—')}}</span>
+      <span>${{escHtml(item.detail || '')}}</span>
     </div>`).join('');
 }}
 
-function renderIntelInsights(command) {{
+function renderIntelInsights(items) {{
   const el = document.getElementById('intel-insight-list');
   if (!el) return;
-  const items = (command.needs_cockpit?.items || []).slice(0, 5);
   if (!items.length) {{
     el.innerHTML = '<div class="service-card"><strong>No live intel insights</strong><span>The floor is quiet right now.</span></div>';
     return;
@@ -28823,28 +28920,59 @@ function renderIntelInsights(command) {{
       <strong>${{idx + 1}}. ${{escHtml(item.title || 'Insight')}}</strong>
       <span>${{escHtml(item.detail || '')}}</span>
       <div class="intel-pill ${{intelTone(item)}}" style="margin-top:10px;">${{escHtml(String(item.urgency || 'normal'))}}</div>
+      <div style="margin-top:10px;">
+        <button class="${{intelActionButtonClass(item.urgency)}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Insight")}}, ${{JSON.stringify(`Opening ${{item.title || 'insight'}}…`)}})'>Open Insight</button>
+      </div>
     </div>`).join('');
 }}
 
-function renderIntelPatterns(command, services) {{
+function renderIntelRadar(radar) {{
+  const el = document.querySelector('#view-intelligence .intel-radar');
+  if (!el) return;
+  const risks = Array.isArray(radar?.risks) ? radar.risks : [];
+  const opportunities = Array.isArray(radar?.opportunities) ? radar.opportunities : [];
+  const riskMarkup = risks.length
+    ? risks.map(item => `<div class="intel-route-item"><strong>${{escHtml(item.title || 'Risk')}}</strong><span>${{escHtml(item.detail || '')}}</span><button class="${{intelActionButtonClass('high')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Risk")}}, ${{JSON.stringify(`Opening ${{item.title || 'risk'}}…`)}})'>Open</button></div>`).join('')
+    : '<div class="service-card"><strong>No active risks</strong><span>Intel has not surfaced a major live risk right now.</span></div>';
+  const opportunityMarkup = opportunities.length
+    ? opportunities.map(item => `<div class="intel-route-item"><strong>${{escHtml(item.title || 'Opportunity')}}</strong><span>${{escHtml(item.detail || '')}}</span><button class="${{intelActionButtonClass('good')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Opportunity")}}, ${{JSON.stringify(`Opening ${{item.title || 'opportunity'}}…`)}})'>Open</button></div>`).join('')
+    : '<div class="service-card"><strong>No immediate opportunities</strong><span>New opportunities will surface here as Intel correlates signals.</span></div>';
+  el.innerHTML = `
+    <div class="intel-radar-grid">
+      <svg viewBox="0 0 220 220" preserveAspectRatio="xMidYMid meet">
+        <circle cx="110" cy="110" r="78" fill="none" stroke="rgba(255,255,255,0.08)"></circle>
+        <circle cx="110" cy="110" r="52" fill="none" stroke="rgba(255,255,255,0.08)"></circle>
+        <circle cx="110" cy="110" r="28" fill="none" stroke="rgba(255,255,255,0.08)"></circle>
+        <path d="M110 32 L188 110 L110 188 L32 110 Z" fill="rgba(55,167,255,0.08)" stroke="rgba(55,167,255,0.34)"></path>
+        <path d="M110 52 L162 104 L134 150 L74 138 L58 94 Z" fill="rgba(231,164,79,0.12)" stroke="rgba(231,164,79,0.44)"></path>
+        <path d="M110 68 L144 110 L118 142 L78 122 L84 86 Z" fill="rgba(93,190,120,0.12)" stroke="rgba(93,190,120,0.44)"></path>
+      </svg>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px;">
+      <div><strong style="display:block;margin-bottom:8px;">Risks</strong>${{riskMarkup}}</div>
+      <div><strong style="display:block;margin-bottom:8px;">Opportunities</strong>${{opportunityMarkup}}</div>
+    </div>`;
+}}
+
+function renderIntelPatterns(items) {{
   const el = document.getElementById('intel-pattern-grid');
   if (!el) return;
-  const labels = [
-    'Approval Load', 'Travel Compression', 'Creative Momentum', 'Household Drift', 'Launch Bottleneck'
-  ];
-  el.innerHTML = labels.map((label, idx) => `
+  el.innerHTML = items.map(item => `
     <div class="intel-pattern-card">
-      <strong>${{escHtml(label)}}</strong>
-      <span>Updated ${{idx === 0 ? 'today' : idx === 4 ? '2d ago' : 'yesterday'}}</span>
+      <strong>${{escHtml(item.title || 'Pattern')}}</strong>
+      <span>${{escHtml(item.updated_label || 'Updated recently')}}</span>
       <div class="intel-pattern-spark"></div>
-      <div class="intel-pattern-tag">${{escHtml(String((command.activity_feed?.length || 0) + idx))}} signals</div>
+      <div class="intel-pattern-tag">${{escHtml(String(item.count ?? 0))}} signals</div>
+      <span>${{escHtml(item.detail || '')}}</span>
+      <div style="margin-top:10px;">
+        <button class="${{intelActionButtonClass('info')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Pattern")}}, ${{JSON.stringify(`Opening ${{item.title || 'pattern'}}…`)}})'>Open Pattern</button>
+      </div>
     </div>`).join('');
 }}
 
-function renderIntelTimeline(activity, motion) {{
+function renderIntelTimeline(rows) {{
   const el = document.getElementById('intel-timeline-list');
   if (!el) return;
-  const rows = [...activity.slice(0, 4), ...motion.slice(0, 2)].slice(0, 6);
   if (!rows.length) {{
     el.innerHTML = '<div class="service-card"><strong>No intel timeline yet</strong><span>Activity will appear here.</span></div>';
     return;
@@ -28854,48 +28982,46 @@ function renderIntelTimeline(activity, motion) {{
       <strong>${{escHtml(item.title || item.source_label || 'Signal')}}</strong>
       <span>${{escHtml(item.detail || item.result || item.evidence || '')}}</span>
       <div class="intel-route-count">${{escHtml(intelRelativeTime(item.timestamp || item.generated_at || new Date().toISOString()))}}</div>
+      <div style="margin-top:10px;">
+        <button class="${{intelActionButtonClass('info')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Timeline Item")}}, ${{JSON.stringify(`Opening ${{item.title || 'timeline item'}}…`)}})'>Open Event</button>
+      </div>
     </div>`).join('');
 }}
 
-function renderIntelDoctrine(command, services) {{
+function renderIntelDoctrine(items) {{
   const el = document.getElementById('intel-doctrine-list');
   if (!el) return;
-  const rows = [
-    `Doctrine follows the current branch: ${{command.branch || 'main'}}`,
-    `Recent head: ${{command.head || '—'}}`,
-    `${{services.filter(s => s.ok).length}} service lanes are healthy`,
-    `${{command.what_needs_me?.length || 0}} signals still want operator review`,
-  ];
-  el.innerHTML = rows.map(text => `<div class="intel-doctrine-item"><strong>Learning</strong><span>${{escHtml(text)}}</span></div>`).join('');
-}}
-
-function renderIntelTeach() {{
-  const el = document.getElementById('intel-teach-list');
-  if (!el) return;
-  const items = [
-    ['Correct an insight', 'Improve future accuracy', 'Correct'],
-    ['Adjust signal sensitivity', 'Tune what you want to see', 'Adjust'],
-    ['Mark as noise', 'Stop surfacing similar items', 'Ignore'],
-    ['Add personal context', 'Help JARVIS understand', 'Add'],
-    ['Share outcome', 'Close the learning loop', 'Share'],
-  ];
-  el.innerHTML = items.map(([title, copy, action]) => `
-    <div class="intel-teach-item">
-      <div><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>
-      <span class="intel-pill info">${{escHtml(action)}}</span>
+  el.innerHTML = items.map(item => `
+    <div class="intel-doctrine-item">
+      <strong>${{escHtml(item.title || 'Learning')}}</strong>
+      <span>${{escHtml(item.detail || '')}}</span>
+      <div style="margin-top:10px;">
+        <button class="${{intelActionButtonClass('info')}}" type="button" onclick='intelOpenRoute(${{JSON.stringify(item.route || "")}}, ${{JSON.stringify(item.fallback_view || "")}}, ${{JSON.stringify(item.title || "Learning")}}, ${{JSON.stringify(`Opening ${{item.title || 'learning'}}…`)}})'>Inspect</button>
+      </div>
     </div>`).join('');
 }}
 
-function renderIntelFooter() {{
+function renderIntelTeach(items) {{
+  const el = document.getElementById('intel-teach-list');
+  if (!el) return;
+  el.innerHTML = items.map(item => `
+    <div class="intel-teach-item">
+      <div><strong>${{escHtml(item.title || 'Feedback')}}</strong><span>${{escHtml(item.detail || '')}}</span></div>
+      <button class="${{intelActionButtonClass('info')}}" type="button" onclick='intelTeachAction(${{JSON.stringify(item.id || "")}}, ${{JSON.stringify(item.title || "Feedback")}})'>${{escHtml(item.button || 'Record')}}</button>
+    </div>`).join('');
+}}
+
+function renderIntelFooter(payload) {{
   const el = document.getElementById('intel-footer-strip');
   if (!el) return;
+  const notes = Array.isArray(payload?.availability_notes) ? payload.availability_notes.filter(Boolean) : [];
   const cards = [
     ['Sees Everything', 'Perceives signals from every layer of your life.'],
     ['Understands Context', 'Connects signals across domains and time.'],
     ['Protects Your Attention', 'Surfaces only what truly needs you.'],
     ['Learns Continuously', 'Gets smarter with patterns, outcomes, and feedback.'],
     ['Serves Stewardship', 'Prepares you to decide with wisdom and confidence.'],
-    ['Intel Engine Online', 'All perception systems active and learning'],
+    ['Intel Engine Online', notes.length ? notes.join(' • ') : 'All perception systems active and learning'],
   ];
   el.innerHTML = cards.map(([title, copy]) => `<div class="intel-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}

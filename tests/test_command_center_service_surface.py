@@ -316,6 +316,31 @@ class _StubRuntime:
     def dashboard_snapshot(self) -> dict:
         return {"status": "ok"}
 
+    def status(self) -> list[dict]:
+        return [
+            {
+                "name": "openai-api",
+                "ok": True,
+                "state": "connected",
+                "detail": "OpenAI API is configured.",
+                "updated_at": "2026-06-08T08:00:00Z",
+            },
+            {
+                "name": "google-workspace",
+                "ok": False,
+                "state": "disconnected",
+                "detail": "No Google accounts are currently connected.",
+                "updated_at": "2026-06-08T08:00:00Z",
+            },
+            {
+                "name": "family-calendar",
+                "ok": True,
+                "state": "connected",
+                "detail": "Family shared calendar is connected.",
+                "updated_at": "2026-06-08T08:00:00Z",
+            },
+        ]
+
     def get_actor(self, actor_name: str):
         return SimpleNamespace(user_id=str(actor_name or "Chris").strip().lower() or "chris", display_name=actor_name)
 
@@ -495,6 +520,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         huddle_api_response = asyncio.run(self._route("/api/huddle/module", "GET")())
         health_response = asyncio.run(self._route("/health-center", "GET")())
         health_api_response = asyncio.run(self._route("/api/health/module", "GET")())
+        intel_api_response = asyncio.run(self._route("/api/intel/module", "GET")())
 
         html = self._text_body(html_response)
         snapshot = self._json_body(snapshot_response)
@@ -526,6 +552,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         huddle_snapshot = self._json_body(huddle_api_response)
         health_html = self._text_body(health_response)
         health_snapshot = self._json_body(health_api_response)
+        intel_snapshot = self._json_body(intel_api_response)
 
         self.assertIn("JARVIS Command Center Index", html)
         self.assertIn("/approval-queue", html)
@@ -912,6 +939,24 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("proof_paths", health_snapshot)
         self.assertEqual(health_snapshot["proof_paths"]["module_route"], "/health-center")
         self.assertEqual(health_snapshot["proof_paths"]["module_api"], "/api/health/module")
+        self.assertIn("status", intel_snapshot)
+        self.assertIn("signal_sources", intel_snapshot)
+        self.assertIn("truths", intel_snapshot)
+        self.assertIn("routing", intel_snapshot)
+        self.assertIn("continuity", intel_snapshot)
+        self.assertIn("summary_cards", intel_snapshot)
+        self.assertIn("insights", intel_snapshot)
+        self.assertIn("patterns", intel_snapshot)
+        self.assertIn("timeline", intel_snapshot)
+        self.assertIn("doctrine", intel_snapshot)
+        self.assertIn("teach_actions", intel_snapshot)
+        self.assertIn("radar", intel_snapshot)
+        self.assertIn("counts", intel_snapshot)
+        self.assertIn("proof_paths", intel_snapshot)
+        self.assertEqual(intel_snapshot["proof_paths"]["module_api"], "/api/intel/module")
+        self.assertEqual(intel_snapshot["proof_paths"]["status_api"], "/api/status")
+        self.assertEqual(intel_snapshot["proof_paths"]["activity_api"], "/api/activity/module")
+        self.assertTrue(intel_snapshot["counts"]["signals"] >= len(intel_snapshot["signal_sources"]))
         self.assertEqual(health_snapshot["proof_paths"]["checkins_api"], "/api/health/checkins")
         self.assertEqual(health_snapshot["proof_paths"]["checkin_review_api"], "/api/health/checkins/{checkin_id}/review")
 

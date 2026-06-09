@@ -1853,6 +1853,416 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }
         )
 
+    async def _build_intel_module_payload() -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        payload: dict[str, Any] = {
+            "generated_at": generated_at,
+            "available": True,
+            "status": "Useful",
+            "summary": "Intel now has a dedicated module API with live signal health, cross-domain pressure, route guidance, and operator feedback inside JARVIS.",
+            "what_became_real": "Intel is now driven by the live runtime status surface, command-center cockpit, and activity continuity instead of generic derived counts inside the shell.",
+            "remains_partial": "Broader learning persistence and deeper source-specific recovery controls still need follow-on slices, but the desktop Intel floor is now fed by real runtime state and honest partial-source handling.",
+            "services": [],
+            "signal_sources": [],
+            "sidebar": [],
+            "correlations": [],
+            "truths": [],
+            "routing": [],
+            "continuity": [],
+            "summary_cards": [],
+            "insights": [],
+            "patterns": [],
+            "timeline": [],
+            "doctrine": [],
+            "teach_actions": [],
+            "radar": {"risks": [], "opportunities": []},
+            "availability_notes": [],
+            "counts": {
+                "signals": 0,
+                "correlations": 0,
+                "truths": 0,
+                "escalations": 0,
+                "patterns": 0,
+                "confidence": 72,
+                "connected_service_count": 0,
+                "disconnected_service_count": 0,
+                "recent_activity_count": 0,
+            },
+            "proof_paths": {
+                "module_route": "/",
+                "shell_view": "intelligence",
+                "module_api": "/api/intel/module",
+                "status_api": "/api/status",
+                "command_center_api": "/api/command-center",
+                "activity_api": "/api/activity/module",
+                "operator_action_api": "/api/activity/operator-action",
+                "settings_route": "/settings-center",
+                "needs_route": "/approval-queue",
+                "command_route": "/command-center",
+                "journey_route": "/journey",
+                "vision_route": "/vision",
+            },
+            "errors": [],
+        }
+
+        command_center = build_command_center_index()
+        activity_module = await _build_activity_module_payload()
+        payload["generated_at"] = str(command_center.get("generated_at") or generated_at)
+
+        services: list[dict[str, Any]] = []
+        try:
+            runtime_status = getattr(runtime, "status", None)
+            if callable(runtime_status):
+                candidate = runtime_status()
+                if isinstance(candidate, list):
+                    services = [dict(item) for item in candidate if isinstance(item, dict)]
+                else:
+                    payload["errors"].append("status: runtime status did not return a list")
+            else:
+                payload["errors"].append("status: runtime status surface unavailable")
+        except Exception as exc:
+            payload["errors"].append(f"status: {exc}")
+
+        lane = dict(command_center.get("lane_progress") or {})
+        cockpit = dict(command_center.get("needs_cockpit") or {})
+        failure_recovery = dict(command_center.get("failure_recovery") or {})
+        what_needs_me = [dict(item) for item in list(command_center.get("what_needs_me") or []) if isinstance(item, dict)]
+        activity_feed = [dict(item) for item in list(command_center.get("activity_feed") or []) if isinstance(item, dict)]
+        motion = [dict(item) for item in list((command_center.get("needs_motion") or {}).get("entries") or []) if isinstance(item, dict)]
+        memory = dict(command_center.get("memory") or {})
+        home_overview = dict(command_center.get("home_overview") or {})
+        brief_preview = dict(command_center.get("brief_preview") or {})
+        notification_preview = dict(command_center.get("notification_preview") or {})
+        activity_rows = [dict(item) for item in list(activity_module.get("activity_feed") or []) if isinstance(item, dict)]
+        recent_activity = _module_recent_activity(route="/", domain="intel")
+        payload["recent_activity"] = recent_activity
+
+        connected_count = sum(1 for item in services if bool(item.get("ok")))
+        disconnected_count = sum(1 for item in services if not bool(item.get("ok")))
+        issue_count = int(failure_recovery.get("integration_issue_count", 0) or 0)
+        approval_gate_count = int(failure_recovery.get("pending_approval_count", 0) or 0)
+        critical_count = int(cockpit.get("critical_count", 0) or 0)
+        high_count = int(cockpit.get("high_count", 0) or 0)
+        cockpit_total = int(cockpit.get("total", 0) or 0)
+        notification_count = int(notification_preview.get("count", 0) or 0)
+        recent_commit_count = len(list(lane.get("recent_commits") or []))
+        activity_count = len(activity_feed)
+        signals = max(len(services) + notification_count + activity_count + len(what_needs_me), len(services))
+        correlations = recent_commit_count + len(what_needs_me) + connected_count
+        truths = max(cockpit_total, len(what_needs_me), issue_count)
+        escalations = critical_count + high_count + issue_count
+        patterns = recent_commit_count + len(activity_rows[:6]) + len(list(memory.get("pending_proposals") or []))
+        confidence = max(62, min(96, 88 + connected_count - (disconnected_count * 5) - max(0, issue_count - 1)))
+
+        def _route_for_service(item: dict[str, Any]) -> tuple[str, str]:
+            name = str(item.get("name") or "").strip().lower()
+            if "calendar" in name:
+                return ("/calendar-center", "calendar")
+            if "home" in name or "household" in name:
+                return ("/home-center", "home")
+            if "openai" in name or "workspace" in name or "google" in name or "api" in name:
+                return ("/settings-center", "settings")
+            if "health" in name:
+                return ("/health-center", "health")
+            if "navigation" in name or "maps" in name:
+                return ("/navigation-center", "navigate")
+            return ("/command-center", "chat")
+
+        def _timestamp_for(item: dict[str, Any]) -> str:
+            return (
+                str(item.get("timestamp") or "").strip()
+                or str(item.get("generated_at") or "").strip()
+                or str(item.get("updated_at") or "").strip()
+            )
+
+        services_payload: list[dict[str, Any]] = []
+        for item in services:
+            route, fallback_view = _route_for_service(item)
+            state = str(item.get("state") or "").strip() or ("connected" if bool(item.get("ok")) else "disconnected")
+            services_payload.append(
+                {
+                    "name": str(item.get("name") or "service").strip() or "service",
+                    "title": str(item.get("name") or "service").replace("-", " ").strip().title(),
+                    "detail": str(item.get("detail") or "").strip() or "No additional detail provided.",
+                    "ok": bool(item.get("ok")),
+                    "state": state,
+                    "route": route,
+                    "fallback_view": fallback_view,
+                    "timestamp": _timestamp_for(item) or payload["generated_at"],
+                }
+            )
+        payload["services"] = services_payload
+        payload["signal_sources"] = services_payload
+
+        payload["sidebar"] = [
+            {"title": "Perception", "count": len(services_payload), "copy": "Signal lanes"},
+            {"title": "Correlation", "count": correlations, "copy": "Recent linkages"},
+            {"title": "Compression", "count": truths, "copy": "Truths condensed"},
+            {"title": "Escalation", "count": escalations, "copy": "Raised upward"},
+            {"title": "Continuity", "count": int(memory.get("entry_count", 0) or 0), "copy": "Memory and proposals"},
+            {"title": "Last Update", "count": str(payload["generated_at"]), "copy": "Freshness"},
+        ]
+
+        raw_correlations = [
+            cockpit.get("headline"),
+            services_payload[0]["title"] if services_payload else "Service posture",
+            "Calendar Overload" if notification_count else "",
+            "Household Drift" if home_overview else "",
+            "Approval Load" if approval_gate_count else "",
+            "Recovery Strain" if issue_count else "",
+        ]
+        fallback_correlations = [
+            "Decision Risk",
+            "Service Drift",
+            "Calendar Overload",
+            "Household Drift",
+            "Approval Load",
+            "Recovery Strain",
+        ]
+        payload["correlations"] = [
+            {"label": str(raw_correlations[idx] or fallback_correlations[idx]).strip(), "route": route}
+            for idx, route in enumerate(
+                [
+                    "/command-center",
+                    "/settings-center",
+                    "/calendar-center",
+                    "/home-center",
+                    "/approval-queue",
+                    "/recovery-center",
+                ]
+            )
+        ]
+
+        payload["truths"] = [
+            {
+                "title": "What Changed",
+                "detail": f"{str(lane.get('branch') or 'main').strip() or 'main'} @ {str(lane.get('head') or '—').strip() or '—'}",
+                "count": max(1, recent_commit_count),
+                "route": "/progress-center",
+                "fallback_view": "activity",
+            },
+            {
+                "title": "What Matters",
+                "detail": str(cockpit.get("headline") or "No dominant pressure signal right now.").strip(),
+                "count": max(1, high_count),
+                "route": "/approval-queue",
+                "fallback_view": "approvals",
+            },
+            {
+                "title": "What’s Heating Up",
+                "detail": f"{issue_count} integration issue(s) and {critical_count} critical authority item(s).",
+                "count": max(0, critical_count + issue_count),
+                "route": "/recovery-center",
+                "fallback_view": "chat",
+            },
+            {
+                "title": "What’s Noise",
+                "detail": f"{max(0, activity_count - 5)} low-signal activity item(s) and {max(0, notification_count - high_count)} notification(s) kept ambient.",
+                "count": max(0, notification_count),
+                "route": "/activity-center",
+                "fallback_view": "activity",
+            },
+            {
+                "title": "What Needs Review",
+                "detail": f"{len(what_needs_me)} operator review cue(s) are still open.",
+                "count": len(what_needs_me),
+                "route": "/approval-queue",
+                "fallback_view": "approvals",
+            },
+        ]
+
+        payload["routing"] = [
+            {"title": "Stay Ambient", "count": max(0, connected_count - disconnected_count), "detail": "Observed and understood. No action.", "route": "/activity-center", "fallback_view": "activity"},
+            {"title": "Stage for Daily Brief", "count": notification_count, "detail": "Important, but not urgent.", "route": "/briefing-center", "fallback_view": "overview"},
+            {"title": "Queue for Needs You", "count": high_count, "detail": "Requires decision or presence.", "route": "/approval-queue", "fallback_view": "approvals"},
+            {"title": "Escalate to Command", "count": critical_count, "detail": "Authority level decision needed.", "route": "/command-center", "fallback_view": "chat"},
+            {"title": "Interrupt Immediately", "count": issue_count, "detail": "High-risk failure or degraded integration.", "route": "/recovery-center", "fallback_view": "chat"},
+            {"title": "Suppressed / Duplicate", "count": max(0, activity_count - 5), "detail": "Already known or intentionally quieted.", "route": "/activity-center", "fallback_view": "activity"},
+        ]
+
+        payload["continuity"] = [
+            {
+                "title": "Recurring Pattern",
+                "detail": str(lane.get("return_brief_summary") or "No recurring continuity signal is currently dominant.").strip(),
+                "tag": "High relevance",
+                "route": "/journey",
+                "fallback_view": "journey",
+            },
+            {
+                "title": "Previous Resolution",
+                "detail": str((list(lane.get("recent_commits") or []) or ["No recent commits yet."])[0]).strip(),
+                "tag": "Recent commit",
+                "route": "/progress-center",
+                "fallback_view": "activity",
+            },
+            {
+                "title": "Mission Context",
+                "detail": f"{len(what_needs_me)} active review cue(s) and {cockpit_total} cockpit item(s).",
+                "tag": "Mission impact",
+                "route": "/command-center",
+                "fallback_view": "chat",
+            },
+            {
+                "title": "Household Context",
+                "detail": str((home_overview.get("family_signal") or {}).get("summary") or "No household posture signal is currently dominant.").strip(),
+                "tag": "Environment",
+                "route": "/home-center",
+                "fallback_view": "home",
+            },
+            {
+                "title": "Memory Context",
+                "detail": f"{int(memory.get('entry_count', 0) or 0)} memory item(s), {int(memory.get('proposal_count', 0) or 0)} proposal(s), and {int(memory.get('fact_count', 0) or 0)} fact(s) are active.",
+                "tag": "Continuity",
+                "route": "/chronicle-center",
+                "fallback_view": "chronicle",
+            },
+        ]
+
+        payload["summary_cards"] = [
+            {"title": "Signals Processed", "value": str(signals), "detail": "Service and attention sources"},
+            {"title": "Correlations Made", "value": str(correlations), "detail": "Cross-domain links"},
+            {"title": "Insights Generated", "value": str(truths), "detail": "Surfaced into cockpit"},
+            {"title": "Actions Taken", "value": str(len(motion)), "detail": "Moved through motion lane"},
+        ]
+
+        insights_payload: list[dict[str, Any]] = []
+        for item in list(cockpit.get("items") or [])[:6]:
+            if not isinstance(item, dict):
+                continue
+            route = str(item.get("route") or "/approval-queue").strip() or "/approval-queue"
+            fallback_view = "approvals" if route == "/approval-queue" else "chat"
+            insights_payload.append(
+                {
+                    "title": str(item.get("title") or "Insight").strip() or "Insight",
+                    "detail": str(item.get("detail") or item.get("action_hint") or "").strip() or "No additional detail provided.",
+                    "urgency": str(item.get("urgency") or "normal").strip() or "normal",
+                    "route": route,
+                    "fallback_view": fallback_view,
+                }
+            )
+        if not insights_payload and services_payload:
+            insights_payload.append(
+                {
+                    "title": "Service posture is the dominant Intel signal right now.",
+                    "detail": services_payload[0]["detail"],
+                    "urgency": "info",
+                    "route": services_payload[0]["route"],
+                    "fallback_view": services_payload[0]["fallback_view"],
+                }
+            )
+        payload["insights"] = insights_payload
+
+        pattern_candidates = [
+            ("Approval Load", approval_gate_count, "Approval requests are clustering around the same authority boundary.", "/approval-queue", "approvals"),
+            ("Travel Compression", notification_count, "Attention signals suggest timing and schedule compression.", "/calendar-center", "calendar"),
+            ("Creative Momentum", recent_commit_count, "Recent commit motion suggests creative throughput is still active.", "/progress-center", "activity"),
+            ("Household Drift", 1 if home_overview else 0, "Home posture signals are beginning to influence executive focus.", "/home-center", "home"),
+            ("Launch Bottleneck", issue_count, "Recovery posture is tightening around one or more integrations.", "/recovery-center", "chat"),
+        ]
+        payload["patterns"] = [
+            {
+                "title": title,
+                "count": int(count or 0),
+                "detail": detail,
+                "updated_label": "Updated today" if idx == 0 else ("Updated 2d ago" if idx == 4 else "Updated yesterday"),
+                "route": route,
+                "fallback_view": fallback_view,
+            }
+            for idx, (title, count, detail, route, fallback_view) in enumerate(pattern_candidates)
+        ]
+
+        timeline_rows = []
+        for item in (activity_rows[:4] + motion[:2])[:6]:
+            if not isinstance(item, dict):
+                continue
+            route = str(item.get("related_route") or "/activity-center").strip() or "/activity-center"
+            timeline_rows.append(
+                {
+                    "title": str(item.get("title") or item.get("source_label") or "Signal").strip() or "Signal",
+                    "detail": str(item.get("detail") or item.get("result") or item.get("evidence") or "").strip() or "No additional detail provided.",
+                    "timestamp": _timestamp_for(item) or payload["generated_at"],
+                    "route": route,
+                    "fallback_view": "activity" if route == "/activity-center" else "chat",
+                }
+            )
+        payload["timeline"] = timeline_rows
+
+        payload["doctrine"] = [
+            {"title": "Doctrine", "detail": f"Current branch: {str(lane.get('branch') or 'main').strip() or 'main'} · Head: {str(lane.get('head') or '—').strip() or '—'}", "route": "/progress-center", "fallback_view": "activity"},
+            {"title": "Escalation Policy", "detail": f"{issue_count} integration issue(s) and {critical_count} critical item(s) currently inform escalation posture.", "route": "/recovery-center", "fallback_view": "chat"},
+            {"title": "Signal Weights", "detail": f"{connected_count} connected source(s), {disconnected_count} degraded or missing source(s).", "route": "/settings-center", "fallback_view": "settings"},
+            {"title": "Memory Continuity", "detail": f"{int(memory.get('proposal_count', 0) or 0)} pending proposal(s) and {int(memory.get('entry_count', 0) or 0)} memory item(s) remain in context.", "route": "/chronicle-center", "fallback_view": "chronicle"},
+        ]
+
+        payload["teach_actions"] = [
+            {"id": "correct", "title": "Correct an insight", "detail": "Mark the top intel signal as misweighted and send that feedback into the activity record.", "button": "Correct"},
+            {"id": "adjust", "title": "Adjust signal sensitivity", "detail": "Record that a source is too noisy or too quiet in the current posture.", "button": "Adjust"},
+            {"id": "ignore", "title": "Mark as noise", "detail": "Suppress a low-signal pattern and keep the activity lane cleaner.", "button": "Ignore"},
+            {"id": "add", "title": "Add personal context", "detail": "Attach operator context so the same situation is interpreted differently next time.", "button": "Add"},
+            {"id": "share", "title": "Share outcome", "detail": "Record the eventual result so Intel can learn from the full loop, not just the signal.", "button": "Share"},
+        ]
+
+        risk_items = []
+        opportunity_items = []
+        for item in list(failure_recovery.get("failing_integrations") or [])[:4]:
+            if not isinstance(item, dict):
+                continue
+            risk_items.append(
+                {
+                    "title": str(item.get("name") or "Integration issue").strip() or "Integration issue",
+                    "detail": str(item.get("detail") or "Needs repair.").strip() or "Needs repair.",
+                    "route": str(item.get("case_route") or "/recovery-center").strip() or "/recovery-center",
+                    "fallback_view": "chat",
+                }
+            )
+        top_opportunities = []
+        mission_summary = str((command_center.get("mission_task_board") or {}).get("summary") or "").strip()
+        if mission_summary:
+            top_opportunities.append(("Mission Board", mission_summary, "/mission-board", "workshop"))
+        if brief_preview:
+            top_opportunities.append(("Daily Brief", str(brief_preview.get("headline") or brief_preview.get("summary") or "Brief signal available.").strip(), "/briefing-center", "overview"))
+        if memory:
+            top_opportunities.append(("Memory Continuity", f"{int(memory.get('proposal_count', 0) or 0)} memory proposal(s) are available to reinforce context.", "/chronicle-center", "chronicle"))
+        for title, detail, route, fallback_view in top_opportunities[:4]:
+            opportunity_items.append(
+                {"title": title, "detail": detail, "route": route, "fallback_view": fallback_view}
+            )
+        payload["radar"] = {"risks": risk_items, "opportunities": opportunity_items}
+
+        availability_notes = list(payload.get("availability_notes") or [])
+        if not services_payload:
+            availability_notes.append("Live service status is unavailable in this runtime.")
+        if disconnected_count:
+            availability_notes.append(f"{disconnected_count} service lane(s) are degraded or disconnected.")
+        if payload["errors"]:
+            payload["status"] = "Wired"
+            if not services_payload and not cockpit_total and not activity_rows:
+                payload["available"] = False
+                payload["summary"] = "Intel route is live, but its core signal sources did not fully hydrate."
+                payload["remains_partial"] = "Runtime status, command-center cockpit, or activity sources still need repair or population in this runtime."
+            else:
+                payload["summary"] = "Intel route is live with partial signal and continuity hydration."
+                payload["remains_partial"] = "Some Intel sources still failed to hydrate; inspect the runtime note and payload preview for details."
+        payload["availability_notes"] = availability_notes
+        payload["counts"] = {
+            "signals": signals,
+            "correlations": correlations,
+            "truths": truths,
+            "escalations": escalations,
+            "patterns": patterns,
+            "confidence": confidence,
+            "connected_service_count": connected_count,
+            "disconnected_service_count": disconnected_count,
+            "recent_activity_count": len(recent_activity),
+        }
+        return payload
+
+    @app.get("/api/intel/module")
+    async def api_intel_module() -> JSONResponse:
+        return _json(await _build_intel_module_payload())
+
     @app.get("/api/agents/{agent_id}")
     async def api_task_agent(agent_id: str) -> JSONResponse:
         profile = await asyncio.to_thread(runtime.task_agent_profile, agent_id)

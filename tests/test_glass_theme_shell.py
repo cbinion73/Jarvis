@@ -140,6 +140,21 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/agent-work/approve/", html)
         self.assertIn("/api/agent-work/reject/", html)
 
+    def test_render_glass_shell_wires_intel_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="intel-refresh-button"', html)
+        self.assertIn('id="intel-runtime-note"', html)
+        self.assertIn("function refreshIntelDesktop(", html)
+        self.assertIn("function intelTeachAction(", html)
+        self.assertIn("function intelOpenRoute(", html)
+        self.assertIn("function intelRecordAction(", html)
+        self.assertIn("/api/intel/module", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Open Lane", html)
+        self.assertIn("Open Context", html)
+        self.assertIn("Open Route", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 
