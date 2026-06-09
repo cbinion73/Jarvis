@@ -4,20 +4,19 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (GAP-8 partial resolved; 532 tests passing)
+Last updated: 2026-06-09 (Level 3 exit gate complete; 550 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
 - Level 2 (Unified Command Product): COMPLETE
-- Level 3 (Household OS): ~95% — all 23 experiences live-backed or honestly
-  unavailable; event log wired; stewardship HTTP routes live (GAP-9 resolved);
-  Phase 3 Slice 2 complete — escalate/defer/stage endpoints all live with
-  governed boundary checks and event fabric wiring
-- Level 4 (Governed Intelligence): ~70% BUILT — far ahead of what
-  JARVIS-MATURITY-MODEL.md claims. Trust zones, supervision plane,
+- Level 3 (Household OS): COMPLETE — all 23 experiences live-backed or honestly
+  unavailable with no 500 escape paths; event log wired; stewardship HTTP routes
+  live; Phase 3 Slice 2 (escalate/defer/stage) live with governed boundary
+  checks; exit gate hardened 2026-06-09 (9 new tests, 550 total)
+- Level 4 (Governed Intelligence): ~80% BUILT — Trust zones, supervision plane,
   promotion engine, sandbox execution, email draft staging, agent registry
-  contract all exist in code with enforcement at two choke points and
-  negative-path tests
+  contract all exist; all 10 governed action types enforce sequence gating;
+  negative-path tests cover deny/stage/allow across all bootstrapped zones
 - Level 5 (Ambient): ~55% — event fabric autonomous (GAP-2 resolved), all 6
   delivery postures live (GAP-6 resolved), interruption decisions recorded;
   presence-aware routing and background-to-foreground escalation still missing
@@ -186,9 +185,12 @@ safety, stray .tmp recovery, lock file creation. All pass.
 
 ## Next 3 Work Items
 
-1. stewardship_lane_review boundary gap: add `stewardship_lane_review` to the
-   restricted action_type set in assess_action_boundary (runtime.py:20162) so
-   stewardship lane actions are properly sequence-gated like all other governed actions.
-2. Level 3 exit gate review: re-audit all 23 glass experiences for honest
-   unavailable states; confirm event log writing paths are exercised on Hetzner.
-3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
+1. Level 5 gaps: presence-aware routing and background-to-foreground escalation
+   are the two remaining ~45% items. Presence signals are read from watch_status
+   (already exists in apple_api.py) but not used to gate delivery-mode decisions
+   outside of the interruption posture. Escalation path from background to
+   foreground alert is not implemented.
+2. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
+3. Level 7 season detection: _current_season() exists (service.py) but is not
+   wired to formation content (daily word, faith context, stewardship card type).
+   Season should influence which formation templates are selected.
