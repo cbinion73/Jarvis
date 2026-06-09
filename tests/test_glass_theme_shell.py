@@ -185,6 +185,23 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/chronicle/update-prayer", html)
         self.assertIn("Faith is live and connected.", html)
 
+    def test_render_glass_shell_wires_journey_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="journey-runtime-note"', html)
+        self.assertIn('id="journey-refresh-button"', html)
+        self.assertIn("function journeyRuntimeNote(", html)
+        self.assertIn("function journeyOpenRoute(", html)
+        self.assertIn("function journeyReviewOpportunity(", html)
+        self.assertIn("function refreshJourneyView(", html)
+        self.assertIn("function journeyTimelineFromModule(", html)
+        self.assertIn("function journeyGrowthSeries(", html)
+        self.assertIn("/api/activity/module", html)
+        self.assertIn("/api/activity/module/review", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Open Activity Feed", html)
+        self.assertIn("Journey is live and connected.", html)
+
     def test_render_glass_shell_wires_agents_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

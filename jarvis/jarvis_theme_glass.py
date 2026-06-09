@@ -25414,6 +25414,11 @@ body::after {{
         <div class="view-title">JARVIS JOURNEY<div class="view-title-line"></div></div>
         <div class="view-subtitle" id="journey-subtitle">The record of how JARVIS learns your world. Memory. Learning. Maturity. Impact.</div>
       </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <span id="journey-runtime-note" style="font-size:12px;color:var(--journey-muted);">Journey is live and connected.</span>
+        <button class="journey-btn" type="button" id="journey-refresh-button" onclick="refreshJourneyView()">Refresh Journey</button>
+        <button class="journey-btn" type="button" onclick="journeyOpenRoute('/activity-center','journey','Open Activity Feed','Review the standalone Journey activity feed.')">Open Activity Feed</button>
+      </div>
     </div>
 
     <div class="journey-header-stats">
@@ -25438,7 +25443,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">1. What JARVIS Learned</div><h3>Key insights and patterns discovered this week.</h3></div>
-            <button class="journey-btn" type="button">View All Insights</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/activity-center','journey','Open Activity Feed','Inspect the latest learning signals.')">View Activity Feed</button>
           </div>
           <div class="journey-list" id="journey-learned-list"></div>
         </div>
@@ -25448,7 +25453,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">2. Accomplishments & Impact</div><h3>What JARVIS and your agents have done for you.</h3></div>
-            <button class="journey-btn" type="button">This Week</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/activity-center','journey','Open This Week','Review this week\\'s live Journey continuity.')">This Week</button>
           </div>
           <div class="journey-impact-grid" id="journey-impact-grid"></div>
         </div>
@@ -25458,7 +25463,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">3. Agent Collaboration Intelligence</div><h3>How your agents are working together and creating value.</h3></div>
-            <button class="journey-btn" type="button">Network View</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/agent-ops-center','agents','Open Agent Network','Inspect live agent collaboration from Journey.')">Network View</button>
           </div>
           <div class="journey-collab-map" id="journey-collab-map"></div>
         </div>
@@ -25468,7 +25473,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">4. Second Brain Map</div><h3>Your connected knowledge ecosystem.</h3></div>
-            <button class="journey-btn" type="button">Explore Map</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/chronicle-center','chronicle','Explore Memory Map','Inspect connected Chronicle continuity from Journey.')">Explore Map</button>
           </div>
           <div class="journey-brain-grid" id="journey-brain-grid"></div>
           <div class="journey-list-row" style="margin-top:12px;"><div><strong>Total Knowledge Nodes</strong><span id="journey-total-nodes">Loading…</span></div></div>
@@ -25479,7 +25484,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">5. Trust & Autonomy Development</div><h3>How JARVIS earns and expands your trust.</h3></div>
-            <button class="journey-btn" type="button">Manage Boundaries</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/supervision-snapshot','chat','Manage Boundaries','Inspect supervision boundaries from Journey.')">Manage Boundaries</button>
           </div>
           <div class="journey-trust-grid" id="journey-trust-grid"></div>
         </div>
@@ -25489,7 +25494,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">6. Pattern Library</div><h3>Reusable patterns JARVIS has discovered.</h3></div>
-            <button class="journey-btn" type="button">View All Patterns</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/chronicle-center','chronicle','Open Chronicle','Inspect memory patterns from Journey.')">Open Chronicle</button>
           </div>
           <div class="journey-pattern-grid" id="journey-pattern-grid"></div>
         </div>
@@ -25499,7 +25504,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">7. Memory Timeline</div><h3>Key moments in JARVIS’s learning journey.</h3></div>
-            <button class="journey-btn" type="button">All Time</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/activity-center','journey','Open Timeline','Inspect full Journey timeline.')">Open Timeline</button>
           </div>
           <div class="journey-timeline-list" id="journey-memory-timeline"></div>
           <div style="text-align:center;margin-top:14px;">
@@ -25512,7 +25517,7 @@ body::after {{
         <div class="journey-card-inner">
           <div class="journey-card-header">
             <div><div class="journey-card-number">8. System Growth Over Time</div><h3>JARVIS maturity trend across key dimensions.</h3></div>
-            <button class="journey-btn" type="button">6 Months</button>
+            <button class="journey-btn" type="button" onclick="journeyOpenRoute('/progress-center','activity','Open Progress','Review progress continuity from Journey.')">Open Progress</button>
           </div>
           <div class="journey-chart"><svg id="journey-growth-chart" viewBox="0 0 620 220" preserveAspectRatio="none"></svg></div>
         </div>
@@ -27338,31 +27343,208 @@ function renderVisionFooter(privacy) {{
 let _journeyDays = 30;
 let _journeyAllEvents = [];
 let _journeyCenter = null;
+let _journeyActivityModule = null;
+let _journeyVisibleEventCount = 8;
+
+function journeyRuntimeNote(text) {{
+  const el = document.getElementById('journey-runtime-note');
+  if (el) el.textContent = text || 'Journey is live and connected.';
+}}
+
+async function journeyFetchJson(url, options = undefined) {{
+  try {{
+    const response = await fetch(url, {{
+      cache: 'no-store',
+      ...(options || {{}}),
+    }});
+    const payload = await response.json().catch(() => null);
+    return {{ ok: response.ok, status: response.status, payload }};
+  }} catch (error) {{
+    return {{ ok: false, status: 0, payload: null, error }};
+  }}
+}}
+
+async function journeyRecordAction(payload) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: (typeof dailyBriefName === 'function' && dailyBriefName()) || 'Chris',
+        domain: 'journey',
+        route: '/activity-center',
+        route_label: 'Open Activity Feed',
+        ...payload,
+      }}),
+    }});
+  }} catch (_error) {{
+    // Best-effort continuity logging only.
+  }}
+}}
+
+function journeyOpenRoute(route, fallbackView = '', label = 'Open Journey Surface', detail = '') {{
+  journeyRuntimeNote(`Opening ${{label}}…`);
+  journeyRecordAction({{
+    action: label,
+    title: label,
+    detail: detail || `Journey opened ${{label}}.`,
+    why_now: 'Journey routed a related operating surface from the live learning record.',
+    result_summary: `${{label}} opened from Journey.`,
+    related_kind: 'journey-route',
+    related_label: label,
+    route: route || '/activity-center',
+    route_label: label,
+    succeeded: true,
+  }});
+  if (typeof commandOpenCommandRoute === 'function') {{
+    commandOpenCommandRoute(route || '', fallbackView || '');
+  }} else if (fallbackView) {{
+    switchView(fallbackView);
+  }} else if (route) {{
+    window.location.href = route;
+  }}
+}}
+
+function journeyCountByType(activity, journal) {{
+  const rows = [...(Array.isArray(activity) ? activity : []), ...(Array.isArray(journal) ? journal : [])];
+  return rows.reduce((acc, item) => {{
+    const key = String(item.entry_type || item.kind || item.related_kind || 'activity').trim().toLowerCase() || 'activity';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }}, {{}});
+}}
+
+function journeyTimelineFromModule(activityPayload) {{
+  const feed = Array.isArray(activityPayload?.activity_feed) ? activityPayload.activity_feed : [];
+  const journal = Array.isArray(activityPayload?.action_journal?.entries) ? activityPayload.action_journal.entries : [];
+  return [...feed, ...journal].map((item) => ({{
+    ts: item.timestamp || item.created_at || item.saved_at || item.reviewed_at || new Date().toISOString(),
+    type: item.entry_type || item.kind || item.related_kind || 'activity',
+    payload: {{
+      title: item.title || '',
+      text: item.detail || item.result || item.subtitle || '',
+      summary: item.result_summary || item.route_label || '',
+    }},
+    raw: item,
+  }})).sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
+}}
+
+function journeyRecentDayBuckets(events, limit = 6) {{
+  const bucketMap = new Map();
+  (Array.isArray(events) ? events : []).forEach((event) => {{
+    const stamp = String(event?.ts || '');
+    if (!stamp) return;
+    const day = stamp.slice(0, 10);
+    if (!day) return;
+    if (!bucketMap.has(day)) bucketMap.set(day, []);
+    bucketMap.get(day).push(event);
+  }});
+  return Array.from(bucketMap.entries())
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+    .slice(-limit)
+    .map(([day, items]) => ({{ day, items }}));
+}}
+
+function journeyGrowthSeries(events) {{
+  const buckets = journeyRecentDayBuckets(events, 6);
+  const labels = buckets.map((bucket) => {{
+    const date = new Date(bucket.day + 'T12:00:00');
+    return Number.isNaN(date.getTime()) ? bucket.day : date.toLocaleDateString([], {{ month: 'short', day: 'numeric' }});
+  }});
+  const definitions = [
+    {{
+      label: 'Memory Signals',
+      color: '#60a5fa',
+      count(items) {{
+        return items.filter((event) => {{
+          const type = String(event?.type || '').toLowerCase();
+          return type.includes('chronicle') || type.includes('memory') || type.includes('journal');
+        }}).length;
+      }},
+    }},
+    {{
+      label: 'Operator Momentum',
+      color: '#f59e0b',
+      count(items) {{
+        return items.filter((event) => {{
+          const type = String(event?.type || '').toLowerCase();
+          return type.includes('operator') || type.includes('task') || type.includes('home-action');
+        }}).length;
+      }},
+    }},
+    {{
+      label: 'Review Posture',
+      color: '#c084fc',
+      count(items) {{
+        return items.filter((event) => {{
+          const raw = event?.raw || {{}};
+          const type = String(event?.type || '').toLowerCase();
+          return String(raw.review_status || '').trim() || type.includes('review');
+        }}).length;
+      }},
+    }},
+    {{
+      label: 'Agent Motion',
+      color: '#34d399',
+      count(items) {{
+        return items.filter((event) => {{
+          const raw = event?.raw || {{}};
+          const type = String(event?.type || '').toLowerCase();
+          return type.includes('agent') || String(raw.related_kind || '').toLowerCase().includes('agent');
+        }}).length;
+      }},
+    }},
+    {{
+      label: 'Route Continuity',
+      color: '#22d3ee',
+      count(items) {{
+        return items.filter((event) => {{
+          const raw = event?.raw || {{}};
+          return Boolean(raw.related_route || raw.route);
+        }}).length;
+      }},
+    }},
+  ];
+  const series = definitions.map((definition) => {{
+    const rawValues = buckets.map((bucket) => definition.count(bucket.items));
+    const max = Math.max(1, ...rawValues);
+    return {{
+      label: definition.label,
+      color: definition.color,
+      rawValues,
+      values: rawValues.map((value) => Math.round((value / max) * 100)),
+    }};
+  }});
+  return {{ labels, series }};
+}}
 
 async function loadJourneyView() {{
   try {{
-    const [journeyRes, statsRes, layoutRes, centerRes] = await Promise.all([
-      fetch('/api/journey?days=' + _journeyDays),
-      fetch('/api/journey/stats?days=30'),
-      fetch('/api/layout/state'),
-      fetch('/api/command-center'),
+    journeyRuntimeNote('Loading Journey…');
+    const [activityModuleRes, layoutRes, centerRes] = await Promise.all([
+      journeyFetchJson('/api/activity/module'),
+      journeyFetchJson('/api/layout/state'),
+      journeyFetchJson('/api/command-center'),
     ]);
-    const journey = await journeyRes.json();
-    const stats   = await statsRes.json();
-    const layout  = layoutRes.ok ? await layoutRes.json() : {{}};
-    const center  = centerRes.ok ? await centerRes.json() : {{}};
+    const activityModule = activityModuleRes.ok ? (activityModuleRes.payload || {{}}) : {{}};
+    const layout = layoutRes.ok ? (layoutRes.payload || {{}}) : {{}};
+    const center = centerRes.ok ? (centerRes.payload || {{}}) : {{}};
 
-    _journeyAllEvents = journey.events || [];
+    _journeyActivityModule = activityModule;
     _journeyCenter = center || {{}};
+    _journeyAllEvents = journeyTimelineFromModule(activityModule);
+    _journeyVisibleEventCount = 8;
 
-    const byType = stats.by_type || {{}};
+    const activityFeed = Array.isArray(activityModule.activity_feed) ? activityModule.activity_feed : [];
+    const journalEntries = Array.isArray(activityModule?.action_journal?.entries) ? activityModule.action_journal.entries : [];
+    const byType = journeyCountByType(activityFeed, journalEntries);
     const memory = center.memory || {{}};
     const progress = center.progress_dashboard || {{}};
     const roster = center.agent_ops_roster || {{}};
     const failure = center.failure_recovery || {{}};
     const seams = center.seam_tracker || {{}};
     const checklist = center.level3_checklist || {{}};
-    const activity = center.activity_feed || [];
+    const activity = activityFeed;
     const insights = layout.insights || [];
 
     const usefulModules = (progress.counts || {{}}).useful || 0;
@@ -27397,22 +27579,26 @@ async function loadJourneyView() {{
     }}
 
     renderJourneyLearned(insights, activity);
-    renderJourneyImpact(byType, progress, activity);
+    renderJourneyImpact(byType, progress, activityModule);
     renderJourneyCollaboration(roster);
-    renderJourneyBrain(memory, seams);
-    renderJourneyTrust(roster, failure);
-    renderJourneyPatterns(insights, byType, memory);
+    renderJourneyBrain(memory, seams, activityModule);
+    renderJourneyTrust(roster, failure, activityModule);
+    renderJourneyPatterns(insights, byType, memory, activityModule);
     renderJourneyTimeline(_journeyAllEvents);
-    renderJourneyGrowth(progress, roster, failure, memory, insights);
+    renderJourneyGrowth(_journeyAllEvents);
     renderJourneyOpportunities(checklist);
     renderJourneyMilestone(checklist);
-    renderJourneyUserImpact(activity, memory);
-    renderJourneyFooter();
+    renderJourneyUserImpact(activityModule, memory, insights);
+    renderJourneyFooter(activityModule);
 
     const loadMoreBtn = document.getElementById('journey-load-more');
-    if (loadMoreBtn) loadMoreBtn.style.display = _journeyAllEvents.length >= 200 ? '' : 'none';
+    if (loadMoreBtn) loadMoreBtn.style.display = _journeyAllEvents.length > _journeyVisibleEventCount ? '' : 'none';
+    const availability = Array.isArray(activityModule.availability_notes) ? activityModule.availability_notes.filter(Boolean) : [];
+    const summary = activityModule.summary || 'Journey is live and connected.';
+    journeyRuntimeNote(availability.length ? `${{summary}} ${{availability[0]}}` : summary);
   }} catch(e) {{
     console.error('loadJourneyView failed', e);
+    journeyRuntimeNote('Journey is partially unavailable right now.');
   }}
 }}
 
@@ -27439,7 +27625,7 @@ function renderJourneyTimeline(events) {{
     return;
   }}
 
-  container.innerHTML = events.slice(0, 8).map(ev => {{
+  container.innerHTML = events.slice(0, _journeyVisibleEventCount).map(ev => {{
     const d = new Date(ev.ts);
     const dayKey = d.toLocaleDateString([], {{weekday:'short', month:'short', day:'numeric'}});
     const meta = EVENT_META[ev.type] || {{ icon: '•', label: ev.type }};
@@ -27450,8 +27636,11 @@ function renderJourneyTimeline(events) {{
 }}
 
 function loadJourneyMore() {{
-  _journeyDays += 30;
-  loadJourneyView();
+  _journeyVisibleEventCount += 8;
+  renderJourneyTimeline(_journeyAllEvents);
+  const loadMoreBtn = document.getElementById('journey-load-more');
+  if (loadMoreBtn) loadMoreBtn.style.display = _journeyAllEvents.length > _journeyVisibleEventCount ? '' : 'none';
+  journeyRuntimeNote('Expanded Journey timeline.');
 }}
 
 function _journeySetText(id, value) {{
@@ -27462,7 +27651,7 @@ function _journeySetText(id, value) {{
 function renderJourneyLearned(insights, activity) {{
   const el = document.getElementById('journey-learned-list');
   if (!el) return;
-  const tags = ['Creative Rhythm', 'Health Pattern', 'Foundry Insight', 'Family Pattern', 'Launch Pattern'];
+  const tags = ['Insight', 'Signal', 'Pattern', 'Continuity', 'Review'];
   let items = (insights || []).slice(0, 5).map((txt, idx) => ({{
     title: txt,
     tag: tags[idx] || 'Pattern',
@@ -27470,31 +27659,36 @@ function renderJourneyLearned(insights, activity) {{
   if (!items.length) {{
     items = (activity || []).slice(0, 5).map((item, idx) => ({{
       title: item.detail || item.result || item.title || 'Learning signal captured.',
-      tag: tags[idx] || 'Pattern',
+      tag: String(item.entry_type || item.related_kind || tags[idx] || 'Signal').replace(/[-_]/g, ' '),
     }}));
   }}
   el.innerHTML = items.map(item => `<div class="journey-list-row"><div style="flex:1;"><strong>${{escHtml(item.title)}}</strong></div><span class="journey-tag good">${{escHtml(item.tag)}}</span></div>`).join('');
 }}
 
-function renderJourneyImpact(byType, progress, activity) {{
+function renderJourneyImpact(byType, progress, activityModule) {{
   const el = document.getElementById('journey-impact-grid');
   if (!el) return;
   const counts = (progress || {{}}).counts || {{}};
+  const moduleCounts = (activityModule || {{}}).counts || {{}};
   const cards = [
-    ['Tasks Completed', byType.task_completed || 0, '+12%'],
-    ['Approvals Prepared', byType.approval_actioned || 0, '+9%'],
-    ['Risks Caught Early', (activity || []).filter(a => String(a.entry_type || '').includes('supervision')).length || 0, '+33%'],
-    ['Memories Connected', (byType.chronicle_entry || 0) + ((_journeyCenter?.memory || {{}}).proposal_count || 0), '+27%'],
-    ['Workflows Automated', counts.useful || 0, 'New'],
-    ['Hours of Time Saved', Math.max(6, (byType.brief_received || 0) * 2 + (byType.task_completed || 0)), '+15%'],
+    ['Activity Events', moduleCounts.activity_count || 0, 'Recent motion captured in the live Journey feed.'],
+    ['Journal Entries', moduleCounts.journal_count || 0, 'Operator and home actions recorded for continuity.'],
+    ['Review Items', moduleCounts.review_count || 0, 'Items currently staged for follow-through or review.'],
+    ['Home Bridges', moduleCounts.home_bridge_count || 0, 'Cross-surface actions persisted into shared continuity.'],
+    ['Useful Modules', counts.useful || 0, 'Modules currently marked useful in progress posture.'],
+    ['Progress Focuses', moduleCounts.focus_history_count || 0, 'Shared progress promotions captured from live activity.'],
   ];
-  el.innerHTML = cards.map(([title, value, delta]) => `<div class="journey-impact-card"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(title)}}</span><span style="margin-top:8px;display:block;color:#86efac;">${{escHtml(delta)}}</span></div>`).join('');
+  el.innerHTML = cards.map(([title, value, copy]) => `<div class="journey-impact-card"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(title)}}</span><span style="margin-top:8px;display:block;color:var(--journey-muted);">${{escHtml(copy)}}</span></div>`).join('');
 }}
 
 function renderJourneyCollaboration(roster) {{
   const el = document.getElementById('journey-collab-map');
   if (!el) return;
   const items = ((roster || {{}}).items || []).slice(0, 6);
+  if (!items.length) {{
+    el.innerHTML = '<div class="journey-list-row"><div><strong>No live collaboration map yet</strong><span>Agent roster data is not currently available in Journey.</span></div></div>';
+    return;
+  }}
   const positions = [
     {{ left: '50%', top: '10%' }},
     {{ left: '80%', top: '28%' }},
@@ -27511,65 +27705,95 @@ function renderJourneyCollaboration(roster) {{
   }});
 }}
 
-function renderJourneyBrain(memory, seams) {{
+function renderJourneyBrain(memory, seams, activityModule) {{
   const el = document.getElementById('journey-brain-grid');
   const totalEl = document.getElementById('journey-total-nodes');
   if (!el) return;
-  const nodes = [
-    ['People', 142],
-    ['Themes', 53],
-    ['Projects', (seams.item_count || 0) + 20],
-    ['Goals', 27],
-    ['Decisions', ((_journeyCenter?.what_needs_me || []).length * 52) || 104],
-    ['Preferences', memory.fact_count || 0],
-    ['Life Patterns', 41],
-    ['Resources', seams.item_count || 0],
-    ['Documents', (memory.entry_count || 0) * 12],
+  const moduleCounts = (activityModule || {{}}).counts || {{}};
+  const cards = [
+    ['Entries', Number(memory.entry_count || 0)],
+    ['Facts', Number(memory.fact_count || 0)],
+    ['Proposals', Number(memory.proposal_count || 0)],
+    ['Seams', Number(seams.item_count || 0)],
+    ['Decision Requests', Number(((_journeyCenter || {{}}).what_needs_me || []).length || 0)],
+    ['Review Items', Number(moduleCounts.review_count || 0)],
+    ['Action Journal', Number(moduleCounts.journal_count || 0)],
+    ['Home Bridges', Number(moduleCounts.home_bridge_count || 0)],
+    ['Focus History', Number(moduleCounts.focus_history_count || 0)],
   ];
-  const total = nodes.reduce((sum, [, value]) => sum + Number(value || 0), 0);
-  el.innerHTML = nodes.map(([label, value]) => `<div class="journey-brain-node"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(label)}}</span></div>`).join('');
+  const total = cards.reduce((sum, [, value]) => sum + Number(value || 0), 0);
+  el.innerHTML = cards.map(([label, value]) => `<div class="journey-brain-node"><strong>${{escHtml(String(value))}}</strong><span>${{escHtml(label)}}</span></div>`).join('');
   if (totalEl) totalEl.textContent = total.toLocaleString();
 }}
 
-function renderJourneyTrust(roster, failure) {{
+function renderJourneyTrust(roster, failure, activityModule) {{
   const el = document.getElementById('journey-trust-grid');
   if (!el) return;
-  const blocked = (roster.counts || {{}}).blocked || 0;
+  const rosterCounts = (roster && roster.counts) || {{}};
+  const blocked = Number(rosterCounts.blocked || 0);
+  const running = Number(rosterCounts.running || 0);
+  const itemCount = Number(roster.item_count || 0);
+  const issues = Number((failure || {{}}).integration_issue_count || 0);
+  const reviewCount = Number(((activityModule || {{}}).counts || {{}}).review_count || 0);
   const cards = [
-    ['Safe to Automate', ['Calendar reminders', 'Task sorting & triage', 'Routine follow-ups'], Math.max(82, 94 - blocked)],
-    ['Needs Approval', ['External communication', 'Purchases & spending', 'Publishing & launches'], Math.max(54, 72 - blocked * 2)],
-    ['Watch Zone', ['Health recommendations', 'Financial strategies', 'High-stakes commitments'], Math.max(36, 48 - Number(failure.integration_issue_count || 0) * 2)],
+    ['Agent Posture', [`${{running}} running`, `${{blocked}} blocked`, `${{itemCount}} total rostered`], Math.max(0, Math.min(100, itemCount ? Math.round((running / itemCount) * 100) : 0))],
+    ['Recovery Pressure', [`${{issues}} integration issues`, `${{reviewCount}} active reviews`, 'Escalations stay visible in shared continuity'], Math.max(0, Math.min(100, 100 - (issues * 14) - (blocked * 6)))],
+    ['Autonomy Readiness', ['Route-safe surfaces are live', 'High-risk actions still require bounded review', 'Journey reflects real supervision posture'], Math.max(0, Math.min(100, 68 + (running * 4) - (blocked * 7) - (issues * 5)))],
   ];
   el.innerHTML = cards.map(([title, items, pct]) => `<div class="journey-trust-card"><strong>${{escHtml(title)}}</strong><span>${{items.map(item => '• ' + item).join(' ')}}</span><div class="journey-meter"><div style="width:${{pct}}%;"></div></div><span style="margin-top:10px;display:block;">Trust Level ${{pct}}%</span></div>`).join('');
 }}
 
-function renderJourneyPatterns(insights, byType, memory) {{
+function renderJourneyPatterns(insights, byType, memory, activityModule) {{
   const el = document.getElementById('journey-pattern-grid');
   if (!el) return;
-  const cards = [
-    ['Creative Momentum Pattern', 'You create best after morning alignment and focus blocks.', 92],
-    ['Afternoon Drift Pattern', 'Focus drops in the mid afternoon without a reset.', 87],
-    ['Launch Bottleneck Pattern', 'Sequencing and approvals cause the biggest launch delays.', 90],
-    ['Travel Compression Pattern', 'Back-to-back travel days increase reactivity and reduce clarity.', 93],
-    ['Recovery Warning Pattern', 'Sleep debt weakens creative decision quality.', 91],
-  ];
-  if ((insights || []).length) cards[0][1] = insights[0];
-  if ((byType.chronicle_entry || 0) > 0) cards[2][1] = 'Memory capture and launch prep intersect more than JARVIS expected.';
-  if ((memory.pending_proposals || []).length) cards[4][1] = 'Pending memory proposals cluster around emotionally meaningful household events.';
-  el.innerHTML = cards.map(([title, copy, pct]) => `<div class="journey-mini-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span><div class="journey-meter"><div style="width:${{pct}}%;"></div></div><span style="margin-top:8px;display:block;">Confidence ${{pct}}%</span></div>`).join('');
+  const moduleCounts = (activityModule || {{}}).counts || {{}};
+  const rawCards = [];
+  (insights || []).slice(0, 3).forEach((insight, idx) => {{
+    rawCards.push([
+      `Live Insight ${{idx + 1}}`,
+      insight,
+      Math.max(55, Math.min(96, 58 + ((insights || []).length - idx) * 8)),
+    ]);
+  }});
+  if ((byType['operator-action'] || 0) > 0 || (moduleCounts.journal_count || 0) > 0) {{
+    rawCards.push([
+      'Operator Continuity',
+      `${{moduleCounts.journal_count || 0}} journal entries show what was acted on and why it mattered.`,
+      Math.max(45, Math.min(94, 48 + Number(moduleCounts.journal_count || 0) * 6)),
+    ]);
+  }}
+  if ((byType.chronicle_entry || 0) > 0 || Number(memory.entry_count || 0) > 0) {{
+    rawCards.push([
+      'Memory Density',
+      `${{memory.entry_count || 0}} Chronicle entries and ${{memory.fact_count || 0}} facts are available to Journey right now.`,
+      Math.max(45, Math.min(94, 44 + Number(memory.entry_count || 0) * 4 + Number(memory.fact_count || 0) * 2)),
+    ]);
+  }}
+  if ((moduleCounts.review_count || 0) > 0) {{
+    rawCards.push([
+      'Review Pressure',
+      `${{moduleCounts.review_count}} items are still asking for follow-through across the activity lane.`,
+      Math.max(40, Math.min(92, 40 + Number(moduleCounts.review_count || 0) * 9)),
+    ]);
+  }}
+  const cards = rawCards.slice(0, 5);
+  if (!cards.length) {{
+    el.innerHTML = '<div class="journey-list-row"><div><strong>No live patterns surfaced yet</strong><span>Journey will show reusable patterns once more continuity accumulates.</span></div></div>';
+    return;
+  }}
+  el.innerHTML = cards.map(([title, copy, pct]) => `<div class="journey-mini-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span><div class="journey-meter"><div style="width:${{pct}}%;"></div></div><span style="margin-top:8px;display:block;">Evidence score ${{pct}}%</span></div>`).join('');
 }}
 
-function renderJourneyGrowth(progress, roster, failure, memory, insights) {{
+function renderJourneyGrowth(events) {{
   const svg = document.getElementById('journey-growth-chart');
   if (!svg) return;
-  const series = [
-    {{ label: 'Memory Depth', color: '#60a5fa', values: [52, 61, 68, 76, 82, Math.max(82, 48 + Number(memory.entry_count || 0))] }},
-    {{ label: 'Preference Learning', color: '#f59e0b', values: [48, 55, 63, 71, 78, Math.max(78, 60 + (insights || []).length * 4)] }},
-    {{ label: 'Agent Coordination', color: '#c084fc', values: [28, 34, 41, 49, 58, Math.max(58, 50 + ((roster.counts || {{}}).running || 0) * 3)] }},
-    {{ label: 'Autonomy Trust', color: '#34d399', values: [64, 70, 76, 81, 86, Math.max(68, 82 - ((roster.counts || {{}}).blocked || 0) * 2)] }},
-    {{ label: 'System Health', color: '#22d3ee', values: [14, 22, 28, 39, 51, Math.max(40, 88 - Number(failure.integration_issue_count || 0) * 8)] }},
-  ];
-  const months = ['Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May'];
+  const growth = journeyGrowthSeries(events);
+  const series = Array.isArray(growth.series) ? growth.series : [];
+  const labels = Array.isArray(growth.labels) ? growth.labels : [];
+  if (!series.length || labels.length < 2) {{
+    svg.innerHTML = '<text x="24" y="44" fill="rgba(255,255,255,0.55)" font-size="13">Not enough recent live Journey history to chart growth yet.</text>';
+    return;
+  }}
   const width = 620;
   const height = 220;
   const padL = 42;
@@ -27579,14 +27803,14 @@ function renderJourneyGrowth(progress, roster, failure, memory, insights) {{
   const innerW = width - padL - padR;
   const innerH = height - padT - padB;
   const line = (values) => values.map((v, i) => {{
-    const x = padL + (innerW / (values.length - 1)) * i;
+    const x = padL + (innerW / Math.max(1, values.length - 1)) * i;
     const y = padT + innerH - (innerH * (v / 100));
     return `${{i === 0 ? 'M' : 'L'}}${{x}},${{y}}`;
   }}).join(' ');
   svg.innerHTML = `
     <rect x="0" y="0" width="${{width}}" height="${{height}}" fill="transparent"/>
     ${{[0,25,50,75,100].map(v => `<line x1="${{padL}}" y1="${{padT + innerH - (innerH * (v/100))}}" x2="${{width - padR}}" y2="${{padT + innerH - (innerH * (v/100))}}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/><text x="8" y="${{padT + innerH - (innerH * (v/100)) + 4}}" fill="rgba(255,255,255,0.35)" font-size="10">${{v}}%</text>`).join('')}}
-    ${{months.map((m, i) => `<text x="${{padL + (innerW / (months.length - 1)) * i}}" y="${{height - 8}}" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="10">${{m}}</text>`).join('')}}
+    ${{labels.map((label, i) => `<text x="${{padL + (innerW / Math.max(1, labels.length - 1)) * i}}" y="${{height - 8}}" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="10">${{label}}</text>`).join('')}}
     ${{series.map(s => `<path d="${{line(s.values)}}" fill="none" stroke="${{s.color}}" stroke-width="2.4"/>`).join('')}}
     ${{series.map((s, i) => `<text x="${{width - padR + 10}}" y="${{28 + i * 24}}" fill="${{s.color}}" font-size="11">${{s.label}}</text>`).join('')}}
   `;
@@ -27596,47 +27820,97 @@ function renderJourneyOpportunities(checklist) {{
   const el = document.getElementById('journey-opportunity-list');
   if (!el) return;
   const items = (checklist.items || []).slice(0, 5);
-  el.innerHTML = items.length ? items.map(item => `<div class="journey-opportunity-row"><div><strong>${{escHtml(item.title || 'Learning opportunity')}}</strong><span>${{escHtml(item.next_slice || item.why_open || 'Review this area with JARVIS.')}}</span></div><button class="journey-btn" type="button">Review</button></div>`).join('') : '<div class="journey-list-row"><div><strong>No learning opportunities surfaced</strong><span>The checklist is currently clear.</span></div></div>';
+  el.innerHTML = items.length ? items.map(item => `<div class="journey-opportunity-row"><div><strong>${{escHtml(item.title || 'Learning opportunity')}}</strong><span>${{escHtml(item.next_slice || item.why_open || 'Review this area with JARVIS.')}}</span></div><button class="journey-btn" type="button" onclick="journeyReviewOpportunity(${{JSON.stringify(item.title || 'Learning opportunity')}}, ${{JSON.stringify(item.next_slice || item.why_open || 'Review this area with JARVIS.')}})">Review</button></div>`).join('') : '<div class="journey-list-row"><div><strong>No learning opportunities surfaced</strong><span>The checklist is currently clear.</span></div></div>';
 }}
 
 function renderJourneyMilestone(checklist) {{
   const item = (checklist.items || [])[0] || null;
-  if (!item) return;
-  const progress = Math.max(34, Math.min(84, 100 - ((checklist.open_count || 1) * 8)));
+  if (!item) {{
+    _journeySetText('journey-next-milestone-title', 'No open maturity blockers');
+    _journeySetText('journey-next-milestone-copy', 'Level-3 checklist items are currently clear or unavailable.');
+    const clearMeter = document.getElementById('journey-next-milestone-meter');
+    if (clearMeter) clearMeter.style.width = '100%';
+    _journeySetText('journey-next-milestone-progress', 'Checklist clear');
+    return;
+  }}
+  const openCount = Number(checklist.open_count || 0);
+  const totalCount = Math.max(1, Number(checklist.item_count || ((checklist.items || []).length) || 1));
+  const progress = Math.max(0, Math.min(100, Math.round(((totalCount - openCount) / totalCount) * 100)));
   _journeySetText('journey-next-milestone-title', item.title || 'Next maturity milestone');
   _journeySetText('journey-next-milestone-copy', item.next_slice || item.why_open || 'JARVIS is refining the next meaningful seam.');
   const meter = document.getElementById('journey-next-milestone-meter');
   if (meter) meter.style.width = progress + '%';
-  _journeySetText('journey-next-milestone-progress', 'Progress ' + progress + '% · estimated completion 2–3 weeks');
+  _journeySetText('journey-next-milestone-progress', 'Progress ' + progress + '% · open items ' + openCount);
 }}
 
-function renderJourneyUserImpact(activity, memory) {{
+function renderJourneyUserImpact(activityModule, memory, insights) {{
   const el = document.getElementById('journey-user-impact-grid');
   if (!el) return;
+  const counts = (activityModule || {{}}).counts || {{}};
   const cards = [
-    ['You give clear feedback', 'This improves accuracy by 4%'],
-    ['You correct with specificity', 'This strengthens learning by 3%'],
-    ['You teach through examples', 'This builds patterns that compound'],
-    ['You trust with boundaries', 'This allows safe autonomy growth'],
+    ['Feedback leaves a trail', `${{counts.journal_count || 0}} action-journal entries show where your judgment changed the system.`],
+    ['Memory review shapes recall', `${{memory.proposal_count || 0}} proposals and ${{memory.fact_count || 0}} facts define what Journey should keep.`],
+    ['Insights become doctrine', `${{(insights || []).length}} live insight${{(insights || []).length === 1 ? '' : 's'}} currently influence Journey summaries.`],
+    ['Boundaries stay explicit', `${{counts.review_count || 0}} review items keep autonomy growth tied to visible supervision.`],
   ];
-  if ((activity || []).length > 2) cards[0][1] = 'Recent progress snapshots show your feedback is landing.';
-  if ((memory.pending_proposals || []).length) cards[3][1] = 'Memory review posture is teaching JARVIS what deserves durable continuity.';
   el.innerHTML = cards.map(([title, copy]) => `<div class="journey-impact-card"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
 }}
 
-function renderJourneyFooter() {{
+function renderJourneyFooter(activityModule = null) {{
   const el = document.getElementById('journey-footer-strip');
   if (!el) return;
+  const counts = (activityModule || {{}}).counts || {{}};
+  const focus = activityModule?.progress_next_focus || 'No next progress focus recorded yet.';
+  const availability = Array.isArray(activityModule?.availability_notes) ? activityModule.availability_notes.filter(Boolean) : [];
+  const reviewLane = Array.isArray(activityModule?.review_lane) ? activityModule.review_lane : [];
+  const activityFeed = Array.isArray(activityModule?.activity_feed) ? activityModule.activity_feed : [];
+  const latest = activityFeed[0] || null;
   const cards = [
-    ['Learns Continuously', 'Every interaction makes JARVIS wiser.'],
-    ['Remembers Deeply', 'Your context is preserved across time and systems.'],
-    ['Sees Patterns', 'Connections most people miss become visible.'],
-    ['Acts With Care', 'JARVIS protects what matters most.'],
-    ['Grows With You', 'Stronger together. Smarter together.'],
-    ['Built For Stewardship', 'JARVIS is here to serve your mission and your family.'],
-    ['Journey Engine Online', 'All systems learning and syncing'],
+    ['Runtime Note', activityModule?.summary || 'Journey is live and connected.'],
+    ['Next Focus', focus],
+    ['Review Lane', reviewLane.length ? `${{reviewLane.length}} item${{reviewLane.length === 1 ? '' : 's'}} waiting in the shared review lane.` : 'No review items are waiting right now.'],
+    ['Recent Motion', latest ? (latest.title || latest.detail || 'Recent activity is available in Journey.') : 'No recent activity has been recorded yet.'],
+    ['Activity Coverage', `${{counts.activity_count || 0}} feed events · ${{counts.journal_count || 0}} journal entries · ${{counts.home_bridge_count || 0}} home bridges.`],
+    ['Availability', availability.length ? availability[0] : 'All current Journey sources responded normally.'],
+    ['Journey Engine Online', focus],
   ];
   el.innerHTML = cards.map(([title, copy]) => `<div class="journey-footer-pill"><strong>${{escHtml(title)}}</strong><span>${{escHtml(copy)}}</span></div>`).join('');
+}}
+
+async function journeyReviewOpportunity(title, detail) {{
+  const payload = _journeyActivityModule || {{}};
+  const activity = Array.isArray(payload.activity_feed) ? payload.activity_feed : [];
+  const target = activity[0] || null;
+  if (!target || !target.event_id) {{
+    journeyRuntimeNote('No live Journey event is available to review right now.');
+    return;
+  }}
+  journeyRuntimeNote('Saving Journey review state…');
+  const response = await journeyFetchJson('/api/activity/module/review', {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify({{
+      actor: (typeof dailyBriefName === 'function' && dailyBriefName()) || 'Chris',
+      event_id: target.event_id,
+      title: title || target.title || 'Journey opportunity',
+      detail: detail || target.detail || target.result || 'Reviewed from Journey.',
+      status: 'reviewing',
+      related_route: target.related_route || '/activity-center',
+      related_kind: target.related_kind || target.entry_type || 'activity',
+      route_label: target.route_label || 'Open Activity Feed',
+    }}),
+  }});
+  if (!response.ok) {{
+    journeyRuntimeNote('Journey review could not be saved.');
+    return;
+  }}
+  journeyRuntimeNote(`Journey review saved for ${{title || 'the selected opportunity'}}.`);
+  await loadJourneyView();
+}}
+
+async function refreshJourneyView() {{
+  journeyRuntimeNote('Refreshing Journey…');
+  await loadJourneyView();
 }}
 
 /* ═══════════════════════════════════════════════════════════════
