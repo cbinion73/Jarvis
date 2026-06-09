@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (GAP-2 + GAP-3 resolved; pending commit+push to Hetzner)
+Last updated: 2026-06-09 (GAP-5 resolved; GAP-2+GAP-3 live on Hetzner)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -70,10 +70,13 @@ Supervision/boundary gating happens in ApprovalManager.execute_approved and
 are not wrapped. Also enqueue_self_improvement_sandbox_job does not
 re-check arena pause status at enqueue time.
 
-### GAP-5 — Governance endpoints lack authn [P3]
-/api/learning/proposals/{id} takes no viewer at all; other governance
-routes trust a self-asserted viewer string. Memory read-path enforcement is
-real, but write/approve paths are open to any local caller.
+### GAP-5 — Governance endpoints lack authn [RESOLVED 2026-06-09]
+Fixed three sites:
+- GET /api/memory-proposals: requires viewer param, validated via get_actor (403 on unknown)
+- POST /api/learning/proposals/{id}: requires viewer in body (422 if missing, 403 if unknown)
+- POST /api/apple/governance-proposals/{id}/promote + /dismiss: actor validated via
+  get_actor before any business logic (403 on unknown actor)
+11 tests in tests/test_governance_authn.py (all pass).
 
 ### GAP-6 — Interruption postures incomplete [P4]
 _compute_interruption_posture (apple_api.py:2702) implements deliver_now /
@@ -156,9 +159,7 @@ writers or multi-process contention on persistence.py.
 
 ## Next 3 Work Items
 
-1. GAP-3: approvals.py:953 and :1072 — swallow evaluate_action failures must
-   contract to lower authority stage (fail-closed), not proceed.
-2. GAP-5: /api/learning/proposals/{id} takes no viewer; governance write/
-   approve paths open to any local caller.
-3. GAP-6: add suppress + escalate postures to _compute_interruption_posture
-   (apple_api.py:2702).
+1. GAP-6: add suppress + escalate postures to _compute_interruption_posture
+   (apple_api.py:2702); add delivery decision recording to interruption_decisions.jsonl.
+2. GAP-4: enqueue_self_improvement_sandbox_job must re-check arena pause status.
+3. Phase 3 Slice 1: wire _event_log.record() into approvals, home commands, nav actions.

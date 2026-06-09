@@ -9132,7 +9132,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return _json(runtime.review_memory(viewer, memory_type=type, owner=owner, project=project))
 
     @app.get("/api/memory-proposals")
-    async def api_memory_proposals(status: str = "") -> JSONResponse:
+    async def api_memory_proposals(status: str = "", viewer: str = "Chris") -> JSONResponse:
+        try:
+            runtime.get_actor(viewer)
+        except KeyError:
+            raise HTTPException(status_code=403, detail=f"Unknown viewer: {viewer!r}")
         return _json(runtime.memory_proposals(status=status))
 
     @app.get("/api/memory-profiles")
@@ -9450,6 +9454,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.post("/api/learning/proposals/{proposal_id}")
     async def api_learning_proposal_decision(proposal_id: str, payload: dict[str, Any]) -> JSONResponse:
+        viewer = str(payload.get("viewer", "")).strip()
+        if not viewer:
+            raise HTTPException(status_code=422, detail="viewer is required")
+        try:
+            runtime.get_actor(viewer)
+        except KeyError:
+            raise HTTPException(status_code=403, detail=f"Unknown viewer: {viewer!r}")
         decision = str(payload.get("decision", "approved"))
         return _json(runtime.resolve_memory_proposal(proposal_id, decision))
 
@@ -10826,6 +10837,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         from datetime import datetime, timezone
 
         generated_at = datetime.now(timezone.utc).isoformat()
+        local_now_fn = getattr(runtime, "_local_now", None)
+        local_today_iso = (
+            local_now_fn().date().isoformat()
+            if callable(local_now_fn)
+            else datetime.now().astimezone().date().isoformat()
+        )
         availability_notes: list[str] = []
         errors: list[str] = []
 
@@ -10850,11 +10867,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 today_payload = {
                     "events": today_events,
                     "total": len(today_events),
-                    "date": generated_at[:10],
+                    "date": local_today_iso,
                 }
         except Exception as exc:
             errors.append(f"today_calendar: {exc}")
             availability_notes.append(f"Today's calendar could not be loaded: {exc}")
+
+        if not str(today_payload.get("date") or "").strip():
+            today_payload["date"] = local_today_iso
 
         try:
             if home_db is not None:
@@ -11053,6 +11073,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "operator_activity_api": "/api/activity/operator-action",
                 "action_api": "/api/calendar/module/action",
             },
+            "local_today": local_today_iso,
             "errors": errors,
         }
 

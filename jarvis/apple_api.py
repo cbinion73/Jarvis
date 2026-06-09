@@ -8055,6 +8055,10 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_promote_governance_proposal(proposal_id: str, payload: dict | None = None):
         payload = payload if isinstance(payload, dict) else {}
         actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            runtime.get_actor(actor)
+        except KeyError:
+            raise HTTPException(status_code=403, detail=f"Unknown actor: {actor!r}")
         basis_override = str(payload.get("basis") or "").strip()
 
         reviews = _stewardship_reviews.list(include_closed=True, limit=0)
@@ -8131,6 +8135,10 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
     async def apple_dismiss_governance_proposal(proposal_id: str, payload: dict | None = None):
         payload = payload if isinstance(payload, dict) else {}
         actor = str(payload.get("actor") or "chris").strip() or "chris"
+        try:
+            runtime.get_actor(actor)
+        except KeyError:
+            raise HTTPException(status_code=403, detail=f"Unknown actor: {actor!r}")
         reason = str(payload.get("reason") or "Dismissed from Systems/Admin.").strip()
 
         reviews = _stewardship_reviews.list(include_closed=True, limit=0)
