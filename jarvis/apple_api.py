@@ -63,6 +63,7 @@ _STEWARDSHIP_REVIEW_QUEUE_LOG_PATH = _STEWARDSHIP_REVIEW_QUEUE_PATH.with_name("s
 _SIGNAL_RESOLUTIONS_PATH = Path("data/state/signal_resolutions.json")
 _SIGNAL_RESOLUTIONS_LOG_PATH = _SIGNAL_RESOLUTIONS_PATH.with_name("signal_resolutions_log.jsonl")
 _INTERRUPTION_DECISIONS_PATH = Path("data/state/interruption_decisions.jsonl")
+_PRESENCE_OVERRIDES_PATH = Path("data/apple/presence_overrides.json")
 _FOCUS_STATE_PATH = Path("data/apple/focus_state.json")
 _FOCUS_STATE_LOG_PATH = _FOCUS_STATE_PATH.with_name("focus_state_log.jsonl")
 _APPLE_REMINDERS_PATH = Path("data/apple/reminders.json")
@@ -2837,6 +2838,84 @@ def _record_interruption_decision(
         persistence_append_jsonl(_INTERRUPTION_DECISIONS_PATH, record)
     except Exception as exc:
         logger.debug("interruption_decision record failed: %s", exc)
+
+
+def _read_presence_overrides() -> dict[str, Any]:
+    """Read persisted presence overrides; returns {} if absent, invalid, or TTL expired."""
+    try:
+        data = json.loads(_PRESENCE_OVERRIDES_PATH.read_text())
+    except Exception:
+        return {}
+    expires_at = data.get("expires_at")
+    if expires_at:
+        try:
+            from datetime import datetime, timezone
+            exp = datetime.fromisoformat(str(expires_at))
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            if exp < datetime.now(timezone.utc):
+                return {}
+        except Exception:
+            pass
+    return data
+
+
+def _write_presence_overrides(overrides: dict[str, Any]) -> None:
+    try:
+        from .persistence import atomic_write_json
+        _PRESENCE_OVERRIDES_PATH.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(_PRESENCE_OVERRIDES_PATH, overrides)
+    except Exception:
+        pass
+
+
+def _fire_escalation_push(
+    title: str,
+    body: str,
+    actor_id: str = "chris",
+    category: str = "household",
+) -> None:
+    """Dispatch a push notification in a daemon thread — fire-and-forget, never blocks."""
+    try:
+        import threading
+        from .apns_sender import send_push
+        t = threading.Thread(
+            target=send_push,
+            args=(actor_id, title, body),
+            kwargs={"category": category},
+            daemon=True,
+        )
+        t.start()
+    except Exception:
+        pass
+
+
+def _maybe_fire_escalation_push(posture_mode: str, posture: dict[str, Any]) -> None:
+    """Fire a background→foreground push when posture requires breakout. Debounced to 5 minutes."""
+    if posture_mode not in {"escalate", "household_alert"}:
+        return
+    overrides = _read_presence_overrides()
+    last_push_ts = overrides.get("last_escalation_push_ts")
+    if last_push_ts:
+        try:
+            from datetime import datetime, timezone
+            last = datetime.fromisoformat(str(last_push_ts))
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+            if (datetime.now(timezone.utc) - last).total_seconds() < 300:
+                return
+        except Exception:
+            pass
+    alert_count = int(posture.get("alert_count") or 0)
+    if posture_mode == "escalate":
+        title = "JARVIS: Escalation Override"
+        body = f"Multiple alerts active ({alert_count}) — immediate attention required."
+    else:
+        title = "JARVIS: Household Alert"
+        body = f"Active alert requires attention ({alert_count} pending)."
+    overrides["last_escalation_push_ts"] = _ts()
+    _write_presence_overrides(overrides)
+    _fire_escalation_push(title=title, body=body, actor_id="chris", category="household")
 
 
 def _chronicle_actor_matches(entry: dict[str, Any], actor: str) -> bool:
@@ -7335,6 +7414,7 @@ def _reconcile_shared_notifications(
     )
 
     posture_mode = str(posture.get("mode") or "active_hours")
+    _maybe_fire_escalation_push(posture_mode, posture)
 
     needs_count = int(watch_status.get("needs_count") or 0)
     if needs_count > 0:
@@ -8445,12 +8525,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         weather = str(status.get("weather") or status.get("weather_summary") or "")
         drift = bool(status.get("drift") or status.get("drift_detected"))
 
+        presence = _read_presence_overrides()
         data = {
             "needs_count": needs_count,
             "mode": str(mode),
             "weather": str(weather),
             "drift": drift,
             "ts": _ts(),
+            "suppress_interruptions": bool(presence.get("suppress_interruptions")),
+            "escalate_interruptions": bool(presence.get("escalate_interruptions")),
         }
         return _ok(data)
 
@@ -8630,6 +8713,44 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             focus_payload=focus_payload if isinstance(focus_payload, dict) else {},
             posture=posture,
         ))
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/presence-override
+    # Set or clear suppress/escalate interruption overrides with optional TTL.
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/presence-override")
+    async def apple_presence_override(payload: dict = {}):
+        mode = str(payload.get("mode") or "clear").lower()
+        ttl_minutes = int(payload.get("ttl_minutes") or 60)
+        ttl_minutes = max(1, min(ttl_minutes, 480))
+
+        if mode == "clear":
+            _write_presence_overrides({})
+            return _ok({"mode": "cleared", "suppress_interruptions": False, "escalate_interruptions": False})
+
+        from datetime import datetime, timezone, timedelta
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)).isoformat()
+
+        suppress = mode == "suppress"
+        escalate = mode == "escalate"
+
+        if not suppress and not escalate:
+            raise HTTPException(status_code=400, detail=f"Unknown mode '{mode}'. Use: suppress, escalate, clear.")
+
+        overrides = {
+            "suppress_interruptions": suppress,
+            "escalate_interruptions": escalate,
+            "expires_at": expires_at,
+            "set_at": _ts(),
+            "mode": mode,
+        }
+        _write_presence_overrides(overrides)
+        return _ok({
+            "mode": mode,
+            "suppress_interruptions": suppress,
+            "escalate_interruptions": escalate,
+            "expires_at": expires_at,
+        })
 
     # ------------------------------------------------------------------
     # GET /api/apple/weather
