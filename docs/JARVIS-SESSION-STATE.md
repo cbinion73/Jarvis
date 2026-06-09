@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Phase 3 Slice 2 resolved; 485 tests passing)
+Last updated: 2026-06-09 (GAP-8 partial resolved; 532 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -97,10 +97,15 @@ _relevant_profile_facts injects up to 4 facts by keyword relevance into
 chat context. Roadmap Phase 7 requires retrieval-by-situation,
 lessons-learned, prior-resolution recall.
 
-### GAP-8 — Recursive foundry is read-only [P5]
-Only GET /api/foundry/module (dashboard payload). No proposal pipeline,
-agent generation, or newborn-agent zone attachment
-(JARVIS-RECURSIVE-GROWTH-ARCHITECTURE.md sections 6, APIs /api/foundry/*).
+### GAP-8 — Recursive foundry is read-only [PARTIALLY RESOLVED 2026-06-09]
+POST /api/foundry/proposals, GET /api/foundry/proposals,
+POST /api/foundry/proposals/{id}/approve all added. Proposals persisted to
+data/foundry/proposals.json + proposals_log.jsonl. Approve governed by
+assess_action_boundary against system_agent zone + system.agent-sandbox arena.
+system_agent trust zone bootstrapped (resolves dangling arena linked_zone_id).
+23 new tests all pass.
+REMAINING: agent generation and newborn-agent zone attachment require a
+Fable 5 architecture session — deferred.
 
 ### GAP-9 — Formation gaps [RESOLVED 2026-06-09]
 Added GET /api/stewardship/daily (cached day card + season), POST
@@ -170,8 +175,20 @@ safety, stray .tmp recovery, lock file creation. All pass.
   blockers.md #1 (still needed)
 - Live household entity map (garage/climate/lighting/lock/leak names)
 
+## Phase B Audit Findings (2026-06-09)
+
+- All 4 trust levels enforced via assess_action_boundary sequence comparison. REAL.
+- Negative paths (unknown zone, inactive zone, unknown/suspended arena) all deny. REAL.
+- 8 restricted action types all stage correctly at observe level. REAL.
+- Gap documented: action_type=stewardship_lane_review (runtime.py:8957) is NOT in the
+  restricted set → allows at any stage level. Low risk for now (read-oriented lane metadata).
+- 24 new tests in test_phase_b_trust_boundary_audit.py.
+
 ## Next 3 Work Items
 
-1. Phase B audit: verify all four trust zones (Observe / Draft+Stage / Sandbox Live / Mature Delegated) enforced in code with negative-path tests; audit assess_action_boundary coverage across non-apple_api paths.
-2. Phase C — GAP-8 partial: add foundry proposal pipeline (POST/GET /api/foundry/proposals, POST /api/foundry/proposals/{id}/approve); no agent generation yet (requires architecture session).
-3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session before implementation.
+1. stewardship_lane_review boundary gap: add `stewardship_lane_review` to the
+   restricted action_type set in assess_action_boundary (runtime.py:20162) so
+   stewardship lane actions are properly sequence-gated like all other governed actions.
+2. Level 3 exit gate review: re-audit all 23 glass experiences for honest
+   unavailable states; confirm event log writing paths are exercised on Hetzner.
+3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
