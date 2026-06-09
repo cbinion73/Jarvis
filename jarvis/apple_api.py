@@ -6682,6 +6682,68 @@ def _apple_snooze_reminder(reminder_id: str, *, minutes: int = 60) -> dict[str, 
     return {"ok": True, "reminder_id": reminder_id, "status": "snoozed", "due": new_due}
 
 
+def _apple_defer_reminder(reminder_id: str, *, hours: int = 24) -> dict[str, Any]:
+    new_due = _iso_after_minutes(max(1, hours) * 60)
+    from .reminders import snooze_reminder
+    ok = snooze_reminder(reminder_id, new_due)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    _sync_mirrored_reminder(reminder_id, completed=False, due=new_due)
+    _record_shared_event(
+        domain="reminders",
+        kind="info",
+        title="Reminder deferred",
+        detail=f"{reminder_id} until {new_due}",
+        severity="low",
+        source="apple.reminders",
+        source_id=reminder_id,
+        navigation_target="workshop",
+        actions=["open"],
+        trust_zone="household_schedule",
+        authority_stage="live",
+        why_now="A reminder was deferred for later attention.",
+        metadata={"reminder_id": reminder_id, "due": new_due, "hours": hours},
+    )
+    return {"ok": True, "reminder_id": reminder_id, "status": "deferred", "due": new_due}
+
+
+def _apple_stage_reminder(reminder_id: str) -> dict[str, Any]:
+    """Mark a reminder as staged — held for deliberate review without completing or deferring."""
+    path = _APPLE_REMINDERS_PATH
+    payload = _safe_read_json(path, {})
+    reminders = payload.get("reminders") if isinstance(payload, dict) else []
+    if not isinstance(reminders, list):
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    changed = False
+    for reminder in reminders:
+        if isinstance(reminder, dict) and str(reminder.get("id") or "") == reminder_id:
+            reminder["staged"] = True
+            reminder["staged_at"] = _ts()
+            changed = True
+            break
+    if not changed:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    payload["reminders"] = reminders
+    payload["synced_at"] = _ts()
+    _safe_write_json(path, payload)
+    _record_shared_event(
+        domain="reminders",
+        kind="staged",
+        title="Reminder staged",
+        detail=reminder_id,
+        severity="low",
+        source="apple.reminders",
+        source_id=reminder_id,
+        navigation_target="needs",
+        actions=["open"],
+        trust_zone="household_schedule",
+        authority_stage="live",
+        why_now="A reminder was staged for deliberate review.",
+        metadata={"reminder_id": reminder_id},
+    )
+    return {"ok": True, "reminder_id": reminder_id, "status": "staged"}
+
+
 def _current_apple_reminder_item(reminder_id: str) -> dict[str, Any] | None:
     state = _build_apple_reminders_state(_payload_store.apple_state())
     for item in state.get("open_items") or []:
@@ -6756,6 +6818,10 @@ def _governed_reminder_mutation(reminder_id: str, *, action_label: str, minutes:
 
     if action_label == "complete":
         result = _apple_complete_reminder(reminder_id)
+    elif action_label == "defer":
+        result = _apple_defer_reminder(reminder_id, hours=max(1, minutes // 60))
+    elif action_label == "stage":
+        result = _apple_stage_reminder(reminder_id)
     else:
         result = _apple_snooze_reminder(reminder_id, minutes=minutes)
     updated_item = _current_apple_reminder_item(reminder_id) or item
@@ -10996,6 +11062,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             raise HTTPException(status_code=400, detail="action required")
         return _ok(_perform_notification_action(notification_id, action))
 
+    @app.post("/api/apple/notifications/{notification_id}/escalate")
+    async def apple_notification_escalate(notification_id: str):
+        return await _governed_notification_mutation(
+            notification_id,
+            target_status="escalated",
+            reason="Escalated from Apple client — requires immediate attention.",
+            action_label="escalate",
+        )
+
     # ------------------------------------------------------------------
     # GET /api/apple/voice/greeting
     # ------------------------------------------------------------------
@@ -11468,6 +11543,17 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         if minutes <= 0:
             minutes = 60
         return _ok(_governed_reminder_mutation(reminder_id, action_label="snooze", minutes=minutes))
+
+    @app.post("/api/apple/reminders/{reminder_id}/defer")
+    async def apple_reminder_defer(reminder_id: str, payload: dict | None = None):
+        hours = _coerce_int((payload or {}).get("hours"), 24)
+        if hours <= 0:
+            hours = 24
+        return _ok(_governed_reminder_mutation(reminder_id, action_label="defer", minutes=hours * 60))
+
+    @app.post("/api/apple/reminders/{reminder_id}/stage")
+    async def apple_reminder_stage(reminder_id: str):
+        return _ok(_governed_reminder_mutation(reminder_id, action_label="stage"))
 
     # ── Focus Filter ─────────────────────────────────────────────────────────
 
