@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (GAP-5 resolved; GAP-2+GAP-3 live on Hetzner)
+Last updated: 2026-06-09 (GAP-6 resolved; all 6 delivery postures now live)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -17,9 +17,9 @@ Last updated: 2026-06-09 (GAP-5 resolved; GAP-2+GAP-3 live on Hetzner)
   promotion engine, sandbox execution, email draft staging, agent registry
   contract all exist in code with enforcement at two choke points and
   negative-path tests
-- Level 5 (Ambient): ~40% — event fabric + attention routing + interruption
-  posture exist but the fabric only ticks when polled (GAP-2); 4 of 6
-  delivery postures implemented (GAP-6)
+- Level 5 (Ambient): ~55% — event fabric autonomous (GAP-2 resolved), all 6
+  delivery postures live (GAP-6 resolved), interruption decisions recorded;
+  presence-aware routing and background-to-foreground escalation still missing
 - Level 6 (Memory/Continuity): ~60% — partitioned memory with enforced
   viewer access, memory genuinely read in chat/briefing context, learning
   review live; retrieval is keyword-match not situation retrieval (GAP-7)
@@ -78,9 +78,16 @@ Fixed three sites:
   get_actor before any business logic (403 on unknown actor)
 11 tests in tests/test_governance_authn.py (all pass).
 
-### GAP-6 — Interruption postures incomplete [P4]
-_compute_interruption_posture (apple_api.py:2702) implements deliver_now /
-badge_only / quiet_store / hold_for_brief. Missing: suppress, escalate.
+### GAP-6 — Interruption postures incomplete [RESOLVED 2026-06-09]
+Added suppress and escalate postures to _compute_interruption_posture
+(apple_api.py:2702). suppress: fires on watch_status.suppress_interruptions=True;
+routes non-critical to "suppress", critical to deliver_now. escalate: fires on
+watch_status.escalate_interruptions=True OR alert_count >= 3; routes everything
+to deliver_now. escalate takes priority over suppress. Added
+_record_interruption_decision() helper — appends {ts, item_id, category,
+severity, posture_mode, decision, decision_reason} to
+data/state/interruption_decisions.jsonl. Wired into all 7 _choose_delivery_mode
+call sites in _reconcile_shared_notifications. 16 new tests (all pass).
 
 ### GAP-7 — Memory retrieval is keyword-match [P4]
 _relevant_profile_facts injects up to 4 facts by keyword relevance into
@@ -159,7 +166,6 @@ writers or multi-process contention on persistence.py.
 
 ## Next 3 Work Items
 
-1. GAP-6: add suppress + escalate postures to _compute_interruption_posture
-   (apple_api.py:2702); add delivery decision recording to interruption_decisions.jsonl.
-2. GAP-4: enqueue_self_improvement_sandbox_job must re-check arena pause status.
-3. Phase 3 Slice 1: wire _event_log.record() into approvals, home commands, nav actions.
+1. GAP-4: enqueue_self_improvement_sandbox_job must re-check arena pause status at enqueue time; refuse if arena is paused.
+2. Phase 3 Slice 1: wire _event_log.record() into major action handlers (ApprovalGuard.request_approval, execute_approved, /api/apple/home/command, _record_navigation_route_history).
+3. GAP-9: add GET /api/stewardship/daily and POST /api/stewardship/daily/complete; derive season from current month; wire daily_stewardship.py to HTTP.
