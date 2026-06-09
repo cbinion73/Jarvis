@@ -22345,18 +22345,18 @@ body::after {{
           </div>
 
           <div class="foundry-side-nav">
-            <div class="foundry-side-link active">⌂ Workshop Home</div>
-            <div class="foundry-side-link">◈ Command</div>
-            <div class="foundry-side-link">☰ Daily Brief</div>
-            <div class="foundry-side-link">◎ Mission Board</div>
-            <div class="foundry-side-link">◉ Agents</div>
-            <div class="foundry-side-link">↯ Approvals</div>
-            <div class="foundry-side-link">◌ Supervision</div>
-            <div class="foundry-side-link">◔ Activity</div>
-            <div class="foundry-side-link">✦ Foundry</div>
-            <div class="foundry-side-link">✎ Publish</div>
-            <div class="foundry-side-link">◍ Legacy</div>
-            <div class="foundry-side-link">⚙ Settings</div>
+            <div class="foundry-side-link active" onclick="refreshWorkshopDesktop(true)">⌂ Workshop Home</div>
+            <div class="foundry-side-link" onclick="workshopOpenRoute('/command-center', 'chat', 'Open Command', 'Workshop opened the command lane.')">◈ Command</div>
+            <div class="foundry-side-link" onclick="switchView('overview')">☰ Daily Brief</div>
+            <div class="foundry-side-link" onclick="workshopOpenRoute('/mission-board', 'workshop', 'Open Mission Board', 'Workshop opened the mission board.')">◎ Mission Board</div>
+            <div class="foundry-side-link" onclick="switchView('agents')">◉ Agents</div>
+            <div class="foundry-side-link" onclick="workshopOpenRoute('/approval-queue', 'approvals', 'Open Approvals', 'Workshop opened the approval queue.')">↯ Approvals</div>
+            <div class="foundry-side-link" onclick="workshopOpenRoute('/supervision-snapshot', 'supervision', 'Open Supervision', 'Workshop opened supervision.')">◌ Supervision</div>
+            <div class="foundry-side-link" onclick="workshopOpenRoute('/activity-center', 'activity', 'Open Activity', 'Workshop opened the activity lane.')">◔ Activity</div>
+            <div class="foundry-side-link" onclick="switchView('workshop')">✦ Foundry</div>
+            <div class="foundry-side-link" onclick="switchView('publishing')">✎ Publish</div>
+            <div class="foundry-side-link" onclick="switchView('chronicle')">◍ Legacy</div>
+            <div class="foundry-side-link" onclick="workshopOpenRoute('/settings-center', 'chat', 'Open Settings', 'Workshop opened settings.')">⚙ Settings</div>
           </div>
 
           <div class="foundry-sidebar-status">
@@ -22364,7 +22364,8 @@ body::after {{
             <div class="foundry-status-row"><span>System Health</span><span id="workshop-sidebar-health">Loading…</span></div>
             <div class="foundry-status-row"><span>Queue Health</span><span id="workshop-sidebar-queue">Loading…</span></div>
             <div class="foundry-status-row"><span>Last Update</span><span id="workshop-sidebar-refresh">Loading…</span></div>
-            <button class="foundry-outline-btn" type="button" onclick="loadWorkshop()">Workshop Settings ↻</button>
+            <div class="foundry-status-row"><span>Runtime Note</span><span id="workshop-runtime-note">Loading…</span></div>
+            <button class="foundry-outline-btn" type="button" onclick="refreshWorkshopDesktop(true)">Workshop Settings ↻</button>
           </div>
         </aside>
 
@@ -22400,7 +22401,7 @@ body::after {{
               <div class="workshop-card-inner">
                 <div class="workshop-card-header">
                   <div><div class="workshop-card-number">1. Workshop Command Center</div><h3>Overview of all work across your world.</h3></div>
-                  <button class="workshop-outline-btn" type="button" onclick="loadWorkshop()">Customize View</button>
+                  <button class="workshop-outline-btn" type="button" onclick="workshopOpenRoute('/settings-center', 'chat', 'Customize Workshop', 'Workshop opened settings to customize this view.')">Customize View</button>
                 </div>
                 <div class="workshop-command-grid" id="workshop-command-grid"></div>
                 <div class="workshop-mini-grid" id="workshop-balance-grid" style="margin-top:14px;"></div>
@@ -22420,7 +22421,7 @@ body::after {{
               <div class="workshop-card-inner">
                 <div class="workshop-card-header">
                   <div><div class="workshop-card-number">3. Active Work Orders</div><h3>Deep view of major work threads.</h3></div>
-                  <button class="workshop-view-link" type="button" onclick="switchView('chat')">View All</button>
+                  <button class="workshop-view-link" type="button" onclick="workshopOpenRoute('/mission-board', 'workshop', 'Open Work Orders', 'Workshop opened the mission board work orders.')">View All</button>
                 </div>
                 <div class="workshop-work-orders" id="workshop-work-orders"></div>
               </div>
@@ -22440,7 +22441,7 @@ body::after {{
               <div class="workshop-card-inner">
                 <div class="workshop-card-header">
                   <div><div class="workshop-card-number">5. Blockers & Escalations</div><h3>Items preventing movement.</h3></div>
-                  <button class="workshop-view-link" type="button" onclick="switchView('supervision')">Resolve All</button>
+                  <button class="workshop-view-link" type="button" onclick="workshopOpenRoute('/supervision-snapshot', 'supervision', 'Resolve Blockers', 'Workshop opened supervision for blocker resolution.')">Resolve All</button>
                 </div>
                 <div class="workshop-list-stack" id="workshop-blockers-list"></div>
               </div>
@@ -35536,10 +35537,8 @@ function renderFoundryDesktop() {{
 }}
 
 let workshopStoryboardPage = 1;
-let _workshopCenter = null;
-let _workshopOpenTasks = [];
-let _workshopTodayTasks = [];
-let _workshopRoster = [];
+let _workshopModuleData = null;
+let _workshopRequestSerial = 0;
 
 const WORKSHOP_STORYBOARD_TITLES = {{
   1: {{
@@ -35578,304 +35577,486 @@ function _workshopPriority(value) {{
   return 'medium';
 }}
 
-function _workshopTaskFromMission(item) {{
-  return {{
-    id: item.mission_id || item.title || Math.random().toString(36).slice(2),
-    title: item.title || 'Mission lane',
-    status: item.status || item.lane || 'active',
-    priority: item.blocked_count ? 'high' : 'medium',
-    owner: item.owner_agent || 'JARVIS',
-    due_date: '',
-    summary: item.brief || item.what_became_real || item.remains_partial || '',
-    progress_pct: item.subtask_count ? Math.round(((item.completed_count || 0) / Math.max(item.subtask_count, 1)) * 100) : (item.active_count ? 60 : 35),
-  }};
-}}
-
-function _workshopTaskFromNeed(item, idx) {{
-  return {{
-    id: 'need-' + idx,
-    title: item.title || 'Needs review',
-    status: 'review',
-    priority: item.kind === 'integration' ? 'high' : 'medium',
-    owner: 'Chris',
-    due_date: '',
-    summary: item.detail || 'Needs your review.',
-    progress_pct: 75,
-  }};
-}}
-
-function _workshopTaskFromTask(item, idx) {{
-  return {{
-    id: item.id || item.task_id || 'task-' + idx,
-    title: item.title || item.text || 'Task',
-    status: item.status || 'open',
-    priority: _workshopPriority(item.priority),
-    owner: item.owner || item.assignee || item.agent || 'Chris',
-    due_date: item.due_date || item.due || '',
-    summary: item.summary || item.note || item.blocked_reason || item.status || '',
-    progress_pct: item.progress_pct != null ? item.progress_pct : (String(item.status || '').toLowerCase().includes('done') ? 100 : String(item.status || '').toLowerCase().includes('progress') ? 62 : 28),
-  }};
-}}
-
-function _workshopBoardLane(task) {{
-  const status = String(task.status || '').toLowerCase();
-  if (status.includes('done') || status.includes('complete')) return 'done';
-  if (status.includes('review') || status.includes('await')) return 'review';
-  if (status.includes('wait') || status.includes('hold')) return 'waiting';
-  if (status.includes('progress') || status.includes('active') || status.includes('execut')) return 'progress';
-  if (status.includes('ready') || status.includes('queued')) return 'ready';
-  return 'inbox';
-}}
-
-function _workshopTasks() {{
-  const missionItems = (((_workshopCenter || {{}}).mission_task_board || {{}}).items || []).map(_workshopTaskFromMission);
-  const needItems = ((_workshopCenter || {{}}).what_needs_me || []).map(_workshopTaskFromNeed);
-  const openTasks = (_workshopOpenTasks || []).map(_workshopTaskFromTask);
-  const todayTasks = (_workshopTodayTasks || []).map(_workshopTaskFromTask);
-  const seen = new Set();
-  return [...openTasks, ...todayTasks, ...missionItems, ...needItems].filter(task => {{
-    if (!task.id || seen.has(task.id)) return false;
-    seen.add(task.id);
-    return true;
-  }});
-}}
-
 function _workshopBadge(priority) {{
   const p = _workshopPriority(priority);
   return `<span class="workshop-tag ${{p}}">${{escHtml(p)}}</span>`;
 }}
 
-async function loadWorkshop() {{
-  syncWorkshopStoryboard();
+function workshopRuntimeNote(payload) {{
+  const notes = Array.isArray(payload?.availability_notes) ? payload.availability_notes.filter(Boolean) : [];
+  if (notes.length) return String(notes[0]);
+  if (payload?.runtime_note) return String(payload.runtime_note);
+  if (payload?.summary) return String(payload.summary);
+  return 'Workshop is live and connected.';
+}}
+
+function workshopReadJson(text) {{
+  if (!text) return {{}};
   try {{
-    const [centerRes, tasksRes, todayRes, rosterRes] = await Promise.all([
-      fetch('/api/command-center').catch(() => null),
-      fetch('/api/home/tasks?status=open').catch(() => null),
-      fetch('/api/home/tasks/today').catch(() => null),
-      fetch('/api/agents/roster').catch(() => null),
-    ]);
-    _workshopCenter = centerRes && centerRes.ok ? await centerRes.json() : {{}};
-    _workshopOpenTasks = tasksRes && tasksRes.ok ? ((await tasksRes.json()).tasks || []) : [];
-    _workshopTodayTasks = todayRes && todayRes.ok ? ((await todayRes.json()).tasks || []) : [];
-    _workshopRoster = rosterRes && rosterRes.ok ? ((await rosterRes.json()).agents || []) : [];
-    renderWorkshopDesktop();
-  }} catch (e) {{
-    console.error('loadWorkshop failed', e);
+    return JSON.parse(text);
+  }} catch (_error) {{
+    return {{}};
   }}
 }}
 
-function renderWorkshopDesktop() {{
-  const center = _workshopCenter || {{}};
-  const board = center.mission_task_board || {{}};
-  const loops = center.open_loop_inspector || {{}};
-  const journal = center.action_journal || {{}};
-  const needs = center.what_needs_me || [];
-  const roster = (center.agent_ops_roster && center.agent_ops_roster.items) || _workshopRoster || [];
-  const tasks = _workshopTasks();
-  const byLane = {{ inbox: [], ready: [], progress: [], waiting: [], review: [], done: [] }};
-  tasks.forEach(task => byLane[_workshopBoardLane(task)].push(task));
+async function workshopFetchJson(url, options = {{}}) {{
+  const response = await fetch(url, options);
+  const text = await response.text();
+  const data = workshopReadJson(text);
+  if (!response.ok) {{
+    const detail = (data && (data.detail || data.error || data.message)) || response.statusText || `Request failed (${{response.status}})`;
+    throw new Error(String(detail));
+  }}
+  return data;
+}}
 
-  _workshopSet('workshop-sidebar-health', ((center.home_overview || {{}}).system_state || {{}}).label || 'Operational');
-  _workshopSet('workshop-sidebar-queue', `${{tasks.length}} tasks · ${{needs.length}} review`);
-  _workshopSet('workshop-sidebar-refresh', journal.entries?.[0]?.timestamp ? relTime(journal.entries[0].timestamp) : 'Just now');
+async function workshopRecordAction(action, detail, extra = {{}}) {{
+  try {{
+    await fetch('/api/activity/operator-action', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{
+        actor: 'Chris',
+        domain: 'workshop',
+        action,
+        title: action,
+        detail: detail || '',
+        result_summary: extra.resultSummary || detail || action,
+        route: extra.route || '/mission-board',
+        route_label: extra.routeLabel || 'Open Workshop Surface',
+        related_kind: extra.relatedKind || 'workshop',
+        related_label: extra.relatedLabel || action,
+        succeeded: extra.succeeded !== false,
+      }}),
+    }});
+  }} catch (_error) {{
+    // Keep the UI responsive even if activity logging is unavailable.
+  }}
+}}
 
-  _workshopSet('workshop-stat-wip', String(tasks.filter(t => ['progress','waiting','review'].includes(_workshopBoardLane(t))).length));
-  _workshopSet('workshop-stat-wip-sub', `${{Math.max(1, board.item_count || 0)}} mission lane${{(board.item_count || 0) === 1 ? '' : 's'}} active`);
-  _workshopSet('workshop-stat-completed', String(journal.operator_count || 0));
-  _workshopSet('workshop-stat-completed-sub', `${{journal.autonomous_count || 0}} autonomous`);
-  _workshopSet('workshop-stat-review', String(needs.length));
-  _workshopSet('workshop-stat-review-sub', `${{needs.filter(n => n.kind === 'integration').length}} high priority`);
-  _workshopSet('workshop-stat-blocked', String((board.counts || {{}}).blocked || 0));
-  _workshopSet('workshop-stat-blocked-sub', `${{((center.failure_recovery || {{}}).integration_issue_count) || 0}} integration issue(s)`);
-  _workshopSet('workshop-stat-due', String(_workshopTodayTasks.length || 0));
-  _workshopSet('workshop-stat-due-sub', `${{_workshopTodayTasks.filter(t => _workshopPriority(t.priority) === 'high').length}} high priority`);
+function workshopOpenRoute(route, fallbackView = 'workshop', actionLabel = 'Open Route', detail = '') {{
+  workshopRecordAction(actionLabel, detail || `Workshop opened ${{route}}.`, {{
+    route,
+    routeLabel: actionLabel,
+    relatedLabel: actionLabel,
+  }});
+  if (typeof commandOpenCommandRoute === 'function') {{
+    commandOpenCommandRoute(route, fallbackView);
+    return;
+  }}
+  window.location.href = route;
+}}
+
+async function workshopHandleAction(action, payload = {{}}) {{
+  const workshop = _workshopModuleData || {{}};
+  try {{
+    if (action === 'refresh') {{
+      await refreshWorkshopDesktop(true);
+      return;
+    }}
+    if (action === 'open-route') {{
+      workshopOpenRoute(payload.route || '/mission-board', payload.fallbackView || 'workshop', payload.label || 'Open Route', payload.detail || '');
+      return;
+    }}
+    if (action === 'create-task') {{
+      const title = prompt('Task title');
+      if (!title) return;
+      const description = prompt('Task details') || '';
+      await workshopFetchJson('/api/home/tasks', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          title: title.trim(),
+          description,
+          status: 'open',
+          priority: payload.priority || 'medium',
+          source: 'workshop',
+        }}),
+      }});
+      await workshopRecordAction('Create Task', `Created task: ${{title.trim()}}`, {{ route: '/mission-board', routeLabel: 'Open Mission Board' }});
+      showToast('Task created', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'complete-task') {{
+      if (!payload.taskId) {{
+        showToast('No live task available to complete', 'info');
+        return;
+      }}
+      await workshopFetchJson(`/api/home/tasks/${{encodeURIComponent(payload.taskId)}}/complete`, {{ method: 'POST' }});
+      await workshopRecordAction('Complete Task', `Completed task ${{payload.taskId}}`, {{ route: '/mission-board', routeLabel: 'Open Mission Board' }});
+      showToast('Task completed', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'approve-approval') {{
+      if (!payload.requestId) {{
+        workshopOpenRoute('/approval-queue', 'approvals', 'Open Approval Queue', 'No direct approval was available, so Workshop opened the queue.');
+        return;
+      }}
+      await workshopFetchJson(`/api/approvals/${{encodeURIComponent(payload.requestId)}}/approve`, {{ method: 'POST' }});
+      await workshopRecordAction('Approve Queue', `Approved ${{payload.requestId}} from Workshop.`, {{ route: '/approval-queue', routeLabel: 'Open Approval Queue' }});
+      showToast('Approval completed', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'approve-queue') {{
+      const firstApproval = (((workshop || {{}}).work_orders || []).find(item => item.approval_request_id) || {{}}).approval_request_id;
+      await workshopHandleAction('approve-approval', {{ requestId: firstApproval || '' }});
+      return;
+    }}
+    if (action === 'approve-agent-work') {{
+      if (!payload.workId) {{
+        workshopOpenRoute('/agents', 'agents', 'Open Agents', 'No proposed agent work id was available.');
+        return;
+      }}
+      await workshopFetchJson(`/api/agent-work/approve/${{encodeURIComponent(payload.workId)}}`, {{ method: 'POST' }});
+      await workshopRecordAction('Approve Agent Work', `Approved proposed work ${{payload.workId}}.`, {{ route: '/agents', routeLabel: 'Open Agents' }});
+      showToast('Agent work approved', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'open-loop-action') {{
+      if (!payload.itemId || !payload.domain || !payload.loopAction) {{
+        showToast('This open-loop action is not available right now', 'info');
+        return;
+      }}
+      await workshopFetchJson('/api/open-loops/action', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          actor: 'Chris',
+          domain: payload.domain,
+          item_id: payload.itemId,
+          action: payload.loopAction,
+          item_title: payload.title || '',
+        }}),
+      }});
+      await workshopRecordAction('Open Loop Action', `Applied ${{payload.loopAction}} to ${{payload.title || payload.itemId}}.`, {{ route: '/command-center', routeLabel: 'Open Command' }});
+      showToast('Loop updated', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'create-project') {{
+      const seed = payload.description || payload.title || (workshop.work_orders && workshop.work_orders[0] && workshop.work_orders[0].title) || '';
+      const description = prompt('Workshop project description', seed || '');
+      if (!description) return;
+      await workshopFetchJson('/api/workshop/projects', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ description }}),
+      }});
+      await workshopRecordAction('Create Workshop Project', `Created workshop project from Workshop: ${{description}}`, {{ route: '/forge', routeLabel: 'Open Forge' }});
+      showToast('Workshop project created', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'convert-project') {{
+      await workshopHandleAction('create-project', {{
+        title: payload.title || '',
+        description: payload.description || payload.title || '',
+      }});
+      return;
+    }}
+    if (action === 'create-job') {{
+      const projectId = payload.projectId || (((workshop.workshop || {{}}).projects || [])[0] || {{}}).project_id || '';
+      if (!projectId) {{
+        showToast('No workshop project is available for a print job yet', 'info');
+        return;
+      }}
+      const fileName = prompt('Print file name', 'prototype.gcode');
+      if (!fileName) return;
+      await workshopFetchJson('/api/workshop/jobs', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          project_id: projectId,
+          file: fileName,
+          machine: payload.machine || 'k2_pro',
+          status: 'queued',
+          notes: 'Logged from the Workshop desktop.',
+        }}),
+      }});
+      await workshopRecordAction('Log Print Job', `Queued workshop print job for ${{fileName}}.`, {{ route: '/forge', routeLabel: 'Open Forge' }});
+      showToast('Workshop job logged', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'add-material') {{
+      const name = prompt('Material name', 'PLA Black 1kg');
+      if (!name) return;
+      const qty = prompt('Quantity value', '1000');
+      if (!qty) return;
+      await workshopFetchJson('/api/workshop/materials', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{
+          name,
+          quantity_value: Number(qty) || 0,
+          quantity_units: payload.units || 'g',
+          material_type: payload.materialType || 'pla',
+          notes: 'Updated from the Workshop desktop.',
+        }}),
+      }});
+      await workshopRecordAction('Restock Material', `Updated material inventory for ${{name}}.`, {{ route: '/forge', routeLabel: 'Open Forge' }});
+      showToast('Material updated', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'delegate-work') {{
+      workshopOpenRoute('/agents', 'agents', 'Delegate Work', 'Workshop opened the agents surface for bounded delegation.');
+      return;
+    }}
+    if (action === 'start-focus') {{
+      switchView('chat');
+      await workshopRecordAction('Start Focus Block', 'Workshop opened Command to protect the next focus block.', {{ route: '/command-center', routeLabel: 'Open Command' }});
+      return;
+    }}
+    if (action === 'request-update') {{
+      const note = prompt('What update do you want recorded?', 'Request status update on the top Workshop work order.');
+      if (!note) return;
+      await workshopRecordAction('Request Update', note, {{ route: '/activity-center', routeLabel: 'Open Activity' }});
+      showToast('Update request recorded', 'success');
+      await refreshWorkshopDesktop(false);
+      return;
+    }}
+    if (action === 'escalate-issue') {{
+      workshopOpenRoute('/supervision-snapshot', 'supervision', 'Escalate Issue', 'Workshop escalated the current issue into supervision.');
+      return;
+    }}
+    if (action === 'archive-close') {{
+      const candidate = (workshop.work_orders || []).find(item => item.complete_task_id);
+      if (!candidate || !candidate.complete_task_id) {{
+        showToast('No completable live task is available right now', 'info');
+        return;
+      }}
+      await workshopHandleAction('complete-task', {{ taskId: candidate.complete_task_id }});
+      return;
+    }}
+  }} catch (error) {{
+    console.error('workshopHandleAction failed', error);
+    showToast(`Workshop action failed: ${{error.message}}`, 'error');
+  }}
+}}
+
+function renderWorkshopModule() {{
+  const workshop = _workshopModuleData || {{}};
+  const counts = workshop.counts || {{}};
+  const commandCenter = workshop.command_center || {{}};
+  const board = workshop.board || {{}};
+  const blockers = Array.isArray(workshop.blockers) ? workshop.blockers : [];
+  const workOrders = Array.isArray(workshop.work_orders) ? workshop.work_orders : [];
+  const delegation = Array.isArray(workshop.delegation) ? workshop.delegation : [];
+  const executionLane = Array.isArray(workshop.execution_lane) ? workshop.execution_lane : [];
+  const intelligence = Array.isArray(workshop.intelligence) ? workshop.intelligence : [];
+  const resumption = Array.isArray(workshop.resumption) ? workshop.resumption : [];
+  const quickActions = Array.isArray(workshop.quick_actions) ? workshop.quick_actions : [];
+  const templates = Array.isArray(workshop.templates) ? workshop.templates : [];
+  const footer = Array.isArray(workshop.footer) ? workshop.footer : [];
+  const capacity = workshop.capacity || {{}};
+
+  _workshopSet('workshop-sidebar-health', workshop.status || 'Wired');
+  _workshopSet('workshop-sidebar-queue', `${{Array.isArray(workOrders) ? workOrders.length : 0}} tasks · ${{Array.isArray(blockers) ? blockers.length : 0}} review`);
+  _workshopSet('workshop-sidebar-refresh', workshop.generated_at ? relTime(workshop.generated_at) : 'Just now');
+  _workshopSet('workshop-runtime-note', workshopRuntimeNote(workshop));
+
+  _workshopSet('workshop-stat-wip', String(counts.work_in_progress ?? '—'));
+  _workshopSet('workshop-stat-wip-sub', `${{counts.projects ?? 0}} project${{(counts.projects ?? 0) === 1 ? '' : 's'}} active`);
+  _workshopSet('workshop-stat-completed', String(counts.completed_today ?? '—'));
+  _workshopSet('workshop-stat-completed-sub', `${{counts.jobs ?? 0}} job${{(counts.jobs ?? 0) === 1 ? '' : 's'}} active`);
+  _workshopSet('workshop-stat-review', String(counts.awaiting_review ?? '—'));
+  _workshopSet('workshop-stat-review-sub', `${{counts.low_stock ?? 0}} low-stock item(s)`);
+  _workshopSet('workshop-stat-blocked', String(counts.blocked ?? '—'));
+  _workshopSet('workshop-stat-blocked-sub', `${{Array.isArray(blockers) ? blockers.length : 0}} surfaced blocker(s)`);
+  _workshopSet('workshop-stat-due', String(counts.due_today ?? '—'));
+  _workshopSet('workshop-stat-due-sub', `${{(executionLane || []).filter(item => _workshopPriority(item.priority) === 'high').length}} high priority`);
 
   const commandGrid = document.getElementById('workshop-command-grid');
   if (commandGrid) {{
-    const cards = [
-      ['My Tasks', _workshopOpenTasks.length || tasks.length, `${{_workshopTodayTasks.length}} due today`],
-      ['Agent Tasks', roster.length || 0, `${{(center.agent_ops_roster || {{}}).counts?.running || 0}} in progress`],
-      ['Delegated', roster.filter(a => String(a.status || '').toLowerCase().includes('running')).length || 0, `${{needs.length}} awaiting review`],
-      ['Open Loops', (loops.summary || {{}}).needs_revisit || 0, `${{(loops.summary || {{}}).recent_motion_count || 0}} recent motion`],
-    ];
-    commandGrid.innerHTML = cards.map(([label, value, note]) => `
-      <div class="workshop-kpi"><span>${{escHtml(label)}}</span><strong>${{escHtml(String(value))}}</strong><small>${{escHtml(String(note))}}</small></div>
-    `).join('');
+    const cards = Array.isArray(commandCenter.cards) ? commandCenter.cards : [];
+    commandGrid.innerHTML = cards.length ? cards.map(card => `
+      <div class="workshop-kpi"><span>${{escHtml(card.label || 'Metric')}}</span><strong>${{escHtml(String(card.value ?? '—'))}}</strong><small>${{escHtml(String(card.note || ''))}}</small></div>
+    `).join('') : '<div class="workshop-kpi"><span>No live metrics</span><strong>—</strong><small>Workshop metrics are currently unavailable.</small></div>';
   }}
 
   const balanceGrid = document.getElementById('workshop-balance-grid');
   if (balanceGrid) {{
-    const areas = [
-      ['Foundry', 78], ['Publish', 62], ['Family', 55], ['Health', 40], ['Home', 48], ['Finance', 35], ['Operation', 70],
-    ];
-    const areaRows = areas.map(([label, pct]) => `<div class="workshop-balance-row"><span>${{label}}</span><div style="flex:1;margin:0 12px;"><div class="workshop-progress"><div style="width:${{pct}}%;"></div></div></div><strong>${{pct}}%</strong></div>`).join('');
+    const balance = Array.isArray(commandCenter.workload_balance) ? commandCenter.workload_balance : [];
+    const rows = balance.map(item => `<div class="workshop-balance-row"><span>${{escHtml(item.label || 'Lane')}}</span><div style="flex:1;margin:0 12px;"><div class="workshop-progress"><div style="width:${{Math.max(0, Math.min(100, Number(item.pct) || 0))}}%;"></div></div></div><strong>${{escHtml(String(item.pct ?? 0))}}%</strong></div>`).join('');
     balanceGrid.innerHTML = `
       <div class="workshop-panel">
         <strong>Workload Balance</strong>
-        ${{areaRows}}
+        ${{rows || '<span>No live workload balance was available.</span>'}}
       </div>
       <div class="workshop-panel">
         <strong>Focus Mode Recommendation</strong>
-        <span>${{((center.home_overview || {{}}).next_mission || {{}}).title || 'Deep work block recommended'}}.</span>
-        <button class="workshop-outline-btn" type="button" style="margin-top:12px;" onclick="switchView('command')">Start Focus Block</button>
+        <span>${{escHtml(commandCenter.focus_recommendation || 'Protect the strongest live execution lane.')}}</span>
+        <button class="workshop-outline-btn" type="button" style="margin-top:12px;" onclick="workshopHandleAction('start-focus')">Start Focus Block</button>
       </div>
     `;
   }}
 
   const boardEl = document.getElementById('workshop-board');
   if (boardEl) {{
-    const lanes = [
-      ['Inbox', 'inbox'],
-      ['Ready', 'ready'],
-      ['In Progress', 'progress'],
-      ['Waiting', 'waiting'],
-      ['Review', 'review'],
-      ['Done', 'done'],
-    ];
-    boardEl.innerHTML = lanes.map(([label, key]) => `
+    const lanes = Array.isArray(board.lanes) ? board.lanes : [];
+    boardEl.innerHTML = lanes.length ? lanes.map(lane => `
       <div class="workshop-board-col">
-        <div class="workshop-board-head"><span>${{label}}</span><span>${{byLane[key].length}}</span></div>
-        ${{(byLane[key].slice(0, 4).map(task => `
+        <div class="workshop-board-head"><span>${{escHtml(lane.label || 'Lane')}}</span><span>${{escHtml(String(lane.count ?? 0))}}</span></div>
+        ${{(Array.isArray(lane.items) && lane.items.length ? lane.items.slice(0, 6).map(task => `
           <div class="workshop-task-card">
-            <strong>${{escHtml(task.title)}}</strong>
+            <strong>${{escHtml(task.title || 'Task')}}</strong>
             <span>${{escHtml(task.summary || task.status || 'Task in motion.')}}</span>
             ${{_workshopBadge(task.priority)}}
-            <div class="workshop-task-meta"><span>${{escHtml(task.owner || 'Chris')}}</span><span>${{task.progress_pct}}%</span></div>
+            <div class="workshop-task-meta"><span>${{escHtml(task.owner || 'Chris')}}</span><span>${{escHtml(String(task.progress_pct ?? '—'))}}%</span></div>
           </div>
-        `).join('')) || '<div class="workshop-task-card"><strong>No items</strong><span>This lane is clear right now.</span></div>'}}
+        `).join('') : '<div class="workshop-task-card"><strong>No items</strong><span>This lane is clear right now.</span></div>')}}
       </div>
-    `).join('');
+    `).join('') : '<div class="workshop-board-col"><div class="workshop-board-head"><span>Board</span><span>0</span></div><div class="workshop-task-card"><strong>No live board items</strong><span>Workshop is wired, but the current runtime did not surface board items.</span></div></div>';
   }}
 
   const ordersEl = document.getElementById('workshop-work-orders');
   if (ordersEl) {{
-    const orders = tasks.slice(0, 3);
-    ordersEl.innerHTML = orders.length ? orders.map((task, idx) => `
+    ordersEl.innerHTML = workOrders.length ? workOrders.map((task, idx) => `
       <div class="workshop-work-order">
         <div class="workshop-order-top">
-          <div><span>WO-${{String(idx + 1034).padStart(4, '0')}}</span><strong>${{escHtml(task.title)}}</strong></div>
+          <div><span>WO-${{String(idx + 1034).padStart(4, '0')}}</span><strong>${{escHtml(task.title || 'Work order')}}</strong></div>
           ${{_workshopBadge(task.priority)}}
         </div>
-        <div class="workshop-order-bar"><div class="workshop-progress"><div style="width:${{task.progress_pct}}%;"></div></div></div>
-        <div class="workshop-order-meta"><span>${{escHtml(task.summary || 'Execution lane active')}}</span><strong>${{task.progress_pct}}%</strong></div>
+        <div class="workshop-order-bar"><div class="workshop-progress"><div style="width:${{Math.max(0, Math.min(100, Number(task.progress_pct) || 0))}}%;"></div></div></div>
+        <div class="workshop-order-meta"><span>${{escHtml(task.summary || 'Execution lane active')}}</span><strong>${{escHtml(String(task.progress_pct ?? 0))}}%</strong></div>
+        <div class="workshop-action-row" style="display:flex;gap:8px;margin-top:10px;">
+          <button class="workshop-outline-btn" type="button" onclick="workshopHandleAction('convert-project', {{ title: ${{JSON.stringify(task.title || '')}}, description: ${{JSON.stringify(task.summary || task.title || '')}} }})">Convert</button>
+          ${{task.complete_task_id ? `<button class="workshop-outline-btn" type="button" onclick="workshopHandleAction('complete-task', {{ taskId: ${{JSON.stringify(String(task.complete_task_id))}} }})">Complete</button>` : `<button class="workshop-outline-btn" type="button" onclick="workshopOpenRoute('/mission-board', 'workshop', 'Open Work Order', 'Workshop opened the active work order lane.')">Open</button>`}}
+        </div>
       </div>
     `).join('') : '<div class="workshop-work-order"><strong>No active work orders</strong><span>Major execution threads will surface here.</span></div>';
   }}
 
   const delegationEl = document.getElementById('workshop-delegation-list');
   if (delegationEl) {{
-    delegationEl.innerHTML = roster.slice(0, 5).map(agent => `
+    delegationEl.innerHTML = delegation.length ? delegation.map(agent => `
       <div class="workshop-list-row">
         <div>
-          <strong>${{escHtml(agent.name || agent.agent_id || 'Agent')}}</strong>
-          <span>${{escHtml(agent.purpose || agent.assignment || 'Supporting current work.')}}</span>
+          <strong>${{escHtml(agent.name || 'Agent')}}</strong>
+          <span>${{escHtml(agent.purpose || 'Supporting current work.')}}</span>
         </div>
-        <div class="meta">${{escHtml(String(agent.status || 'idle'))}}<br><em>${{escHtml(relTime(agent.last_activity || ''))}}</em></div>
+        <div class="meta">${{escHtml(String(agent.status || 'idle'))}}<br><em>${{escHtml(agent.last_activity ? relTime(agent.last_activity) : 'recent')}}</em></div>
       </div>
-    `).join('') || '<div class="workshop-list-row"><div><strong>No delegation pressure</strong><span>Agent assignments will surface here.</span></div></div>';
+    `).join('') : '<div class="workshop-list-row"><div><strong>No delegation pressure</strong><span>Agent assignments will surface here.</span></div></div>';
   }}
 
   const blockersEl = document.getElementById('workshop-blockers-list');
   if (blockersEl) {{
-    const issues = [...needs.slice(0, 3), ...(((center.failure_recovery || {{}}).action_items) || []).slice(0, 2)];
-    blockersEl.innerHTML = issues.length ? issues.map(item => `
+    blockersEl.innerHTML = blockers.length ? blockers.map(item => `
       <div class="workshop-list-row">
         <div>
           <strong>${{escHtml(item.title || 'Blocked item')}}</strong>
           <span>${{escHtml(item.detail || 'Needs intervention.')}}</span>
         </div>
-        <div class="meta">${{item.kind ? escHtml(item.kind) : 'Review'}}</div>
+        <div class="meta">${{escHtml(item.kind || 'Review')}}<br><em>${{escHtml(item.domain || 'workshop')}}</em></div>
       </div>
     `).join('') : '<div class="workshop-list-row"><div><strong>No blockers</strong><span>The lane is currently clear.</span></div></div>';
   }}
 
   const laneEl = document.getElementById('workshop-execution-lane');
   if (laneEl) {{
-    const lane = (_workshopTodayTasks.length ? _workshopTodayTasks : tasks).slice(0, 5);
-    laneEl.innerHTML = lane.length ? lane.map((task, idx) => `
+    laneEl.innerHTML = executionLane.length ? executionLane.map((task, idx) => `
       <div class="workshop-exec-row">
         <div class="index">${{idx + 1}}</div>
-        <div><strong>${{escHtml(task.title || task.text || 'Task')}}</strong><span>${{escHtml(task.summary || task.status || 'Execution item')}}</span></div>
+        <div><strong>${{escHtml(task.title || 'Task')}}</strong><span>${{escHtml(task.summary || 'Execution item')}}</span></div>
         ${{_workshopBadge(task.priority)}}
-        <div>${{escHtml(task.due_date || ['9:30 AM','11:00 AM','1:00 PM','3:30 PM','9:00 PM'][idx] || 'Today')}}</div>
+        <div>${{escHtml(task.due || ['9:30 AM','11:00 AM','1:00 PM','3:30 PM','9:00 PM'][idx] || 'Today')}}</div>
       </div>
     `).join('') : '<div class="workshop-exec-row"><div class="index">1</div><div><strong>No scheduled execution lane</strong><span>Today is currently clear.</span></div><span></span><div>—</div></div>';
   }}
 
   const intelEl = document.getElementById('workshop-intelligence-list');
   if (intelEl) {{
-    const items = [
-      `${{needs.length}} task${{needs.length === 1 ? '' : 's'}} need review or repair`,
-      `${{tasks.filter(t => !_workshopBoardLane(t).includes('done') && _workshopPriority(t.priority) === 'high').length}} high-priority items are still open`,
-      `${{roster.filter(a => String(a.status || '').toLowerCase().includes('blocked')).length}} agents are blocked`,
-      `${{journal.autonomous_count || 0}} recent actions were automated`,
-    ];
-    intelEl.innerHTML = items.map(item => `<div class="workshop-list-row"><div><strong>${{escHtml(item)}}</strong><span>JARVIS surfaced this from the current workshop posture.</span></div></div>`).join('');
+    intelEl.innerHTML = intelligence.length ? intelligence.map(item => `
+      <div class="workshop-list-row"><div><strong>${{escHtml(item.title || 'Insight')}}</strong><span>${{escHtml(item.detail || 'Live workshop insight.')}}</span></div></div>
+    `).join('') : '<div class="workshop-list-row"><div><strong>No task intelligence yet</strong><span>Workshop will surface insights here as live data accumulates.</span></div></div>';
   }}
 
   const timelineEl = document.getElementById('workshop-resumption-timeline');
   if (timelineEl) {{
-    const entries = (journal.entries || []).slice(0, 5);
-    timelineEl.innerHTML = entries.length ? entries.map(entry => `
+    timelineEl.innerHTML = resumption.length ? resumption.map(entry => `
       <div class="workshop-timeline-row">
-        <div>${{escHtml(fmtTime(entry.timestamp))}}</div>
+        <div>${{escHtml(entry.timestamp ? fmtTime(entry.timestamp) : '—')}}</div>
         <div class="workshop-timeline-dot"></div>
-        <div><strong>${{escHtml(entry.title || 'Update')}}</strong><span>${{escHtml(entry.status || entry.detail || 'Recent motion in the system.')}}</span></div>
+        <div><strong>${{escHtml(entry.title || 'Update')}}</strong><span>${{escHtml(entry.detail || 'Recent motion in the system.')}}</span></div>
       </div>
     `).join('') : '<div class="workshop-timeline-row"><div>—</div><div class="workshop-timeline-dot"></div><div><strong>No recent resumption events</strong><span>Overnight activity will surface here.</span></div></div>';
   }}
 
   const quickEl = document.getElementById('workshop-quick-actions');
   if (quickEl) {{
-    const actions = ['Create Task','Delegate Work','Start Focus Block','Approve Queue','Request Update','Escalate Issue','Convert to Project','Archive / Close'];
-    quickEl.innerHTML = actions.map(label => `<button class="workshop-quick-btn" type="button">${{escHtml(label)}}</button>`).join('');
+    quickEl.innerHTML = quickActions.length ? quickActions.map(item => `<button class="workshop-quick-btn" type="button" onclick="workshopHandleAction(${{JSON.stringify(item.id || '')}})">${{escHtml(item.label || 'Action')}}</button>`).join('') : `<button class="workshop-quick-btn" type="button" onclick="workshopHandleAction('refresh')">Refresh</button>`;
   }}
 
   const capacityEl = document.getElementById('workshop-capacity-list');
   if (capacityEl) {{
-    const areas = [
-      ['You', 71], ['Agents (All)', 64], ['Foundry', 52], ['Publish', 82], ['Health', 38], ['Family', 46],
-    ];
-    capacityEl.innerHTML = areas.map(([label, pct]) => `
+    const areas = Array.isArray(capacity.areas) ? capacity.areas : [];
+    capacityEl.innerHTML = areas.length ? areas.map(item => `
       <div class="workshop-mini-card">
-        <div class="workshop-capacity-row"><strong>${{label}}</strong><span>${{pct}}%</span></div>
-        <div class="workshop-progress"><div style="width:${{pct}}%;"></div></div>
+        <div class="workshop-capacity-row"><strong>${{escHtml(item.label || 'Lane')}}</strong><span>${{escHtml(String(item.pct ?? 0))}}%</span></div>
+        <div class="workshop-progress"><div style="width:${{Math.max(0, Math.min(100, Number(item.pct) || 0))}}%;"></div></div>
       </div>
-    `).join('');
+    `).join('') : '<div class="workshop-mini-card"><strong>No capacity signal yet</strong><span>Live domain load will surface here.</span></div>';
   }}
-  _workshopSet('workshop-capacity-recommendation',
-    needs.length ? 'You have real review pressure in the queue. Protect the deep work block by clearing approvals in batches.' : 'The queue is manageable. Keep today anchored around the highest-value execution lane.');
+  _workshopSet('workshop-capacity-recommendation', capacity.recommendation || 'Protect the strongest live execution lane.');
 
   const templateEl = document.getElementById('workshop-template-list');
   if (templateEl) {{
-    const templates = [
-      ['Book Chapter Creation', 'End-to-end chapter writing workflow'],
-      ['Launch Campaign Flow', 'From outline to publish launch'],
-      ['Devotional Series Build', '7-step content and publishing flow'],
-      ['Product Development Flow', 'Idea to prototype to release'],
-      ['Monthly Review Process', 'Reflection, metrics, and planning'],
-    ];
-    templateEl.innerHTML = templates.map(([title, copy]) => `
+    templateEl.innerHTML = templates.length ? templates.map(item => `
       <div class="workshop-template-row">
-        <div><strong>${{title}}</strong><span>${{copy}}</span></div>
-        <button class="workshop-outline-btn" type="button">Use</button>
+        <div><strong>${{escHtml(item.title || 'Template')}}</strong><span>${{escHtml(item.detail || 'Reusable live workflow.')}}</span></div>
+        <button class="workshop-outline-btn" type="button" onclick="workshopHandleAction(${{JSON.stringify(item.action || 'open-route')}}, {{ route: ${{JSON.stringify(item.route || '')}}, fallbackView: ${{JSON.stringify(item.fallback_view || 'workshop')}}, description: ${{JSON.stringify(item.detail || '')}} }})">Use</button>
       </div>
-    `).join('');
+    `).join('') : '<div class="workshop-template-row"><div><strong>No live templates surfaced</strong><span>Workshop template routes will appear here.</span></div></div>';
   }}
 
   const footerEl = document.getElementById('workshop-footer-strip');
   if (footerEl) {{
-    const items = [
-      ['Right Work, Right Time', 'Focus on what matters most.'],
-      ['Agentic Execution', 'Let the right agent carry the right work.'],
-      ['Clear Ownership', 'Every task has an owner.'],
-      ['Continuous Momentum', 'Small moves daily. Big things consistently.'],
-      ['Trust & Transparency', 'See what’s happening. Know what’s blocked.'],
-      ['Adaptive Intelligence', 'The system learns your rhythms.'],
-      ['Workshop Online', 'All systems operational'],
-    ];
-    footerEl.innerHTML = items.map(([title, copy]) => `<div class="workshop-footer-pill"><strong>${{title}}</strong><span>${{copy}}</span></div>`).join('');
+    footerEl.innerHTML = footer.length ? footer.map(item => `<div class="workshop-footer-pill"><strong>${{escHtml(item.title || 'Workshop')}}</strong><span>${{escHtml(item.copy || '')}}</span></div>`).join('') : '<div class="workshop-footer-pill"><strong>Workshop Online</strong><span>All systems operational.</span></div>';
   }}
+}}
+
+async function refreshWorkshopDesktop(showToast = false) {{
+  syncWorkshopStoryboard();
+  const requestSerial = ++_workshopRequestSerial;
+  try {{
+    const payload = await workshopFetchJson('/api/workshop/module');
+    if (requestSerial !== _workshopRequestSerial) return;
+    _workshopModuleData = payload || {{}};
+    renderWorkshopModule();
+    if (showToast) window.showToast('Workshop refreshed', 'success');
+  }} catch (error) {{
+    console.error('refreshWorkshopDesktop failed', error);
+    _workshopModuleData = {{
+      status: 'Wired',
+      runtime_note: `Workshop could not load: ${{error.message}}`,
+      availability_notes: [`Workshop could not load: ${{error.message}}`],
+      counts: {{}},
+      command_center: {{ cards: [], workload_balance: [], focus_recommendation: 'Workshop is waiting on a valid live payload.' }},
+      board: {{ lanes: [] }},
+      work_orders: [],
+      delegation: [],
+      blockers: [],
+      execution_lane: [],
+      intelligence: [],
+      resumption: [],
+      capacity: {{ areas: [], recommendation: 'Workshop is waiting on a valid live payload.' }},
+      templates: [],
+      quick_actions: [{{ id: 'refresh', label: 'Refresh' }}],
+      footer: [],
+    }};
+    renderWorkshopModule();
+    if (showToast) window.showToast(`Workshop unavailable: ${{error.message}}`, 'error');
+  }}
+}}
+
+async function loadWorkshop() {{
+  return refreshWorkshopDesktop(false);
 }}
 
 async function syncAll() {{

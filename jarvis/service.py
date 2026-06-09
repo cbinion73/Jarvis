@@ -2842,6 +2842,571 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["summary"] = "Catalyst routes are live, but the workspace and ops surfaces are only partially hydrated in this runtime."
         return payload
 
+    def _workshop_priority(value: Any) -> str:
+        raw = str(value or "").strip().lower()
+        if raw in {"critical", "high"} or "critical" in raw or "high" in raw:
+            return "high"
+        if raw == "low" or "low" in raw:
+            return "low"
+        return "medium"
+
+    def _workshop_progress(value: Any, status: str) -> int:
+        if value is not None:
+            try:
+                pct = int(float(value))
+                return max(0, min(100, pct))
+            except (TypeError, ValueError):
+                pass
+        lowered = str(status or "").strip().lower()
+        if any(token in lowered for token in ("done", "complete", "closed", "approved", "published")):
+            return 100
+        if any(token in lowered for token in ("review", "waiting", "await")):
+            return 74
+        if any(token in lowered for token in ("progress", "running", "active", "execut")):
+            return 58
+        if any(token in lowered for token in ("ready", "queued", "staged")):
+            return 36
+        return 18
+
+    def _workshop_lane(status: str, priority: str = "") -> str:
+        lowered = str(status or "").strip().lower()
+        if any(token in lowered for token in ("done", "complete", "closed", "approved", "published")):
+            return "done"
+        if any(token in lowered for token in ("review", "await", "approval")):
+            return "review"
+        if any(token in lowered for token in ("wait", "hold", "blocked")):
+            return "waiting"
+        if any(token in lowered for token in ("progress", "running", "active", "execut")):
+            return "progress"
+        if any(token in lowered for token in ("ready", "queued", "staged")):
+            return "ready"
+        if priority == "high":
+            return "ready"
+        return "inbox"
+
+    def _normalize_workshop_task(item: dict[str, Any], *, source_kind: str, owner: str = "") -> dict[str, Any]:
+        title = (
+            str(item.get("title") or item.get("text") or item.get("request") or item.get("part_name") or "Task").strip()
+            or "Task"
+        )
+        status = str(item.get("status") or item.get("lane") or "open").strip() or "open"
+        priority = _workshop_priority(item.get("priority") or item.get("severity"))
+        due_date = str(item.get("due_date") or item.get("due") or item.get("timestamp") or "").strip()
+        task_id = (
+            str(
+                item.get("id")
+                or item.get("task_id")
+                or item.get("item_id")
+                or item.get("request_id")
+                or item.get("prep_id")
+                or item.get("work_id")
+                or title
+            ).strip()
+            or title
+        )
+        summary = (
+            str(
+                item.get("summary")
+                or item.get("detail")
+                or item.get("rationale")
+                or item.get("blocked_reason")
+                or item.get("next_step")
+                or item.get("brief")
+                or item.get("request_text")
+                or status
+            ).strip()
+            or status
+        )
+        assigned_to = (
+            str(
+                item.get("owner")
+                or item.get("assignee")
+                or item.get("agent")
+                or item.get("owner_agent")
+                or item.get("actor")
+                or owner
+                or "Chris"
+            ).strip()
+            or "Chris"
+        )
+        progress_pct = _workshop_progress(item.get("progress_pct"), status)
+        return {
+            "id": task_id,
+            "title": title,
+            "status": status,
+            "priority": priority,
+            "lane": _workshop_lane(status, priority),
+            "owner": assigned_to,
+            "due_date": due_date,
+            "summary": summary,
+            "progress_pct": progress_pct,
+            "source_kind": source_kind,
+            "request_id": str(item.get("request_id", "")).strip(),
+            "work_id": str(item.get("work_id", "")).strip(),
+            "domain": str(item.get("domain", "")).strip(),
+            "available_actions": list(item.get("available_actions") or []),
+        }
+
+    async def _build_workshop_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        command_center = build_command_center_index()
+        integration_status = runtime.status()
+        recent_activity_fn = getattr(runtime, "recent_activity", None)
+        recent_activity = list(
+            command_center.get("activity_feed")
+            or (recent_activity_fn(limit=20) if callable(recent_activity_fn) else _module_recent_activity(route="/mission-board", domain="mission-board", limit=8))
+            or []
+        )
+        pending_approvals_fn = getattr(runtime, "list_pending_approvals", None)
+        approvals = list(pending_approvals_fn() if callable(pending_approvals_fn) else [])
+        unified_open_loops_fn = getattr(runtime, "unified_open_loops", None)
+        open_loops = (
+            await asyncio.to_thread(unified_open_loops_fn, actor_name, 24)
+            if callable(unified_open_loops_fn)
+            else {"summary": {}, "items": []}
+        )
+        background_agent_status_fn = getattr(runtime, "background_agent_status", None)
+        scheduler = background_agent_status_fn(
+            recent_activity=recent_activity,
+            integration_status=integration_status,
+        ) if callable(background_agent_status_fn) else {}
+
+        availability_notes: list[str] = []
+
+        db = _get_home_db()
+        open_tasks: list[dict[str, Any]] = []
+        today_tasks: list[dict[str, Any]] = []
+        overdue_tasks: list[dict[str, Any]] = []
+        if db is None:
+            availability_notes.append("Home task database is not connected, so Workshop is using mission and open-loop continuity without full task storage.")
+        else:
+            try:
+                task_rows = await asyncio.to_thread(db.list_tasks, None, None)
+                open_tasks = [
+                    row for row in task_rows
+                    if str(row.get("status", "")).strip().lower() not in {"complete", "dismissed", "archived"}
+                ]
+                today_tasks = await asyncio.to_thread(db.get_tasks_due_today)
+                overdue_tasks = await asyncio.to_thread(db.get_overdue_tasks)
+            except Exception as exc:
+                availability_notes.append(f"Home task storage could not be queried: {exc}")
+
+        workshop_status: dict[str, Any] = {}
+        workshop_projects: list[dict[str, Any]] = []
+        workshop_jobs: list[dict[str, Any]] = []
+        workshop_materials: list[dict[str, Any]] = []
+        workshop_low_stock: list[dict[str, Any]] = []
+        copilot = _get_workshop_copilot()
+        if copilot is None:
+            availability_notes.append("Workshop copilot is not initialised, so maker and project-specific detail is unavailable.")
+        else:
+            try:
+                workshop_status = await asyncio.to_thread(copilot.daily_workshop_check)
+                workshop_projects = [asdict(item) for item in await asyncio.to_thread(copilot.store.list_projects)]
+                workshop_jobs = [asdict(item) for item in await asyncio.to_thread(copilot.store.get_active_jobs)]
+                workshop_materials = [asdict(item) for item in await asyncio.to_thread(copilot.rocket.get_inventory)]
+                workshop_low_stock = [asdict(item) for item in await asyncio.to_thread(copilot.rocket.get_low_stock_alerts)]
+            except Exception as exc:
+                availability_notes.append(f"Workshop project, job, or material sources were unavailable: {exc}")
+
+        work_items: list[dict[str, Any]] = []
+        proposed_work: list[dict[str, Any]] = []
+        try:
+            from .agent_work import get_all_proposed, get_all_stores
+
+            for store in get_all_stores().values():
+                work_items.extend(asdict(item) for item in store.all_items())
+            proposed_work = list(get_all_proposed())
+        except Exception as exc:
+            availability_notes.append(f"Agent work stores are partially unavailable: {exc}")
+
+        mission_items = list((command_center.get("mission_task_board") or {}).get("items") or [])
+        needs = list(command_center.get("what_needs_me") or [])
+        journal_entries = list((command_center.get("action_journal") or {}).get("entries") or [])
+
+        normalized_tasks = [
+            *[_normalize_workshop_task(item, source_kind="task") for item in open_tasks],
+            *[_normalize_workshop_task(item, source_kind="today") for item in today_tasks],
+            *[_normalize_workshop_task(item, source_kind="overdue") for item in overdue_tasks],
+            *[
+                _normalize_workshop_task(
+                    {
+                        "item_id": item.get("mission_id"),
+                        "title": item.get("title"),
+                        "status": item.get("status") or item.get("lane") or "active",
+                        "priority": "high" if item.get("blocked_count") else "medium",
+                        "owner_agent": item.get("owner_agent"),
+                        "summary": item.get("brief") or item.get("what_became_real") or item.get("remains_partial"),
+                        "progress_pct": (
+                            round(((item.get("completed_count") or 0) / max(item.get("subtask_count") or 1, 1)) * 100)
+                            if item.get("subtask_count")
+                            else 45
+                        ),
+                        "domain": "mission-board",
+                    },
+                    source_kind="mission",
+                )
+                for item in mission_items
+            ],
+            *[
+                _normalize_workshop_task(
+                    {
+                        "item_id": item.get("item_id"),
+                        "title": item.get("title"),
+                        "status": item.get("status") or "review",
+                        "priority": "high" if str(item.get("kind", "")).strip().lower() == "integration" else "medium",
+                        "summary": item.get("detail") or item.get("summary"),
+                        "owner": actor_name,
+                        "domain": item.get("domain") or "review",
+                        "available_actions": item.get("available_actions") or [],
+                    },
+                    source_kind="need",
+                )
+                for item in needs
+            ],
+            *[
+                _normalize_workshop_task(
+                    {
+                        "item_id": item.get("item_id"),
+                        "title": item.get("title"),
+                        "status": item.get("status"),
+                        "priority": item.get("priority") or item.get("approval_threshold"),
+                        "summary": item.get("summary"),
+                        "owner_agent": item.get("owner_agent"),
+                        "domain": item.get("domain"),
+                        "available_actions": item.get("available_actions") or [],
+                    },
+                    source_kind="open-loop",
+                )
+                for item in list(open_loops.get("items") or [])
+            ],
+            *[
+                _normalize_workshop_task(
+                    {
+                        "request_id": item.get("request_id"),
+                        "title": item.get("request"),
+                        "status": item.get("status") or "pending",
+                        "priority": item.get("priority") or "medium",
+                        "summary": item.get("rationale"),
+                        "owner": item.get("actor") or actor_name,
+                        "domain": "approvals",
+                    },
+                    source_kind="approval",
+                )
+                for item in approvals
+            ],
+            *[
+                _normalize_workshop_task(
+                    {
+                        "work_id": item.get("work_id"),
+                        "title": item.get("title"),
+                        "status": item.get("status") or "proposed",
+                        "priority": item.get("priority") or "medium",
+                        "summary": item.get("summary") or item.get("description"),
+                        "owner": item.get("agent_id") or item.get("owner_agent"),
+                        "domain": item.get("domain") or "agent-work",
+                    },
+                    source_kind="agent-work",
+                )
+                for item in work_items
+            ],
+        ]
+
+        deduped_tasks: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+        for item in normalized_tasks:
+            item_id = str(item.get("id", "")).strip()
+            if not item_id or item_id in seen_ids:
+                continue
+            seen_ids.add(item_id)
+            deduped_tasks.append(item)
+
+        lane_order = [
+            ("inbox", "Inbox"),
+            ("ready", "Ready"),
+            ("progress", "In Progress"),
+            ("waiting", "Waiting"),
+            ("review", "Review"),
+            ("done", "Done"),
+        ]
+        lane_buckets: dict[str, list[dict[str, Any]]] = {key: [] for key, _ in lane_order}
+        for item in deduped_tasks:
+            lane_buckets.setdefault(str(item.get("lane", "inbox")), []).append(item)
+
+        work_in_progress = len([item for item in deduped_tasks if item.get("lane") in {"progress", "waiting", "review"}])
+        completed_today = len([item for item in deduped_tasks if item.get("lane") == "done"]) or int((command_center.get("action_journal") or {}).get("operator_count") or 0)
+        awaiting_review = len(lane_buckets["review"])
+        blocked_count = len([item for item in deduped_tasks if "block" in str(item.get("status", "")).lower()]) + len(overdue_tasks)
+        due_today_count = len(today_tasks)
+
+        roster_items = list(scheduler.get("statuses") or [])
+        delegation_items = []
+        for status in roster_items[:8]:
+            delegation_items.append(
+                {
+                    "agent_id": str(status.get("agent_id", "")).strip(),
+                    "name": str(status.get("display_name") or status.get("agent_id") or "Agent").strip() or "Agent",
+                    "status": str(status.get("status") or status.get("mode") or "idle").strip() or "idle",
+                    "purpose": str(status.get("current_focus") or status.get("assignment") or status.get("purpose") or "Supporting current work.").strip() or "Supporting current work.",
+                    "last_activity": str(status.get("last_activity") or status.get("heartbeat_at") or "").strip(),
+                }
+            )
+
+        work_orders = [
+            {
+                "id": item.get("id"),
+                "title": item.get("title"),
+                "status": item.get("status"),
+                "priority": item.get("priority"),
+                "summary": item.get("summary"),
+                "progress_pct": item.get("progress_pct"),
+                "source_kind": item.get("source_kind"),
+                "complete_task_id": item.get("id") if item.get("source_kind") in {"task", "today", "overdue"} else "",
+            }
+            for item in deduped_tasks[:6]
+        ]
+
+        blocker_items: list[dict[str, Any]] = []
+        for item in list(needs)[:4]:
+            blocker_items.append(
+                {
+                    "title": str(item.get("title") or "Needs review").strip() or "Needs review",
+                    "detail": str(item.get("detail") or item.get("summary") or "").strip() or "Needs intervention.",
+                    "kind": str(item.get("kind") or "review").strip() or "review",
+                    "domain": str(item.get("domain") or "command").strip() or "command",
+                    "item_id": str(item.get("item_id") or "").strip(),
+                    "available_actions": list(item.get("available_actions") or []),
+                }
+            )
+        for item in workshop_status.get("safety", {}).get("alerts", [])[:3]:
+            blocker_items.append(
+                {
+                    "title": "Workshop safety alert",
+                    "detail": str(item).strip() or "Safety attention required.",
+                    "kind": "safety",
+                    "domain": "workshop",
+                    "item_id": "",
+                    "available_actions": [],
+                }
+            )
+        for item in workshop_low_stock[:3]:
+            blocker_items.append(
+                {
+                    "title": f"Low stock: {str(item.get('name') or 'Material').strip()}",
+                    "detail": f"{item.get('quantity_value', 0)} {item.get('quantity_units', '')} remaining",
+                    "kind": "inventory",
+                    "domain": "workshop",
+                    "item_id": str(item.get("material_id", "")).strip(),
+                    "available_actions": [],
+                }
+            )
+
+        execution_source = today_tasks or open_tasks or deduped_tasks
+        execution_lane = [
+            {
+                "id": str(item.get("id") or item.get("task_id") or item.get("item_id") or "").strip(),
+                "title": str(item.get("title") or item.get("text") or "Task").strip() or "Task",
+                "summary": str(item.get("summary") or item.get("description") or item.get("status") or "").strip() or "Execution item",
+                "priority": _workshop_priority(item.get("priority") or item.get("severity")),
+                "due": str(item.get("due_date") or item.get("due") or "").strip(),
+            }
+            for item in execution_source[:5]
+        ]
+
+        intelligence_items = [
+            {
+                "title": f"{awaiting_review} item(s) are waiting on human review.",
+                "detail": "Reviews and approvals are now fed from live command, approval, and open-loop sources.",
+            },
+            {
+                "title": f"{len(proposed_work)} proposed agent work item(s) are available.",
+                "detail": "Use Workshop to keep delegation and approval pressure visible in one place.",
+            },
+            {
+                "title": f"{len(overdue_tasks)} task(s) are overdue.",
+                "detail": "Overdue tasks are now surfaced from the live home task database when available.",
+            },
+            {
+                "title": f"{len(workshop_jobs)} workshop job(s) are active.",
+                "detail": str(workshop_status.get("summary") or "Workshop machine activity will surface here.").strip() or "Workshop machine activity will surface here.",
+            },
+        ]
+
+        timeline_rows = []
+        for entry in journal_entries[:6] or recent_activity[:6]:
+            timeline_rows.append(
+                {
+                    "timestamp": str(entry.get("timestamp") or entry.get("created_at") or "").strip(),
+                    "title": str(entry.get("title") or entry.get("action") or entry.get("headline") or "Update").strip() or "Update",
+                    "detail": str(entry.get("status") or entry.get("detail") or entry.get("summary") or "").strip() or "Recent movement in the system.",
+                }
+            )
+
+        domain_counts: dict[str, int] = {}
+        for item in deduped_tasks:
+            domain = str(item.get("domain") or item.get("source_kind") or "general").strip().lower()
+            if not domain:
+                continue
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+        max_domain = max(domain_counts.values() or [1])
+        capacity_areas = [
+            {
+                "label": str(label).replace("-", " ").title(),
+                "pct": max(10, min(100, round((count / max_domain) * 100))),
+            }
+            for label, count in sorted(domain_counts.items(), key=lambda kv: kv[1], reverse=True)[:6]
+        ] or [
+            {"label": "Workshop", "pct": 42},
+            {"label": "Tasks", "pct": 36},
+        ]
+
+        templates = [
+            {
+                "template_id": "review-approval-queue",
+                "title": "Approval Queue Review",
+                "detail": "Use the live approval queue to batch low-risk review decisions.",
+                "action": "open-route",
+                "route": "/approval-queue",
+                "fallback_view": "approvals",
+            },
+            {
+                "template_id": "mission-work-order",
+                "title": "Mission Work Order",
+                "detail": "Open the live mission board and continue the active work lane.",
+                "action": "open-route",
+                "route": "/mission-board",
+                "fallback_view": "workshop",
+            },
+            {
+                "template_id": "workshop-project-intake",
+                "title": "Workshop Project Intake",
+                "detail": "Create a workshop project from a real task or new description.",
+                "action": "create-project",
+            },
+            {
+                "template_id": "print-job-log",
+                "title": "Print Job Log",
+                "detail": "Log a queued workshop print job using the current project store.",
+                "action": "create-job",
+            },
+            {
+                "template_id": "material-restock",
+                "title": "Material Restock",
+                "detail": "Add or restock workshop material inventory without leaving the board.",
+                "action": "add-material",
+            },
+        ]
+
+        quick_actions = [
+            {"id": "create-task", "label": "Create Task", "detail": "Add a new live task to the home task store."},
+            {"id": "delegate-work", "label": "Delegate Work", "detail": "Open the agents lane and delegate bounded work."},
+            {"id": "start-focus", "label": "Start Focus Block", "detail": "Route into Command or Daily Brief and protect a work block."},
+            {"id": "approve-queue", "label": "Approve Queue", "detail": "Review the first live approval or open the approval queue."},
+            {"id": "request-update", "label": "Request Update", "detail": "Record a workshop follow-up and surface it in activity."},
+            {"id": "escalate-issue", "label": "Escalate Issue", "detail": "Open supervision or recovery on the current blocker."},
+            {"id": "convert-project", "label": "Convert to Project", "detail": "Create a workshop project from the strongest work order."},
+            {"id": "archive-close", "label": "Archive / Close", "detail": "Complete the first live task in the current queue."},
+        ]
+
+        runtime_note = "Workshop is live and connected."
+        if availability_notes:
+            runtime_note = availability_notes[0]
+
+        payload = {
+            "generated_at": command_center.get("generated_at", datetime.now(timezone.utc).isoformat()),
+            "available": bool(deduped_tasks or workshop_projects or workshop_jobs or roster_items or blocker_items),
+            "status": "Useful" if (deduped_tasks or workshop_projects or workshop_jobs) else "Wired",
+            "summary": (
+                f"Workshop loaded {len(deduped_tasks)} live board item(s), {len(workshop_projects)} workshop project(s), "
+                f"{len(workshop_jobs)} active job(s), {len(blocker_items)} blocker(s), and {len(delegation_items)} delegation lane(s)."
+            ),
+            "what_became_real": "Workshop now hydrates from the live command center, task database, open loops, approvals, agent work, and workshop copilot stores instead of browser-side filler.",
+            "remains_partial": "Some workload balance and maker-specific richness still depends on whichever local task, project, job, and material sources are actually configured in this runtime.",
+            "runtime_note": runtime_note,
+            "availability_notes": availability_notes[:8],
+            "counts": {
+                "work_in_progress": work_in_progress,
+                "completed_today": completed_today,
+                "awaiting_review": awaiting_review,
+                "blocked": blocked_count,
+                "due_today": due_today_count,
+                "projects": len(workshop_projects),
+                "jobs": len(workshop_jobs),
+                "low_stock": len(workshop_low_stock),
+            },
+            "command_center": {
+                "cards": [
+                    {"label": "My Tasks", "value": len(open_tasks) or len(deduped_tasks), "note": f"{len(today_tasks)} due today"},
+                    {"label": "Agent Tasks", "value": len(work_items), "note": f"{len([item for item in work_items if str(item.get('status', '')).lower() not in {'done', 'complete', 'closed'}])} in motion"},
+                    {"label": "Delegated", "value": len(proposed_work), "note": f"{len(delegation_items)} live agent lane(s)"},
+                    {"label": "Open Loops", "value": int((open_loops.get('summary') or {}).get('needs_revisit') or 0), "note": f"{int((open_loops.get('summary') or {}).get('recent_motion_count') or 0)} recent motion"},
+                ],
+                "workload_balance": capacity_areas,
+                "focus_recommendation": str(((command_center.get("home_overview") or {}).get("next_mission") or {}).get("title") or (execution_lane[0]["title"] if execution_lane else "Protect the highest-value lane.")).strip() or "Protect the highest-value lane.",
+            },
+            "board": {
+                "lanes": [
+                    {"key": key, "label": label, "count": len(lane_buckets[key]), "items": lane_buckets[key][:6]}
+                    for key, label in lane_order
+                ],
+            },
+            "work_orders": work_orders,
+            "delegation": delegation_items,
+            "blockers": blocker_items,
+            "execution_lane": execution_lane,
+            "intelligence": intelligence_items,
+            "resumption": timeline_rows,
+            "capacity": {
+                "areas": capacity_areas,
+                "recommendation": (
+                    "You have real review pressure in the queue. Clear approvals in a batch, then protect the deepest work block."
+                    if awaiting_review
+                    else "The queue is currently manageable. Protect the strongest execution lane and let agents carry the rest."
+                ),
+            },
+            "templates": templates,
+            "quick_actions": quick_actions,
+            "footer": [
+                {"title": "Right Work, Right Time", "copy": "Live tasks, approvals, and loops are unified here."},
+                {"title": "Agentic Execution", "copy": f"{len(delegation_items)} delegation lane(s) are visible right now."},
+                {"title": "Clear Ownership", "copy": f"{len(deduped_tasks)} active board item(s) now carry a real source and lane."},
+                {"title": "Continuous Momentum", "copy": f"{len(timeline_rows)} recent action-journal or activity event(s) are visible."},
+                {"title": "Trust & Transparency", "copy": f"{len(blocker_items)} blocker or escalation item(s) are currently surfaced."},
+                {"title": "Adaptive Intelligence", "copy": f"{len(intelligence_items)} Workshop insights are derived from live runtime and task posture."},
+                {"title": "Workshop Online", "copy": str(workshop_status.get("summary") or "Workshop routes and task surfaces are operational.").strip() or "Workshop routes and task surfaces are operational."},
+            ],
+            "workshop": {
+                "status": workshop_status,
+                "projects": workshop_projects[:12],
+                "jobs": workshop_jobs[:12],
+                "materials": workshop_materials[:12],
+                "low_stock": workshop_low_stock[:12],
+            },
+            "proof_paths": {
+                "module_route": "/workshop",
+                "module_api": "/api/workshop/module",
+                "command_center_api": "/api/command-center",
+                "home_tasks_api": "/api/home/tasks",
+                "home_tasks_today_api": "/api/home/tasks/today",
+                "home_tasks_complete_api": "/api/home/tasks/{task_id}/complete",
+                "open_loops_api": "/api/open-loops",
+                "open_loops_action_api": "/api/open-loops/action",
+                "approvals_api": "/api/approvals",
+                "approvals_action_api": "/api/approvals/{request_id}/approve",
+                "agent_work_api": "/api/agent-work",
+                "agent_work_proposed_api": "/api/agent-work/proposed",
+                "agent_work_approve_api": "/api/agent-work/approve/{work_id}",
+                "workshop_projects_api": "/api/workshop/projects",
+                "workshop_jobs_api": "/api/workshop/jobs",
+                "workshop_materials_api": "/api/workshop/materials",
+                "workshop_status_api": "/api/workshop/status",
+                "activity_api": "/api/activity/operator-action",
+            },
+        }
+        if not payload["available"]:
+            payload["status"] = "Wired"
+            payload["summary"] = "Workshop routes are live, but the runtime could not hydrate meaningful task, project, or job data."
+        return payload
+
     @app.get("/api/intel/module")
     async def api_intel_module() -> JSONResponse:
         return _json(await _build_intel_module_payload())
@@ -6615,6 +7180,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/catalyst/module")
     async def api_catalyst_module() -> JSONResponse:
         return _json(await _build_catalyst_module_payload())
+
+    @app.get("/api/workshop/module")
+    async def api_workshop_module() -> JSONResponse:
+        return _json(await _build_workshop_module_payload())
 
     @app.get("/api/router/capabilities")
     async def api_router_capabilities() -> JSONResponse:

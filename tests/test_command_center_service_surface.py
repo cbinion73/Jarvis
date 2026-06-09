@@ -2368,6 +2368,32 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(wow_models["count"], 1)
         self.assertEqual(wow_models["models"][0]["filename"], "paladin.glb")
 
+    def test_workshop_routes_expose_module_and_live_work_surfaces(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/workshop/module", "GET")()))
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("command_center", module_payload)
+        self.assertIn("board", module_payload)
+        self.assertIn("work_orders", module_payload)
+        self.assertIn("delegation", module_payload)
+        self.assertIn("blockers", module_payload)
+        self.assertIn("execution_lane", module_payload)
+        self.assertIn("intelligence", module_payload)
+        self.assertIn("resumption", module_payload)
+        self.assertIn("capacity", module_payload)
+        self.assertIn("templates", module_payload)
+        self.assertIn("quick_actions", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/workshop/module")
+        self.assertEqual(module_payload["proof_paths"]["workshop_projects_api"], "/api/workshop/projects")
+        self.assertEqual(module_payload["proof_paths"]["workshop_jobs_api"], "/api/workshop/jobs")
+        self.assertEqual(module_payload["proof_paths"]["activity_api"], "/api/activity/operator-action")
+        self.assertIsInstance(module_payload["board"]["lanes"], list)
+        self.assertGreaterEqual(len(module_payload["board"]["lanes"]), 1)
+        self.assertIsInstance(module_payload["templates"], list)
+        self.assertIsInstance(module_payload["quick_actions"], list)
+
     def test_open_loop_action_populates_daily_brief_continuity(self) -> None:
         self.runtime.apply_open_loop_action = lambda actor_name, **kwargs: {
             "ok": True,

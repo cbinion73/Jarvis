@@ -189,6 +189,22 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/forge/convert/repair", html)
         self.assertIn("/api/forge/convert/scale", html)
 
+    def test_render_glass_shell_wires_workshop_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="workshop-runtime-note"', html)
+        self.assertIn("function refreshWorkshopDesktop(", html)
+        self.assertIn("function renderWorkshopModule(", html)
+        self.assertIn("function workshopHandleAction(", html)
+        self.assertIn("function workshopOpenRoute(", html)
+        self.assertIn("/api/workshop/module", html)
+        self.assertIn("/api/home/tasks", html)
+        self.assertIn("/api/open-loops/action", html)
+        self.assertIn("/api/workshop/projects", html)
+        self.assertIn("/api/workshop/jobs", html)
+        self.assertIn("/api/workshop/materials", html)
+        self.assertIn("/api/activity/operator-action", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 
