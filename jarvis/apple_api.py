@@ -62,6 +62,7 @@ _STEWARDSHIP_REVIEW_QUEUE_PATH = Path("data/state/stewardship_reviews.json")
 _STEWARDSHIP_REVIEW_QUEUE_LOG_PATH = _STEWARDSHIP_REVIEW_QUEUE_PATH.with_name("stewardship_reviews_log.jsonl")
 _SIGNAL_RESOLUTIONS_PATH = Path("data/state/signal_resolutions.json")
 _SIGNAL_RESOLUTIONS_LOG_PATH = _SIGNAL_RESOLUTIONS_PATH.with_name("signal_resolutions_log.jsonl")
+_INTERRUPTION_DECISIONS_PATH = Path("data/state/interruption_decisions.jsonl")
 _FOCUS_STATE_PATH = Path("data/apple/focus_state.json")
 _FOCUS_STATE_LOG_PATH = _FOCUS_STATE_PATH.with_name("focus_state_log.jsonl")
 _APPLE_REMINDERS_PATH = Path("data/apple/reminders.json")
@@ -2715,13 +2716,27 @@ def _compute_interruption_posture(
     ]
     alert_count = len(alerts)
     needs_count = int(watch_status.get("needs_count") or 0)
+    # suppress: operator-signalled DND (no alerts qualify for delivery)
+    suppress_active = bool(watch_status.get("suppress_interruptions"))
+    # escalate: operator-signalled emergency override (everything becomes deliver_now)
+    escalate_active = bool(watch_status.get("escalate_interruptions")) or alert_count >= 3
 
     mode = "active_hours"
     label = "Active hours"
     reason = "JARVIS can surface normal household attention during active hours."
     recommended_delivery = "badge_only"
 
-    if alert_count > 0:
+    if escalate_active:
+        mode = "escalate"
+        label = "Escalation override"
+        reason = "Multiple active alerts or an explicit escalation signal require immediate delivery."
+        recommended_delivery = "deliver_now"
+    elif suppress_active:
+        mode = "suppress"
+        label = "Suppression active"
+        reason = "Interruptions are suppressed by operator signal; only critical items may break through."
+        recommended_delivery = "suppress"
+    elif alert_count > 0:
         mode = "household_alert"
         label = "Household alert override"
         reason = "An active home alert overrides quieter delivery modes."
@@ -2753,6 +2768,8 @@ def _compute_interruption_posture(
         "needs_count": needs_count,
         "alert_count": alert_count,
         "present_members": present_members,
+        "suppress_active": suppress_active,
+        "escalate_active": escalate_active,
         "updated_at": _ts(),
     }
 
@@ -2768,6 +2785,14 @@ def _choose_delivery_mode(
     posture_reason = str(posture.get("reason") or "")
     normalized_severity = str(severity or "low").lower()
     normalized_category = str(category or "system").lower()
+
+    if posture_mode == "escalate":
+        return "deliver_now", posture_reason
+
+    if posture_mode == "suppress":
+        if normalized_severity == "critical":
+            return "deliver_now", "Critical items break through suppression."
+        return "suppress", posture_reason
 
     if posture_mode == "household_alert":
         return "deliver_now", posture_reason
@@ -2788,6 +2813,30 @@ def _choose_delivery_mode(
         return "deliver_now", "Critical items should break through during active hours."
 
     return str(default_mode or "badge_only"), posture_reason or "Normal household hours allow standard delivery."
+
+
+def _record_interruption_decision(
+    *,
+    item_id: str,
+    category: str,
+    severity: str,
+    posture_mode: str,
+    decision: str,
+    decision_reason: str,
+) -> None:
+    record = {
+        "ts": _ts(),
+        "item_id": str(item_id or ""),
+        "category": str(category or ""),
+        "severity": str(severity or ""),
+        "posture_mode": str(posture_mode or ""),
+        "decision": str(decision or ""),
+        "decision_reason": str(decision_reason or ""),
+    }
+    try:
+        persistence_append_jsonl(_INTERRUPTION_DECISIONS_PATH, record)
+    except Exception as exc:
+        logger.debug("interruption_decision record failed: %s", exc)
 
 
 def _chronicle_actor_matches(entry: dict[str, Any], actor: str) -> bool:
@@ -7197,20 +7246,31 @@ def _reconcile_shared_notifications(
         focus_payload=focus_payload,
     )
 
+    posture_mode = str(posture.get("mode") or "active_hours")
+
     needs_count = int(watch_status.get("needs_count") or 0)
     if needs_count > 0:
+        _severity = "high" if needs_count >= 3 else "medium"
         delivery_mode, decision_reason = _choose_delivery_mode(
             default_mode="badge_only",
-            severity="high" if needs_count >= 3 else "medium",
+            severity=_severity,
             category="approval",
             posture=posture,
+        )
+        _record_interruption_decision(
+            item_id="needs:pending",
+            category="approval",
+            severity=_severity,
+            posture_mode=posture_mode,
+            decision=delivery_mode,
+            decision_reason=decision_reason,
         )
         _notification_center.upsert(
             source_key="needs:pending",
             category="approval",
             title="Approvals waiting",
             detail=f"{needs_count} approval request" + ("s are" if needs_count != 1 else " is") + " waiting for attention.",
-            severity="high" if needs_count >= 3 else "medium",
+            severity=_severity,
             delivery_mode=delivery_mode,
             navigation_target="needs",
             available_actions=["open", "dismiss"],
@@ -7232,18 +7292,28 @@ def _reconcile_shared_notifications(
     minutes_away = _iso_minutes_away(event_start)
     if event_title and minutes_away is not None and -60 <= minutes_away <= 24 * 60:
         default_mode = "hold_for_brief" if minutes_away > 60 else "badge_only"
+        _severity = "medium" if minutes_away <= 120 else "low"
         delivery_mode, decision_reason = _choose_delivery_mode(
             default_mode=default_mode,
-            severity="medium" if minutes_away <= 120 else "low",
+            severity=_severity,
             category="household",
             posture=posture,
         )
+        _item_id = f"calendar:{event_title}:{event_start}"
+        _record_interruption_decision(
+            item_id=_item_id,
+            category="household",
+            severity=_severity,
+            posture_mode=posture_mode,
+            decision=delivery_mode,
+            decision_reason=decision_reason,
+        )
         _notification_center.upsert(
-            source_key=f"calendar:{event_title}:{event_start}",
+            source_key=_item_id,
             category="household",
             title=f"Prepare for {event_title}",
             detail=f"Next event starts {('in ' + str(minutes_away) + ' min') if minutes_away >= 0 else 'soon'}" + (f" at {event_start}" if event_start else "."),
-            severity="medium" if minutes_away <= 120 else "low",
+            severity=_severity,
             delivery_mode=delivery_mode,
             navigation_target="calendar",
             available_actions=["open", "stage_prep", "dismiss"],
@@ -7265,18 +7335,27 @@ def _reconcile_shared_notifications(
     if open_reminders:
         top = open_reminders[0]
         reminder_id = str(top.get("id") or "").strip()
+        _severity = "medium" if len(open_reminders) >= 3 else "low"
         delivery_mode, decision_reason = _choose_delivery_mode(
             default_mode="hold_for_brief",
-            severity="medium" if len(open_reminders) >= 3 else "low",
+            severity=_severity,
             category="household",
             posture=posture,
+        )
+        _record_interruption_decision(
+            item_id=f"reminders:{len(open_reminders)}",
+            category="household",
+            severity=_severity,
+            posture_mode=posture_mode,
+            decision=delivery_mode,
+            decision_reason=decision_reason,
         )
         _notification_center.upsert(
             source_key=f"reminders:{len(open_reminders)}",
             category="household",
             title="Reminders need attention",
             detail=str(top.get("title") or "Outstanding reminders are waiting."),
-            severity="medium" if len(open_reminders) >= 3 else "low",
+            severity=_severity,
             delivery_mode=delivery_mode,
             navigation_target="workshop",
             available_actions=["open", "complete_reminder", "snooze_reminder", "dismiss"],
@@ -7301,8 +7380,17 @@ def _reconcile_shared_notifications(
             category="household",
             posture=posture,
         )
+        _alert_id = f"home-alert:{str(first_alert)}"
+        _record_interruption_decision(
+            item_id=_alert_id,
+            category="household",
+            severity="high",
+            posture_mode=posture_mode,
+            decision=delivery_mode,
+            decision_reason=decision_reason,
+        )
         _notification_center.upsert(
-            source_key=f"home-alert:{str(first_alert)}",
+            source_key=_alert_id,
             category="household",
             title="Household alert",
             detail=str(first_alert),
@@ -7322,6 +7410,14 @@ def _reconcile_shared_notifications(
             severity="low",
             category="system",
             posture=posture,
+        )
+        _record_interruption_decision(
+            item_id="focus:active",
+            category="system",
+            severity="low",
+            posture_mode=posture_mode,
+            decision=delivery_mode,
+            decision_reason=decision_reason,
         )
         _notification_center.upsert(
             source_key="focus:active",
@@ -7348,8 +7444,17 @@ def _reconcile_shared_notifications(
             category="household",
             posture=posture,
         )
+        _sound_id = f"sound:{sound_label}:{str(latest_sound.get('received_at') or '')}"
+        _record_interruption_decision(
+            item_id=_sound_id,
+            category="household",
+            severity=sound_severity,
+            posture_mode=posture_mode,
+            decision=delivery_mode,
+            decision_reason=decision_reason,
+        )
         _notification_center.upsert(
-            source_key=f"sound:{sound_label}:{str(latest_sound.get('received_at') or '')}",
+            source_key=_sound_id,
             category="household",
             title=f"Sound detected: {sound_label}",
             detail=str(latest_sound.get("detail") or "Recent sound analysis detected a notable event."),
@@ -7373,8 +7478,17 @@ def _reconcile_shared_notifications(
             category="system",
             posture=posture,
         )
+        _vision_id = f"vision:{scan_context}:{str(latest_scan.get('received_at') or '')}"
+        _record_interruption_decision(
+            item_id=_vision_id,
+            category="system",
+            severity="low",
+            posture_mode=posture_mode,
+            decision=delivery_mode,
+            decision_reason=decision_reason,
+        )
         _notification_center.upsert(
-            source_key=f"vision:{scan_context}:{str(latest_scan.get('received_at') or '')}",
+            source_key=_vision_id,
             category="system",
             title=scan_context or "Vision scan captured",
             detail=scan_text[:180] or "A recent scan is available for review.",
