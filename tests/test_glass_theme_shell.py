@@ -106,6 +106,26 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("Refresh Vision", html)
         self.assertIn("Vision is live and connected.", html)
 
+    def test_render_glass_shell_wires_foundry_runtime_controls(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn('id="view-foundry"', html)
+        self.assertIn('id="foundry-runtime-note"', html)
+        self.assertIn('id="foundry-refresh-button"', html)
+        self.assertIn('data-view="foundry"', html)
+        self.assertIn("function foundryRuntimeNote(", html)
+        self.assertIn("function foundryFetchJson(", html)
+        self.assertIn("function foundryOpenRoute(", html)
+        self.assertIn("function foundryCreateDraftProject(", html)
+        self.assertIn("function foundryCreateIdea(", html)
+        self.assertIn("function refreshFoundryDesktop(", html)
+        self.assertIn("/api/foundry/module", html)
+        self.assertIn("/api/publishing/projects", html)
+        self.assertIn("/api/ideas", html)
+        self.assertIn("/api/activity/operator-action", html)
+        self.assertIn("Refresh Foundry", html)
+        self.assertIn("Foundry is live and connected.", html)
+
     def test_render_glass_shell_wires_daily_brief_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
 

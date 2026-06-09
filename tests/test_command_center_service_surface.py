@@ -2436,6 +2436,33 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIsInstance(module_payload["templates"], list)
         self.assertIsInstance(module_payload["quick_actions"], list)
 
+    def test_foundry_routes_expose_module_and_live_asset_surfaces(self) -> None:
+        module_payload = self._json_body(asyncio.run(self._route("/api/foundry/module", "GET")()))
+
+        self.assertIn("available", module_payload)
+        self.assertIn("counts", module_payload)
+        self.assertIn("hero", module_payload)
+        self.assertIn("pipeline", module_payload)
+        self.assertIn("asset_types", module_payload)
+        self.assertIn("performance", module_payload)
+        self.assertIn("health", module_payload)
+        self.assertIn("projects", module_payload)
+        self.assertIn("publishing", module_payload)
+        self.assertIn("offers", module_payload)
+        self.assertIn("audience", module_payload)
+        self.assertIn("incubator", module_payload)
+        self.assertIn("launch", module_payload)
+        self.assertIn("proof_paths", module_payload)
+        self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/foundry/module")
+        self.assertEqual(module_payload["proof_paths"]["projects_api"], "/api/home/projects?status=active")
+        self.assertEqual(module_payload["proof_paths"]["publishing_module_api"], "/api/publish/module")
+        self.assertEqual(module_payload["proof_paths"]["ideas_api"], "/api/ideas")
+        self.assertEqual(module_payload["proof_paths"]["dossiers_api"], "/api/dossiers")
+        self.assertEqual(module_payload["proof_paths"]["activity_api"], "/api/activity/operator-action")
+        self.assertIsInstance(module_payload["projects"], list)
+        self.assertIsInstance(module_payload["incubator"]["ideas"], list)
+        self.assertIsInstance(module_payload["launch"]["checklist"], list)
+
     def test_dining_routes_expose_module_and_live_search_surfaces(self) -> None:
         nearby_rows = [
             {

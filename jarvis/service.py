@@ -12392,6 +12392,322 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             }
         )
 
+    async def _build_foundry_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        generated_at = datetime.now(timezone.utc).isoformat()
+        availability_notes: list[str] = []
+        errors: list[str] = []
+
+        projects: list[dict[str, Any]] = []
+        open_tasks: list[dict[str, Any]] = []
+        today_tasks: list[dict[str, Any]] = []
+        home_db = _get_home_db()
+        if home_db is None:
+            availability_notes.append("Home project storage is not initialised, so Foundry project and task depth is limited.")
+        else:
+            try:
+                projects = list(await asyncio.to_thread(home_db.list_projects, "active"))
+            except Exception as exc:
+                errors.append(f"home_projects: {exc}")
+                availability_notes.append(f"Active Foundry projects could not be loaded: {exc}")
+            try:
+                open_tasks = list(await asyncio.to_thread(home_db.list_tasks, None, "open"))
+            except Exception as exc:
+                errors.append(f"home_tasks_open: {exc}")
+                availability_notes.append(f"Open task intake could not be loaded: {exc}")
+            try:
+                today_tasks = list(await asyncio.to_thread(home_db.get_tasks_due_today))
+            except Exception as exc:
+                errors.append(f"home_tasks_today: {exc}")
+                availability_notes.append(f"Today's task runway could not be loaded: {exc}")
+
+        publishing_module: dict[str, Any] = {}
+        books: list[dict[str, Any]] = []
+        pending_reviews: list[dict[str, Any]] = []
+        revenue_summary: dict[str, Any] = {}
+        publishing_metrics: dict[str, Any] = {}
+        content_performance: dict[str, Any] = {}
+        pub = _get_publishing()
+        try:
+            publishing_module = _build_publish_module_payload()
+            books = list(publishing_module.get("projects") or [])[:8]
+            pending_reviews = list(publishing_module.get("pending_reviews") or [])[:8]
+            revenue_summary = dict(publishing_module.get("revenue") or {})
+        except Exception as exc:
+            errors.append(f"publish_module: {exc}")
+            availability_notes.append(f"Publishing continuity could not be fully loaded: {exc}")
+        if pub is not None:
+            try:
+                publishing_metrics = await asyncio.to_thread(pub.sage.get_publishing_metrics)
+            except Exception as exc:
+                errors.append(f"publishing_metrics: {exc}")
+                availability_notes.append(f"Publishing metrics were unavailable: {exc}")
+            try:
+                content_performance = await asyncio.to_thread(pub.sage.get_content_performance)
+            except Exception as exc:
+                errors.append(f"content_performance: {exc}")
+                availability_notes.append(f"Audience/content performance signals were unavailable: {exc}")
+        else:
+            availability_notes.append("Live publishing analytics are not initialised in this runtime, so Foundry audience and launch depth is partial.")
+
+        ideas: list[dict[str, Any]] = []
+        try:
+            from .ideas import list_ideas
+
+            ideas = list(await asyncio.to_thread(list_ideas))
+        except Exception as exc:
+            errors.append(f"ideas: {exc}")
+            availability_notes.append(f"Idea intake could not be loaded: {exc}")
+
+        dossiers: list[dict[str, Any]] = []
+        try:
+            from dataclasses import asdict
+            from .dossier import get_dossier_store
+
+            store = get_dossier_store()
+            dossiers = [asdict(item) for item in store.get_all()]
+        except Exception as exc:
+            errors.append(f"dossiers: {exc}")
+            availability_notes.append(f"Dossier research outputs were unavailable: {exc}")
+
+        total_projected_value = round(sum(float(item.get("projected_value") or 0) for item in projects), 2)
+        total_monthly_estimate = float(revenue_summary.get("monthly_estimate_total") or revenue_summary.get("total_monthly_estimate") or 0.0)
+        total_reach = 0
+        for item in (content_performance.get("platform_breakdown") or {}).values():
+            if isinstance(item, dict):
+                total_reach += int(item.get("total_reach") or 0)
+        published_count = int(publishing_metrics.get("published_count") or 0)
+        in_progress_count = int(publishing_metrics.get("in_progress_count") or 0)
+        active_assets = len(projects) + len(books) + len(dossiers)
+        research_ready_ideas = len([item for item in ideas if str(item.get("status") or "").strip().lower() in {"done", "researching"}])
+        queued_ideas = len([item for item in ideas if str(item.get("status") or "").strip().lower() in {"captured", "queued"}])
+        revenue_projects = [item for item in projects if str(item.get("track") or "").strip().lower() == "revenue"]
+        focus_asset = (projects[:1] or books[:1] or ideas[:1] or [{}])[0]
+        focus_title = str(focus_asset.get("title") or focus_asset.get("text") or "Choose the next durable asset").strip() or "Choose the next durable asset"
+        focus_pct = 0
+        if focus_asset:
+            if focus_asset.get("total_stages"):
+                try:
+                    focus_pct = max(0, min(100, round((float(focus_asset.get("stages_complete") or 0) / max(float(focus_asset.get("total_stages") or 1), 1)) * 100)))
+                except Exception:
+                    focus_pct = 0
+            elif focus_asset.get("progress_pct") is not None:
+                try:
+                    focus_pct = max(0, min(100, int(round(float(focus_asset.get("progress_pct") or 0)))))
+                except Exception:
+                    focus_pct = 0
+
+        asset_types: list[dict[str, Any]] = []
+        for label, count, note in [
+            ("Books", len(books), "Publishing projects currently visible in the live publishing store."),
+            ("Offers", len(revenue_projects), "Revenue-tracked home projects currently active."),
+            ("Projects", len(projects), "Home projects currently active in Foundry."),
+            ("Ideas", len(ideas), "Ideas captured and retained in the live idea store."),
+            ("Dossiers", len(dossiers), "Research dossiers available for asset shaping."),
+            ("Tasks", len(today_tasks), "Tasks due today that can constrain launch or making windows."),
+        ]:
+            if count:
+                asset_types.append({"label": label, "count": count, "note": note})
+
+        performance_rows = [
+            {"label": "Projected Value", "display_value": f"${total_projected_value:,.0f}" if total_projected_value else "$0", "note": "Summed from live active home-project projected values."},
+            {"label": "Monthly Revenue", "display_value": f"${total_monthly_estimate:,.0f}/mo" if total_monthly_estimate else "$0/mo", "note": "Publishing revenue streams currently tracked in Sage."},
+            {"label": "Content Reach", "display_value": f"{total_reach:,}" if total_reach else "Unavailable", "note": "Summed from posted social performance data when available."},
+            {"label": "Published Assets", "display_value": str(published_count), "note": "Published publishing projects in the live store."},
+            {"label": "Review Gates", "display_value": str(len(pending_reviews)), "note": "Pending editorial reviews blocking launch-ready movement."},
+        ]
+
+        health_strengths = []
+        if projects:
+            health_strengths.append(f"{len(projects)} active home project(s) are visible.")
+        if books:
+            health_strengths.append(f"{len(books)} publishing project(s) are connected into Foundry.")
+        if pending_reviews:
+            health_strengths.append(f"{len(pending_reviews)} review gate(s) are live and actionable.")
+        if dossiers:
+            health_strengths.append(f"{len(dossiers)} dossier(s) can feed future assets.")
+        if not health_strengths:
+            health_strengths.append("Foundry routes are live, but the asset stack is still thin in this runtime.")
+
+        health_label = "Live"
+        if errors and not active_assets:
+            health_label = "Partial"
+        elif pending_reviews or revenue_projects or total_monthly_estimate:
+            health_label = "Operational"
+
+        audience_available = bool(total_reach or (content_performance.get("platform_breakdown") or {}) or publishing_metrics.get("platforms"))
+        audience_segments = []
+        platform_breakdown = content_performance.get("platform_breakdown") or {}
+        for platform, stats in list(platform_breakdown.items())[:6]:
+            if not isinstance(stats, dict):
+                continue
+            audience_segments.append(
+                {
+                    "label": str(platform).title(),
+                    "share": int(stats.get("post_count") or 0),
+                    "note": f"{int(stats.get('total_reach') or 0):,} reach across {int(stats.get('post_count') or 0)} post(s).",
+                }
+            )
+        if not audience_segments:
+            for platform in list(publishing_metrics.get("platforms") or [])[:6]:
+                audience_segments.append({"label": str(platform).title(), "share": 0, "note": "Platform is active, but no audience-performance breakdown is available yet."})
+
+        payload = {
+            "generated_at": generated_at,
+            "available": bool(active_assets or ideas or today_tasks or pending_reviews),
+            "status": "Useful" if (active_assets or ideas or pending_reviews) else "Wired",
+            "summary": (
+                f"Foundry loaded {len(projects)} active home project(s), {len(books)} publishing project(s), "
+                f"{len(ideas)} idea(s), {len(dossiers)} dossier(s), and {len(pending_reviews)} launch review gate(s)."
+            ),
+            "what_became_real": "Foundry now hydrates from live home projects, publishing stores, idea intake, dossier research, and task runway data instead of shell-side growth fiction.",
+            "remains_partial": "Audience intelligence and deeper commercialization posture still depend on whichever publishing analytics and revenue tracking are actually configured in this runtime.",
+            "runtime_note": availability_notes[0] if availability_notes else "Foundry is live and connected.",
+            "availability_notes": availability_notes[:8],
+            "counts": {
+                "active_assets": active_assets,
+                "projects": len(projects),
+                "books": len(books),
+                "ideas": len(ideas),
+                "dossiers": len(dossiers),
+                "pending_reviews": len(pending_reviews),
+                "due_today": len(today_tasks),
+                "projected_value": total_projected_value,
+                "monthly_revenue": total_monthly_estimate,
+                "audience_reach": total_reach,
+            },
+            "hero": {
+                "focus_title": focus_title,
+                "focus_subtitle": str(focus_asset.get("category") or focus_asset.get("status") or focus_asset.get("track") or "Active asset lane").strip() or "Active asset lane",
+                "focus_track": str(focus_asset.get("track") or focus_asset.get("workflow_type") or focus_asset.get("project_type") or focus_asset.get("domain") or "Foundry").strip() or "Foundry",
+                "focus_pct": focus_pct,
+                "priority_title": str((books[:1] or revenue_projects[:1] or projects[:1] or [{}])[0].get("title") or "Move the highest-trust asset").strip() or "Move the highest-trust asset",
+                "priority_copy": (
+                    f"{len(pending_reviews)} review gate(s) are holding up launch-ready movement."
+                    if pending_reviews
+                    else f"{research_ready_ideas} idea(s) are far enough along to shape into real assets."
+                ),
+                "priority_date": str((books[:1] or [{}])[0].get("updated_at") or generated_at),
+                "priority_pct": focus_pct,
+                "making_window": "Today has task pressure to work around." if today_tasks else "No hard deadline pressure is visible in today's task runway.",
+                "today_count": len(today_tasks),
+                "today_high_priority_count": len([item for item in today_tasks if str(item.get("priority") or "").strip().lower() == "high"]),
+                "incubator_count": len([item for item in ideas if str(item.get("status") or "").strip().lower() != "passed"]),
+                "research_ready_count": research_ready_ideas,
+                "active_project_count": len(projects) or in_progress_count,
+                "review_count": len(pending_reviews),
+                "command_narrative": (
+                    f'Today’s best Foundry move is to stay with "{focus_title}" until it becomes more real.'
+                    if focus_asset
+                    else "Foundry is live, but it needs a clear active asset before leverage compounds."
+                ),
+                "economic_lens": (
+                    f"Active home projects currently carry ${total_projected_value:,.0f} in projected value."
+                    if total_projected_value
+                    else "No projected-value data is attached to the active home projects yet."
+                ),
+                "legacy_lens": (
+                    f"{published_count} published asset(s) and {len(books)} publishing project(s) are shaping the durable body of work."
+                    if books or published_count
+                    else "No publishing asset is far enough along yet to anchor the long-horizon body of work."
+                ),
+            },
+            "pipeline": {
+                "idea": len(ideas),
+                "shape": queued_ideas,
+                "build": len(projects),
+                "launch": len(pending_reviews),
+                "grow": len(revenue_projects) or int(revenue_summary.get("active_stream_count") or 0),
+                "total_assets": active_assets,
+            },
+            "asset_types": asset_types,
+            "performance": performance_rows,
+            "health": {
+                "score_label": health_label,
+                "copy": "Foundry is drawing from live project, publishing, and research sources." if active_assets else "Foundry routes are wired, but the asset graph is still sparse.",
+                "strengths": health_strengths[:5],
+            },
+            "projects": projects[:8],
+            "publishing": {
+                "projects": books[:8],
+                "opportunity_title": str((books[:1] or [{}])[0].get("title") or "Repurpose the strongest asset").strip() or "Repurpose the strongest asset",
+                "opportunity_copy": (
+                    f'{str((books[:1] or [{}])[0].get("title") or "The lead publishing asset").strip() or "The lead publishing asset"} already has enough live structure to feed additional formats.'
+                    if books
+                    else "No publishing asset is active enough yet to show clear repurposing lanes."
+                ),
+            },
+            "offers": {
+                "rows": [
+                    {
+                        "title": str(item.get("title") or "Revenue asset").strip() or "Revenue asset",
+                        "subtitle": str(item.get("category") or item.get("status") or "Economic lane").strip() or "Economic lane",
+                        "value_label": f"${float(item.get('projected_value') or 0):,.0f}" if float(item.get("projected_value") or 0) else "Unvalued",
+                        "status_label": str(item.get("status") or "active").strip() or "active",
+                    }
+                    for item in revenue_projects[:6]
+                ],
+                "note": (
+                    f"{int(revenue_summary.get('active_stream_count') or 0)} live revenue stream(s) are currently tracked."
+                    if revenue_summary
+                    else "No live offer or revenue stream analytics are currently attached to Foundry."
+                ),
+            },
+            "audience": {
+                "available": audience_available,
+                "total_label": f"{total_reach:,}" if total_reach else "Unavailable",
+                "growth_note": (
+                    f"{int(content_performance.get('total_posts_analyzed') or 0)} posted content item(s) are contributing live audience signal."
+                    if audience_available
+                    else "No live audience segmentation or posted-performance signal is currently available."
+                ),
+                "segments": audience_segments[:6],
+            },
+            "incubator": {
+                "ideas": ideas[:8],
+                "dossiers": dossiers[:6],
+            },
+            "launch": {
+                "rows": [
+                    {
+                        "title": str(item.get("title") or item.get("text") or "Launch lane").strip() or "Launch lane",
+                        "subtitle": str(item.get("current_stage") or item.get("status") or "Launch control item").strip() or "Launch control item",
+                    }
+                    for item in ([*books[:4], *today_tasks[:4]])
+                ],
+                "score_label": "Ready" if pending_reviews else ("Building" if books or projects else "Standby"),
+                "checklist": [
+                    "Audience analytics are live." if audience_available else "Audience analytics are not live yet.",
+                    "Publishing reviews are visible." if pending_reviews else "No pending editorial review gates are visible.",
+                    "Revenue signals are tracked." if total_monthly_estimate else "No live monthly revenue estimate is attached yet.",
+                    "Today's runway is clear." if not today_tasks else f"{len(today_tasks)} due-today task(s) can affect launch pacing.",
+                    "Dossier research is available." if dossiers else "No dossier research is currently attached to launch planning.",
+                ],
+            },
+            "recent_activity": _module_recent_activity(route="/foundry", domain="foundry"),
+            "proof_paths": {
+                "module_route": "/foundry",
+                "module_api": "/api/foundry/module",
+                "projects_api": "/api/home/projects?status=active",
+                "tasks_api": "/api/home/tasks?status=open",
+                "tasks_today_api": "/api/home/tasks/today",
+                "publishing_module_api": "/api/publish/module",
+                "publishing_projects_api": "/api/publishing/projects",
+                "publishing_metrics_api": "/api/publishing/metrics",
+                "ideas_api": "/api/ideas",
+                "idea_create_api": "/api/ideas",
+                "dossiers_api": "/api/dossiers",
+                "activity_api": "/api/activity/operator-action",
+            },
+            "errors": errors,
+        }
+        if not payload["available"]:
+            payload["summary"] = "Foundry routes are live, but the runtime could not hydrate meaningful creative asset, publishing, or research data."
+        if errors and payload["runtime_note"] == "Foundry is live and connected.":
+            payload["runtime_note"] = "Foundry is live, but some backend asset sources are partially unavailable."
+        return payload
+
     def _build_publish_module_payload() -> dict[str, Any]:
         from datetime import datetime, timezone
 
@@ -12562,6 +12878,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/publish/module")
     async def api_publish_module() -> JSONResponse:
         return _json(_build_publish_module_payload())
+
+    @app.get("/api/foundry/module")
+    async def api_foundry_module() -> JSONResponse:
+        return _json(await _build_foundry_module_payload())
 
     @app.get("/api/publishing/projects")
     async def api_publishing_list_projects(
