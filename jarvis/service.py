@@ -18015,6 +18015,81 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail=summary["error"])
         return _json(summary)
 
+    @app.post("/api/foundry/agents/{agent_id}/sandbox-snapshot")
+    async def api_foundry_agent_sandbox_snapshot(agent_id: str) -> JSONResponse:
+        """K5: Capture a pre-execution sandbox snapshot for safe rollback."""
+        from .foundry import FoundryStore
+        store = FoundryStore(runtime.data_root / "foundry")
+        snapshot = await asyncio.to_thread(store.capture_sandbox_snapshot, agent_id)
+        if snapshot is None:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        return _json({"snapshot": snapshot, "agent_id": agent_id})
+
+    @app.post("/api/foundry/agents/{agent_id}/rollback")
+    async def api_foundry_agent_rollback(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        """K5: Roll back agent state to a previously captured sandbox snapshot."""
+        from .foundry import FoundryStore
+        store = FoundryStore(runtime.data_root / "foundry")
+        snapshot_id = str(payload.get("snapshot_id", ""))
+        actor = str(payload.get("actor", "chris"))
+        if not snapshot_id:
+            raise HTTPException(status_code=400, detail="snapshot_id required")
+        updated = await asyncio.to_thread(store.rollback_to_snapshot, agent_id, snapshot_id, actor)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Snapshot {snapshot_id!r} not found for agent {agent_id}")
+        return _json({"rolled_back": True, "agent": updated, "snapshot_id": snapshot_id})
+
+    @app.post("/api/foundry/agents/{agent_id}/assign-pipeline")
+    async def api_foundry_agent_assign_pipeline(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        """K3: Assign a promoted Foundry agent to execute an AutomationPipeline stage.
+
+        The agent must be in state 'promoted' to be assigned.
+        Records the assignment in the agent's record under 'pipeline_assignments'.
+        """
+        from .foundry import FoundryStore
+        store = FoundryStore(runtime.data_root / "foundry")
+        agent = await asyncio.to_thread(store.get, agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        if agent.get("state") != "promoted":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Agent {agent_id} must be in 'promoted' state to be assigned (currently: {agent.get('state')})"
+            )
+        pipeline_id = str(payload.get("pipeline_id", ""))
+        stage = str(payload.get("stage", ""))
+        actor = str(payload.get("actor", "chris"))
+        if not pipeline_id or not stage:
+            raise HTTPException(status_code=400, detail="pipeline_id and stage required")
+
+        def _assign():
+            import time as _time
+            records = store._load()
+            updated = None
+            for r in records:
+                if r.get("agent_id") == agent_id:
+                    assignments = list(r.get("pipeline_assignments") or [])
+                    assignments.append({
+                        "pipeline_id": pipeline_id,
+                        "stage": stage,
+                        "assigned_at": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+                        "assigned_by": actor,
+                    })
+                    r["pipeline_assignments"] = assignments
+                    r["updated_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                    updated = r
+                    break
+            if updated:
+                store._save(records)
+                store._audit("pipeline_assigned", agent_id, actor,
+                             {"pipeline_id": pipeline_id, "stage": stage})
+            return updated
+
+        result = await asyncio.to_thread(_assign)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        return _json({"assigned": True, "agent_id": agent_id, "pipeline_id": pipeline_id, "stage": stage})
+
     @app.get("/api/publishing/projects")
     async def api_publishing_list_projects(
         status: str | None = Query(default=None),

@@ -209,6 +209,67 @@ class FoundryStore:
         self._audit("sandboxed", agent_id, actor)
         return result
 
+    def capture_sandbox_snapshot(self, agent_id: str) -> dict | None:
+        """K5: Capture a pre-execution snapshot of agent state for rollback.
+
+        Stores a timestamped snapshot under agent['sandbox_snapshots'].
+        Returns the snapshot dict, or None if agent not found.
+        """
+        records = self._load()
+        snapshot = None
+        for r in records:
+            if r.get("agent_id") == agent_id:
+                snap = {
+                    "snapshot_id": str(uuid.uuid4()),
+                    "captured_at": _ts(),
+                    "state": r.get("state"),
+                    "authority_stage": r.get("authority_stage"),
+                    "sandbox_run_count": r.get("sandbox_run_count", 0),
+                    "sandbox_success_count": r.get("sandbox_success_count", 0),
+                    "sandbox_failure_count": r.get("sandbox_failure_count", 0),
+                    "evaluation_notes": r.get("evaluation_notes", ""),
+                }
+                snaps = list(r.get("sandbox_snapshots") or [])
+                snaps.append(snap)
+                r["sandbox_snapshots"] = snaps[-10:]  # keep last 10
+                r["updated_at"] = _ts()
+                snapshot = snap
+                break
+        if snapshot:
+            self._save(records)
+            self._audit("sandbox_snapshot", agent_id, "system", {"snapshot_id": snapshot["snapshot_id"]})
+        return snapshot
+
+    def rollback_to_snapshot(self, agent_id: str, snapshot_id: str, actor: str) -> dict | None:
+        """K5: Roll an agent back to a captured sandbox snapshot.
+
+        Restores state, authority_stage, and counter fields from the snapshot.
+        The rollback itself is audited.  Returns the updated agent or None.
+        """
+        records = self._load()
+        updated = None
+        for r in records:
+            if r.get("agent_id") == agent_id:
+                snaps = r.get("sandbox_snapshots") or []
+                target = next((s for s in snaps if s.get("snapshot_id") == snapshot_id), None)
+                if not target:
+                    return None
+                r["state"] = target["state"]
+                r["authority_stage"] = target["authority_stage"]
+                r["sandbox_run_count"] = target["sandbox_run_count"]
+                r["sandbox_success_count"] = target["sandbox_success_count"]
+                r["sandbox_failure_count"] = target["sandbox_failure_count"]
+                r["evaluation_notes"] = target["evaluation_notes"]
+                r["rolled_back_at"] = _ts()
+                r["rolled_back_to_snapshot"] = snapshot_id
+                r["updated_at"] = _ts()
+                updated = r
+                break
+        if updated:
+            self._save(records)
+            self._audit("rollback", agent_id, actor, {"snapshot_id": snapshot_id})
+        return updated
+
     def record_sandbox_run(self, agent_id: str, success: bool, notes: str = "") -> dict | None:
         records = self._load()
         updated = None
