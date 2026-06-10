@@ -120,6 +120,13 @@ class RecoveryCaseStore:
         record["next_plan_step_id"] = str((next_step or {}).get("step_id") or "").strip()
         record["next_plan_step_label"] = str((next_step or {}).get("label") or "").strip()
 
+    def get_case(self, case_id: str) -> dict[str, Any] | None:
+        for item in self._load_json():
+            if str(item.get("case_id", "")).strip() == case_id.strip():
+                from copy import deepcopy
+                return deepcopy(item)
+        return None
+
     def list_cases(self) -> list[dict[str, Any]]:
         records = self._load_json()
         for item in records:
@@ -135,6 +142,9 @@ class RecoveryCaseStore:
         related_route: str,
         related_key: str,
         metadata: dict[str, Any] | None = None,
+        owner: str = "",
+        root_cause: str = "",
+        prevention_note: str = "",
     ) -> dict[str, Any]:
         normalized_key = related_key.strip()
         now = _now_iso()
@@ -183,6 +193,13 @@ class RecoveryCaseStore:
                 "remediation_plan_status_label": "Unplanned",
                 "next_plan_step_id": "",
                 "next_plan_step_label": "",
+                "owner": owner.strip(),
+                "root_cause": root_cause.strip(),
+                "prevention_note": prevention_note.strip(),
+                "verification_note": "",
+                "closure_note": "",
+                "closed_at": "",
+                "closed_by": "",
             }
             self._refresh_plan_state(record)
             records.append(record)
@@ -461,3 +478,92 @@ class RecoveryCaseStore:
         target["history"] = history[-26:]
         self._save(records)
         return deepcopy(target), deepcopy(step)
+
+    def set_lifecycle_fields(
+        self,
+        case_id: str,
+        *,
+        owner: str = "",
+        root_cause: str = "",
+        prevention_note: str = "",
+        verification_note: str = "",
+    ) -> dict[str, Any]:
+        """Set durable lifecycle metadata: owner, root cause, prevention note, verification note."""
+        records = self._load_json()
+        target = None
+        for item in records:
+            if str(item.get("case_id", "")).strip() == case_id.strip():
+                target = item
+                break
+        if target is None:
+            raise KeyError("Recovery case not found.")
+        now = _now_iso()
+        if owner:
+            target["owner"] = owner.strip()
+        if root_cause:
+            target["root_cause"] = root_cause.strip()
+        if prevention_note:
+            target["prevention_note"] = prevention_note.strip()
+        if verification_note:
+            target["verification_note"] = verification_note.strip()
+        target["updated_at"] = now
+        target["last_action_at"] = now
+        target["last_action"] = "lifecycle-update"
+        history = list(target.get("history") or [])
+        history.append(
+            {
+                "timestamp": now,
+                "action": "lifecycle-update",
+                "status": str(target.get("status") or "open"),
+                "detail": "Recovery case lifecycle fields updated.",
+            }
+        )
+        target["history"] = history[-28:]
+        self._save(records)
+        return deepcopy(target)
+
+    def close_case(
+        self,
+        case_id: str,
+        *,
+        actor: str,
+        closure_note: str = "",
+        verification_note: str = "",
+        prevention_note: str = "",
+    ) -> dict[str, Any]:
+        """Close a recovery case with audit evidence: verification and prevention notes required."""
+        records = self._load_json()
+        target = None
+        for item in records:
+            if str(item.get("case_id", "")).strip() == case_id.strip():
+                target = item
+                break
+        if target is None:
+            raise KeyError("Recovery case not found.")
+        now = _now_iso()
+        target["status"] = "resolved"
+        target["status_label"] = "Resolved"
+        target["closed_at"] = now
+        target["closed_by"] = actor.strip() or "Chris"
+        if closure_note:
+            target["closure_note"] = closure_note.strip()
+        if verification_note:
+            target["verification_note"] = verification_note.strip()
+        if prevention_note:
+            target["prevention_note"] = prevention_note.strip()
+        target["updated_at"] = now
+        target["last_action_at"] = now
+        target["last_action"] = "closed"
+        history = list(target.get("history") or [])
+        history.append(
+            {
+                "timestamp": now,
+                "action": "closed",
+                "status": "resolved",
+                "actor": actor.strip() or "Chris",
+                "detail": closure_note.strip() or "Recovery case closed.",
+            }
+        )
+        target["history"] = history[-30:]
+        self._save(records)
+        return deepcopy(target)

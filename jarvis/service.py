@@ -1943,6 +1943,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.post("/api/missions/{mission_id}/status")
     async def api_update_mission_status(mission_id: str, payload: dict[str, Any]) -> JSONResponse:
+        lessons = str(payload.get("lessons_learned", "")).strip()
+        if lessons:
+            def _set_lessons():
+                dossier = runtime.mission_support.get_mission(mission_id)
+                if dossier is None:
+                    raise KeyError(f"Unknown mission: {mission_id}")
+                dossier["lessons_learned"] = lessons
+                runtime.mission_support.save_mission(dossier)
+            try:
+                await asyncio.to_thread(_set_lessons)
+            except Exception:
+                pass
         try:
             updated = await asyncio.to_thread(
                 runtime.update_mission_status,

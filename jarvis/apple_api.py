@@ -8799,6 +8799,129 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         })
 
     # ------------------------------------------------------------------
+    # GET /api/apple/command-center
+    # Reorganized mobile-first command surface: Today / Focus / Family /
+    # Decisions / Navigate / Continuity — quiet command system not a web mirror.
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/command-center")
+    async def apple_command_center():
+        """
+        Structured command surface for iPhone.
+        Returns Today, Focus, Family, Decisions, Navigate, Continuity sections.
+        No silent fallback — every section has a source label.
+        """
+        try:
+            status = (await apple_status()).get("data") or {}
+        except Exception:
+            status = {}
+        try:
+            briefing_resp = await apple_briefing()
+            briefing = briefing_resp.get("data") or {} if isinstance(briefing_resp, dict) else {}
+        except Exception:
+            briefing = {}
+
+        # Today — focus theme, open loops, morning/evening state
+        focus_zone = briefing.get("focus") or {}
+        calendar_zone = briefing.get("calendar") or {}
+        tasks_zone = briefing.get("tasks") or {}
+        open_loops = briefing.get("open_loops") or {}
+        today = {
+            "source": "live" if focus_zone or calendar_zone else "unavailable",
+            "focus": focus_zone,
+            "calendar": calendar_zone,
+            "tasks": tasks_zone,
+            "open_loops": open_loops,
+        }
+
+        # Focus — attention state, posture, interruption mode
+        posture = _compute_interruption_posture(
+            watch_status=status if isinstance(status, dict) else {},
+            home_state={},
+            focus_payload={},
+        )
+        focus_section = {
+            "source": "live",
+            "mode": posture.get("mode", "active_hours"),
+            "reason": posture.get("reason", ""),
+            "foreground_active": posture.get("foreground_active", False),
+            "suppress": posture.get("suppress", False),
+            "escalate": posture.get("escalate", False),
+            "needs_count": int(status.get("needs_count") or 0),
+            "alert_count": int(status.get("alert_count") or 0),
+        }
+
+        # Family — family mode, member presence
+        family_mode = runtime.family_mode_snapshot() if hasattr(runtime, "family_mode_snapshot") else {}
+        family_section = {
+            "source": "live" if family_mode else "unavailable",
+            "mode": str(family_mode.get("mode", "")).strip() if isinstance(family_mode, dict) else "",
+            "mode_label": str(family_mode.get("mode_label", "")).strip() if isinstance(family_mode, dict) else "",
+        }
+
+        # Decisions — pending approvals requiring Chris's action
+        try:
+            approvals_raw = runtime.list_pending_approvals()
+            pending_decisions = [
+                {
+                    "request_id": str(item.get("request_id", "")).strip(),
+                    "action_type": str(item.get("action_type", "")).strip(),
+                    "actor": str(item.get("actor", "")).strip(),
+                    "summary": str(item.get("summary") or item.get("detail", "")).strip()[:120],
+                    "created_at": str(item.get("created_at", "")).strip(),
+                }
+                for item in (approvals_raw if isinstance(approvals_raw, list) else [])
+            ][:10]
+        except Exception:
+            pending_decisions = []
+        decisions_section = {
+            "source": "live",
+            "pending": pending_decisions,
+            "pending_count": len(pending_decisions),
+        }
+
+        # Navigate — current location/route state (condensed)
+        try:
+            nav_raw = runtime.navigation_state("chris") if hasattr(runtime, "navigation_state") else {}
+            nav_section = {
+                "source": "live" if nav_raw else "unavailable",
+                "route": str(nav_raw.get("route", "")).strip() if isinstance(nav_raw, dict) else "",
+                "destination": str(nav_raw.get("destination", "")).strip() if isinstance(nav_raw, dict) else "",
+                "eta_label": str(nav_raw.get("eta_label", "")).strip() if isinstance(nav_raw, dict) else "",
+            }
+        except Exception:
+            nav_section = {"source": "unavailable", "route": "", "destination": "", "eta_label": ""}
+
+        # Continuity — active missions, last activity, recent events
+        try:
+            missions_list = runtime.list_missions(actor="chris", include_completed=False, limit=5)
+            active_missions = [
+                {
+                    "mission_id": str(m.get("mission_id", "")).strip(),
+                    "title": str(m.get("title", "")).strip(),
+                    "status": str(m.get("status", "")).strip(),
+                    "domain": str(m.get("primary_domain", "")).strip(),
+                }
+                for m in (missions_list if isinstance(missions_list, list) else [])
+            ]
+        except Exception:
+            active_missions = []
+        continuity_section = {
+            "source": "live" if active_missions else "unavailable",
+            "active_missions": active_missions,
+            "mission_count": len(active_missions),
+        }
+
+        return _ok({
+            "today": today,
+            "focus": focus_section,
+            "family": family_section,
+            "decisions": decisions_section,
+            "navigate": nav_section,
+            "continuity": continuity_section,
+            "generated_at": __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat(),
+        })
+
+    # ------------------------------------------------------------------
     # GET /api/apple/weather
     # ------------------------------------------------------------------
     @app.get("/api/apple/weather")
@@ -9615,10 +9738,13 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             if ha is not None:
                 state = ha.get_house_state()
             else:
-                state = _mock_home_state()
+                state = _unavailable_home_state(
+                    "HomeAssistant connector not initialized. "
+                    "Set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN."
+                )
         except Exception as exc:
             logger.warning("apple_home_state: %s", exc)
-            state = _mock_home_state()
+            state = _unavailable_home_state(f"HomeAssistant error: {exc}")
         if isinstance(state, dict):
             state = dict(state)
             home_context = _build_home_context(needs_count=needs_count)
@@ -14174,14 +14300,27 @@ def _approval_context_lines(payload: dict[str, Any]) -> list[str]:
     return lines
 
 
-def _mock_home_state() -> dict:
-    """Stub home state returned when HomeAssistant is not configured."""
+def _unavailable_home_state(reason: str = "HomeAssistant not configured") -> dict:
+    """Proper unavailable state returned when HomeAssistant connector is not initialized.
+
+    Returns source='unavailable' with actionable blocker — never returns fake data.
+    Configure HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN env vars to enable real state.
+    """
+    from datetime import datetime, timezone
     return {
+        "available": False,
+        "source": "unavailable",
+        "error": reason,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
         "present_members": [],
-        "doors": {"front": "locked", "garage": "closed"},
-        "temperature": {"inside": 70.0, "target": 72.0, "mode": "cool"},
+        "doors": {},
+        "temperature": {},
         "lights_on": [],
         "alerts": [],
-        "home_ops": _build_home_ops_summary(),
-        "source": "mock",
+        "blocker": "Set HOME_ASSISTANT_URL and HOME_ASSISTANT_TOKEN to enable live home state.",
     }
+
+
+def _mock_home_state() -> dict:
+    """Deprecated — kept for internal callers only. Returns unavailable, not mock."""
+    return _unavailable_home_state()

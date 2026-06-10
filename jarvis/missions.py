@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .agentic import AgentDefinition, AgentRegistry
-from .audit import ApprovalStore
+from .audit import ApprovalStore, AuditLog
 from .models import (
     AgentDecisionRecord,
     AgentDelegationRecord,
@@ -562,7 +562,24 @@ class MissionSupport:
             for agent_id in list(dossier.get("selected_agents", [])):
                 if agent_id in task_agents:
                     self.record_task_agent_outcome(agent_id, succeeded=False)
-        return self.save_mission(dossier)
+        result = self.save_mission(dossier)
+        if resolved_status.lower() in {"completed", "blocked", "abandoned"}:
+            try:
+                audit_root = self.store.root.parent / "audit"
+                AuditLog(audit_root).log_event(
+                    "mission_lifecycle",
+                    {
+                        "mission_id": mission_id,
+                        "title": str(dossier.get("title", "")).strip(),
+                        "status": resolved_status,
+                        "lessons_learned": str(dossier.get("lessons_learned", "")).strip(),
+                        "note": note.strip(),
+                        "selected_agents": list(dossier.get("selected_agents", [])),
+                    },
+                )
+            except Exception:
+                pass
+        return result
 
     def update_mission_details(
         self,

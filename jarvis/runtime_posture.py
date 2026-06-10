@@ -193,6 +193,47 @@ def _health_sync_summary(*, warn_after_hours: int, fail_after_hours: int) -> dic
     }
 
 
+def _build_deployment_context(repo_root: Path) -> dict[str, Any]:
+    """Detect deployment environment: Docker (Hetzner production) vs local dev vs CI."""
+    in_docker = Path("/.dockerenv").exists() or os.environ.get("DOCKER_CONTAINER") == "1"
+    in_ci = bool(os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"))
+    hetzner_host = os.environ.get("HETZNER_HOST", "")
+    data_path = os.environ.get("DATA_PATH", "/app/data" if in_docker else str(repo_root / "data"))
+
+    if in_ci:
+        env = "ci"
+        label = "GitHub Actions CI"
+        note = "Running in CI — not production."
+    elif in_docker:
+        env = "docker"
+        label = "Docker (Hetzner production)"
+        note = (
+            "Running in Docker. Production stack: jarvis + chronicle + ghostwritr + "
+            "nginx + cloudflared + postgres + redis. Data volume: jarvis_data at /app/data. "
+            "Deployment: push to main → GitHub Actions → SSH → docker compose up -d --build jarvis."
+        )
+    else:
+        env = "local"
+        label = "Local dev (macOS)"
+        note = (
+            "Running locally. This is a dev/test environment, NOT production. "
+            "Production runs on Hetzner VPS via Docker Compose."
+        )
+
+    services_expected = ["jarvis", "chronicle", "ghostwritr", "nginx", "cloudflared", "postgres", "redis"] if in_docker else []
+
+    return {
+        "env": env,
+        "label": label,
+        "in_docker": in_docker,
+        "in_ci": in_ci,
+        "hetzner_host": hetzner_host,
+        "data_path": data_path,
+        "services_expected": services_expected,
+        "note": note,
+    }
+
+
 def build_runtime_posture_snapshot(runtime: Any) -> dict[str, Any]:
     repo_root = Path.cwd()
     config = runtime.config
@@ -411,7 +452,9 @@ def build_runtime_posture_snapshot(runtime: Any) -> dict[str, Any]:
             "recent_events": guardian.get("recent_events", []),
             "consecutive_runtime_failures": int(guardian_state.get("consecutive_runtime_failures", 0) or 0),
         },
+        "deployment": _build_deployment_context(repo_root),
         "launchd": {
+            "note": "local-only — not applicable in Docker production on Hetzner",
             "install_script": str(repo_root / "ops" / "install_launchd_services.sh"),
             "launch_agents_dir": str(launch_agents_dir),
             "services": service_rows,
