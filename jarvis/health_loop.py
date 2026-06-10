@@ -285,6 +285,27 @@ class HealthLoopStore:
             m = c.get("mood", "unknown")
             mood_counts[m] = mood_counts.get(m, 0) + 1
 
+        # J5: Enrich doctor packet with health_state (conditions/medications/targets)
+        health_context: dict = {}
+        try:
+            from .longevity_council import load_health_state
+            hs = load_health_state()
+            if hs:
+                med_hist = hs.get("medical_history") or {}
+                health_context = {
+                    "known_conditions": [
+                        c.get("name", "") for c in med_hist.get("known_conditions", []) if c.get("name")
+                    ],
+                    "current_medications": [
+                        m.get("name", "") for m in med_hist.get("medications", []) if m.get("name")
+                    ],
+                    "allergies": list(med_hist.get("allergies", [])),
+                    "health_targets": hs.get("health_targets") or {},
+                    "source": "health_state",
+                }
+        except Exception:
+            health_context = {"source": "unavailable"}
+
         return {
             "source": "live",
             "actor": actor,
@@ -300,4 +321,5 @@ class HealthLoopStore:
                 for r in reviews[-7:]
                 for flag in r.get("drift_flags", [])
             ],
+            "health_context": health_context,
         }

@@ -281,6 +281,45 @@ class TutoringSupport:
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
         self.store.add_session(session)
+
+        # J4: Auto-create parent review approval when session needs attention.
+        # Conditions: boundary redirect OR high/critical frustration signal.
+        needs_parent_review = (
+            boundary_status == "redirected"
+            or frustration_signal in ("high", "critical")
+        )
+        if needs_parent_review:
+            try:
+                from .audit import ApprovalStore
+                from .models import ApprovalRequest
+                from pathlib import Path as _Path
+
+                parent_note = (
+                    "Boundary redirect: child asked about a restricted topic."
+                    if boundary_status == "redirected"
+                    else f"Frustration signal '{frustration_signal}' detected during tutoring."
+                )
+                review_request = ApprovalRequest(
+                    request_id=str(uuid.uuid4()),
+                    actor=actor.display_name,
+                    room="family",
+                    request=(
+                        f"Parent review: {actor.display_name} tutoring session – {subject_label}. "
+                        f"{parent_note} "
+                        f"Session summary: {parent_summary}"
+                    ),
+                    action_class="child_tutoring_action",
+                    second_factor_required=False,
+                    status="pending",
+                    rationale=parent_note,
+                    domain="tutoring",
+                    lane="family",
+                )
+                store_root = _Path(self.store.sessions_path).parent.parent / "approvals"
+                ApprovalStore(root=store_root).add(review_request)
+            except Exception:
+                pass  # approval creation failures must not break tutoring
+
         return asdict(session)
 
     def parent_summaries(self, viewer: UserProfile, child_name: str = "", limit: int = 10) -> dict:

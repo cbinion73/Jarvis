@@ -11455,6 +11455,68 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         )
         return _json(ctx.as_dict())
 
+    @app.get("/api/adaptation/guidance-card")
+    async def api_adaptation_guidance_card(actor: str = "chris") -> JSONResponse:
+        """J3: Return a live guidance card driven by AdaptationContextBuilder.
+
+        Aggregates live signals (mode, health_state, calendar) into an adaptation
+        context and returns it as a structured guidance card.  All signal reads
+        fail-open: if a source is unavailable its default values are used.
+        """
+        def _build_card() -> dict:
+            from .adaptation import AdaptationContextBuilder
+            from datetime import datetime
+
+            # Derive season from current month
+            month = datetime.now().month
+            if month in (3, 4, 5):    season = "spring"
+            elif month in (6, 7, 8):  season = "summer"
+            elif month in (9, 10, 11): season = "fall"
+            else:                     season = "winter"
+
+            # Live signal: mode
+            household_mode = "normal"
+            try:
+                from .mode_resolver import get_active_mode_summary
+                household_mode = get_active_mode_summary().get("mode_id", "normal")
+            except Exception:
+                pass
+
+            # Live signal: calendar pressure
+            cal_count = 0
+            try:
+                from .unified_inbox import get_unified_inbox
+                inbox = get_unified_inbox()
+                if inbox:
+                    agenda = inbox.get_todays_agenda()
+                    cal_count = len(agenda.get("events", [])) if isinstance(agenda, dict) else 0
+            except Exception:
+                pass
+
+            # Live signal: health
+            energy_level = "moderate"
+            try:
+                from .longevity_council import load_health_state
+                hs = load_health_state()
+                energy_level = str(hs.get("energy_level") or "moderate")
+            except Exception:
+                pass
+
+            ctx = AdaptationContextBuilder().build(
+                actor=actor,
+                season=season,
+                household_mode=household_mode,
+                calendar_event_count=cal_count,
+                energy_level=energy_level,
+            )
+            card = ctx.as_dict()
+            card["card_type"] = "live_guidance"
+            card["actor"] = actor
+            return card
+
+        result = await asyncio.to_thread(_build_card)
+        return _json(result)
+
     # ── E7: Automation pipeline ────────────────────────────────────────────────
 
     @app.post("/api/automation/pipelines")
