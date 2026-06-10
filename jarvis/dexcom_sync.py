@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from contextlib import suppress
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -47,10 +48,10 @@ def _base_url() -> str:
     return "https://sandbox-api.dexcom.com" if _sandbox() else "https://api.dexcom.com"
 
 def _auth_url() -> str:
-    return f"{_base_url()}/v2/oauth2/login"
+    return f"{_base_url()}/v3/oauth2/login"
 
 def _token_url() -> str:
-    return f"{_base_url()}/v2/oauth2/token"
+    return f"{_base_url()}/v3/oauth2/token"
 
 def _egv_url() -> str:
     return f"{_base_url()}/v3/users/self/egvs"
@@ -73,10 +74,27 @@ _TREND_ARROWS = {
 # Token storage
 # ---------------------------------------------------------------------------
 
-_TOKENS_PATH = Path.home() / ".jarvis" / "dexcom_tokens.json"
+def _default_tokens_path() -> Path:
+    explicit = str(os.getenv("JARVIS_DEXCOM_TOKEN_PATH", "") or "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+    explicit_data_root = str(os.getenv("DATA_PATH", "") or "").strip()
+    if explicit_data_root:
+        return Path(explicit_data_root).expanduser() / "health" / "dexcom_tokens.json"
+    app_data = Path("/app/data")
+    if app_data.exists():
+        return app_data / "health" / "dexcom_tokens.json"
+    return Path.home() / ".jarvis" / "health" / "dexcom_tokens.json"
+
+
+_TOKENS_PATH = _default_tokens_path()
 _TOKENS_LOG_PATH = _TOKENS_PATH.with_name("dexcom_tokens_log.jsonl")
 _TOKENS_STATE_LOG_PATH = _TOKENS_PATH.with_name("dexcom_tokens_state_log.jsonl")
-_TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
+with suppress(Exception):
+    _TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
+_LEGACY_TOKENS_PATH = Path.home() / ".jarvis" / "dexcom_tokens.json"
+_LEGACY_TOKENS_LOG_PATH = _LEGACY_TOKENS_PATH.with_name("dexcom_tokens_log.jsonl")
+_LEGACY_TOKENS_STATE_LOG_PATH = _LEGACY_TOKENS_PATH.with_name("dexcom_tokens_state_log.jsonl")
 
 
 def _load_tokens() -> dict:
@@ -85,7 +103,37 @@ def _load_tokens() -> dict:
             return json.loads(_TOKENS_PATH.read_text())
         except Exception:
             return _load_tokens_from_state_log() or _load_tokens_from_log()
-    return _load_tokens_from_state_log() or _load_tokens_from_log()
+    current = _load_tokens_from_state_log() or _load_tokens_from_log()
+    if current:
+        return current
+    return _load_legacy_tokens()
+
+
+def _load_legacy_tokens() -> dict:
+    if _LEGACY_TOKENS_PATH.exists():
+        try:
+            payload = json.loads(_LEGACY_TOKENS_PATH.read_text())
+            if isinstance(payload, dict) and payload.get("access_token"):
+                return payload
+        except Exception:
+            pass
+    for path in (_LEGACY_TOKENS_STATE_LOG_PATH, _LEGACY_TOKENS_LOG_PATH):
+        if not path.exists():
+            continue
+        latest: dict | None = None
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                tokens = payload.get("tokens")
+                if isinstance(tokens, dict):
+                    latest = tokens
+        except Exception:
+            continue
+        if isinstance(latest, dict) and latest.get("access_token"):
+            return latest
+    return {}
 
 
 def _load_tokens_from_log() -> dict:
@@ -127,17 +175,18 @@ def _load_tokens_from_state_log() -> dict:
 
 
 def _save_tokens(tokens: dict) -> None:
+    _TOKENS_PATH.parent.mkdir(parents=True, exist_ok=True)
     append_jsonl(
         _TOKENS_LOG_PATH,
         {
-            "saved_at": datetime.utcnow().isoformat(),
+            "saved_at": datetime.now(timezone.utc).isoformat(),
             "tokens": tokens,
         },
     )
     append_jsonl(
         _TOKENS_STATE_LOG_PATH,
         {
-            "saved_at": datetime.utcnow().isoformat(),
+            "saved_at": datetime.now(timezone.utc).isoformat(),
             "tokens": tokens,
         },
     )
