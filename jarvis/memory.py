@@ -223,6 +223,129 @@ class MemoryStore:
             self._save_json(self.facts_path, records)
         return updated
 
+    def correct_profile_fact(self, fact_id: str, correction_note: str) -> dict | None:
+        """Mark a fact as corrected; excluded from inference until re-approved."""
+        records = self.list_profile_facts()
+        updated = None
+        for item in records:
+            if item.get("fact_id") == fact_id:
+                item["status"] = "corrected"
+                item["correction_note"] = str(correction_note or "")
+                item["updated_at"] = _now_iso()
+                updated = item
+                break
+        if updated is not None:
+            self._save_json(self.facts_path, records)
+        return updated
+
+    def dispute_profile_fact(self, fact_id: str, dispute_note: str) -> dict | None:
+        """Mark a fact as disputed; not yet retired but flagged for review."""
+        records = self.list_profile_facts()
+        updated = None
+        for item in records:
+            if item.get("fact_id") == fact_id:
+                item["status"] = "disputed"
+                item["correction_note"] = str(dispute_note or "")
+                item["updated_at"] = _now_iso()
+                updated = item
+                break
+        if updated is not None:
+            self._save_json(self.facts_path, records)
+        return updated
+
+    def retire_profile_fact(self, fact_id: str, reason: str = "") -> dict | None:
+        """Permanently retire a fact; excluded from all reasoning."""
+        records = self.list_profile_facts()
+        updated = None
+        for item in records:
+            if item.get("fact_id") == fact_id:
+                item["status"] = "retired"
+                item["correction_note"] = str(reason or "")
+                item["updated_at"] = _now_iso()
+                updated = item
+                break
+        if updated is not None:
+            self._save_json(self.facts_path, records)
+        return updated
+
+    def supersede_profile_fact(self, fact_id: str, new_fact_id: str, reason: str = "") -> dict | None:
+        """Mark a fact as superseded by a newer fact."""
+        records = self.list_profile_facts()
+        updated = None
+        for item in records:
+            if item.get("fact_id") == fact_id:
+                item["status"] = "superseded"
+                item["superseded_by"] = str(new_fact_id or "")
+                item["correction_note"] = str(reason or "")
+                item["updated_at"] = _now_iso()
+                updated = item
+                break
+        if updated is not None:
+            self._save_json(self.facts_path, records)
+        return updated
+
+    def retrieve_by_situation(
+        self,
+        actor: str,
+        situation_context: dict,
+    ) -> list[dict]:
+        """D8: Retrieve memory facts ranked by situational relevance.
+
+        situation_context keys (all optional): person, domain, task, season, relationship
+        Returns facts sorted by match score descending, each with a retrieval_reason.
+        """
+        facts = self.list_profile_facts()
+        actor_lower = actor.strip().lower()
+        person = str(situation_context.get("person") or "").strip().lower()
+        domain = str(situation_context.get("domain") or "").strip().lower()
+        task = str(situation_context.get("task") or "").strip().lower()
+        season = str(situation_context.get("season") or "").strip().lower()
+        relationship = str(situation_context.get("relationship") or "").strip().lower()
+
+        from .models import MEMORY_EXCLUDED_FROM_REASONING
+        scored: list[tuple[int, str, dict]] = []
+        for fact in facts:
+            if fact.get("status") in MEMORY_EXCLUDED_FROM_REASONING:
+                continue
+            subject = str(fact.get("subject_user_id") or "").strip().lower()
+            lane = str(fact.get("lane") or "").strip().lower()
+            tags = [str(t).strip().lower() for t in (fact.get("tags") or [])]
+            title_lower = str(fact.get("title") or "").strip().lower()
+            summary_lower = str(fact.get("summary") or "").strip().lower()
+
+            score = 0
+            reasons: list[str] = []
+
+            if person and (person == subject or person in title_lower or person in summary_lower):
+                score += 4
+                reasons.append(f"person:{person}")
+            if actor_lower and actor_lower == subject:
+                score += 2
+                reasons.append(f"actor:{actor_lower}")
+            if domain and (domain in lane or domain in tags or domain in title_lower):
+                score += 3
+                reasons.append(f"domain:{domain}")
+            if task and (task in title_lower or task in summary_lower or task in tags):
+                score += 3
+                reasons.append(f"task:{task}")
+            if relationship and (relationship in tags or relationship in lane):
+                score += 2
+                reasons.append(f"relationship:{relationship}")
+            if season and (season in tags or season in summary_lower):
+                score += 1
+                reasons.append(f"season:{season}")
+
+            if score == 0:
+                continue
+            retrieval_reason = ", ".join(reasons) if reasons else "general"
+            enriched = dict(fact)
+            enriched["retrieval_reason"] = retrieval_reason
+            enriched["retrieval_score"] = score
+            scored.append((score, fact.get("fact_id", ""), enriched))
+
+        scored.sort(key=lambda x: (-x[0], x[1]))
+        return [item for _, _, item in scored]
+
     def _coerce_entry_record(self, item: dict) -> dict:
         item = dict(item)
         if not str(item.get("subject_user_id", "")).strip() and str(item.get("memory_type", "")).strip().lower() == "personal":
@@ -232,6 +355,7 @@ class MemoryStore:
         item.setdefault("boundary_label", "")
         item.setdefault("source_type", "user-stated")
         item.setdefault("confidence", "confirmed")
+        item.setdefault("provenance", "observed_fact")
         return item
 
     def _coerce_proposal_record(self, item: dict) -> dict:
@@ -253,6 +377,9 @@ class MemoryStore:
         item.setdefault("status", "active")
         item.setdefault("source_type", "user-stated")
         item.setdefault("boundary_label", "")
+        item.setdefault("provenance", "observed_fact")
+        item.setdefault("correction_note", "")
+        item.setdefault("superseded_by", "")
         return item
 
     def _legacy_access_policy(self, item: dict) -> str:

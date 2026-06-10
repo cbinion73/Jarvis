@@ -965,6 +965,41 @@ class UnlockAssessment:
     timestamp: str
 
 
+# Memory provenance taxonomy values (D9)
+MEMORY_PROVENANCE_OBSERVED_FACT = "observed_fact"
+MEMORY_PROVENANCE_INSTRUCTION = "instruction"
+MEMORY_PROVENANCE_INFERENCE = "inference"
+MEMORY_PROVENANCE_TENTATIVE_PATTERN = "tentative_pattern"
+MEMORY_PROVENANCE_APPROVED_BELIEF = "approved_belief"
+MEMORY_PROVENANCE_RETIRED_BELIEF = "retired_belief"
+MEMORY_PROVENANCE_VALUES = frozenset({
+    MEMORY_PROVENANCE_OBSERVED_FACT,
+    MEMORY_PROVENANCE_INSTRUCTION,
+    MEMORY_PROVENANCE_INFERENCE,
+    MEMORY_PROVENANCE_TENTATIVE_PATTERN,
+    MEMORY_PROVENANCE_APPROVED_BELIEF,
+    MEMORY_PROVENANCE_RETIRED_BELIEF,
+})
+
+# Memory correction loop status values (D10)
+MEMORY_CORRECTION_STATUS_CORRECTED = "corrected"
+MEMORY_CORRECTION_STATUS_DISPUTED = "disputed"
+MEMORY_CORRECTION_STATUS_RETIRED = "retired"
+MEMORY_CORRECTION_STATUS_SUPERSEDED = "superseded"
+MEMORY_CORRECTION_STATUS_DO_NOT_USE = "do_not_use"
+MEMORY_CORRECTION_STATUSES = frozenset({
+    MEMORY_CORRECTION_STATUS_CORRECTED,
+    MEMORY_CORRECTION_STATUS_DISPUTED,
+    MEMORY_CORRECTION_STATUS_RETIRED,
+    MEMORY_CORRECTION_STATUS_SUPERSEDED,
+    MEMORY_CORRECTION_STATUS_DO_NOT_USE,
+})
+MEMORY_EXCLUDED_FROM_REASONING = frozenset({
+    MEMORY_CORRECTION_STATUS_RETIRED,
+    MEMORY_CORRECTION_STATUS_DO_NOT_USE,
+})
+
+
 @dataclass(slots=True)
 class MemoryEntry:
     entry_id: str
@@ -986,6 +1021,7 @@ class MemoryEntry:
     boundary_label: str = ""
     source_type: str = "user-stated"
     confidence: str = "confirmed"
+    provenance: str = "observed_fact"
 
 
 @dataclass(slots=True)
@@ -1027,3 +1063,6 @@ class MemoryProfileFact:
     boundary_label: str
     created_at: str
     updated_at: str
+    provenance: str = "observed_fact"
+    correction_note: str = ""
+    superseded_by: str = ""

@@ -13,6 +13,7 @@ import sys
 import tempfile
 import threading
 import time
+import uuid
 from pathlib import Path
 
 import numpy as np
@@ -127,6 +128,18 @@ class WakeWordListener:
     @property
     def is_running(self) -> bool:
         return self._running and bool(self._thread and self._thread.is_alive())
+
+
+# D5: VoiceSession state machine lives in voice_session.py (no numpy/sounddevice dependency).
+# Re-export here for backwards compatibility.
+from .voice_session import (  # noqa: E402
+    VoiceSession,
+    VOICE_SESSION_IDLE,
+    VOICE_SESSION_LISTENING,
+    VOICE_SESSION_PROCESSING,
+    VOICE_SESSION_SPEAKING,
+    VOICE_SESSION_ERROR,
+)
 
 
 class JarvisVoiceShell:

@@ -19,6 +19,34 @@ logger = logging.getLogger(__name__)
 
 JARVIS_TAILSCALE_URL = "https://chriss-mac-mini.tail076511.ts.net"
 
+# D6: App Intents config contract
+# JARVIS uses Siri Shortcuts (HTTP-based) for voice integration.
+# Native App Intents require an iOS app target with the SiriKit or App Intents
+# entitlement — neither is present in this server-side Python implementation.
+# This contract documents what would be required and returns an honest
+# unavailable state so callers can degrade gracefully.
+
+APP_INTENTS_REQUIREMENTS = {
+    "requires_ios_entitlement": "com.apple.developer.siri",
+    "requires_app_target": True,
+    "requires_swift_app_intents_framework": True,
+    "available": False,
+    "reason": "JARVIS is a server-side assistant. App Intents require a native iOS app target with the Siri entitlement, which is not present in this Python server. Use Siri Shortcuts (HTTP-based) as the integration path instead.",
+    "alternative": "Siri Shortcuts via /api/siri/* endpoints",
+}
+
+
+def app_intents_status() -> dict:
+    """D6: Return the honest availability state for native App Intents integration."""
+    return {
+        "available": False,
+        "source": "unavailable",
+        "integration_path": "siri_shortcuts",
+        "siri_shortcuts_base_url": JARVIS_TAILSCALE_URL,
+        "requirements": APP_INTENTS_REQUIREMENTS,
+        "launch_path": "/siri",
+    }
+
 
 # ---------------------------------------------------------------------------
 # Named intents

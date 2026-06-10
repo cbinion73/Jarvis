@@ -83,6 +83,80 @@ _CARPLAY_OPS_FOCUS_CANDIDATES = [
     {"module": "Mission Board", "route": "/mission-board", "label": "Mission Pressure"},
     {"module": "Agent Ops", "route": "/agent-ops-center", "label": "Agent Operations"},
 ]
+
+# D7: CarPlay safe-action allowlist — actions that are safe while driving.
+# These are read-only, non-destructive, or voice-confirm-only actions.
+# CarPlay must remain driving-safe; do NOT add broad non-driving workflows.
+CARPLAY_SAFE_ACTIONS = frozenset({
+    # Navigation and routing
+    "navigate_to",
+    "get_directions",
+    "nearby_places",
+    # Status reads (audio-safe)
+    "read_briefing_summary",
+    "read_next_event",
+    "read_task_count",
+    "read_weather",
+    "read_presence_status",
+    # Simple approvals (pre-screened, single-tap)
+    "approve_queued_item",
+    # Voice acknowledgement
+    "acknowledge_notification",
+})
+
+# D7: Actions explicitly denied in CarPlay context — unsafe while driving.
+CARPLAY_DENIED_ACTIONS = frozenset({
+    # Complex input required
+    "compose_message",
+    "write_memory_entry",
+    "edit_profile_fact",
+    "create_task",
+    "update_task",
+    # Financial / account / identity
+    "send_payment",
+    "create_account",
+    "update_credentials",
+    # Multi-step approvals (require reading detail)
+    "approve_financial_action",
+    "approve_identity_action",
+    "approve_security_action",
+    # System changes
+    "update_settings",
+    "promote_trust_zone",
+    "fire_automation",
+    # Long-form content
+    "run_chronicle_capture",
+    "run_proactive_prompt_creation",
+})
+
+
+def carplay_action_check(action_type: str) -> dict:
+    """D7: Check whether an action is allowed in the CarPlay driving context.
+
+    Returns: {allowed, action_type, reason, driving_safe}
+    """
+    action_type = str(action_type or "").strip().lower()
+    if action_type in CARPLAY_DENIED_ACTIONS:
+        return {
+            "allowed": False,
+            "action_type": action_type,
+            "reason": "action explicitly denied in CarPlay driving context",
+            "driving_safe": False,
+        }
+    if action_type in CARPLAY_SAFE_ACTIONS:
+        return {
+            "allowed": True,
+            "action_type": action_type,
+            "reason": "action is on the CarPlay safe-action allowlist",
+            "driving_safe": True,
+        }
+    # Unknown actions default to denied in driving context (fail-closed)
+    return {
+        "allowed": False,
+        "action_type": action_type,
+        "reason": "action not on CarPlay allowlist — fail-closed for driving safety",
+        "driving_safe": False,
+    }
 _CATALYST_OPS_FOCUS_CANDIDATES = [
     {"module": "Progress", "route": "/progress-center", "label": "Progress Studio"},
     {"module": "Recovery", "route": "/recovery-center", "label": "Recovery Studio"},
@@ -2824,6 +2898,35 @@ def _choose_delivery_mode(
     return resolved_mode, posture_reason or "Normal household hours allow standard delivery."
 
 
+# D2: SLA seconds by severity tier (time within which notification should be acknowledged)
+_INTERRUPTION_SLA_SECONDS: dict[str, int] = {
+    "critical": 60,
+    "urgent": 300,
+    "important": 900,
+    "high": 900,
+    "normal": 3600,
+    "low": 86400,
+}
+
+# D2: Cooldown seconds — minimum gap between interruptions in the same category
+_INTERRUPTION_COOLDOWN_SECONDS: dict[str, int] = {
+    "critical": 0,
+    "urgent": 30,
+    "important": 120,
+    "high": 120,
+    "normal": 300,
+    "low": 600,
+}
+
+
+def _interruption_sla_seconds(severity: str) -> int:
+    return _INTERRUPTION_SLA_SECONDS.get(str(severity).lower(), 3600)
+
+
+def _interruption_cooldown_seconds(severity: str) -> int:
+    return _INTERRUPTION_COOLDOWN_SECONDS.get(str(severity).lower(), 300)
+
+
 def _record_interruption_decision(
     *,
     item_id: str,
@@ -2833,6 +2936,10 @@ def _record_interruption_decision(
     decision: str,
     decision_reason: str,
 ) -> None:
+    from datetime import datetime, timezone, timedelta
+    now_dt = datetime.now(timezone.utc)
+    sla_sec = _interruption_sla_seconds(severity)
+    sla_deadline = (now_dt + timedelta(seconds=sla_sec)).isoformat() if sla_sec > 0 else ""
     record = {
         "ts": _ts(),
         "item_id": str(item_id or ""),
@@ -2841,6 +2948,11 @@ def _record_interruption_decision(
         "posture_mode": str(posture_mode or ""),
         "decision": str(decision or ""),
         "decision_reason": str(decision_reason or ""),
+        "sla_seconds": sla_sec,
+        "sla_deadline": sla_deadline,
+        "acknowledged": False,
+        "acknowledged_at": "",
+        "cooldown_seconds": _interruption_cooldown_seconds(severity),
     }
     try:
         persistence_append_jsonl(_INTERRUPTION_DECISIONS_PATH, record)
@@ -2875,6 +2987,58 @@ def _write_presence_overrides(overrides: dict[str, Any]) -> None:
         atomic_write_json(_PRESENCE_OVERRIDES_PATH, overrides)
     except Exception:
         pass
+
+
+def _effective_presence(overrides: dict[str, Any]) -> dict[str, Any]:
+    """D1: Aggregate device surface states into a single effective presence record.
+
+    Priority order for state: driving > focus > quiet > available > away.
+    Stale entries (past expires_at) are excluded. Returns truth label:
+    live (at least one surface active), stale (all expired), unavailable (no data).
+    """
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    device_states = dict(overrides.get("device_states") or {})
+    active: dict[str, dict] = {}
+    for surface, info in device_states.items():
+        if not isinstance(info, dict):
+            continue
+        expires_at_str = str(info.get("expires_at") or "")
+        if expires_at_str:
+            try:
+                exp = datetime.fromisoformat(expires_at_str)
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=timezone.utc)
+                if exp <= now:
+                    continue
+            except Exception:
+                pass
+        active[surface] = info
+
+    if not active:
+        return {
+            "source": "unavailable",
+            "state": "unknown",
+            "surfaces": {},
+            "foreground_active": _foreground_active(),
+        }
+
+    priority = ["driving", "focus", "quiet", "available", "away"]
+    best_state = "available"
+    for pstate in priority:
+        for info in active.values():
+            if info.get("state") == pstate:
+                best_state = pstate
+                break
+        if best_state == pstate:
+            break
+
+    return {
+        "source": "live",
+        "state": best_state,
+        "surfaces": active,
+        "foreground_active": _foreground_active(),
+    }
 
 
 def _foreground_active() -> bool:
@@ -7888,6 +8052,25 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             }
         )
 
+    # D7: CarPlay action safety check
+    @app.post("/api/apple/carplay/action-check")
+    async def apple_carplay_action_check(payload: dict = {}):
+        """Check if an action is safe to execute in the CarPlay driving context."""
+        action_type = str(payload.get("action_type") or "").strip()
+        if not action_type:
+            raise HTTPException(status_code=400, detail="action_type is required")
+        result = carplay_action_check(action_type)
+        return _ok(result)
+
+    @app.get("/api/apple/carplay/safe-actions")
+    async def apple_carplay_safe_actions():
+        """Return the CarPlay allowlist and denied list for driving-safe action gating."""
+        return _ok({
+            "safe_actions": sorted(CARPLAY_SAFE_ACTIONS),
+            "denied_actions": sorted(CARPLAY_DENIED_ACTIONS),
+            "policy": "fail-closed — unknown actions are denied in driving context",
+        })
+
     @app.get("/api/apple/carplay/ops")
     async def apple_carplay_ops():
         overview = await asyncio.to_thread(_build_carplay_ops_overview, runtime)
@@ -8796,6 +8979,104 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
         return _ok({
             "foreground_active": True,
             "foreground_expires_at": expires_at,
+        })
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/presence/report  (D1)
+    # Device-surface reporting: phone/watch/CarPlay/HomePod with state
+    # driving/focus/quiet/available.  TTL-based expiry; honest unavailable
+    # state when no recent report exists.
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/presence/report")
+    async def apple_presence_report(payload: dict = {}):
+        from datetime import datetime, timezone, timedelta
+
+        surface = str(payload.get("surface") or "phone").strip().lower()
+        state = str(payload.get("state") or "available").strip().lower()
+        ttl_minutes = int(payload.get("ttl_minutes") or 10)
+        ttl_minutes = max(1, min(ttl_minutes, 60))
+
+        allowed_surfaces = {"phone", "watch", "carplay", "home"}
+        allowed_states = {"driving", "focus", "quiet", "available", "away"}
+        if surface not in allowed_surfaces:
+            raise HTTPException(status_code=400, detail=f"surface must be one of {sorted(allowed_surfaces)}")
+        if state not in allowed_states:
+            raise HTTPException(status_code=400, detail=f"state must be one of {sorted(allowed_states)}")
+
+        now = datetime.now(timezone.utc)
+        expires_at = (now + timedelta(minutes=ttl_minutes)).isoformat()
+
+        overrides = _read_presence_overrides()
+        overrides.setdefault("device_states", {})
+        overrides["device_states"][surface] = {
+            "state": state,
+            "reported_at": now.isoformat(),
+            "expires_at": expires_at,
+        }
+        _write_presence_overrides(overrides)
+
+        return _ok({
+            "surface": surface,
+            "state": state,
+            "expires_at": expires_at,
+            "effective_presence": _effective_presence(overrides),
+        })
+
+    @app.get("/api/apple/presence/effective")
+    async def apple_presence_effective():
+        """Return the current aggregated presence state across all device surfaces."""
+        overrides = _read_presence_overrides()
+        return _ok(_effective_presence(overrides))
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/interruption/{item_id}/acknowledge  (D2)
+    # Client confirms the user saw/acted on a notification.
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/interruption/{item_id}/acknowledge")
+    async def apple_interruption_acknowledge(item_id: str):
+        """Record that the user acknowledged a delivered notification."""
+        ack_ts = _ts()
+        record = {
+            "ts": ack_ts,
+            "item_id": str(item_id or ""),
+            "event": "acknowledged",
+        }
+        try:
+            persistence_append_jsonl(_INTERRUPTION_DECISIONS_PATH, record)
+        except Exception as exc:
+            logger.debug("interruption_acknowledge record failed: %s", exc)
+        return _ok({"acknowledged": True, "item_id": item_id, "acknowledged_at": ack_ts})
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/interruption/{item_id}/feedback  (D4)
+    # Noise learning: user tells JARVIS whether a delivered notification
+    # was useful, noisy, wrong-time, on the wrong surface, or missed urgency.
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/interruption/{item_id}/feedback")
+    async def apple_interruption_feedback(item_id: str, payload: dict = {}):
+        allowed = {"useful", "noisy", "wrong_time", "wrong_surface", "missed_urgency"}
+        feedback_type = str(payload.get("feedback_type") or "").strip().lower()
+        if feedback_type not in allowed:
+            raise HTTPException(
+                status_code=400,
+                detail=f"feedback_type must be one of {sorted(allowed)}",
+            )
+        note = str(payload.get("note") or "").strip()
+        record = {
+            "ts": _ts(),
+            "item_id": str(item_id or ""),
+            "event": "feedback",
+            "feedback_type": feedback_type,
+            "note": note,
+        }
+        try:
+            persistence_append_jsonl(_INTERRUPTION_DECISIONS_PATH, record)
+        except Exception as exc:
+            logger.debug("interruption_feedback record failed: %s", exc)
+        return _ok({
+            "recorded": True,
+            "item_id": item_id,
+            "feedback_type": feedback_type,
         })
 
     # ------------------------------------------------------------------

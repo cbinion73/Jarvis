@@ -13459,6 +13459,65 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail=f"Drift event not found: {drift_id}")
         return _json({"resolved": True, "drift_id": drift_id})
 
+    # D10: Correction loop — fact correction/dispute/retire/supersede routes
+    @app.post("/api/memory/facts/{fact_id}/correct")
+    async def api_memory_fact_correct(fact_id: str, payload: dict[str, Any]) -> JSONResponse:
+        from .memory import MemoryStore
+        store = MemoryStore(runtime.data_root / "memory")
+        note = str(payload.get("correction_note") or payload.get("note") or "")
+        updated = await asyncio.to_thread(store.correct_profile_fact, fact_id, note)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Fact not found: {fact_id}")
+        return _json({"corrected": True, "fact": updated})
+
+    @app.post("/api/memory/facts/{fact_id}/dispute")
+    async def api_memory_fact_dispute(fact_id: str, payload: dict[str, Any]) -> JSONResponse:
+        from .memory import MemoryStore
+        store = MemoryStore(runtime.data_root / "memory")
+        note = str(payload.get("dispute_note") or payload.get("note") or "")
+        updated = await asyncio.to_thread(store.dispute_profile_fact, fact_id, note)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Fact not found: {fact_id}")
+        return _json({"disputed": True, "fact": updated})
+
+    @app.post("/api/memory/facts/{fact_id}/retire")
+    async def api_memory_fact_retire(fact_id: str, payload: dict[str, Any]) -> JSONResponse:
+        from .memory import MemoryStore
+        store = MemoryStore(runtime.data_root / "memory")
+        reason = str(payload.get("reason") or "")
+        updated = await asyncio.to_thread(store.retire_profile_fact, fact_id, reason)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Fact not found: {fact_id}")
+        return _json({"retired": True, "fact": updated})
+
+    @app.post("/api/memory/facts/{fact_id}/supersede")
+    async def api_memory_fact_supersede(fact_id: str, payload: dict[str, Any]) -> JSONResponse:
+        from .memory import MemoryStore
+        store = MemoryStore(runtime.data_root / "memory")
+        new_fact_id = str(payload.get("new_fact_id") or "")
+        reason = str(payload.get("reason") or "")
+        if not new_fact_id:
+            raise HTTPException(status_code=400, detail="new_fact_id is required")
+        updated = await asyncio.to_thread(store.supersede_profile_fact, fact_id, new_fact_id, reason)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Fact not found: {fact_id}")
+        return _json({"superseded": True, "fact": updated})
+
+    # D8: Situation retrieval
+    @app.post("/api/memory/facts/retrieve-by-situation")
+    async def api_memory_retrieve_by_situation(payload: dict[str, Any]) -> JSONResponse:
+        from .memory import MemoryStore
+        store = MemoryStore(runtime.data_root / "memory")
+        actor = str(payload.get("actor") or "chris")
+        situation_context = dict(payload.get("situation_context") or {})
+        results = await asyncio.to_thread(store.retrieve_by_situation, actor, situation_context)
+        return _json({
+            "actor": actor,
+            "situation_context": situation_context,
+            "facts": results,
+            "count": len(results),
+        })
+
     @app.get("/api/memory/context")
     async def api_memory_context(actor_id: str = "chris", domains: str = "") -> JSONResponse:
         try:
@@ -13474,6 +13533,78 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "relational_context": context,
             "briefing_context": briefing_ctx,
         })
+
+    # ------------------------------------------------------------------
+    # D3: Proactive prompts
+    # ------------------------------------------------------------------
+
+    @app.get("/api/proactive/prompts")
+    async def api_proactive_prompts(actor: str = "chris") -> JSONResponse:
+        from .proactive import ProactivePromptStore
+        store = ProactivePromptStore(runtime.data_root / "proactive")
+        prompts = await asyncio.to_thread(store.list_pending, actor)
+        return _json({"actor": actor, "prompts": prompts, "count": len(prompts)})
+
+    @app.post("/api/proactive/prompts")
+    async def api_proactive_prompt_create(payload: dict[str, Any]) -> JSONResponse:
+        from .proactive import ProactivePromptBuilder, ProactivePromptStore
+        builder = ProactivePromptBuilder()
+        try:
+            prompt = builder.build(
+                actor=str(payload.get("actor") or "chris"),
+                title=str(payload.get("title") or ""),
+                body=str(payload.get("body") or ""),
+                why_now=str(payload.get("why_now") or ""),
+                confidence=float(payload.get("confidence") or 0.7),
+                source_facts=list(payload.get("source_facts") or []),
+                suggested_actions=list(payload.get("suggested_actions") or []),
+                domain=str(payload.get("domain") or ""),
+                priority=int(payload.get("priority") or 5),
+                source=str(payload.get("source") or "inferred"),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        store = ProactivePromptStore(runtime.data_root / "proactive")
+        created = await asyncio.to_thread(store.add, prompt)
+        return _json({"created": True, "prompt": created})
+
+    @app.post("/api/proactive/prompts/{prompt_id}/snooze")
+    async def api_proactive_prompt_snooze(prompt_id: str, payload: dict[str, Any]) -> JSONResponse:
+        from .proactive import ProactivePromptStore
+        store = ProactivePromptStore(runtime.data_root / "proactive")
+        snooze_until = str(payload.get("snooze_until") or "")
+        reason = str(payload.get("reason") or "")
+        if not snooze_until:
+            raise HTTPException(status_code=400, detail="snooze_until is required (ISO timestamp)")
+        try:
+            updated = await asyncio.to_thread(store.snooze, prompt_id, snooze_until, reason)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Prompt not found: {prompt_id}")
+        return _json({"snoozed": True, "prompt": updated})
+
+    @app.post("/api/proactive/prompts/{prompt_id}/dismiss")
+    async def api_proactive_prompt_dismiss(prompt_id: str, payload: dict[str, Any]) -> JSONResponse:
+        from .proactive import ProactivePromptStore
+        store = ProactivePromptStore(runtime.data_root / "proactive")
+        reason = str(payload.get("reason") or "")
+        try:
+            updated = await asyncio.to_thread(store.dismiss, prompt_id, reason)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Prompt not found: {prompt_id}")
+        return _json({"dismissed": True, "prompt": updated})
+
+    @app.post("/api/proactive/prompts/{prompt_id}/act")
+    async def api_proactive_prompt_act(prompt_id: str) -> JSONResponse:
+        from .proactive import ProactivePromptStore
+        store = ProactivePromptStore(runtime.data_root / "proactive")
+        updated = await asyncio.to_thread(store.mark_acted, prompt_id)
+        if updated is None:
+            raise HTTPException(status_code=404, detail=f"Prompt not found: {prompt_id}")
+        return _json({"acted": True, "prompt": updated})
 
     # ------------------------------------------------------------------
     # Scheduler endpoints
@@ -14376,6 +14507,129 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_chronicle_patterns() -> JSONResponse:
         payload = await _build_chronicle_recent_payload()
         return _json(_chronicle_patterns_from_recent(payload))
+
+    @app.get("/api/chronicle/rituals")
+    async def api_chronicle_rituals() -> JSONResponse:
+        """D11: Return detected recurring rituals from chronicle entries.
+
+        Rituals are recurring patterns that appear at least twice in the last 60 days
+        and share a theme. Examples: morning prayer, weekly devotional, evening review.
+        """
+        from collections import Counter
+        from datetime import datetime, timedelta
+
+        payload = await _build_chronicle_recent_payload()
+        entries = [dict(item) for item in list(payload.get("entries") or []) if isinstance(item, dict)]
+        cutoff = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d")
+        recent = [item for item in entries if str(item.get("date") or "") >= cutoff]
+
+        # Group by theme × approximate day-of-week to detect weekly rituals
+        theme_dates: dict[str, list[str]] = {}
+        for item in recent:
+            for theme in list(item.get("themes") or []):
+                theme_str = str(theme).strip().lower()
+                if not theme_str:
+                    continue
+                theme_dates.setdefault(theme_str, [])
+                date_str = str(item.get("date") or "")[:10]
+                if date_str:
+                    theme_dates[theme_str].append(date_str)
+
+        rituals = []
+        for theme, dates_list in theme_dates.items():
+            if len(dates_list) < 2:
+                continue
+            unique_dates = sorted(set(dates_list))
+            # Detect weekly cadence if at least 2 occurrences
+            cadence = "recurring"
+            if len(unique_dates) >= 2:
+                try:
+                    first = datetime.strptime(unique_dates[0], "%Y-%m-%d")
+                    last = datetime.strptime(unique_dates[-1], "%Y-%m-%d")
+                    span_days = (last - first).days
+                    avg_interval = span_days / max(len(unique_dates) - 1, 1)
+                    if avg_interval <= 2:
+                        cadence = "daily"
+                    elif avg_interval <= 9:
+                        cadence = "weekly"
+                    elif avg_interval <= 18:
+                        cadence = "biweekly"
+                    else:
+                        cadence = "monthly"
+                except Exception:
+                    pass
+            rituals.append({
+                "theme": theme,
+                "occurrence_count": len(unique_dates),
+                "first_seen": unique_dates[0],
+                "last_seen": unique_dates[-1],
+                "cadence": cadence,
+            })
+
+        rituals.sort(key=lambda r: (-r["occurrence_count"], r["theme"]))
+        return _json({
+            "ok": True,
+            "window_days": 60,
+            "rituals": rituals[:10],
+            "ritual_count": len(rituals),
+        })
+
+    @app.get("/api/chronicle/narrative")
+    async def api_chronicle_narrative(actor: str = "chris", limit: int = 5) -> JSONResponse:
+        """D11: Return a narrative memory layer — patterns, milestones, and open decisions.
+
+        Synthesizes recent chronicle entries into a structured narrative summary
+        useful for briefings and memory context. Source label is always 'inferred'
+        because this is a pattern extraction, not raw entries.
+        """
+        from datetime import datetime, timedelta
+
+        payload = await _build_chronicle_recent_payload()
+        patterns = _chronicle_patterns_from_recent(payload)
+        entries = [dict(item) for item in list(payload.get("entries") or []) if isinstance(item, dict)]
+        cutoff = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        recent = [item for item in entries if str(item.get("date") or "") >= cutoff]
+
+        # Milestones: entries explicitly typed as milestone
+        milestones = [
+            {
+                "date": item.get("date", ""),
+                "title": item.get("title", ""),
+                "body": (str(item.get("body") or ""))[:200],
+            }
+            for item in recent
+            if str(item.get("type") or "").lower() == "milestone"
+        ][:limit]
+
+        # Decisions: entries typed as decision or with decision in themes
+        decisions = [
+            {
+                "date": item.get("date", ""),
+                "title": item.get("title", ""),
+                "body": (str(item.get("body") or ""))[:200],
+            }
+            for item in recent
+            if (
+                str(item.get("type") or "").lower() == "decision"
+                or "decision" in [str(t).lower() for t in list(item.get("themes") or [])]
+            )
+        ][:limit]
+
+        # Top themes from patterns
+        top_themes = [r["theme"] for r in patterns.get("recurring_themes", [])[:5]]
+
+        return _json({
+            "ok": True,
+            "source": "inferred",
+            "actor": actor,
+            "window_days": 30,
+            "top_themes": top_themes,
+            "writing_streak_days": patterns.get("writing_streak_days", 0),
+            "milestones": milestones,
+            "open_decisions": decisions,
+            "entry_count": len(recent),
+            "prayer_arc": patterns.get("prayer_arc", {}),
+        })
 
     @app.get("/api/chronicle/search")
     async def api_chronicle_search(q: str = Query("", alias="q")) -> JSONResponse:
