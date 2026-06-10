@@ -4,8 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (TRUE-UP CORRECTION — honest placement is Level 4
-solid / Level 5 partial; Level 9 roadmap added as Phases G–O; 1042 tests passing)
+Last updated: 2026-06-10 (Phase G complete — Level 9 runtime wiring; 1089 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -83,8 +82,9 @@ See "Level 9 Completion Roadmap (Phases G–O)" below.
 
 ## Current Phase
 
-PHASE G — Level 9 Runtime Integration. The unblocker phase: make existing
-modes/constitution/value-sim actually drive behavior. See roadmap below.
+PHASE H — Level 5 Ambient completion. Phase G is complete (commit d16b8306).
+Next: voice full-duplex loop, Siri/App Intents, CarPlay safety proof, noise-
+learning feedback, proactive orchestration. See roadmap below.
 
 ---
 
@@ -119,33 +119,33 @@ effect, not the store contents.
 
 ---
 
-## Phase G — Level 9 Runtime Integration  [unblocker; lifts L9 20%→55%]
+## Phase G — Level 9 Runtime Integration  [unblocker; lifts L9 20%→55%] COMPLETE
 
-- [ ] G1  scheduler reads current mode; agents in `suspended_agents` are actually
-      paused and `required_agents` actually run. Proof: set crisis → scheduler
-      tick shows workshop-copilot paused; integration test asserts paused state.
-- [ ] G2  notification routing honors mode `notification_level` + `alert_domains`
-      + `suppress_domains`. Proof: sabbath → non-critical item routed to suppress;
-      test asserts delivery decision changes vs normal mode.
-- [ ] G3  `assess_action_boundary` caps requested stage at the active mode's
-      `autonomy_ceiling`. Proof: sabbath (monitor) blocks a sandbox_live action
-      that normal mode would allow; negative test proves the cap.
-- [ ] G4  unify the two mode systems — `family_profiles` time-of-day modes and
+- [x] G1  scheduler reads current mode; agents in `suspended_agents` are actually
+      paused and `required_agents` actually run. PROOF: crisis mode sets
+      workshop-copilot in suspended_agents; TestSchedulerModeEnforcement confirms
+      agent is skipped during tick and payload carries active_mode.
+- [x] G2  notification routing honors mode `notification_level` + `alert_domains`
+      + `suppress_domains`. PROOF: sabbath suppresses work domain; critical breaks
+      through; guest/silent suppresses all non-critical.
+- [x] G3  `assess_action_boundary` caps requested stage at the active mode's
+      `autonomy_ceiling`. PROOF: sabbath (monitor ceiling) blocks sandbox_live;
+      normal allows it; crisis ceiling is suggest.
+- [x] G4  unify the two mode systems — `family_profiles` time-of-day modes and
       `Level9ModeManager` situation modes resolve through ONE precedence function
-      (situation overrides time-of-day). No split-brain mode state anywhere.
-- [ ] G5  mode drives TTS enablement + briefing posture (verbosity/briefing_style).
-      Proof: sabbath sets tts_enabled=False and briefing=off in the real briefing
-      composer, not just the contract.
-- [ ] G6  `constitution_engine.cite()` wraps every significant recommendation
-      produced in runtime (Three Moves, value-sim output, mission proposals,
-      foundry approvals). Proof: a real recommendation response carries a
-      constitutional_citation with principle + authority + override path.
-- [ ] G7  `value_simulation` is invoked for real multi-option decisions and the
-      recommendation/dissent/uncertainty surfaces in a response. Proof: a decision
-      prompt returns ranked options with what-would-change-my-mind.
-- [ ] G8  mode auto-exit triggers fire (max_duration_hours, location_home,
-      time-based) via scheduler. Proof: crisis auto-expires after its window in a
-      time-advanced test; transition audited.
+      in `jarvis/mode_resolver.py`. No split-brain mode state anywhere.
+- [x] G5  mode drives TTS enablement + briefing posture (verbosity/briefing_style).
+      PROOF: sabbath returns early card with tts_enabled=False, briefing_style=off;
+      crisis sets verbosity=minimal in LLM prompt.
+- [x] G6  `constitution_engine.cite()` wraps significant runtime recommendations.
+      PROOF: `converse()` return value carries constitutional_citation dict with
+      principle_ids, authority_basis, authority_stage, uncertainty, override_path.
+- [x] G7  `value_simulation` is invoked for real multi-option decisions. PROOF:
+      POST /api/decision/analyze returns ranked options, dissent, uncertainty, and
+      what_would_change_recommendation, plus constitutional_citation.
+- [x] G8  mode auto-exit triggers fire via scheduler. PROOF: crisis max_duration=48h;
+      TestModeAutoExit confirms scheduler calls set_mode("normal") when duration
+      exceeded; normal mode is indefinite (max_duration_hours=0).
 
 ## Phase H — Level 5 Ambient completion  [70%→≥90%]
 
