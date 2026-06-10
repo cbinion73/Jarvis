@@ -20159,7 +20159,55 @@ class JarvisRuntime:
         current_sequence = int(current_stage.get("sequence") or 0)
         requested_sequence = int(requested.get("sequence") or current_sequence)
 
-        if action_type in {"home_control", "calendar_route", "signal_resolution", "notification_workflow", "reminder_workflow", "publishing_review", "focus_workflow", "huddle_workflow", "stewardship_lane_review", "foundry_proposal_review"} and current_sequence < requested_sequence:
+        # Consult canonical action taxonomy for two critical checks:
+        # 1. Unknown actions fail CLOSED (B3 — fail-closed behavior)
+        # 2. Hard boundary denials block regardless of zone stage (B7 — policy rails)
+        from .policy_rails import get_action_policy
+        policy = get_action_policy(action_type)
+
+        # Unknown action type → deny (fail closed — B3)
+        if policy.action_type == "_unknown":
+            return {
+                "decision": "deny",
+                "reason": (
+                    f"Unknown action type '{action_type}' is not registered in the canonical "
+                    "action taxonomy. Unknown actions fail closed. Register it in "
+                    "jarvis/policy_rails.py to enable it."
+                ),
+                "trust_zone": zone_id,
+                "authority_stage": current_stage_id,
+                "approval_mode": "deny",
+                "arena_status": arena_status or "active",
+                "action_type": action_type,
+                "registered": False,
+            }
+
+        # Hard boundary deny (money, legal, identity, security, children, reputation, system — B7)
+        if policy.hard_boundary and policy.approval_mode == "deny":
+            return {
+                "decision": "deny",
+                "reason": (
+                    f"Action '{action_type}' is in hard boundary family '{policy.family}'. "
+                    "Requires explicit human initiation — no automated agent may execute it."
+                ),
+                "trust_zone": zone_id,
+                "authority_stage": current_stage_id,
+                "approval_mode": "deny",
+                "arena_status": arena_status or "active",
+                "action_type": action_type,
+                "family": policy.family,
+                "risk_tier": policy.risk_tier,
+                "hard_boundary": True,
+                "registered": True,
+            }
+
+        # Stage if zone stage below required minimum (original sequence logic — B1)
+        if action_type in {
+            "home_control", "calendar_route", "signal_resolution",
+            "notification_workflow", "reminder_workflow", "publishing_review",
+            "focus_workflow", "huddle_workflow", "stewardship_lane_review",
+            "foundry_proposal_review",
+        } and current_sequence < requested_sequence:
             return {
                 "decision": "stage",
                 "reason": f"{zone_id} is at {current_stage_id} and must promote before live {action_type} actions.",
@@ -20167,6 +20215,10 @@ class JarvisRuntime:
                 "authority_stage": current_stage_id,
                 "approval_mode": str(zone.get("approval_mode") or ""),
                 "arena_status": arena_status or "active",
+                "action_type": action_type,
+                "family": policy.family,
+                "risk_tier": policy.risk_tier,
+                "registered": True,
             }
 
         return {
@@ -20176,6 +20228,10 @@ class JarvisRuntime:
             "authority_stage": current_stage_id,
             "approval_mode": str(zone.get("approval_mode") or ""),
             "arena_status": arena_status or "active",
+            "action_type": action_type,
+            "family": policy.family,
+            "risk_tier": policy.risk_tier,
+            "registered": True,
         }
 
     def list_stewardship_lanes(self) -> list[dict]:

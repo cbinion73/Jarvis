@@ -9359,6 +9359,193 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_device_boundaries(child: str = "", limit: int = 10) -> JSONResponse:
         return _json(runtime.list_device_boundaries(child_name=child, limit=limit))
 
+    # ------------------------------------------------------------------
+    # B5: Household governance UI — plain-language views (no JSON/code)
+    # ------------------------------------------------------------------
+    @app.get("/api/governance/summary")
+    async def api_governance_summary() -> JSONResponse:
+        """Plain-language governance state for household users."""
+        from .policy_rails import governance_plain_language_summary
+        zones = runtime.trust_support.list_trust_zones()
+        try:
+            pending = runtime.list_pending_approvals()
+        except Exception:
+            pending = []
+        try:
+            promotions = runtime.list_promotion_records(limit=10)
+        except Exception:
+            promotions = []
+        return _json(governance_plain_language_summary(
+            zones=zones,
+            pending_approvals=pending,
+            recent_promotions=promotions,
+            blocked_actions=[],
+        ))
+
+    @app.get("/api/governance/action-taxonomy")
+    async def api_governance_action_taxonomy() -> JSONResponse:
+        """Canonical action taxonomy — all registered action types with risk, authority, and approval rules."""
+        from .policy_rails import list_action_taxonomy
+        return _json({"taxonomy": list_action_taxonomy()})
+
+    @app.post("/api/governance/assess-action")
+    async def api_governance_assess_action(payload: dict[str, Any]) -> JSONResponse:
+        """Assess whether an action is allowed, staged, or denied under current policy."""
+        from .policy_rails import assess_action_policy
+        action_type = str(payload.get("action_type", "")).strip()
+        authority_stage = str(payload.get("authority_stage", "observe")).strip()
+        zone_id = str(payload.get("zone_id", "")).strip()
+        actor = str(payload.get("actor", "")).strip()
+        context = dict(payload.get("context") or {})
+        if not action_type:
+            raise HTTPException(status_code=400, detail="action_type is required")
+        verdict = assess_action_policy(action_type, authority_stage=authority_stage, zone_id=zone_id, actor=actor, context=context)
+        return _json(verdict)
+
+    @app.get("/api/governance/capabilities")
+    async def api_governance_capabilities(zone_id: str = "") -> JSONResponse:
+        """What is JARVIS currently authorized to do in a given zone?"""
+        from .policy_rails import CANONICAL_ACTION_TAXONOMY, assess_action_policy
+        zone = runtime.trust_support.get_trust_zone(zone_id) if zone_id else None
+        authority_stage = str((zone or {}).get("authority_stage", "observe"))
+        capabilities = []
+        for action_type in sorted(CANONICAL_ACTION_TAXONOMY.keys()):
+            verdict = assess_action_policy(action_type, authority_stage=authority_stage, zone_id=zone_id)
+            capabilities.append({
+                "action_type": action_type,
+                "decision": verdict["decision"],
+                "family": verdict.get("family", ""),
+                "risk_tier": verdict.get("risk_tier", 0),
+                "plain": f"{action_type}: {verdict['decision']} — {verdict['reason'][:80]}",
+            })
+        return _json({
+            "zone_id": zone_id,
+            "authority_stage": authority_stage,
+            "capabilities": capabilities,
+            "allow_count": sum(1 for c in capabilities if c["decision"] == "allow"),
+            "stage_count": sum(1 for c in capabilities if c["decision"] == "stage"),
+            "deny_count": sum(1 for c in capabilities if c["decision"] == "deny"),
+        })
+
+    # ------------------------------------------------------------------
+    # B6: Child/privacy boundaries — parent review routes
+    # ------------------------------------------------------------------
+    @app.get("/api/governance/child-safety-status")
+    async def api_child_safety_status(parent_actor: str = "Rebekah") -> JSONResponse:
+        """Parent view of child safety boundaries and recent child-facing actions."""
+        from .policy_rails import CANONICAL_ACTION_TAXONOMY, FAMILY_CHILDREN
+        child_actions = [
+            {
+                "action_type": k,
+                "description": v.description,
+                "approval_mode": v.approval_mode,
+                "parent_review_required": v.parent_review_required,
+                "hard_boundary": v.hard_boundary,
+            }
+            for k, v in CANONICAL_ACTION_TAXONOMY.items()
+            if v.family == FAMILY_CHILDREN
+        ]
+        try:
+            child_summaries = runtime.tutoring_summaries(parent_actor, limit=5)
+        except Exception:
+            child_summaries = []
+        try:
+            boundaries = runtime.child_boundaries(actor_name=parent_actor)
+        except Exception:
+            boundaries = {}
+        return _json({
+            "parent_actor": parent_actor,
+            "child_action_policies": child_actions,
+            "recent_tutoring": child_summaries,
+            "child_boundaries": boundaries,
+            "hard_boundary_summary": "Child data cannot be shared externally. Child safety guardrails cannot be overridden by any automated action. Parent review is required for all child-tagged data access.",
+        })
+
+    @app.post("/api/governance/child-action-check")
+    async def api_child_action_check(payload: dict[str, Any]) -> JSONResponse:
+        """Check whether a proposed child-related action is permitted."""
+        from .policy_rails import assess_action_policy
+        action_type = str(payload.get("action_type", "")).strip()
+        authority_stage = str(payload.get("authority_stage", "observe")).strip()
+        parent_acknowledged = bool(payload.get("parent_acknowledged", False))
+        if not action_type:
+            raise HTTPException(status_code=400, detail="action_type is required")
+        verdict = assess_action_policy(
+            action_type,
+            authority_stage=authority_stage,
+            zone_id=str(payload.get("zone_id", "")),
+            actor=str(payload.get("actor", "")),
+            context={"parent_acknowledged": parent_acknowledged},
+        )
+        return _json(verdict)
+
+    # ------------------------------------------------------------------
+    # B7: Hard policy rails — check action against constitutional limits
+    # ------------------------------------------------------------------
+    @app.post("/api/governance/hard-policy-check")
+    async def api_hard_policy_check(payload: dict[str, Any]) -> JSONResponse:
+        """
+        Check an action against hard constitutional policy rails.
+        Hard boundary families (money, legal, identity, security, children, reputation, system)
+        are denied regardless of zone stage — they require explicit human initiation.
+        """
+        from .policy_rails import assess_action_policy, is_hard_boundary, get_action_policy, HARD_BOUNDARY_FAMILIES
+        action_type = str(payload.get("action_type", "")).strip()
+        if not action_type:
+            raise HTTPException(status_code=400, detail="action_type is required")
+        policy = get_action_policy(action_type)
+        verdict = assess_action_policy(
+            action_type,
+            authority_stage=str(payload.get("authority_stage", "mature_live")),
+            zone_id=str(payload.get("zone_id", "")),
+            actor=str(payload.get("actor", "")),
+            context=dict(payload.get("context") or {}),
+        )
+        return _json({
+            "action_type": action_type,
+            "registered": verdict.get("registered", False),
+            "family": verdict.get("family", "_unknown"),
+            "is_hard_boundary": is_hard_boundary(action_type),
+            "hard_boundary_families": sorted(HARD_BOUNDARY_FAMILIES),
+            "decision": verdict["decision"],
+            "reason": verdict["reason"],
+            "approval_mode": verdict.get("approval_mode", "deny"),
+            "audit_required": verdict.get("audit_required", True),
+            "parent_review_required": verdict.get("parent_review_required", False),
+            "constitutional_note": (
+                "Hard boundary actions require explicit human initiation. "
+                "No automated agent can execute them regardless of authority stage."
+            ) if is_hard_boundary(action_type) else "",
+        })
+
+    @app.get("/api/governance/hard-boundaries")
+    async def api_hard_boundaries() -> JSONResponse:
+        """List all hard policy boundary action types and their constitutional basis."""
+        from .policy_rails import CANONICAL_ACTION_TAXONOMY, HARD_BOUNDARY_FAMILIES
+        hard_actions = [
+            {
+                "action_type": k,
+                "family": v.family,
+                "description": v.description,
+                "approval_mode": v.approval_mode,
+                "risk_tier": v.risk_tier,
+                "reversible": v.reversible,
+            }
+            for k, v in sorted(CANONICAL_ACTION_TAXONOMY.items())
+            if v.hard_boundary
+        ]
+        return _json({
+            "hard_boundary_families": sorted(HARD_BOUNDARY_FAMILIES),
+            "hard_boundary_actions": hard_actions,
+            "count": len(hard_actions),
+            "constitutional_basis": "JARVIS-CONSTITUTION-FOR-SELF-IMPROVING-INTELLIGENCE.md Article VI: Hard Escalation Lines",
+            "summary": (
+                "These actions require explicit human initiation regardless of trust zone stage. "
+                "No automated agent may execute them. They include all money, legal, identity, "
+                "security, children, reputation, and system-mutation actions."
+            ),
+        })
+
     @app.post("/api/respond")
     async def api_respond(
         payload: dict[str, Any],

@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Phase A complete; 687 tests passing)
+Last updated: 2026-06-09 (Phase B complete; 760 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -14,10 +14,14 @@ Last updated: 2026-06-09 (Phase A complete; 687 tests passing)
   prevention_note/closure_note); deployment context detects Docker vs local;
   mission audit on closure; lessons_learned field; /api/apple/command-center live;
   exit report at docs/JARVIS-LEVEL3-EXIT-REPORT.md; 687 tests passing
-- Level 4 (Governed Intelligence): ~80% BUILT — Trust zones, supervision plane,
+- Level 4 (Governed Intelligence): COMPLETE — Trust zones, supervision plane,
   promotion engine, sandbox execution, email draft staging, agent registry
   contract all exist; all 10 governed action types enforce sequence gating;
-  negative-path tests cover deny/stage/allow across all bootstrapped zones
+  negative-path tests cover deny/stage/allow across all bootstrapped zones;
+  canonical action taxonomy (50+ actions, 14 families); fail-closed unknown
+  actions; hard boundary families (money/legal/security/identity/children/
+  reputation/system) always deny; plain-language household governance UI;
+  child safety guard with homework coaching; 72 new B-phase tests; 760 total
 - Level 5 (Ambient): ~90% — event fabric autonomous, all 6 delivery postures
   live, interruption decisions recorded; presence override store live with TTL
   (suppress/escalate/clear via POST /api/apple/presence-override); background→
@@ -201,6 +205,34 @@ safety, stray .tmp recovery, lock file creation. All pass.
    _reconcile_shared_notifications pass posture with foreground_active (they read
    posture from _compute_interruption_posture which now includes it — should be
    automatic, but worth an integration test).
+
+## Phase B Completion Record (2026-06-09)
+
+All 7 Phase B rows complete:
+- B1 DONE: Trust-zone coverage — negative paths for unknown/inactive zone,
+  suspended arena, unknown action; 4 tests in TestTrustZoneCoverageNegativePaths
+- B2 DONE: Canonical action taxonomy — jarvis/policy_rails.py with 50+ action
+  types across 14 families; every entry has risk_tier, approval_mode, family,
+  audit_required, reversible; discoverable via list_action_taxonomy()
+- B3 DONE: Fail-closed posture — unknown action_type → deny regardless of zone
+  stage; assess_action_boundary() passes through to policy_rails for unknown +
+  hard boundary checks; original sequence logic preserved for known non-hard actions
+- B4 DONE: Promotion engine evidence gating — 7 tests covering hold/promote/
+  suspend/pending_consent; min_runs, success_rate, boundary_violations all gate
+- B5 DONE: Plain-language governance UI — governance_plain_language_summary()
+  returns plain_summary, active/inactive zone counts, per-zone plain labels,
+  per-approval plain descriptions; capabilities assessment via assess_action_policy
+- B6 DONE: Children/privacy boundaries — ChildInteractionHandler (CHILD_USER_IDS=
+  {caleb, anna}); share_child_data + override_child_guardrail always deny;
+  all child family actions have parent_review_required; homework coaching response
+- B7 DONE: Hard policy rails — spend_money, sign_document, remote_unlock,
+  post_social, create_account, change_credentials, submit_filing all deny at every
+  authority stage; HARD_BOUNDARY_FAMILIES covers all 7 required families;
+  all hard boundary actions have audit_required and reversible=False
+New files: jarvis/policy_rails.py; tests/test_phase_b_level4_governance.py (72 tests)
+Modified: jarvis/runtime.py (assess_action_boundary fail-closed);
+          jarvis/service.py (8 governance routes); jarvis/policy_rails.py (create_account fix)
+Tests: 760 passing (no regressions)
 
 ## Phase A Completion Record (2026-06-09)
 
