@@ -82,6 +82,33 @@ class SettingsStoreTests(unittest.TestCase):
             self.assertEqual(office["latitude"], 1.23)
             self.assertEqual(office["longitude"], 4.56)
 
+    def test_add_location_accepts_glass_address_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "locations.json"
+            store = LocationSettingsStore(_ConfigStub(), path=path)
+
+            saved = store.add_location(
+                {
+                    "label": "Home",
+                    "address": "8384 Riley Rd",
+                    "city": "Alexandria",
+                    "state": "KY",
+                    "zip": "41001",
+                    "lat": "38.960475",
+                    "lon": "-84.385347",
+                    "notes": "Primary home.",
+                }
+            )
+
+            home = next(item for item in saved["saved_locations"] if item["id"] == "home")
+            self.assertEqual(home["geography"], "8384 Riley Rd, Alexandria, KY, 41001")
+            self.assertEqual(home["address"], "8384 Riley Rd")
+            self.assertEqual(home["city"], "Alexandria")
+            self.assertEqual(home["state"], "KY")
+            self.assertEqual(home["zip"], "41001")
+            self.assertEqual(home["latitude"], 38.960475)
+            self.assertEqual(home["longitude"], -84.385347)
+
 
 if __name__ == "__main__":
     unittest.main()

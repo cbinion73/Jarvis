@@ -308,7 +308,13 @@ class LocationSettingsStore:
         state = self.load()
         saved = list(state.get("saved_locations", []))
         label = str(payload.get("label", "")).strip()
-        geography = str(payload.get("geography", "")).strip() or label
+        address = str(payload.get("address", "")).strip()
+        city = str(payload.get("city", "")).strip()
+        state_label = str(payload.get("state", "")).strip()
+        zip_code = str(payload.get("zip", payload.get("postal_code", ""))).strip()
+        address_parts = [address, city, state_label, zip_code]
+        address_geography = ", ".join(part for part in address_parts if part)
+        geography = str(payload.get("geography", "")).strip() or address_geography or label
         if not label:
             raise ValueError("Location label is required.")
         location_id = str(payload.get("id", "")).strip() or _slugify_location(label)
@@ -316,8 +322,12 @@ class LocationSettingsStore:
             "id": location_id,
             "label": label,
             "geography": geography,
-            "latitude": _float_or_none(payload.get("latitude")),
-            "longitude": _float_or_none(payload.get("longitude")),
+            "address": address,
+            "city": city,
+            "state": state_label,
+            "zip": zip_code,
+            "latitude": _float_or_none(payload.get("latitude", payload.get("lat"))),
+            "longitude": _float_or_none(payload.get("longitude", payload.get("lon"))),
             "source": str(payload.get("source", "manual")).strip() or "manual",
             "notes": str(payload.get("notes", "")).strip(),
         }
@@ -336,8 +346,8 @@ class LocationSettingsStore:
         device_location = {
             "label": label,
             "geography": geography,
-            "latitude": _float_or_none(payload.get("latitude")),
-            "longitude": _float_or_none(payload.get("longitude")),
+            "latitude": _float_or_none(payload.get("latitude", payload.get("lat"))),
+            "longitude": _float_or_none(payload.get("longitude", payload.get("lon"))),
             "source": "device-location-services",
             "timestamp": str(payload.get("timestamp", "")).strip(),
         }
@@ -454,6 +464,10 @@ class LocationSettingsStore:
                     "id": location_id,
                     "label": label or geography,
                     "geography": geography or label,
+                    "address": str(item.get("address", "")).strip(),
+                    "city": str(item.get("city", "")).strip(),
+                    "state": str(item.get("state", "")).strip(),
+                    "zip": str(item.get("zip", item.get("postal_code", ""))).strip(),
                     "latitude": _float_or_none(item.get("latitude")),
                     "longitude": _float_or_none(item.get("longitude")),
                     "source": str(item.get("source", "manual")).strip() or "manual",

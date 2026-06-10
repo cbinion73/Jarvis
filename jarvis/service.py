@@ -9673,6 +9673,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_save_location_settings(payload: dict[str, Any]) -> JSONResponse:
         action = str(payload.get("action", "")).strip()
         preferred_location_id = str(payload.get("preferred_location_id", "")).strip()
+        has_location_entry = any(
+            str(payload.get(key, "")).strip()
+            for key in ("label", "geography", "address", "city", "state", "zip")
+        )
         try:
             if action == "add_location":
                 state = location_settings.add_location(payload)
@@ -9682,6 +9686,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 )
             elif action == "save_device_location":
                 state = location_settings.save_device_location(payload)
+            elif not action and has_location_entry:
+                state = location_settings.add_location(payload)
             else:
                 state = location_settings.save(payload)
         except ValueError as exc:
@@ -20884,6 +20890,69 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         """Return Google Maps API key availability (key itself is never exposed)."""
         maps_key = str(os.environ.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
         return _json({"ok": True, "available": bool(maps_key), "key_configured": bool(maps_key)})
+
+    @app.get("/api/maps/geocode")
+    async def api_maps_geocode(q: str = "") -> JSONResponse:
+        """Geocode an address for Settings without exposing any map provider keys."""
+        query = str(q or "").strip()
+        if not query:
+            return _json({"ok": False, "lat": None, "lon": None, "error": "Address is required."})
+        maps_key = str(os.environ.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
+        if maps_key:
+            try:
+                import httpx
+
+                response = httpx.get(
+                    "https://maps.googleapis.com/maps/api/geocode/json",
+                    params={"address": query, "key": maps_key},
+                    timeout=8,
+                )
+                data = response.json()
+                results = data.get("results") if isinstance(data, dict) else []
+                if results:
+                    first = results[0]
+                    location = ((first.get("geometry") or {}).get("location") or {})
+                    lat = location.get("lat")
+                    lon = location.get("lng")
+                    if lat is not None and lon is not None:
+                        return _json(
+                            {
+                                "ok": True,
+                                "lat": float(lat),
+                                "lon": float(lon),
+                                "formatted": str(first.get("formatted_address") or query),
+                                "provider": "google",
+                            }
+                        )
+            except Exception:
+                pass
+        try:
+            import httpx
+
+            response = httpx.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": query, "format": "jsonv2", "limit": 1},
+                headers={
+                    "Accept": "application/json",
+                    "User-Agent": "JARVIS-Settings/1.0 (+http://127.0.0.1:8787)",
+                },
+                timeout=12,
+            )
+            results = response.json()
+            if isinstance(results, list) and results:
+                first = results[0]
+                return _json(
+                    {
+                        "ok": True,
+                        "lat": float(first["lat"]),
+                        "lon": float(first["lon"]),
+                        "formatted": str(first.get("display_name") or query),
+                        "provider": "nominatim",
+                    }
+                )
+        except Exception as exc:
+            return _json({"ok": False, "lat": None, "lon": None, "error": str(exc)})
+        return _json({"ok": False, "lat": None, "lon": None, "error": "Address not found."})
 
     @app.get("/api/nav/pois")
     async def api_nav_pois(lat: float = 0.0, lng: float = 0.0, radius: int = 5000) -> JSONResponse:

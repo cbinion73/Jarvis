@@ -45602,11 +45602,19 @@ function settingsUseCurrentLocation() {{
   navigator.geolocation.getCurrentPosition(async pos => {{
     const lat = pos.coords.latitude, lon = pos.coords.longitude;
     try {{
-      const r = await fetch('/api/location-settings', {{
-        method: 'POST',
-        headers: {{'Content-Type': 'application/json'}},
-        body: JSON.stringify({{label: 'Current Location', lat, lon}})
-      }});
+	      const r = await fetch('/api/location-settings', {{
+	        method: 'POST',
+	        headers: {{'Content-Type': 'application/json'}},
+	        body: JSON.stringify({{
+	          action: 'save_device_location',
+	          label: 'Current Location',
+	          latitude: lat,
+	          longitude: lon,
+	          geography: `Lat ${{lat.toFixed(4)}}, Lon ${{lon.toFixed(4)}}`,
+	          save_as_location: true,
+	          make_preferred: true
+	        }})
+	      }});
       const d = await r.json();
       if (msg) msg.textContent = d.detail || (d.ok ? `Saved: ${{lat.toFixed(4)}}, ${{lon.toFixed(4)}}` : 'Error saving.');
       if (d.ok) settingsLoadSection('location');
@@ -45617,20 +45625,35 @@ function settingsUseCurrentLocation() {{
 }}
 
 async function settingsSaveLocation() {{
-  const label = document.getElementById('loc-new-label')?.value.trim();
-  const notes = document.getElementById('loc-new-notes')?.value.trim();
-  const latRaw = document.getElementById('loc-new-lat')?.value.trim();
-  const lonRaw = document.getElementById('loc-new-lon')?.value.trim();
-  const msg = document.getElementById('settings-loc-add-msg');
-  if (!label) {{ if (msg) msg.textContent = 'Enter a label first.'; return; }}
-  const lat = latRaw ? parseFloat(latRaw) : null;
-  const lon = lonRaw ? parseFloat(lonRaw) : null;
-  try {{
-    const r = await fetch('/api/location-settings', {{
-      method: 'POST',
-      headers: {{'Content-Type': 'application/json'}},
-      body: JSON.stringify({{label, notes, ...(lat !== null ? {{lat, lon}} : {{}})}})
-    }});
+	  const label = document.getElementById('loc-new-label')?.value.trim();
+	  const address = document.getElementById('loc-new-address')?.value.trim();
+	  const city = document.getElementById('loc-new-city')?.value.trim();
+	  const state = document.getElementById('loc-new-state')?.value.trim();
+	  const zip = document.getElementById('loc-new-zip')?.value.trim();
+	  const notes = document.getElementById('loc-new-notes')?.value.trim();
+	  const latRaw = document.getElementById('loc-new-lat')?.value.trim();
+	  const lonRaw = document.getElementById('loc-new-lon')?.value.trim();
+	  const msg = document.getElementById('settings-loc-add-msg');
+	  if (!label) {{ if (msg) msg.textContent = 'Enter a label first.'; return; }}
+	  const lat = latRaw ? parseFloat(latRaw) : null;
+	  const lon = lonRaw ? parseFloat(lonRaw) : null;
+	  const geography = [address, city, state, zip].filter(Boolean).join(', ');
+	  try {{
+	    const r = await fetch('/api/location-settings', {{
+	      method: 'POST',
+	      headers: {{'Content-Type': 'application/json'}},
+	      body: JSON.stringify({{
+	        action: 'add_location',
+	        label,
+	        address,
+	        city,
+	        state,
+	        zip,
+	        geography,
+	        notes,
+	        ...(lat !== null && lon !== null ? {{latitude: lat, longitude: lon}} : {{}})
+	      }})
+	    }});
     const d = await r.json();
     if (msg) msg.textContent = d.detail || (d.ok ? 'Location saved.' : 'Error saving.');
     if (d.ok) settingsLoadSection('location');
