@@ -73,6 +73,16 @@ TEXT_FILE_SUFFIXES = {".json", ".jsonl", ".txt", ".html", ".md"}
 MAX_SCAN_FILE_BYTES = 1_000_000
 MAX_SCAN_TOTAL_BYTES = 25_000_000
 
+FILTERED_AT_READ_PATH_PREFIXES = (
+    "data/content/",
+    "data/content/exports/",
+    "data/family/",
+    "data/logs/actions.jsonl",
+    "data/router/",
+    "data/settings/shared_doctrine.json",
+    "data/workshop/",
+)
+
 
 @dataclass
 class LevelRow:
@@ -315,6 +325,13 @@ def _scan_mock_source_markers(repo_root: Path) -> list[dict[str, Any]]:
     return findings
 
 
+def _classify_seed_path(path: str) -> str:
+    for prefix in FILTERED_AT_READ_PATH_PREFIXES:
+        if path.startswith(prefix):
+            return "filtered_at_read"
+    return "runtime_exposed"
+
+
 def build_truth_report(repo_root: Path, session_state_path: Path) -> dict[str, Any]:
     levels, blockers = parse_session_state(session_state_path)
     git = _git_truth(repo_root)
@@ -327,9 +344,11 @@ def build_truth_report(repo_root: Path, session_state_path: Path) -> dict[str, A
     unresolved_failures: list[str] = []
     unresolved_failures.extend(str(item) for item in platform_report.get("failures") or [])
     unresolved_failures.extend(str(item) for item in provider_report.get("failures") or [])
+    runtime_exposed_findings = [item for item in fake_data_findings if _classify_seed_path(str(item.get("path", ""))) == "runtime_exposed"]
+    filtered_findings = [item for item in fake_data_findings if _classify_seed_path(str(item.get("path", ""))) == "filtered_at_read"]
     unresolved_failures.extend(
         f"fake-data:{item.get('path')}:{item.get('line', item.get('index', '?'))}"
-        for item in fake_data_findings
+        for item in runtime_exposed_findings
     )
 
     level_rows: list[dict[str, Any]] = []
@@ -382,6 +401,8 @@ def build_truth_report(repo_root: Path, session_state_path: Path) -> dict[str, A
         "providers": provider_truth,
     }
 
+    no_fake_data_status = "fail" if runtime_exposed_findings else ("warn" if filtered_findings else "pass")
+
     return {
         "generated_at": _now_iso(),
         "source_of_truth": _display_path(session_state_path, repo_root),
@@ -399,8 +420,10 @@ def build_truth_report(repo_root: Path, session_state_path: Path) -> dict[str, A
             "unresolved_failures": unresolved_failures,
         },
         "no_fake_data_audit": {
-            "status": "fail" if fake_data_findings else "pass",
+            "status": no_fake_data_status,
             "seed_findings": fake_data_findings,
+            "runtime_exposed_findings": runtime_exposed_findings,
+            "filtered_at_read_findings": filtered_findings,
             "source_markers": source_markers,
             "scanned_directories": SEED_SCAN_DIRS,
             "scan_stats": scan_stats,

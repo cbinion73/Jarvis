@@ -88,9 +88,11 @@ class VerifyLevel9TruthTests(unittest.TestCase):
             ):
                 report = verify_level9_truth.build_truth_report(root, session_state)
 
-        self.assertEqual(report["no_fake_data_audit"]["status"], "fail")
+        self.assertEqual(report["no_fake_data_audit"]["status"], "warn")
         self.assertEqual(len(report["no_fake_data_audit"]["seed_findings"]), 1)
-        self.assertIn("fake-data:data/family/drafts.json:0", report["proof_ledger"]["unresolved_failures"])
+        self.assertEqual(report["no_fake_data_audit"]["runtime_exposed_findings"], [])
+        self.assertEqual(len(report["no_fake_data_audit"]["filtered_at_read_findings"]), 1)
+        self.assertNotIn("fake-data:data/family/drafts.json:0", report["proof_ledger"]["unresolved_failures"])
         self.assertEqual(report["proof_ledger"]["platform_e2e"]["summary"]["failed"], 1)
         self.assertEqual(report["channel_truth"]["deployed"]["status"], "unverified")
 

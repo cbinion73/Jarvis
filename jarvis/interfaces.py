@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 import time
 import uuid
 
+from .data_hygiene import record_looks_like_test_data
 from .persistence import append_jsonl, atomic_write_json
 
 MANIFESTS_ROOT = Path(__file__).resolve().parent / "manifests"
@@ -52,7 +53,11 @@ class InterfaceRouterStore:
             if payload:
                 return payload
             return {}
-        loaded = {str(key): value for key, value in payload.items() if isinstance(value, dict)}
+        loaded = {
+            str(key): value
+            for key, value in payload.items()
+            if isinstance(value, dict) and not record_looks_like_test_data(value)
+        }
         if loaded:
             return loaded
         replayed = self._load_map_from_state_log(path)
@@ -73,7 +78,11 @@ class InterfaceRouterStore:
                 state = payload.get("payload")
                 if not isinstance(state, dict):
                     continue
-                latest = {str(key): value for key, value in state.items() if isinstance(value, dict)}
+                latest = {
+                    str(key): value
+                    for key, value in state.items()
+                    if isinstance(value, dict) and not record_looks_like_test_data(value)
+                }
             return latest
         except (OSError, json.JSONDecodeError):
             return {}
@@ -91,7 +100,11 @@ class InterfaceRouterStore:
                 state = payload.get("payload")
                 if not isinstance(state, dict):
                     continue
-                latest = {str(key): value for key, value in state.items() if isinstance(value, dict)}
+                latest = {
+                    str(key): value
+                    for key, value in state.items()
+                    if isinstance(value, dict) and not record_looks_like_test_data(value)
+                }
             return latest
         except (OSError, json.JSONDecodeError):
             return {}

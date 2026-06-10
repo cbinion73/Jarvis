@@ -283,7 +283,9 @@ Proof landed 2026-06-10:
   - `python3 -m pytest tests/test_verify_docs_truth.py tests/test_verify_level9_truth.py -q`
 - Current unresolved truth findings from the artifact:
   - provider battery still records one runner fetch failure
-  - no-fake-data audit still finds seeded/QA content in runtime data stores
+  - no-fake-data audit now reports `warn`, not `fail`: zero runtime-exposed
+    seeded findings, with remaining seeded/QA records classified as
+    filtered-at-read backing data
   - live deployed / Cloudflare truth remains explicitly unverified in local sandbox runs
 
 Exit gate: the team can answer "what level is JARVIS today?" from one artifact,
@@ -576,14 +578,15 @@ truth is verified, and docs agree.
 
 ## Resume Point
 
-Resume from LEVEL 0 TASK seeded-data truth cleanup using `JARVIS-SESSION-STATE.md`.
+Resume from LEVEL 3 TASK provider truth battery cleanup using `JARVIS-SESSION-STATE.md`.
 
 Immediate next work:
 
-1. Triage `artifacts/qa/level9-truth-report.json` findings, starting with
-   seeded/QA records still present in runtime-visible data stores.
+1. Triage the remaining provider battery runner fetch failure and determine
+   whether it is a real route defect, an E2E battery issue, or an environment
+   limitation.
 2. Re-run `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
-   after each truth-cleanup seam to reduce unresolved failures honestly.
+   after each provider-truth seam to reduce unresolved failures honestly.
 3. Keep `python3 scripts/verify_docs_truth.py` green as the planning docs evolve.
 
 ## Level 9 Exit Gate

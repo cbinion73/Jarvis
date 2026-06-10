@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from .data_hygiene import filter_records
 from .persistence import append_jsonl, atomic_write_json
 
 
@@ -105,9 +106,9 @@ class SharedDoctrineStore:
         payload.setdefault("rules", [])
         payload.setdefault("history", [])
         payload.setdefault("last_synthesis", {})
-        payload["candidates"] = [dict(item) for item in list(payload.get("candidates", [])) if isinstance(item, dict)]
-        payload["rules"] = [dict(item) for item in list(payload.get("rules", [])) if isinstance(item, dict)]
-        payload["history"] = [dict(item) for item in list(payload.get("history", [])) if isinstance(item, dict)]
+        payload["candidates"] = filter_records([dict(item) for item in list(payload.get("candidates", [])) if isinstance(item, dict)])
+        payload["rules"] = filter_records([dict(item) for item in list(payload.get("rules", [])) if isinstance(item, dict)])
+        payload["history"] = filter_records([dict(item) for item in list(payload.get("history", [])) if isinstance(item, dict)])
         return payload
 
     def save(self, payload: dict[str, Any]) -> None:

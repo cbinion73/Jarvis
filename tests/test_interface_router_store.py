@@ -43,6 +43,28 @@ class InterfaceRouterStoreTests(unittest.TestCase):
 
             self.assertEqual(loaded, saved)
 
+    def test_filters_seeded_sessions_from_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = InterfaceRouterStore(Path(tmp))
+            store.sessions_path.write_text(
+                """
+{
+  "demo": {
+    "request_id": "demo",
+    "prompt": "Continue my formation thread in Chronicle for troop meeting follow-up"
+  },
+  "real": {
+    "request_id": "real",
+    "prompt": "Open Chronicle timeline"
+  }
+}
+                """.strip(),
+                encoding="utf-8",
+            )
+
+            self.assertIsNone(store.get_session("demo"))
+            self.assertEqual(store.get_session("real")["request_id"], "real")
+
 
 if __name__ == "__main__":
     unittest.main()
