@@ -17,7 +17,7 @@
       "status": "local-only"
     },
     "github": {
-      "detail": "## main...origin/main [ahead 16, behind 1]",
+      "detail": "## main...origin/main [ahead 17, behind 1]",
       "status": "observed"
     },
     "local": {
@@ -85,9 +85,11 @@
             "status": "passed"
           }
         ],
+        "environment_limited": false,
         "failures": [],
         "finished_at": "2026-06-09T19:26:32.361Z",
         "path": "artifacts/qa/jarvis-platform-report.json",
+        "runtime": {},
         "started_at": "2026-06-09T19:26:00.644Z",
         "status": "present",
         "summary": {
@@ -98,24 +100,41 @@
       },
       "provider_report": {
         "base_url": "http://127.0.0.1:8787",
-        "checks": [],
-        "failures": [
+        "checks": [
           {
-            "error": "TypeError: fetch failed",
-            "name": "runner"
+            "details": "Local runtime at http://127.0.0.1:8787 was unavailable before provider checks: TypeError: fetch failed",
+            "kind": "automated",
+            "name": "Provider battery preflight",
+            "screenshot": null,
+            "status": "skipped"
           }
         ],
-        "finished_at": null,
+        "environment_limited": true,
+        "failures": [],
+        "finished_at": "2026-06-10T14:54:41.062Z",
         "path": "artifacts/qa/jarvis-provider-layer-report.json",
-        "started_at": "2026-05-15T15:57:13.349Z",
-        "status": "present",
-        "summary": {
-          "failed": 1,
-          "passed": 0,
-          "skipped": 0,
-          "warned": 0
+        "runtime": {
+          "available": false,
+          "health_url": "http://127.0.0.1:8787/health",
+          "healthcheck": {
+            "error": "TypeError: fetch failed",
+            "ok": false
+          }
         },
-        "warnings": []
+        "started_at": "2026-06-10T14:54:41.061Z",
+        "status": "environment-limited",
+        "summary": {
+          "failed": 0,
+          "passed": 0,
+          "skipped": 1,
+          "warned": 1
+        },
+        "warnings": [
+          {
+            "details": "Local runtime at http://127.0.0.1:8787 was unavailable before provider checks: TypeError: fetch failed",
+            "name": "runtime-unavailable"
+          }
+        ]
       },
       "status": "environment-limited"
     }
@@ -138,15 +157,16 @@
     "CarPlay navigation depth: may require entitlement approval for deeper",
     "Provider credentials: Google, Microsoft, Dexcom, Plaid, KDP, Weather, and"
   ],
-  "generated_at": "2026-06-10T14:50:07.189558+00:00",
+  "generated_at": "2026-06-10T14:55:50.471182+00:00",
   "git": {
-    "branch_status": "## main...origin/main [ahead 16, behind 1]",
+    "branch_status": "## main...origin/main [ahead 17, behind 1]",
     "dirty": true,
-    "head": "ac0ee3c786a9de05282dfe0e657bd75abfd5c09d",
+    "head": "2d962c39d5ff135844117aca523eccb0fce11c29",
     "status_excerpt": [
       " M artifacts/generated/jarvis-approval-queue.html",
       " M artifacts/generated/jarvis-approval-queue.json",
       " M artifacts/qa/jarvis-platform-report.json",
+      " M artifacts/qa/jarvis-provider-layer-report.json",
       " M artifacts/qa/level9-truth-report.json",
       " M data/catalyst/work_lifecycle.json",
       " M data/family/mode_history_state_log.jsonl",
@@ -162,8 +182,7 @@
       " M data/system/guardian_events.jsonl",
       " M data/system/guardian_state.json",
       " M data/system/jobs.json",
-      " M data/system/runs.json",
-      " M data/trust/resource_arenas.json"
+      " M data/system/runs.json"
     ]
   },
   "no_fake_data_audit": {
@@ -1668,9 +1687,11 @@
           "status": "passed"
         }
       ],
+      "environment_limited": false,
       "failures": [],
       "finished_at": "2026-06-09T19:26:32.361Z",
       "path": "artifacts/qa/jarvis-platform-report.json",
+      "runtime": {},
       "started_at": "2026-06-09T19:26:00.644Z",
       "status": "present",
       "summary": {
@@ -1681,35 +1702,52 @@
     },
     "production_revision": {
       "deployed_revision": "unverified in this run",
-      "git_head": "ac0ee3c786a9de05282dfe0e657bd75abfd5c09d"
+      "git_head": "2d962c39d5ff135844117aca523eccb0fce11c29"
     },
     "provider_battery": {
       "base_url": "http://127.0.0.1:8787",
-      "checks": [],
-      "failures": [
+      "checks": [
         {
-          "error": "TypeError: fetch failed",
-          "name": "runner"
+          "details": "Local runtime at http://127.0.0.1:8787 was unavailable before provider checks: TypeError: fetch failed",
+          "kind": "automated",
+          "name": "Provider battery preflight",
+          "screenshot": null,
+          "status": "skipped"
         }
       ],
-      "finished_at": null,
+      "environment_limited": true,
+      "failures": [],
+      "finished_at": "2026-06-10T14:54:41.062Z",
       "path": "artifacts/qa/jarvis-provider-layer-report.json",
-      "started_at": "2026-05-15T15:57:13.349Z",
-      "status": "present",
-      "summary": {
-        "failed": 1,
-        "passed": 0,
-        "skipped": 0,
-        "warned": 0
+      "runtime": {
+        "available": false,
+        "health_url": "http://127.0.0.1:8787/health",
+        "healthcheck": {
+          "error": "TypeError: fetch failed",
+          "ok": false
+        }
       },
-      "warnings": []
+      "started_at": "2026-06-10T14:54:41.061Z",
+      "status": "environment-limited",
+      "summary": {
+        "failed": 0,
+        "passed": 0,
+        "skipped": 1,
+        "warned": 1
+      },
+      "warnings": [
+        {
+          "details": "Local runtime at http://127.0.0.1:8787 was unavailable before provider checks: TypeError: fetch failed",
+          "name": "runtime-unavailable"
+        }
+      ]
     },
     "unresolved_failures": []
   },
   "scorecard": [
     {
       "evidence_links": [],
-      "last_verification_date": "2026-06-10T14:50:07.189458+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471062+00:00",
       "level": "Level 1: Tool Bundle",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1729,7 +1767,7 @@
         "tests/e2e/jarvis-platform.e2e.cjs",
         "tests/test_glass_theme_shell.py"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189540+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471163+00:00",
       "level": "Level 2: Unified Command Product",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1750,7 +1788,7 @@
         "tests/test_phase_a_close_level3.py",
         "docs/JARVIS-LEVEL3-EXIT-REPORT.md"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189543+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471167+00:00",
       "level": "Level 3: Household Operating System",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1771,7 +1809,7 @@
         "tests/test_governance_authn.py",
         "tests/test_phase_b_trust_boundary_audit.py"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189545+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471169+00:00",
       "level": "Level 4: Governed Intelligence System",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1792,7 +1830,7 @@
         "tests/test_phase_h5_proactive_orchestrator.py",
         "tests/test_level5_presence_routing.py"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189546+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471170+00:00",
       "level": "Level 5: Ambient Household Intelligence",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1813,7 +1851,7 @@
         "tests/test_truthful_seed_filtering.py",
         "tests/e2e/jarvis-memory-governance.e2e.cjs"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189548+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471173+00:00",
       "level": "Level 6: Memory and Continuity Engine",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1834,7 +1872,7 @@
         "tests/test_level7_season_formation.py",
         "tests/test_stewardship_daily_gap9.py"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189549+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471174+00:00",
       "level": "Level 7: Formation and Stewardship Platform",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1855,7 +1893,7 @@
         "tests/test_level8_zone_consent_promote.py",
         "tests/test_phase_e_formation_autonomy.py"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189550+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471176+00:00",
       "level": "Level 8: Bounded Autonomous Operator",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",
@@ -1876,7 +1914,7 @@
         "tests/test_phase_f_level9.py",
         "docs/JARVIS-LEVEL9-COMPREHENSIVE-CHECKLIST.md"
       ],
-      "last_verification_date": "2026-06-10T14:50:07.189552+00:00",
+      "last_verification_date": "2026-06-10T14:55:50.471177+00:00",
       "level": "Level 9: Family Civilization Layer",
       "open_blockers": [
         "Home Assistant: future integration hub if the household adopts it. Keep in",

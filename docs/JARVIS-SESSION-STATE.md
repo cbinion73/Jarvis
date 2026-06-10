@@ -277,14 +277,17 @@ Proof landed 2026-06-10:
 
 - `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
 - `python3 scripts/verify_docs_truth.py`
+- `node tests/e2e/jarvis-provider-layer.e2e.cjs`
 - Artifact: `artifacts/qa/level9-truth-report.json`
+- Artifact: `artifacts/qa/jarvis-provider-layer-report.json`
 - Tests:
   - `python3 -m pytest tests/test_verify_level9_truth.py tests/test_truthful_seed_filtering.py tests/test_data_connectors.py -q`
   - `python3 -m pytest tests/test_verify_docs_truth.py tests/test_verify_level9_truth.py -q`
 - Current unresolved truth findings from the artifact:
   - provider battery is now classified as `environment-limited` rather than a
-    product failure when the local report only shows a runner fetch error
-    against `127.0.0.1:8787` with zero executed checks
+    product failure when the local runtime is unavailable; the battery now
+    writes an explicit preflight report with zero provider failures and a
+    truthful skipped/warned summary instead of a stale runner failure
   - no-fake-data audit now reports `warn`, not `fail`: zero runtime-exposed
     seeded findings, with remaining seeded/QA records classified as
     filtered-at-read backing data
@@ -581,13 +584,14 @@ truth is verified, and docs agree.
 
 ## Resume Point
 
-Resume from LEVEL 3 TASK hosted/provider proof battery using `JARVIS-SESSION-STATE.md`.
+Resume from LEVEL 3 TASK hosted/provider live verification using `JARVIS-SESSION-STATE.md`.
 
 Immediate next work:
 
-1. Replace or refresh the stale local provider battery artifact with a real run
-   against a live local or hosted JARVIS surface so provider truth can move
-   from environment-limited to verified.
+1. Run the provider battery against a live reachable JARVIS surface so provider
+   truth can move from `environment-limited` to `verified`. The local battery
+   now reports runtime unavailability truthfully; the remaining gap is live
+   runtime reachability, not battery semantics.
 2. Re-run `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
    after each provider-truth seam to reduce unresolved failures honestly.
 3. Keep `python3 scripts/verify_docs_truth.py` green as the planning docs evolve.

@@ -170,6 +170,51 @@ class VerifyLevel9TruthTests(unittest.TestCase):
         self.assertEqual(report["channel_truth"]["providers"]["status"], "environment-limited")
         self.assertNotIn("{'name': 'runner', 'error': 'TypeError: fetch failed'}", report["proof_ledger"]["unresolved_failures"])
 
+    def test_build_truth_report_honors_explicit_environment_limited_provider_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "docs").mkdir()
+            (root / "artifacts" / "qa").mkdir(parents=True)
+            session_state = root / "docs" / "JARVIS-SESSION-STATE.md"
+            session_state.write_text(SESSION_STATE_SAMPLE, encoding="utf-8")
+
+            (root / "artifacts" / "qa" / "jarvis-provider-layer-report.json").write_text(
+                json.dumps(
+                    {
+                        "base_url": "http://127.0.0.1:8787",
+                        "status": "environment-limited",
+                        "environment_limited": True,
+                        "checks": [
+                            {
+                                "name": "Provider battery preflight",
+                                "status": "skipped",
+                                "details": "Local runtime unavailable",
+                            }
+                        ],
+                        "failures": [],
+                        "warnings": [{"name": "runtime-unavailable", "details": "Local runtime unavailable"}],
+                        "summary": {"passed": 0, "failed": 0, "skipped": 1, "warned": 1},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with patch.object(
+                verify_level9_truth,
+                "_git_truth",
+                return_value={"branch_status": "## main", "head": "abc123", "dirty": False, "status_excerpt": []},
+            ), patch.object(
+                verify_level9_truth,
+                "_build_deployment_context",
+                return_value={"label": "Local dev", "data_path": str(root / "data"), "note": "local", "in_docker": False},
+            ):
+                report = verify_level9_truth.build_truth_report(root, session_state)
+
+        self.assertTrue(report["channel_truth"]["providers"]["environment_limited"])
+        self.assertEqual(report["channel_truth"]["providers"]["status"], "environment-limited")
+        self.assertEqual(report["proof_ledger"]["provider_battery"]["summary"]["failed"], 0)
+        self.assertEqual(report["proof_ledger"]["unresolved_failures"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

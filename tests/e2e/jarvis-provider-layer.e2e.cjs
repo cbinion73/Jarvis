@@ -9,6 +9,68 @@ const REPORT_PATH = path.join(ARTIFACT_DIR, "jarvis-provider-layer-report.json")
 
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
+function isLocalBaseUrl(rawBaseUrl) {
+  try {
+    const url = new URL(rawBaseUrl);
+    return url.hostname === "127.0.0.1" || url.hostname === "localhost";
+  } catch {
+    return false;
+  }
+}
+
+async function runtimeHealthcheck() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3000);
+  try {
+    const response = await fetch(`${BASE_URL}/health`, { signal: controller.signal });
+    return { ok: response.ok, status: response.status };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error && error.stack ? error.stack : String(error),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function writeReport(report) {
+  fs.mkdirSync(path.dirname(REPORT_PATH), { recursive: true });
+  fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
+  process.stdout.write(`${REPORT_PATH}\n`);
+  process.stdout.write(JSON.stringify(report, null, 2));
+}
+
+function buildEnvironmentLimitedReport(health) {
+  const detail = health?.error
+    ? `Local runtime at ${BASE_URL} was unavailable before provider checks: ${health.error}`
+    : `Local runtime at ${BASE_URL} did not pass /health before provider checks (status ${health?.status ?? "unknown"}).`;
+  return {
+    started_at: new Date().toISOString(),
+    finished_at: new Date().toISOString(),
+    base_url: BASE_URL,
+    status: "environment-limited",
+    environment_limited: true,
+    runtime: {
+      available: false,
+      health_url: `${BASE_URL}/health`,
+      healthcheck: health,
+    },
+    checks: [
+      {
+        name: "Provider battery preflight",
+        status: "skipped",
+        details: detail,
+        screenshot: null,
+        kind: "automated",
+      },
+    ],
+    failures: [],
+    warnings: [{ name: "runtime-unavailable", details: detail }],
+    summary: { passed: 0, failed: 0, skipped: 1, warned: 1 },
+  };
+}
+
 function slugify(value) {
   return String(value || "")
     .toLowerCase()
@@ -48,6 +110,12 @@ function assert(condition, message) {
 }
 
 async function run() {
+  const health = await runtimeHealthcheck();
+  if (!health.ok && isLocalBaseUrl(BASE_URL)) {
+    writeReport(buildEnvironmentLimitedReport(health));
+    return;
+  }
+
   const report = {
     started_at: new Date().toISOString(),
     base_url: BASE_URL,
@@ -226,9 +294,7 @@ async function run() {
   await browser.close();
 
   report.finished_at = new Date().toISOString();
-  fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2));
-  process.stdout.write(`${REPORT_PATH}\n`);
-  process.stdout.write(JSON.stringify(report, null, 2));
+  writeReport(report);
 
   if (report.summary.failed > 0) {
     process.exitCode = 1;

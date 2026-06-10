@@ -197,7 +197,7 @@ def _summarize_qa_report(path: Path, repo_root: Path) -> dict[str, Any]:
         }
     return {
         "path": _display_path(path, repo_root),
-        "status": "present",
+        "status": payload.get("status") or "present",
         "summary": dict(payload.get("summary") or {}),
         "failures": list(payload.get("failures") or []),
         "warnings": list(payload.get("warnings") or []),
@@ -205,10 +205,16 @@ def _summarize_qa_report(path: Path, repo_root: Path) -> dict[str, Any]:
         "finished_at": payload.get("finished_at"),
         "base_url": payload.get("base_url"),
         "checks": list(payload.get("checks") or []),
+        "environment_limited": bool(payload.get("environment_limited")),
+        "runtime": dict(payload.get("runtime") or {}),
     }
 
 
 def _is_environment_limited_runner_report(report: dict[str, Any]) -> bool:
+    if str(report.get("status") or "").strip().lower() == "environment-limited":
+        return True
+    if bool(report.get("environment_limited")):
+        return True
     failures = list(report.get("failures") or [])
     checks = list(report.get("checks") or [])
     base_url = str(report.get("base_url") or "").strip().lower()

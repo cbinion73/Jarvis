@@ -145,7 +145,7 @@ Expected result:
 Start JARVIS first:
 
 ```bash
-/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python -m jarvis serve --host 127.0.0.1 --port 8787
+/Users/chris/Desktop/JARVIS/.venv/bin/python -m jarvis serve --host 127.0.0.1 --port 8787
 ```
 
 Run the provider battery:
@@ -153,13 +153,13 @@ Run the provider battery:
 ```bash
 NODE_PATH=/Users/chris/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules \
 /Users/chris/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node \
-/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs
+/Users/chris/Desktop/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs
 ```
 
 Artifacts:
 
-- JSON report: [/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-provider-layer-report.json](/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/jarvis-provider-layer-report.json)
-- screenshots: [/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots](/Users/chris/Desktop/CODE/JARVIS/artifacts/qa/screenshots)
+- JSON report: [/Users/chris/Desktop/JARVIS/artifacts/qa/jarvis-provider-layer-report.json](/Users/chris/Desktop/JARVIS/artifacts/qa/jarvis-provider-layer-report.json)
+- screenshots: [/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots](/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots)
 
 ## Status Semantics
 
@@ -167,6 +167,9 @@ Artifacts:
 - `warning`: the provider path is partially wired but not truly usable yet
 - `skipped`: the dependency is not configured, so we did not pretend to test it
 - `failed`: the path should work now and did not
+- `environment-limited`: the local runtime was unreachable before the provider
+  battery could exercise any provider paths, so the artifact records truthful
+  preflight unavailability instead of a fake provider failure
 
 ## Current Likely Failure Modes
 
