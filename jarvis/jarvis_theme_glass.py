@@ -26255,7 +26255,7 @@ body::after {{
 /* ── Constants ── */
 const INITIAL_PACKET = {_packet};
 const USER_NAME      = {_user_name_js};
-const WS_URL         = 'ws://' + location.host + '/ws';
+const GLASS_EVENT_STREAM_PATH = '/ws/events';
 const HOME_PEOPLE_SEED = {_home_people_seed_js};
 const HOME_LOCATION_LABEL = {_home_location_label_js};
 const HOME_QUIET_START = {_home_quiet_start_js};
@@ -26529,6 +26529,10 @@ let _dailyBriefData = null;
 let _dailyBriefActor = 'Chris';
 let _dailyBriefRequestSerial = 0;
 
+function glassEventStreamEnabled() {{
+  return window.__JARVIS_ENABLE_EVENT_STREAM === true;
+}}
+
 /* ═══════════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════════ */
@@ -26709,7 +26713,7 @@ async function init() {{
   loadStatus();
   loadApprovals();
   loadBriefing();
-  connectWebSocket();
+  if (glassEventStreamEnabled()) connectWebSocket();
   updateActiveCounts();
   loadHomeDashboard();
   loadChronicleContext();
@@ -29867,17 +29871,12 @@ async function loadWorkIntelligence() {{
 /* ═══════════════════════════════════════════════════════════════
    API CALLS
 ═══════════════════════════════════════════════════════════════ */
-async function checkMcpStatus() {{
+function checkMcpStatus() {{
   const el = document.getElementById('mcp-status');
-  try {{
-    const res = await fetch('http://127.0.0.1:8788/', {{ signal: AbortSignal.timeout(2000) }});
-    if (el) {{ el.textContent = 'connected ✓'; el.style.color = 'var(--green)'; }}
-  }} catch {{
-    if (el) {{ el.textContent = 'offline'; el.style.color = 'var(--red)'; }}
-  }}
+  if (!el) return;
+  el.textContent = 'manual';
+  el.style.color = 'var(--text-2)';
 }}
-// Check MCP status on load
-setTimeout(checkMcpStatus, 3000);
 
 async function loadStatus() {{
   return refreshIntelDesktop();
@@ -36356,7 +36355,8 @@ function renderCalendarDesktop(modulePayload) {{
   const meetingLoadPct = Math.max(8, Math.min(92, Math.round((meetingHours / totalHours) * 100)));
   const sourceCounts = calendarSourceCounts(allEvents);
   const focusWindow = focusEvent ? calendarEventLabel(focusEvent) : 'Protected window pending';
-  const dateText = todayPayload.date ? calendarPrettyDate(todayPayload.date) : calendarPrettyDate(payload.generated_at || new Date().toISOString());
+  const dateSource = todayPayload.date || payload.local_today || payload.generated_at || new Date().toISOString();
+  const dateText = calendarPrettyDate(dateSource);
 
   calendarRuntimeNote(payload.runtime_note || availabilityNotes[0] || 'Calendar is live and connected.');
 
@@ -41578,7 +41578,7 @@ async function resolveApproval(approvalId, approved, cardEl) {{
 }}
 
 /* ══════════════════════════════════════════════════════════════════
-   MAIN: sendCommand  — now uses the agentic streaming endpoint
+   MAIN: sendCommand  — uses the same safe shell conversation route
 ══════════════════════════════════════════════════════════════════ */
 async function sendCommand(text) {{
   if (!text || !text.trim()) return;
@@ -41618,123 +41618,40 @@ async function sendCommand(text) {{
   chatArea.scrollTop = chatArea.scrollHeight;
 
   _agentStreaming = true;
-  let accText = '';
-  let activeToolBlocks = {{}};  /* tool_use_id → {{block, outputArea}} */
 
   try {{
-    const res = await fetch('/api/agent/stream', {{
+    const res = await fetch('/api/respond', {{
       method: 'POST',
       headers: {{ 'Content-Type': 'application/json' }},
       body: JSON.stringify({{
-        message: text,
+        actor: 'Chris',
+        room: 'office',
+        request: text,
         conversation_id: _agentConversationId(),
-        messages: _agentMessages.slice(0, -1)   /* prior turns only; server appends current */
+        source: 'glass-chat'
       }})
     }});
 
     if (!res.ok) {{
       cursor.remove();
-      textBubble.textContent = 'Agent endpoint error: ' + res.status;
+      textBubble.textContent = 'Command endpoint error: ' + res.status;
       _agentStreaming = false;
       return;
     }}
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    while (true) {{
-      const {{ done, value }} = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, {{ stream: true }});
-
-      const lines = buf.split('\\n');
-      buf = lines.pop();   /* keep incomplete line in buf */
-
-      for (const line of lines) {{
-        if (!line.startsWith('data: ')) continue;
-        let evt;
-        try {{ evt = JSON.parse(line.slice(6)); }} catch(_) {{ continue; }}
-
-        const type = evt.type;
-
-        /* ── Text streaming ── */
-        if (type === 'text_delta') {{
-          accText += evt.delta || '';
-          /* Update bubble — keep cursor at end */
-          textBubble.textContent = accText;
-          textBubble.appendChild(cursor);
-          chatArea.scrollTop = chatArea.scrollHeight;
-        }}
-
-        /* ── Tool call started ── */
-        else if (type === 'tool_call') {{
-          const block = _makeToolBlock(evt.tool, evt.input);
-          const outputArea = block.querySelector('.tool-output-area');
-          bodyWrap.appendChild(block);
-          activeToolBlocks[evt.tool_use_id] = {{ block, outputArea }};
-          chatArea.scrollTop = chatArea.scrollHeight;
-        }}
-
-        /* ── Tool result received ── */
-        else if (type === 'tool_result') {{
-          const entry = activeToolBlocks[evt.tool_use_id];
-          if (entry) {{
-            const statusEl = entry.block.querySelector('.tool-status');
-            statusEl.textContent = evt.error ? 'error' : 'done';
-            statusEl.className   = 'tool-status ' + (evt.error ? 'error' : 'done');
-            entry.outputArea.textContent = evt.output || '';
-            /* Auto-collapse successful tool outputs */
-            if (!evt.error) entry.outputArea.classList.remove('expanded');
-          }}
-          chatArea.scrollTop = chatArea.scrollHeight;
-        }}
-
-        /* ── Approval needed ── */
-        else if (type === 'approval_needed') {{
-          const card = _makeApprovalCard(evt.approval_id, evt.tool, evt.input);
-          bodyWrap.appendChild(card);
-          chatArea.scrollTop = chatArea.scrollHeight;
-        }}
-
-        /* ── Tool skipped ── */
-        else if (type === 'tool_skipped') {{
-          /* Find the most recent approval card and mark it */
-        }}
-
-        /* ── Done ── */
-        else if (type === 'done') {{
-          cursor.remove();
-          /* Finalize text */
-          if (accText) textBubble.textContent = accText;
-          else if (!textBubble.textContent) textBubble.textContent = '(no text response)';
-          /* Add meta */
-          const meta = document.createElement('div');
-          meta.className = 'msg-meta';
-          meta.textContent = (evt.model || 'qwen2.5:14b') + ' · ' + new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
-          bodyWrap.appendChild(meta);
-          /* Save assistant turn in history */
-          _agentMessages.push({{ role: 'assistant', content: accText }});
-          /* Speak response if voice is active */
-          voiceSpeak(accText);
-        }}
-
-        /* ── Error ── */
-        else if (type === 'error') {{
-          cursor.remove();
-          textBubble.textContent = '⚠ ' + (evt.message || 'Unknown error');
-        }}
-
-        /* ── Max turns ── */
-        else if (type === 'max_turns') {{
-          cursor.remove();
-          const notice = document.createElement('div');
-          notice.className = 'msg-meta';
-          notice.textContent = '(reached max turns — task may be incomplete)';
-          bodyWrap.appendChild(notice);
-        }}
-      }}
+    const data = await res.json();
+    const output = data.output_text || data.response || data.text || 'No response returned.';
+    if (data.conversation_id) {{
+      _agentConvId = String(data.conversation_id);
     }}
+    cursor.remove();
+    textBubble.textContent = output;
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    meta.textContent = (data.model || data.provider || 'standby') + ' · ' + new Date().toLocaleTimeString([], {{hour:'2-digit', minute:'2-digit'}});
+    bodyWrap.appendChild(meta);
+    _agentMessages.push({{ role: 'assistant', content: output }});
+    voiceSpeak(output);
 
   }} catch(e) {{
     cursor.remove();
@@ -44683,8 +44600,10 @@ async function voiceSpeak(text) {{
    WEBSOCKET
 ═══════════════════════════════════════════════════════════════ */
 function connectWebSocket() {{
+  if (!glassEventStreamEnabled()) return;
   try {{
-    ws = new WebSocket(WS_URL);
+    const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(protocol + '://' + location.host + GLASS_EVENT_STREAM_PATH);
     ws.onopen    = () => {{ wsRetries = 0; }};
     ws.onmessage = e => {{
       try {{ handlePacket(JSON.parse(e.data)); }} catch(_) {{}}
@@ -45615,12 +45534,38 @@ async function settingsConnectGoogle() {{
 async function settingsConnectOutlook() {{
   const msg = document.getElementById('settings-outlook-msg');
   try {{
-    const r = await fetch('/api/accounts');
-    const data = await r.json();
-    const acct = (data.accounts || []).find(a => a.provider === 'outlook' || a.provider === 'microsoft');
+    const [accountsResp, microsoftResp] = await Promise.all([
+      fetch('/api/accounts'),
+      fetch('/api/microsoft/status')
+    ]);
+    const data = await accountsResp.json();
+    const microsoft = await microsoftResp.json();
+    let acct = (data.accounts || []).find(a => a.provider === 'outlook' || a.provider === 'microsoft');
     if (!acct) {{
-      if (msg) msg.textContent = 'No Outlook account configured. Set JARVIS_MICROSOFT_* env vars first.';
-      return;
+      const configured = !!(microsoft && microsoft.config && microsoft.config.configured);
+      if (!configured) {{
+        if (msg) msg.textContent = 'Microsoft app config is missing. Set JARVIS_MICROSOFT_* env vars first.';
+        return;
+      }}
+      const createResp = await fetch('/api/accounts', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{
+          owner_user_id: 'chris',
+          provider: 'outlook',
+          service_scope: 'mail_calendar',
+          label: 'Chris Outlook',
+          login_hint: '',
+          status: 'planned',
+          notes: 'Auto-provisioned from Outlook connector settings.'
+        }})
+      }});
+      const created = await createResp.json();
+      acct = created.account || null;
+      if (!acct) {{
+        if (msg) msg.textContent = created.detail || created.message || 'Could not create an Outlook account record.';
+        return;
+      }}
     }}
     window.open('/accounts/' + acct.account_id + '/connect', '_blank');
     if (msg) msg.textContent = 'Outlook login opened in a new tab.';

@@ -426,6 +426,9 @@ class MicrosoftGraphSupport:
             token["expires_at"] = (datetime.now(timezone.utc) + timedelta(seconds=expires_in)).isoformat()
         path = self._token_path_for_account_id(account_id)
         self._save_dict_snapshot(path, token)
+        # Mirror the most recent successful delegated token to the default path so
+        # the long-lived Outlook bridge can pick it up immediately without a restart.
+        self._save_dict_snapshot(self.config.microsoft_token_path, token)
 
     def _token_request(self, payload: dict[str, str]) -> dict[str, Any]:
         body = parse.urlencode(payload).encode("utf-8")

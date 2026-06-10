@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -81,6 +82,28 @@ class MicrosoftGraphStoreTests(unittest.TestCase):
             assert token is not None
             self.assertEqual(token["access_token"], "secret-token")
             self.assertEqual(token["refresh_token"], "refresh-token")
+
+    def test_save_token_mirrors_latest_delegated_token_to_default_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = _make_config(root)
+            support = MicrosoftGraphSupport(config)
+
+            support._save_token(
+                {
+                    "access_token": "live-token",
+                    "refresh_token": "live-refresh",
+                    "expires_in": 3600,
+                },
+                account_id="acct-123",
+            )
+
+            account_payload = json.loads((root / "acct-123.json").read_text(encoding="utf-8"))
+            default_payload = json.loads((root / "token.json").read_text(encoding="utf-8"))
+
+            self.assertEqual(account_payload["access_token"], "live-token")
+            self.assertEqual(default_payload["access_token"], "live-token")
+            self.assertEqual(default_payload["refresh_token"], "live-refresh")
 
 
 if __name__ == "__main__":
