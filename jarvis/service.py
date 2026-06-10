@@ -386,6 +386,25 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     def _base_url(request: Request) -> str:
         return str(request.base_url).rstrip("/")
 
+    def _hosted_public_base_url(request: Request | None = None) -> str:
+        configured = str(os.environ.get("JARVIS_HOSTED_BASE_URL", "") or "").strip().rstrip("/")
+        if configured:
+            return configured
+        if request is not None:
+            try:
+                host = str(getattr(request, "headers", {}).get("host", "") or "").strip()
+                if host:
+                    if host.endswith("teambinion.org"):
+                        return f"https://{host}"
+                    return str(request.base_url).rstrip("/")
+            except Exception:
+                pass
+            base = str(request.base_url).rstrip("/")
+            if base.startswith("http://127.0.0.1") or base.startswith("http://localhost"):
+                return "https://jarvis.teambinion.org"
+            return base
+        return "https://jarvis.teambinion.org"
+
     async def _broadcast_dashboard(event_name: str, *, include_dashboard: bool = True) -> None:
         payload: dict[str, Any] = {
             "type": event_name,
@@ -11005,6 +11024,494 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         events = await asyncio.to_thread(db.list_calendar_events, start, end, source or None)
         return _json({"events": events, "total": len(events)})
 
+    # ------------------------------------------------------------------
+    # E11: Home Assistant safety layer routes
+    # ------------------------------------------------------------------
+
+    @app.post("/api/home/ha/service-check")
+    async def api_ha_service_check(payload: dict[str, Any]) -> JSONResponse:
+        """Gate a proposed HA service call through the safety policy.
+
+        Required: domain, service, entity_id
+        Optional: actor, voice_only
+        """
+        from .ha_safety import check_service_call
+        domain = str(payload.get("domain") or "").strip()
+        service = str(payload.get("service") or "").strip()
+        entity_id = str(payload.get("entity_id") or "").strip()
+        if not domain or not service:
+            raise HTTPException(status_code=400, detail="domain and service are required")
+        actor = str(payload.get("actor") or "chris")
+        voice_only = bool(payload.get("voice_only") or False)
+        result = check_service_call(
+            domain=domain,
+            service=service,
+            entity_id=entity_id,
+            actor=actor,
+            voice_only=voice_only,
+        )
+        return _json(result)
+
+    @app.get("/api/home/ha/safe-services")
+    async def api_ha_safe_services() -> JSONResponse:
+        """Return the HA safe-service allowlist and denied list."""
+        from .ha_safety import list_safe_services
+        return _json(list_safe_services())
+
+    @app.get("/api/home/ha/config-status")
+    async def api_ha_config_status() -> JSONResponse:
+        """Return honest HA configuration availability state."""
+        from .ha_safety import validate_ha_config
+        cfg = runtime.config
+        result = validate_ha_config(
+            ha_url=str(getattr(cfg, "home_assistant_url", "") or ""),
+            ha_token=str(getattr(cfg, "home_assistant_token", "") or ""),
+        )
+        return _json(result)
+
+    # ── E6: Sandbox rollback packets ───────────────────────────────────────────
+
+    @app.post("/api/sandbox/rollback/create")
+    async def api_sandbox_rollback_create(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .sandbox_rollback import SandboxRollbackStore
+        store = SandboxRollbackStore(runtime.data_root / "sandbox" / "rollback")
+        packet = store.create_packet(
+            job_id=str(payload.get("job_id", "")),
+            job_type=str(payload.get("job_type", "sandbox")),
+            actor=str(payload.get("actor", "system")),
+            pre_state=payload.get("pre_state") or {},
+            reverse_instructions=list(payload.get("reverse_instructions") or []),
+            files_touched=list(payload.get("files_touched") or []),
+        )
+        from dataclasses import asdict
+        return _json(asdict(packet))
+
+    @app.get("/api/sandbox/rollback/{packet_id}")
+    async def api_sandbox_rollback_get(packet_id: str) -> JSONResponse:
+        from .sandbox_rollback import SandboxRollbackStore
+        store = SandboxRollbackStore(runtime.data_root / "sandbox" / "rollback")
+        pkt = store.get_by_packet_id(packet_id)
+        if not pkt:
+            raise HTTPException(status_code=404, detail="Rollback packet not found")
+        return _json(pkt)
+
+    @app.post("/api/sandbox/rollback/{packet_id}/apply")
+    async def api_sandbox_rollback_apply(packet_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .sandbox_rollback import SandboxRollbackStore
+        store = SandboxRollbackStore(runtime.data_root / "sandbox" / "rollback")
+        result = store.apply_rollback(packet_id, actor=str(payload.get("actor", "chris")))
+        if not result:
+            raise HTTPException(status_code=404, detail="Rollback packet not found")
+        return _json(result)
+
+    @app.post("/api/sandbox/rollback/{packet_id}/skip")
+    async def api_sandbox_rollback_skip(packet_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .sandbox_rollback import SandboxRollbackStore
+        store = SandboxRollbackStore(runtime.data_root / "sandbox" / "rollback")
+        result = store.skip_rollback(packet_id, actor=str(payload.get("actor", "system")), reason=str(payload.get("reason", "")))
+        if not result:
+            raise HTTPException(status_code=404, detail="Rollback packet not found")
+        return _json(result)
+
+    @app.get("/api/sandbox/rollback")
+    async def api_sandbox_rollback_list_pending() -> JSONResponse:
+        from .sandbox_rollback import SandboxRollbackStore
+        store = SandboxRollbackStore(runtime.data_root / "sandbox" / "rollback")
+        return _json(store.list_pending())
+
+    # ── E1: Health loop ────────────────────────────────────────────────────────
+
+    @app.post("/api/health/checkin")
+    async def api_health_checkin(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .health_loop import HealthLoopStore
+        store = HealthLoopStore(runtime.data_root / "health")
+        checkin = store.add_checkin(
+            actor=str(payload.get("actor", "chris")),
+            date=str(payload.get("date", "")),
+            mood=str(payload.get("mood", "good")),
+            energy=str(payload.get("energy", "moderate")),
+            sleep_quality=str(payload.get("sleep_quality", "good")),
+            sleep_hours=float(payload.get("sleep_hours", 7)),
+            hydration_oz=float(payload.get("hydration_oz", 0)),
+            three_moves=list(payload.get("three_moves") or []),
+            gratitude=str(payload.get("gratitude", "")),
+            notes=str(payload.get("notes", "")),
+        )
+        from dataclasses import asdict
+        return _json(asdict(checkin))
+
+    @app.get("/api/health/checkins/{actor}")
+    async def api_health_list_checkins(actor: str) -> JSONResponse:
+        from .health_loop import HealthLoopStore
+        store = HealthLoopStore(runtime.data_root / "health")
+        return _json(store.list_checkins(actor))
+
+    @app.post("/api/health/evening-review")
+    async def api_health_evening_review(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .health_loop import HealthLoopStore
+        store = HealthLoopStore(runtime.data_root / "health")
+        review = store.add_evening_review(
+            actor=str(payload.get("actor", "chris")),
+            date=str(payload.get("date", "")),
+            checkin_id=str(payload.get("checkin_id", "")),
+            three_moves_outcomes=list(payload.get("three_moves_outcomes") or []),
+            what_worked=str(payload.get("what_worked", "")),
+            what_didnt=str(payload.get("what_didnt", "")),
+            health_rating=int(payload.get("health_rating", 5)),
+            drift_flags=list(payload.get("drift_flags") or []),
+            notes=str(payload.get("notes", "")),
+        )
+        from dataclasses import asdict
+        return _json(asdict(review))
+
+    @app.get("/api/health/drift/{actor}")
+    async def api_health_drift_items(actor: str) -> JSONResponse:
+        from .health_loop import HealthLoopStore
+        store = HealthLoopStore(runtime.data_root / "health")
+        return _json(store.list_open_drift_items(actor))
+
+    @app.get("/api/health/doctor-packet/{actor}")
+    async def api_health_doctor_packet(actor: str) -> JSONResponse:
+        from .health_loop import HealthLoopStore
+        store = HealthLoopStore(runtime.data_root / "health")
+        return _json(store.build_doctor_packet(actor))
+
+    # ── E2: Faith/ritual loop ──────────────────────────────────────────────────
+
+    @app.post("/api/ritual/prayer")
+    async def api_ritual_add_prayer(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .ritual_loop import RitualSummaryStore
+        store = RitualSummaryStore(runtime.data_root / "formation" / "ritual")
+        item = store.add_prayer(
+            actor=str(payload.get("actor", "chris")),
+            subject=str(payload.get("subject", "")),
+            request=str(payload.get("request", "")),
+            category=str(payload.get("category", "personal")),
+        )
+        from dataclasses import asdict
+        return _json(asdict(item))
+
+    @app.get("/api/ritual/prayers/{actor}")
+    async def api_ritual_list_prayers(actor: str) -> JSONResponse:
+        from .ritual_loop import RitualSummaryStore
+        store = RitualSummaryStore(runtime.data_root / "formation" / "ritual")
+        return _json(store.list_active_prayers(actor))
+
+    @app.get("/api/ritual/prayers/{actor}/needs-review")
+    async def api_ritual_prayers_needing_review(actor: str) -> JSONResponse:
+        from .ritual_loop import RitualSummaryStore
+        store = RitualSummaryStore(runtime.data_root / "formation" / "ritual")
+        return _json(store.get_prayers_needing_review(actor))
+
+    @app.post("/api/ritual/study")
+    async def api_ritual_add_study(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .ritual_loop import RitualSummaryStore
+        store = RitualSummaryStore(runtime.data_root / "formation" / "ritual")
+        item = store.add_study(
+            actor=str(payload.get("actor", "chris")),
+            title=str(payload.get("title", "")),
+            content=str(payload.get("content", "")),
+            category=str(payload.get("category", "scripture")),
+        )
+        from dataclasses import asdict
+        return _json(asdict(item))
+
+    @app.post("/api/ritual/summary")
+    async def api_ritual_add_summary(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .ritual_loop import RitualSummaryStore
+        store = RitualSummaryStore(runtime.data_root / "formation" / "ritual")
+        summary = store.add_summary(
+            actor=str(payload.get("actor", "chris")),
+            week_of=str(payload.get("week_of", "")),
+            family_devotional_count=int(payload.get("family_devotional_count", 0)),
+            prayer_items_added=int(payload.get("prayer_items_added", 0)),
+            prayer_items_answered=int(payload.get("prayer_items_answered", 0)),
+            study_items_reviewed=int(payload.get("study_items_reviewed", 0)),
+            highlights=str(payload.get("highlights", "")),
+            prayer_needs=list(payload.get("prayer_needs") or []),
+        )
+        from dataclasses import asdict
+        return _json(asdict(summary))
+
+    @app.get("/api/ritual/summaries/{actor}")
+    async def api_ritual_list_summaries(actor: str) -> JSONResponse:
+        from .ritual_loop import RitualSummaryStore
+        store = RitualSummaryStore(runtime.data_root / "formation" / "ritual")
+        return _json(store.list_summaries(actor))
+
+    # ── E3: Adaptation context ─────────────────────────────────────────────────
+
+    @app.post("/api/adaptation/context")
+    async def api_adaptation_context(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .adaptation import AdaptationContextBuilder
+        builder = AdaptationContextBuilder()
+        ctx = builder.build(
+            actor=str(payload.get("actor", "chris")),
+            season=str(payload.get("season", "fall")),
+            household_mode=str(payload.get("household_mode", "normal")),
+            calendar_event_count=int(payload.get("calendar_event_count", 0)),
+            energy_level=str(payload.get("energy_level", "moderate")),
+            sleep_quality=str(payload.get("sleep_quality", "good")),
+            mood=str(payload.get("mood", "good")),
+            active_relationships=list(payload.get("active_relationships") or []),
+            faith_active=bool(payload.get("faith_active", True)),
+            current_study_theme=str(payload.get("current_study_theme", "")),
+            stress_signals=list(payload.get("stress_signals") or []),
+        )
+        return _json(ctx.as_dict())
+
+    # ── E7: Automation pipeline ────────────────────────────────────────────────
+
+    @app.post("/api/automation/pipelines")
+    async def api_automation_create_pipeline(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        pipeline = store.create(
+            title=str(payload.get("title", "")),
+            description=str(payload.get("description", "")),
+            actor=str(payload.get("actor", "chris")),
+            labels=list(payload.get("labels") or []),
+        )
+        from dataclasses import asdict
+        return _json(asdict(pipeline))
+
+    @app.get("/api/automation/pipelines")
+    async def api_automation_list_pipelines() -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        return _json(store.list_all())
+
+    @app.get("/api/automation/pipelines/{pipeline_id}")
+    async def api_automation_get_pipeline(pipeline_id: str) -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        p = store.get(pipeline_id)
+        if not p:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return _json(p)
+
+    @app.post("/api/automation/pipelines/{pipeline_id}/stage/{stage}/start")
+    async def api_automation_stage_start(pipeline_id: str, stage: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        result = store.start_stage(pipeline_id, stage, actor=str(payload.get("actor", "chris")))
+        if not result:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return _json(result)
+
+    @app.post("/api/automation/pipelines/{pipeline_id}/stage/{stage}/complete")
+    async def api_automation_stage_complete(pipeline_id: str, stage: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        result = store.complete_stage(
+            pipeline_id, stage,
+            actor=str(payload.get("actor", "chris")),
+            result_summary=str(payload.get("result_summary", "")),
+            evidence=str(payload.get("evidence", "")),
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return _json(result)
+
+    @app.post("/api/automation/pipelines/{pipeline_id}/cancel")
+    async def api_automation_cancel_pipeline(pipeline_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        result = store.cancel(pipeline_id, actor=str(payload.get("actor", "chris")), reason=str(payload.get("reason", "")))
+        if not result:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return _json(result)
+
+    @app.post("/api/automation/pipelines/{pipeline_id}/rollback")
+    async def api_automation_rollback_pipeline(pipeline_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        result = store.rollback(pipeline_id, actor=str(payload.get("actor", "chris")), rollback_packet_id=str(payload.get("rollback_packet_id", "")))
+        if not result:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return _json(result)
+
+    @app.get("/api/automation/pipelines/{pipeline_id}/summary")
+    async def api_automation_pipeline_summary(pipeline_id: str) -> JSONResponse:
+        from .automation_pipeline import AutomationPipelineStore
+        store = AutomationPipelineStore(runtime.data_root / "automation" / "pipelines")
+        return _json(store.pipeline_summary(pipeline_id))
+
+    # ── E8: Executive workflow contracts ───────────────────────────────────────
+
+    @app.post("/api/catalyst/workflows/contracts")
+    async def api_ewf_create_contract(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .executive_workflow import ExecutiveWorkflowStore
+        store = ExecutiveWorkflowStore(runtime.data_root / "catalyst" / "executive_workflows")
+        contract = store.create_contract(
+            name=str(payload.get("name", "")),
+            domain=str(payload.get("domain", "")),
+            owner=str(payload.get("owner", "chris")),
+            scope=str(payload.get("scope", "")),
+            success_criteria=list(payload.get("success_criteria") or []),
+            approval_gates=list(payload.get("approval_gates") or []),
+            handoff_targets=list(payload.get("handoff_targets") or []),
+            labels=list(payload.get("labels") or []),
+        )
+        from dataclasses import asdict
+        return _json(asdict(contract))
+
+    @app.get("/api/catalyst/workflows/contracts")
+    async def api_ewf_list_contracts() -> JSONResponse:
+        from .executive_workflow import ExecutiveWorkflowStore
+        store = ExecutiveWorkflowStore(runtime.data_root / "catalyst" / "executive_workflows")
+        return _json(store.list_contracts())
+
+    @app.post("/api/catalyst/workflows/runs")
+    async def api_ewf_start_run(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .executive_workflow import ExecutiveWorkflowStore
+        store = ExecutiveWorkflowStore(runtime.data_root / "catalyst" / "executive_workflows")
+        run = store.start_run(
+            contract_id=str(payload.get("contract_id", "")),
+            actor=str(payload.get("actor", "chris")),
+        )
+        from dataclasses import asdict
+        return _json(asdict(run))
+
+    @app.post("/api/catalyst/workflows/runs/{run_id}/complete")
+    async def api_ewf_complete_run(run_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .executive_workflow import ExecutiveWorkflowStore
+        store = ExecutiveWorkflowStore(runtime.data_root / "catalyst" / "executive_workflows")
+        result = store.complete_run(
+            run_id=run_id,
+            actor=str(payload.get("actor", "chris")),
+            outcome=str(payload.get("outcome", "success")),
+            outcome_summary=str(payload.get("outcome_summary", "")),
+            handoff_note=str(payload.get("handoff_note", "")),
+            handoff_target=str(payload.get("handoff_target", "")),
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Run not found")
+        return _json(result)
+
+    @app.get("/api/catalyst/workflows/runs")
+    async def api_ewf_list_runs() -> JSONResponse:
+        from .executive_workflow import ExecutiveWorkflowStore
+        store = ExecutiveWorkflowStore(runtime.data_root / "catalyst" / "executive_workflows")
+        return _json(store.list_runs())
+
+    # ── E9: Chronicle ownership boundary ──────────────────────────────────────
+
+    @app.post("/api/chronicle/boundary/check")
+    async def api_chronicle_boundary_check(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .chronicle_boundary import enforce_routing
+        result = enforce_routing(
+            actor=str(payload.get("actor", "chris")),
+            content_type=str(payload.get("content_type", "memory_fact")),
+            tags=list(payload.get("tags") or []),
+            domain=str(payload.get("domain", "")),
+            content=str(payload.get("content", "")),
+        )
+        return _json(result)
+
+    @app.get("/api/chronicle/boundary/status")
+    async def api_chronicle_status() -> JSONResponse:
+        from .chronicle_boundary import chronicle_service_status
+        import os
+        url = os.environ.get("CHRONICLE_SERVICE_URL", "")
+        return _json(chronicle_service_status(url))
+
+    # ── E10: External systems registry ────────────────────────────────────────
+
+    @app.post("/api/external-systems/register")
+    async def api_ext_register(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .external_systems import ExternalSystemRegistry
+        store = ExternalSystemRegistry(runtime.data_root / "external_systems")
+        connector = store.register(
+            name=str(payload.get("name", "")),
+            display_name=str(payload.get("display_name", "")),
+            capabilities=list(payload.get("capabilities") or []),
+            config_env_vars=list(payload.get("config_env_vars") or []),
+            approval_required_for=list(payload.get("approval_required_for") or []),
+            notes=str(payload.get("notes", "")),
+        )
+        from dataclasses import asdict
+        return _json(asdict(connector))
+
+    @app.get("/api/external-systems")
+    async def api_ext_list() -> JSONResponse:
+        from .external_systems import ExternalSystemRegistry
+        store = ExternalSystemRegistry(runtime.data_root / "external_systems")
+        return _json(store.list_all())
+
+    @app.post("/api/external-systems/{connector_id}/check-operation")
+    async def api_ext_check_op(connector_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .external_systems import ExternalSystemRegistry
+        store = ExternalSystemRegistry(runtime.data_root / "external_systems")
+        result = store.check_operation(
+            connector_id=connector_id,
+            operation=str(payload.get("operation", "")),
+            actor=str(payload.get("actor", "chris")),
+        )
+        return _json(result)
+
+    # ── E12: Perception/security config ───────────────────────────────────────
+
+    @app.get("/api/perception/feed/{feed_id}/status")
+    async def api_perception_feed_status(feed_id: str) -> JSONResponse:
+        from .perception_config import check_feed_config
+        import os
+        env_vars = {k: v for k, v in os.environ.items()}
+        return _json(check_feed_config(feed_id, env_vars))
+
+    @app.get("/api/perception/privacy-policy")
+    async def api_perception_privacy_policy() -> JSONResponse:
+        from .perception_config import privacy_governance_summary
+        return _json(privacy_governance_summary())
+
+    # ── E13: Workshop/fabrication ──────────────────────────────────────────────
+
+    @app.get("/api/workshop/device/{device_id}/status")
+    async def api_workshop_device_status(device_id: str) -> JSONResponse:
+        from .workshop_safety import WorkshopSafetyGate
+        import os
+        gate = WorkshopSafetyGate(runtime.data_root / "workshop", dict(os.environ))
+        return _json(gate.device_status(device_id))
+
+    @app.post("/api/workshop/jobs/stage")
+    async def api_workshop_stage_job(payload: dict[str, Any] = {}) -> JSONResponse:
+        from .workshop_safety import WorkshopSafetyGate
+        import os
+        gate = WorkshopSafetyGate(runtime.data_root / "workshop", dict(os.environ))
+        result = gate.stage_job(
+            device_id=str(payload.get("device_id", "")),
+            actor=str(payload.get("actor", "chris")),
+            job_type=str(payload.get("job_type", "")),
+            description=str(payload.get("description", "")),
+            material=str(payload.get("material", "")),
+            estimated_duration_min=int(payload.get("estimated_duration_min", 0)),
+            checks_passed=list(payload.get("checks_passed") or []),
+            notes=str(payload.get("notes", "")),
+        )
+        return _json(result)
+
+    @app.get("/api/workshop/jobs")
+    async def api_workshop_list_jobs() -> JSONResponse:
+        from .workshop_safety import WorkshopSafetyGate
+        gate = WorkshopSafetyGate(runtime.data_root / "workshop")
+        return _json(gate.list_staged_jobs())
+
+    # ── E14: Infrastructure contract ──────────────────────────────────────────
+
+    @app.get("/api/infra/deployment-check")
+    async def api_infra_deployment_check() -> JSONResponse:
+        from .infra_contract import full_deployment_check
+        import os
+        env_vars = {k: v for k, v in os.environ.items()}
+        return _json(full_deployment_check(env_vars))
+
+    @app.get("/api/infra/component/{component_id}")
+    async def api_infra_component(component_id: str) -> JSONResponse:
+        from .infra_contract import check_component
+        import os
+        env_vars = {k: v for k, v in os.environ.items()}
+        return _json(check_component(component_id, env_vars))
+
     # ── Sync ──────────────────────────────────────────────────────────────────
 
     @app.post("/api/home/sync")
@@ -16473,6 +16980,143 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "boundary_decision": boundary_decision,
         })
 
+    # ------------------------------------------------------------------
+    # E5: Foundry newborn-agent lifecycle routes
+    # ------------------------------------------------------------------
+
+    @app.post("/api/foundry/agents")
+    async def api_foundry_create_agent(payload: dict[str, Any]) -> JSONResponse:
+        """Propose a new newborn agent with full lifecycle spec."""
+        from .foundry import FoundryBuilder, FoundryStore
+        try:
+            builder = FoundryBuilder()
+            spec = builder.build(
+                name=str(payload.get("name") or ""),
+                role=str(payload.get("role") or ""),
+                mission=str(payload.get("mission") or ""),
+                zone=str(payload.get("zone") or "system_agent"),
+                arena=str(payload.get("arena") or "system.agent-sandbox"),
+                memory_scope=list(payload.get("memory_scope") or []),
+                tool_scope=list(payload.get("tool_scope") or []),
+                authority_stage=str(payload.get("authority_stage") or "monitor"),
+                evaluation_criteria=list(payload.get("evaluation_criteria") or []),
+                retirement_policy=str(payload.get("retirement_policy") or ""),
+                proposed_by=str(payload.get("proposed_by") or "chris"),
+                labels=list(payload.get("labels") or []),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        store = FoundryStore(runtime.data_root / "foundry")
+        created = await asyncio.to_thread(store.propose, spec)
+        return _json({"created": True, "agent": created})
+
+    @app.get("/api/foundry/agents")
+    async def api_foundry_list_agents(state: str | None = None) -> JSONResponse:
+        """List newborn agents, optionally filtered by lifecycle state."""
+        from .foundry import FoundryStore
+        store = FoundryStore(runtime.data_root / "foundry")
+        agents = await asyncio.to_thread(store.list_all, state or None)
+        return _json({"agents": agents, "count": len(agents)})
+
+    @app.get("/api/foundry/agents/{agent_id}")
+    async def api_foundry_get_agent(agent_id: str) -> JSONResponse:
+        from .foundry import FoundryStore
+        store = FoundryStore(runtime.data_root / "foundry")
+        agent = await asyncio.to_thread(store.get, agent_id)
+        if agent is None:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        return _json(agent)
+
+    @app.post("/api/foundry/agents/{agent_id}/approve")
+    async def api_foundry_agent_approve(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .foundry import FoundryStore
+        actor = str(payload.get("actor") or "chris")
+        store = FoundryStore(runtime.data_root / "foundry")
+        try:
+            result = await asyncio.to_thread(store.approve, agent_id, actor)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return _json({"approved": True, "agent": result})
+
+    @app.post("/api/foundry/agents/{agent_id}/reject")
+    async def api_foundry_agent_reject(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .foundry import FoundryStore
+        actor = str(payload.get("actor") or "chris")
+        reason = str(payload.get("reason") or "")
+        store = FoundryStore(runtime.data_root / "foundry")
+        try:
+            result = await asyncio.to_thread(store.reject, agent_id, actor, reason)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return _json({"rejected": True, "agent": result})
+
+    @app.post("/api/foundry/agents/{agent_id}/sandbox")
+    async def api_foundry_agent_sandbox(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .foundry import FoundryStore
+        actor = str(payload.get("actor") or "chris")
+        store = FoundryStore(runtime.data_root / "foundry")
+        try:
+            result = await asyncio.to_thread(store.sandbox, agent_id, actor)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return _json({"sandboxed": True, "agent": result})
+
+    @app.post("/api/foundry/agents/{agent_id}/sandbox-run")
+    async def api_foundry_agent_sandbox_run(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .foundry import FoundryStore
+        success = bool(payload.get("success", True))
+        notes = str(payload.get("notes") or "")
+        store = FoundryStore(runtime.data_root / "foundry")
+        result = await asyncio.to_thread(store.record_sandbox_run, agent_id, success, notes)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
+        return _json({"recorded": True, "agent": result})
+
+    @app.post("/api/foundry/agents/{agent_id}/evaluate")
+    async def api_foundry_agent_evaluate(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .foundry import FoundryStore
+        actor = str(payload.get("actor") or "chris")
+        store = FoundryStore(runtime.data_root / "foundry")
+        try:
+            result = await asyncio.to_thread(store.begin_evaluation, agent_id, actor)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        summary = await asyncio.to_thread(store.evaluation_summary, agent_id)
+        return _json({"evaluating": True, "agent": result, "summary": summary})
+
+    @app.post("/api/foundry/agents/{agent_id}/promote")
+    async def api_foundry_agent_promote(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .foundry import FoundryStore
+        actor = str(payload.get("actor") or "chris")
+        new_authority = payload.get("authority_stage")
+        store = FoundryStore(runtime.data_root / "foundry")
+        try:
+            result = await asyncio.to_thread(store.promote, agent_id, actor, new_authority)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return _json({"promoted": True, "agent": result})
+
+    @app.post("/api/foundry/agents/{agent_id}/retire")
+    async def api_foundry_agent_retire(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        from .foundry import FoundryStore
+        actor = str(payload.get("actor") or "chris")
+        reason = str(payload.get("reason") or "")
+        store = FoundryStore(runtime.data_root / "foundry")
+        try:
+            result = await asyncio.to_thread(store.retire, agent_id, actor, reason)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return _json({"retired": True, "agent": result})
+
+    @app.get("/api/foundry/agents/{agent_id}/evaluation-summary")
+    async def api_foundry_agent_evaluation_summary(agent_id: str) -> JSONResponse:
+        from .foundry import FoundryStore
+        store = FoundryStore(runtime.data_root / "foundry")
+        summary = await asyncio.to_thread(store.evaluation_summary, agent_id)
+        if "error" in summary:
+            raise HTTPException(status_code=404, detail=summary["error"])
+        return _json(summary)
+
     @app.get("/api/publishing/projects")
     async def api_publishing_list_projects(
         status: str | None = Query(default=None),
@@ -19566,6 +20210,113 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _json({"ok": True, "connected": status.get("connected", False), "status": status, "available": True})
         except Exception as exc:
             return _json({"ok": False, "connected": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/health/dexcom/status")
+    async def api_health_dexcom_status() -> JSONResponse:
+        """Dexcom CGM connection status."""
+        try:
+            from . import dexcom_sync
+        except ImportError:
+            try:
+                import dexcom_sync  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "connected": False, "available": False, "error": "Dexcom module unavailable"})
+        try:
+            status = dexcom_sync.get_connection_status()
+            return _json(
+                {
+                    "ok": True,
+                    "connected": status.get("connected", False),
+                    "configured": status.get("configured", False),
+                    "status": status,
+                    "available": True,
+                }
+            )
+        except Exception as exc:
+            return _json({"ok": False, "connected": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/health/dexcom/connect")
+    async def api_health_dexcom_connect(request: Request) -> Response:
+        """Redirect to Dexcom OAuth using the live request base URL."""
+        try:
+            from . import dexcom_sync
+        except ImportError:
+            try:
+                import dexcom_sync  # type: ignore[no-redef]
+            except ImportError:
+                return JSONResponse({"error": "Dexcom module unavailable"}, status_code=503)
+        try:
+            redirect_uri = f"{_hosted_public_base_url(request)}/api/health/dexcom/callback"
+            url = dexcom_sync.build_auth_url(redirect_uri)
+            return RedirectResponse(url, status_code=302)
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/health/dexcom/callback", response_class=HTMLResponse)
+    async def api_health_dexcom_callback(request: Request, code: str = "", state: str = "", error: str = "") -> str:
+        """Handle Dexcom OAuth callback and persist tokens."""
+        try:
+            from . import dexcom_sync
+        except ImportError:
+            try:
+                import dexcom_sync  # type: ignore[no-redef]
+            except ImportError:
+                return "<html><body><h1>Dexcom unavailable</h1><p>Dexcom module unavailable.</p></body></html>"
+        if error:
+            return (
+                "<html><body><h1>Dexcom connection failed</h1>"
+                f"<p>{error}</p><p><a href=\"/health-center\">Return to Health</a></p></body></html>"
+            )
+        if not code:
+            return (
+                "<html><body><h1>Dexcom connection failed</h1>"
+                "<p>Missing authorization code.</p><p><a href=\"/health-center\">Return to Health</a></p></body></html>"
+            )
+        try:
+            redirect_uri = f"{_hosted_public_base_url(request)}/api/health/dexcom/callback"
+            await dexcom_sync.exchange_code(code, redirect_uri)
+            return (
+                "<html><body><h1>Dexcom connected</h1>"
+                "<p>JARVIS can now sync your CGM data.</p>"
+                "<p><a href=\"/health-center\">Return to Health</a></p></body></html>"
+            )
+        except Exception as exc:
+            return (
+                "<html><body><h1>Dexcom connection failed</h1>"
+                f"<p>{str(exc)}</p><p><a href=\"/health-center\">Return to Health</a></p></body></html>"
+            )
+
+    @app.post("/api/health/dexcom/sync")
+    async def api_health_dexcom_sync() -> JSONResponse:
+        """Trigger Dexcom EGV sync."""
+        try:
+            from . import dexcom_sync
+        except ImportError:
+            try:
+                import dexcom_sync  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "error": "Dexcom module unavailable"})
+        try:
+            result = await dexcom_sync.sync_egvs()
+            return _json({**result, "available": True})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "error": str(exc)})
+
+    @app.get("/api/health/dexcom/current")
+    async def api_health_dexcom_current() -> JSONResponse:
+        """Return the latest locally stored Dexcom reading."""
+        try:
+            from . import dexcom_sync
+        except ImportError:
+            try:
+                import dexcom_sync  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "current": None, "error": "Dexcom module unavailable"})
+        try:
+            current = await dexcom_sync.get_current_reading()
+            return _json({"ok": True, "available": True, "current": current})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "current": None, "error": str(exc)})
 
     @app.get("/api/health/omron/connect")
     async def api_health_omron_connect() -> JSONResponse:
