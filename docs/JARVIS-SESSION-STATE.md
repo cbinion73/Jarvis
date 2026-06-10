@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Level 7 season formation complete; 595 tests passing)
+Last updated: 2026-06-09 (Level 8 consent-promote complete; 611 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -27,9 +27,10 @@ Last updated: 2026-06-09 (Level 7 season formation complete; 595 tests passing)
 - Level 7 (Formation): ~60% — faith and health loops real; season now wired
   into Three Moves (LLM prompt + seasonal fallback moves) and daily faith word
   prompt; season field in day card and daily_word result; GAP-9 resolved
-- Level 8 (Bounded Autonomy): ~50% — sandbox execution + promotion engine +
-  draft-only email staging real; recursive foundry is a read-only dashboard
-  (GAP-8)
+- Level 8 (Bounded Autonomy): ~65% — sandbox execution + promotion engine +
+  draft-only email staging real; foundry proposals live with governed approve;
+  POST /api/trust-zones/{id}/consent-promote unlocks system_agent to sandbox_live;
+  full foundry approve flow now executable after human consent promotion
 - Level 9: not started (correctly blocked on lower layers)
 
 ## Current Phase
@@ -187,12 +188,13 @@ safety, stray .tmp recovery, lock file creation. All pass.
 
 ## Next 3 Work Items
 
-1. Level 8 deeper: foundry proposal approval is blocked at stage_alert (correct)
-   but there is no promotion path to advance system_agent zone to sandbox_live.
-   Promote system_agent to sandbox_live so proposal approval can actually execute.
-   Wire /api/promotion-request to system_agent zone and add test coverage.
-2. Level 5 remaining: CarPlay/watch presence heartbeat — JARVIS can now be told
-   to suppress/escalate but doesn't know foreground vs background from the device.
-   Add POST /api/apple/presence-heartbeat: sets a short-TTL (5 min) "foreground"
-   signal so routing decisions know the user is actively watching.
+1. Level 5 presence heartbeat: add POST /api/apple/presence-heartbeat that sets
+   a short-TTL (5 min) "foreground_active" flag in presence_overrides.json so
+   delivery-mode decisions know the user is actively watching (vs. background).
+   Wire into _choose_delivery_mode: if foreground_active=true, always badge_only
+   minimum (never hold_for_brief), because the user can see the notification.
+2. Level 8 foundry agent generation: when a proposal is approved at sandbox_live,
+   the foundry should create an agent stub (zone + supervision contract). This is
+   the "newborn-agent zone attachment" described in GAP-8. Requires designing the
+   minimal agent spec format and auto-bootstrap flow.
 3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
