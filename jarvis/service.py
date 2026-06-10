@@ -9003,6 +9003,29 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_create_trust_zone(payload: dict[str, Any]) -> JSONResponse:
         return _json(runtime.create_trust_zone(payload), status_code=201)
 
+    @app.post("/api/trust-zones/{zone_id}/consent-promote")
+    async def api_trust_zone_consent_promote(zone_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        """Human-consented direct zone promotion — bypasses track-record evaluation.
+
+        Requires human_consent=true in the payload. This represents Chris explicitly
+        authorising a zone advancement. The promotion is recorded in the promotion log.
+        """
+        if not bool(payload.get("human_consent")):
+            raise HTTPException(status_code=400, detail="human_consent must be true to use consent-promote")
+        actor = str(payload.get("actor") or "chris").strip() or "chris"
+        basis = str(payload.get("basis") or "human-consented-promotion").strip()
+        try:
+            updated = runtime.promote_trust_zone(zone_id, actor=actor, basis=basis)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json({
+            "promoted": True,
+            "zone_id": zone_id,
+            "authority_stage": str(updated.get("authority_stage") or ""),
+            "actor": actor,
+            "basis": basis,
+        })
+
     @app.get("/api/resource-arenas")
     async def api_resource_arenas() -> JSONResponse:
         return _json({"arenas": runtime.list_resource_arenas()})
