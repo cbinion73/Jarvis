@@ -24,6 +24,8 @@ LIFECYCLE_BLOCKED = "blocked"
 LIFECYCLE_ESCALATING = "escalating"
 LIFECYCLE_RETIRING = "retiring"
 LIFECYCLE_RETIRED = "retired"
+LIFECYCLE_COMPLETING = "completing"
+LIFECYCLE_FAILED = "failed"
 
 CONTROL_ACTIONS = {
     "wake",
@@ -33,6 +35,8 @@ CONTROL_ACTIONS = {
     "escalate",
     "retire",
     "retire-now",
+    "complete",
+    "fail",
 }
 
 ACTIVE_LIFECYCLE_STATES = {
@@ -42,6 +46,12 @@ ACTIVE_LIFECYCLE_STATES = {
     LIFECYCLE_BLOCKED,
     LIFECYCLE_ESCALATING,
     LIFECYCLE_RETIRING,
+    LIFECYCLE_COMPLETING,
+}
+
+TERMINAL_LIFECYCLE_STATES = {
+    LIFECYCLE_RETIRED,
+    LIFECYCLE_FAILED,
 }
 
 
@@ -312,6 +322,29 @@ class AgentRuntimeKernel:
             run["run_id"] = ""
             supervision["requires_attention"] = False
             supervision["attention_reason"] = ""
+        elif command == "complete":
+            self._ensure_not_retired(previous_state)
+            lifecycle["current_state"] = LIFECYCLE_COMPLETING
+            lifecycle["desired_state"] = LIFECYCLE_IDLE
+            lifecycle["complete_reason"] = note or "run-complete"
+            lifecycle["completed_at"] = _iso(now)
+            run["status"] = LIFECYCLE_COMPLETING
+            run["complete_count"] = int(run.get("complete_count", 0) or 0) + 1
+            run["last_completed_at"] = _iso(now)
+            run["run_id"] = ""
+            supervision["requires_attention"] = False
+            supervision["attention_reason"] = ""
+        elif command == "fail":
+            self._ensure_not_retired(previous_state)
+            lifecycle["current_state"] = LIFECYCLE_FAILED
+            lifecycle["desired_state"] = LIFECYCLE_IDLE
+            lifecycle["fail_reason"] = note or "run-failed"
+            lifecycle["failed_at"] = _iso(now)
+            run["status"] = LIFECYCLE_FAILED
+            run["fail_count"] = int(run.get("fail_count", 0) or 0) + 1
+            run["last_failed_at"] = _iso(now)
+            supervision["requires_attention"] = True
+            supervision["attention_reason"] = lifecycle["fail_reason"]
 
         if execution_lane.strip():
             run["execution_lane"] = execution_lane.strip()
@@ -500,6 +533,8 @@ class AgentRuntimeKernel:
                 "resume_count": 0,
                 "interrupt_count": 0,
                 "escalation_count": 0,
+                "complete_count": 0,
+                "fail_count": 0,
                 "last_started_at": timestamp if run_id else "",
                 "last_heartbeat_at": timestamp if run_id else "",
                 "next_due_at": _iso(now + timedelta(minutes=definition.cadence_minutes)),
@@ -663,6 +698,10 @@ class AgentRuntimeKernel:
             return "retired", lifecycle_reason
         if current_state == LIFECYCLE_RETIRING:
             return "retiring", lifecycle_reason
+        if current_state == LIFECYCLE_FAILED:
+            return "failed", lifecycle_reason
+        if current_state == LIFECYCLE_COMPLETING:
+            return "completing", lifecycle_reason
         if current_state == LIFECYCLE_ESCALATING:
             return "attention", lifecycle_reason
         if current_state == LIFECYCLE_INTERRUPTED:
@@ -702,6 +741,10 @@ class AgentRuntimeKernel:
             return str(lifecycle.get("escalation_reason", "") or "Escalated for review.")
         if current_state == LIFECYCLE_RETIRING:
             return str(lifecycle.get("retire_reason", "") or "Retirement requested.")
+        if current_state == LIFECYCLE_COMPLETING:
+            return str(lifecycle.get("complete_reason", "") or "Run completing.")
+        if current_state == LIFECYCLE_FAILED:
+            return str(lifecycle.get("fail_reason", "") or "Agent failed — review required.")
         if current_state == LIFECYCLE_RETIRED:
             return str(lifecycle.get("retire_reason", "") or "Retired from active runtime.")
         if blocked_dependencies:
@@ -772,6 +815,7 @@ class AgentRuntimeKernel:
         counts: dict[str, int] = {}
         attention_required = 0
         running = 0
+        failed = 0
         for row in rows:
             state = str(row.get("state", "unknown"))
             counts[state] = counts.get(state, 0) + 1
@@ -779,9 +823,12 @@ class AgentRuntimeKernel:
                 attention_required += 1
             if state == LIFECYCLE_RUNNING:
                 running += 1
+            if state == LIFECYCLE_FAILED:
+                failed += 1
         return {
             "total_agents": len(rows),
             "running_agents": running,
+            "failed_agents": failed,
             "attention_required": attention_required,
             "lifecycle_counts": counts,
         }

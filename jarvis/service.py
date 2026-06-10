@@ -13486,6 +13486,69 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _json({"running": False, "error": "Scheduler not initialised"})
         return _json(scheduler.get_status())
 
+    @app.get("/api/scheduler/health")
+    async def api_scheduler_health() -> JSONResponse:
+        """
+        Scheduler observability endpoint — proves within 1 minute whether background
+        work is healthy, stale, blocked, or failed.  Exposes tick time, queue depth,
+        stale jobs, dead-letter count, unhealthy agents, and next due work.
+        """
+        from .scheduler import get_scheduler as _get_sched
+        scheduler = _get_sched()
+        if scheduler is None:
+            return _json({
+                "healthy": False,
+                "source": "unavailable",
+                "error": "Scheduler not initialised",
+            })
+        status = scheduler.get_status()
+        healthy = (
+            status.get("running", False)
+            and len(status.get("stale_jobs", [])) == 0
+            and len(status.get("unhealthy_agents", [])) == 0
+        )
+        return _json({
+            "healthy": healthy,
+            "source": "live",
+            "scheduler_running": status.get("running", False),
+            "last_tick_at": status.get("last_tick_at", ""),
+            "tick_count": status.get("tick_count", 0),
+            "queue_depth": status.get("queue_depth", 0),
+            "running_count": status.get("running_count", 0),
+            "dead_letter_count": status.get("dead_letter_count", 0),
+            "stale_jobs": status.get("stale_jobs", []),
+            "unhealthy_agents": status.get("unhealthy_agents", []),
+            "next_due_work": status.get("next_due_work", []),
+            "workers_active": status.get("workers_active", 0),
+        })
+
+    @app.delete("/api/scheduler/queue/{item_id}")
+    async def api_scheduler_cancel_item(item_id: str) -> JSONResponse:
+        """Cancel a queued work item by item_id."""
+        from .scheduler import get_scheduler as _get_sched
+        scheduler = _get_sched()
+        if scheduler is None:
+            raise HTTPException(status_code=503, detail="Scheduler not initialised")
+        cancelled = scheduler._queue.cancel(item_id)
+        if not cancelled:
+            raise HTTPException(status_code=404, detail=f"Item {item_id} not found or not cancellable")
+        return _json({"cancelled": True, "item_id": item_id})
+
+    @app.get("/api/scheduler/dead-letter")
+    async def api_scheduler_dead_letter() -> JSONResponse:
+        """List all dead-letter work items (exceeded max retry attempts)."""
+        from .scheduler import get_scheduler as _get_sched
+        from dataclasses import asdict
+        scheduler = _get_sched()
+        if scheduler is None:
+            return _json({"items": [], "source": "unavailable"})
+        items = scheduler._queue.get_dead_letter()
+        return _json({
+            "items": [asdict(i) for i in items],
+            "count": len(items),
+            "source": "live",
+        })
+
     @app.post("/api/scheduler/fire-event")
     async def api_scheduler_fire_event(payload: dict[str, Any]) -> JSONResponse:
         scheduler = get_scheduler()

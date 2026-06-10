@@ -65,13 +65,17 @@ class AgentWorkItem:
     event_type: str        # e.g. "calendar_update", "home_arrival", "morning"
     payload: dict          # context data for the agent
     queued_at: str         # ISO timestamp
-    status: str            # "queued" | "running" | "completed" | "failed" | "held"
+    status: str            # "queued" | "running" | "completed" | "failed" | "held" | "dead_letter" | "cancelled"
     started_at: str = ""
     completed_at: str = ""
     result: dict = field(default_factory=dict)
     result_text: str = ""  # human-readable output
     error: str = ""
     priority: int = 5      # 1 = highest, 10 = lowest
+    dedupe_key: str = ""   # empty → no dedup; non-empty → reject if same key already queued/running
+    attempt_count: int = 0  # how many times this item has been attempted
+    max_attempts: int = 3   # dead-letter after this many failures
+    next_attempt_at: str = ""  # ISO timestamp for backoff delay (empty = immediately)
 
 
 # ---------------------------------------------------------------------------
@@ -115,11 +119,28 @@ class AgentWorkQueue:
                     continue
                 try:
                     data = json.loads(line)
+                    # Strip unknown fields for forward-compatibility
+                    known = {f.name for f in AgentWorkItem.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+                    data = {k: v for k, v in data.items() if k in known}
                     items.append(AgentWorkItem(**data))
                 except Exception:
                     pass  # skip corrupt lines
         except OSError:
             pass
+        return self._recover_zombies(items)
+
+    @staticmethod
+    def _recover_zombies(items: list[AgentWorkItem]) -> list[AgentWorkItem]:
+        """On restart, items stuck in 'running' are zombie jobs — reset to 'queued'."""
+        for item in items:
+            if item.status == "running":
+                item.status = "queued"
+                item.started_at = ""
+                logger.info(
+                    "Zombie recovery: item %s (agent=%s) reset from running → queued",
+                    item.item_id,
+                    item.agent_id,
+                )
         return items
 
     def _load_state_log_items(self) -> list[AgentWorkItem]:
@@ -169,23 +190,53 @@ class AgentWorkQueue:
     # Public API
     # ------------------------------------------------------------------
 
-    def enqueue(self, item: AgentWorkItem) -> None:
+    def enqueue(self, item: AgentWorkItem) -> bool:
+        """
+        Enqueue an item.  Returns True if enqueued, False if rejected by idempotency check.
+
+        Idempotency: if item.dedupe_key is non-empty and another item with the same
+        dedupe_key is already in status queued or running, this enqueue is a no-op.
+        If item.item_id matches an existing item_id, also rejected.
+        """
         with self._lock:
+            # item_id dedup
+            if any(i.item_id == item.item_id for i in self._items):
+                logger.debug("Idempotency: item_id %s already present — skipped", item.item_id)
+                return False
+            # dedupe_key dedup
+            if item.dedupe_key:
+                active_statuses = {"queued", "running"}
+                if any(
+                    i.dedupe_key == item.dedupe_key and i.status in active_statuses
+                    for i in self._items
+                ):
+                    logger.debug(
+                        "Idempotency: dedupe_key '%s' already active — skipped", item.dedupe_key
+                    )
+                    return False
             self._items.append(item)
             self._save()
         logger.debug("Enqueued %s (agent=%s priority=%d)", item.item_id, item.agent_id, item.priority)
+        return True
 
     def dequeue_next(self) -> AgentWorkItem | None:
-        """Return the highest-priority queued item (lowest priority number)."""
+        """Return the highest-priority queued item (lowest priority number) that is ready."""
+        now_str = _now_iso()
         with self._lock:
-            candidates = [i for i in self._items if i.status == "queued"]
+            candidates = [
+                i for i in self._items
+                if i.status == "queued" and (
+                    not i.next_attempt_at or i.next_attempt_at <= now_str
+                )
+            ]
             if not candidates:
                 return None
             # Sort by priority (asc) then queued_at (asc) for FIFO tie-breaking
             candidates.sort(key=lambda x: (x.priority, x.queued_at))
             item = candidates[0]
             item.status = "running"
-            item.started_at = _now_iso()
+            item.started_at = now_str
+            item.attempt_count = item.attempt_count + 1
             self._save()
             return item
 
@@ -209,36 +260,90 @@ class AgentWorkQueue:
                     break
             self._save()
 
-    def mark_failed(self, item_id: str, error: str) -> None:
+    def mark_failed(self, item_id: str, error: str) -> str:
+        """
+        Mark item failed.  If attempt_count < max_attempts, schedules a retry
+        with exponential backoff and returns "retry".  Otherwise moves to
+        dead_letter and returns "dead_letter".
+        """
+        import math
+        result_status = "failed"
         with self._lock:
             for item in self._items:
                 if item.item_id == item_id:
-                    item.status = "failed"
-                    item.completed_at = _now_iso()
                     item.error = error
+                    item.completed_at = _now_iso()
+                    if item.attempt_count < item.max_attempts:
+                        # Exponential backoff: 2^attempt * 30s, capped at 1 hour
+                        delay_seconds = min(int(math.pow(2, item.attempt_count) * 30), 3600)
+                        from datetime import timedelta
+                        retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
+                        item.status = "queued"
+                        item.next_attempt_at = retry_at.isoformat()
+                        item.started_at = ""
+                        result_status = "retry"
+                        logger.info(
+                            "Retry scheduled: item=%s agent=%s attempt=%d/%d delay=%ds",
+                            item.item_id, item.agent_id, item.attempt_count, item.max_attempts, delay_seconds,
+                        )
+                    else:
+                        item.status = "dead_letter"
+                        result_status = "dead_letter"
+                        logger.warning(
+                            "Dead-letter: item=%s agent=%s exceeded max_attempts=%d",
+                            item.item_id, item.agent_id, item.max_attempts,
+                        )
                     break
             self._save()
+        return result_status
+
+    def cancel(self, item_id: str) -> bool:
+        """Cancel a queued item.  Returns True if cancelled, False if not found or not cancellable."""
+        with self._lock:
+            for item in self._items:
+                if item.item_id == item_id:
+                    if item.status not in ("queued",):
+                        return False
+                    item.status = "cancelled"
+                    item.completed_at = _now_iso()
+                    self._save()
+                    logger.info("Cancelled item %s (agent=%s)", item_id, item.agent_id)
+                    return True
+        return False
 
     def get_recent(self, limit: int = 20) -> list[AgentWorkItem]:
         with self._lock:
-            terminal = [i for i in self._items if i.status in ("completed", "failed")]
+            terminal = [i for i in self._items if i.status in ("completed", "failed", "dead_letter")]
             return list(reversed(terminal[-max(1, limit):]))
 
     def get_queued(self) -> list[AgentWorkItem]:
         with self._lock:
             return [i for i in self._items if i.status == "queued"]
 
+    def get_running(self) -> list[AgentWorkItem]:
+        with self._lock:
+            return [i for i in self._items if i.status == "running"]
+
+    def get_failed(self) -> list[AgentWorkItem]:
+        with self._lock:
+            return [i for i in self._items if i.status in ("failed", "dead_letter")]
+
+    def get_dead_letter(self) -> list[AgentWorkItem]:
+        with self._lock:
+            return [i for i in self._items if i.status == "dead_letter"]
+
     def get_by_agent(self, agent_id: str) -> list[AgentWorkItem]:
         with self._lock:
             return [i for i in self._items if i.agent_id == agent_id]
 
     def purge_old(self, max_age_hours: int = 48) -> int:
-        """Remove completed/failed items older than max_age_hours. Returns count purged."""
+        """Remove terminal/dead-letter/cancelled items older than max_age_hours. Returns count purged."""
         cutoff = datetime.now(timezone.utc).timestamp() - max_age_hours * 3600
+        terminal_statuses = {"completed", "failed", "dead_letter", "cancelled"}
         with self._lock:
             before = len(self._items)
             def _keep(item: AgentWorkItem) -> bool:
-                if item.status not in ("completed", "failed"):
+                if item.status not in terminal_statuses:
                     return True
                 ts_str = item.completed_at or item.queued_at
                 try:
@@ -1448,6 +1553,8 @@ class AgentScheduler:
         self._max_workers = 3
         self._event_hooks: dict[str, list[Callable]] = {}
         self._morning_fired_date: str = ""  # YYYY-MM-DD — prevents double-firing
+        self._last_tick_at: str = ""        # ISO timestamp of most recent _tick() start
+        self._tick_count: int = 0           # total ticks since start
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -1562,13 +1669,72 @@ class AgentScheduler:
         return item
 
     def get_status(self) -> dict:
-        """Return scheduler health snapshot for UI display."""
+        """Return scheduler health snapshot for UI display and /api/scheduler/health."""
+        now_str = _now_iso()
+        queued = self._queue.get_queued()
+        running = self._queue.get_running()
+        dead_letter = self._queue.get_dead_letter()
+        recent = self._queue.get_recent(10)
+
+        # Stale running items (running for > 10 minutes)
+        stale_threshold_iso = datetime.now(timezone.utc).replace(
+            microsecond=0
+        ).isoformat()  # placeholder — use string comparison below
+        stale_jobs = []
+        for item in running:
+            started = item.started_at or ""
+            if started:
+                try:
+                    elapsed = (
+                        datetime.now(timezone.utc) -
+                        datetime.fromisoformat(started.replace("Z", "+00:00"))
+                    ).total_seconds()
+                    if elapsed > 600:
+                        stale_jobs.append({
+                            "item_id": item.item_id,
+                            "agent_id": item.agent_id,
+                            "started_at": started,
+                            "elapsed_seconds": int(elapsed),
+                        })
+                except (ValueError, TypeError):
+                    pass
+
+        # Next due work (first due agent from registry)
+        next_due: list[dict] = []
+        try:
+            registry = self._runtime.agent_registry
+            for agent_def in registry.list():
+                if self._should_run_now(agent_def):
+                    next_due.append({"agent_id": agent_def.agent_id, "status": "due_now"})
+        except Exception:
+            pass
+
+        # Unhealthy agents (stale heartbeat in kernel)
+        unhealthy_agents: list[str] = []
+        try:
+            kernel_snapshot = self._runtime.agent_runtime_kernel.snapshot()
+            for row in kernel_snapshot.get("status_rows", []):
+                hb = row.get("heartbeat_status", "")
+                if hb in ("stale", "missed"):
+                    unhealthy_agents.append(row.get("agent_id", ""))
+        except Exception:
+            pass
+
         return {
             "running": self._running,
             "quiet_hours": self._is_quiet_hours(),
-            "queue_depth": len(self._queue.get_queued()),
-            "recent_work": [asdict(w) for w in self._queue.get_recent(10)],
+            "queue_depth": len(queued),
+            "running_count": len(running),
+            "dead_letter_count": len(dead_letter),
+            "stale_jobs": stale_jobs,
+            "last_tick_at": self._last_tick_at,
+            "tick_count": self._tick_count,
+            "next_due_work": next_due,
+            "unhealthy_agents": unhealthy_agents,
+            "recent_work": [asdict(w) for w in recent],
+            "dead_letter": [asdict(w) for w in dead_letter[:10]],
             "workers_active": sum(1 for t in self._worker_threads if t.is_alive()),
+            "generated_at": now_str,
         }
 
     # ------------------------------------------------------------------
@@ -1604,6 +1770,8 @@ class AgentScheduler:
 
     def _tick(self) -> None:
         """Check all agents and enqueue those that are due to run."""
+        self._last_tick_at = _now_iso()
+        self._tick_count = getattr(self, "_tick_count", 0) + 1
         try:
             registry = self._runtime.agent_registry
         except AttributeError:

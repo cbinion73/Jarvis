@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Phase B complete; 760 tests passing)
+Last updated: 2026-06-10 (Phase C complete; 812 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -22,6 +22,9 @@ Last updated: 2026-06-09 (Phase B complete; 760 tests passing)
   actions; hard boundary families (money/legal/security/identity/children/
   reputation/system) always deny; plain-language household governance UI;
   child safety guard with homework coaching; 72 new B-phase tests; 760 total
+- Level 4 runtime: C-phase runtime complete — fail/complete lifecycle states;
+  queue idempotency/retry/backoff/dead-letter; zombie recovery on restart;
+  scheduler observability (/api/scheduler/health); 52 new C-phase tests
 - Level 5 (Ambient): ~90% — event fabric autonomous, all 6 delivery postures
   live, interruption decisions recorded; presence override store live with TTL
   (suppress/escalate/clear via POST /api/apple/presence-override); background→
@@ -205,6 +208,43 @@ safety, stray .tmp recovery, lock file creation. All pass.
    _reconcile_shared_notifications pass posture with foreground_active (they read
    posture from _compute_interruption_posture which now includes it — should be
    automatic, but worth an integration test).
+
+## Phase C Completion Record (2026-06-10)
+
+All 6 Phase C rows complete:
+- C1 DONE: Agent lifecycle — added `fail` and `complete` states + control actions
+  to runtime_kernel.py; both emit durable JSONL events; `fail_count`,
+  `complete_count` tracked per agent; fail sets `requires_attention`; `fail` and
+  `complete` in CONTROL_ACTIONS; health_summary handles both new states;
+  `failed_agents` count in snapshot summary; 11 new lifecycle tests
+- C2 DONE: Queue semantics — `AgentWorkItem` gains `dedupe_key`, `attempt_count`,
+  `max_attempts`, `next_attempt_at`; `enqueue()` returns bool and checks item_id +
+  dedupe_key idempotency; `dequeue_next()` respects `next_attempt_at` backoff;
+  `mark_failed()` returns "retry"/"dead_letter" and implements exponential backoff
+  (2^attempt*30s capped at 1h) or moves to `dead_letter` after max_attempts;
+  `cancel()` cancels queued items; `get_dead_letter()`, `get_failed()`,
+  `get_running()` added; 16 new queue tests
+- C3 DONE: Restart survival — zombie recovery on load resets "running" items to
+  "queued" (started_at cleared, logged); existing test updated to reflect correct
+  behavior; state-log fallback verified; dead-letter survives restart; 5 tests
+- C4 DONE: Scheduler observability — `get_status()` now exposes: `last_tick_at`,
+  `tick_count`, `running_count`, `dead_letter_count`, `stale_jobs` (items running
+  >10min), `unhealthy_agents`, `next_due_work`, `workers_active`, `dead_letter`;
+  `_tick()` writes `_last_tick_at` on every call; `GET /api/scheduler/health`
+  endpoint with healthy flag; `DELETE /api/scheduler/queue/{item_id}` to cancel;
+  `GET /api/scheduler/dead-letter`; 6 new observability tests
+- C5 DONE: Data architecture — JSONL persistence round-trips new fields correctly;
+  old format without new fields loads with safe defaults (unknown fields stripped);
+  state-log fallback verified for both queue and kernel event log; 4 tests
+- C6 DONE: Concurrency integrity — concurrent enqueue (N*M items), concurrent
+  mark_completed (no double-dequeue), concurrent JSONL append (all valid lines),
+  concurrent dedupe_key enqueue (exactly 1 accepted), concurrent mark_failed
+  (exactly 1 dead_letter), concurrent kernel event append (all N lines valid);
+  6 concurrency tests
+New files: tests/test_phase_c_runtime.py (52 tests)
+Modified: jarvis/runtime_kernel.py, jarvis/scheduler.py, jarvis/service.py,
+          tests/test_scheduler_queue.py (zombie recovery semantics update)
+Tests: 812 passing (was 760), no regressions
 
 ## Phase B Completion Record (2026-06-09)
 

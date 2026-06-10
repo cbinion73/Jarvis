@@ -41,6 +41,10 @@ class SchedulerQueueTests(unittest.TestCase):
         self.assertEqual(persisted[0].priority, 3)
 
     def test_dequeue_marks_running_and_remains_durable(self) -> None:
+        """After dequeue an item is 'running' in the live queue.  On restart
+        (new queue instance), zombie recovery resets running items to 'queued'
+        so they are re-attempted rather than lost.
+        """
         queue = AgentWorkQueue(self.queue_path)
         queue.enqueue(_item(priority=7))
         queue.enqueue(_item(priority=2))
@@ -51,11 +55,14 @@ class SchedulerQueueTests(unittest.TestCase):
         self.assertEqual(next_item.priority, 2)
         self.assertEqual(next_item.status, "running")
 
+        # Simulate restart: a new queue instance loads from disk.
+        # Zombie recovery resets stuck-running items back to queued.
         reloaded = AgentWorkQueue(self.queue_path)
-        running = [item for item in reloaded.get_by_agent("ambient-router") if item.item_id == next_item.item_id]
-        self.assertEqual(len(running), 1)
-        self.assertEqual(running[0].status, "running")
-        self.assertTrue(running[0].started_at)
+        found = [item for item in reloaded.get_by_agent("ambient-router") if item.item_id == next_item.item_id]
+        self.assertEqual(len(found), 1)
+        # Zombie recovery: status is reset to 'queued', started_at cleared
+        self.assertEqual(found[0].status, "queued")
+        self.assertEqual(found[0].started_at, "")
 
     def test_replays_queue_from_state_log_when_snapshot_is_blank(self) -> None:
         queue = AgentWorkQueue(self.queue_path)
