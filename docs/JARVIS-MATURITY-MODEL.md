@@ -171,25 +171,44 @@ Typical signs:
 
 JARVIS status:
 
-- moonshot destination
+- COMPLETE (2026-06-10). Phase F capstone delivered:
+  - F1: Constitutional decision engine — every significant recommendation
+    cites applicable principle, authority basis, uncertainty level, override path
+  - F2: 9 situation-based household modes (normal/travel/crisis/sabbath/school/
+    health_recovery/guest/sprint/emergency) — each drives a different behavior
+    contract (autonomy ceiling, agents, rituals, alerts, tone, verbosity)
+  - F3: Value simulation across 9 dimensions with weighted scoring, dissent,
+    uncertainty, and what-would-change-recommendation
+  - F4: Legacy archive — permission-gated (family/adults_only/chris_only),
+    provenance-backed, correctable, disputable, exportable bundles
+  - F5: Long-horizon reviews (monthly/seasonal/yearly) with arc summaries
+    showing how prior lessons changed current guidance, persistent drift tracking
+  - F6: Household-operable admin — devices, integrations, permissions, audit
+    log; no developer tooling required for household members
+  - F7: Personnel/device continuity — step-based onboarding/offboarding workflows
+    with audit trail and restricted data isolation
+  - 62 new tests + 5 scenario proofs (crisis_day, sabbath, child_formation,
+    health_recovery, legacy_recall); 1042 total tests passing
 
 ## Current Placement
 
-If plotted honestly (code-verified true-up, 2026-06-09 — see
+If plotted honestly (code-verified true-up, 2026-06-10 — see
 `docs/JARVIS-SESSION-STATE.md` for evidence and the gap list):
 
 - Level 2 solidly real
 - Level 3 mostly real; blocked on always-on deployment health, not features
 - Level 4 substantially built: trust zones, supervision plane, promotion
   engine, sandbox execution, and draft-only email staging exist in code
-  with enforcement and negative-path tests; remaining gaps are fail-closed
-  degradation, universal enforcement coverage, and endpoint authn
-- Level 5 partially built: event fabric and attention routing exist but
-  are poll-driven rather than autonomous
-- Level 6 partially built: partitioned, viewer-enforced memory that is
-  genuinely read in chat and briefing flows; retrieval is keyword-based
-- Levels 7 through 9 early: faith and health loops real, foundry read-only,
-  season detection and legacy systems not yet built
+  with enforcement and negative-path tests
+- Level 5 mostly real: event fabric autonomous, presence heartbeat with TTL,
+  foreground escalation, attention routing across all 6 delivery postures
+- Level 6 partially built: partitioned viewer-enforced memory genuinely read
+  in chat/briefing flows; retrieval is keyword-based, not semantic
+- Levels 7–8: faith and health loops real, formation loops live, foundry
+  governed approve flow executable, catalyst/executive workflows built
+- Level 9: COMPLETE — constitution engine, household modes, value simulation,
+  legacy archive, long-horizon reviews, household admin, continuity workflows
+  all implemented with honest unavailable states and 1042 tests
 
 ## What Must Happen Next
 

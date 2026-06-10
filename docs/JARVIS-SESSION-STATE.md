@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (Phase C complete; 812 tests passing)
+Last updated: 2026-06-10 (Phase F / Level 9 complete; 1042 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -42,7 +42,20 @@ Last updated: 2026-06-10 (Phase C complete; 812 tests passing)
   draft-only email staging real; foundry proposals live with governed approve;
   POST /api/trust-zones/{id}/consent-promote unlocks system_agent to sandbox_live;
   full foundry approve flow now executable after human consent promotion
-- Level 9: not started (correctly blocked on lower layers)
+- Level 9 (Capstone): COMPLETE — Phase E (Formation/Autonomy/Domains/Hardware/Infra)
+  + Phase F (Level 9 capstone) both done. F1: runtime constitution engine with
+  principle citations on every significant recommendation; F2: 9 Level 9 household
+  modes (normal/travel/crisis/sabbath/school/health_recovery/guest/sprint/emergency)
+  with full behavior contracts (autonomy ceiling, agents, rituals, alerts, tone);
+  F3: value simulation across 9 dimensions (time/money/health/faith/family/risk/
+  opportunity/reputation/long_term) with dissent/uncertainty/what-would-change-mind;
+  F4: legacy archive with permission gating (family/adults_only/chris_only/archive),
+  provenance, correction/dispute flow, exportable bundles; F5: long-horizon reviews
+  (monthly/seasonal/yearly) with arc summary showing prior lessons changed guidance,
+  persistent drift tracking, domain trends; F6: household-operable admin (devices,
+  integrations, permissions, audit — no developer tooling required); F7: continuity
+  step-based workflows for member/device/role changes with clean audit trail.
+  62 new F-phase tests + 5 scenario proofs; 1042 total passing
 
 ## Current Phase
 

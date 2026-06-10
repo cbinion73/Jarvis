@@ -1881,7 +1881,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/accounts/{account_id}/connect")
     async def account_connect(account_id: str, request: Request) -> Response:
-        connect = runtime.account_connect_url(account_id, _base_url(request))
+        connect = runtime.account_connect_url(account_id, _hosted_public_base_url(request))
         if not connect.get("ok"):
             return HTMLResponse(
                 f"<html><body><h1>Account connection unavailable</h1><p>{connect.get('detail', 'Unable to start provider login.')}</p></body></html>",
@@ -1899,7 +1899,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/google/callback", response_class=HTMLResponse)
     async def google_callback(request: Request, code: str = "", state: str = "") -> str:
-        result = runtime.google_handle_callback(_base_url(request), code, state)
+        result = runtime.google_handle_callback(_hosted_public_base_url(request), code, state)
         title = "Google connected" if result.get("ok") else "Google connection failed"
         return f"<html><body><h1>{title}</h1><p>{result.get('detail', 'Unknown Google callback state.')}</p></body></html>"
 
@@ -11511,6 +11511,515 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         import os
         env_vars = {k: v for k, v in os.environ.items()}
         return _json(check_component(component_id, env_vars))
+
+    # ── F1: Constitution engine ───────────────────────────────────────────────
+
+    @app.post("/api/constitution/cite")
+    async def api_constitution_cite(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .constitution_engine import ConstitutionEngine
+        engine = ConstitutionEngine()
+        citation = engine.cite(
+            actor=body.get("actor", "chris"),
+            recommendation_summary=body.get("recommendation_summary", ""),
+            principle_ids=body.get("principle_ids", []),
+            authority_basis=body.get("authority_basis", "explicit_grant"),
+            authority_stage=body.get("authority_stage", "suggest"),
+            uncertainty_level=body.get("uncertainty_level", "low"),
+            uncertainty_explanation=body.get("uncertainty_explanation", ""),
+            override_path=body.get("override_path", ""),
+            dissent=body.get("dissent", ""),
+        )
+        from dataclasses import asdict
+        return _json(asdict(citation))
+
+    @app.post("/api/constitution/make-recommendation")
+    async def api_constitution_recommend(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .constitution_engine import ConstitutionEngine
+        engine = ConstitutionEngine()
+        rec = engine.make_recommendation(
+            actor=body.get("actor", "chris"),
+            summary=body.get("summary", ""),
+            detail=body.get("detail", ""),
+            domain=body.get("domain", "general"),
+            principle_ids=body.get("principle_ids", []),
+            authority_stage=body.get("authority_stage", "suggest"),
+            dissent=body.get("dissent", ""),
+            uncertainty=body.get("uncertainty", ""),
+        )
+        from dataclasses import asdict
+        return _json(asdict(rec))
+
+    @app.post("/api/constitution/wrap-decision")
+    async def api_constitution_wrap(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .constitution_engine import ConstitutionEngine
+        engine = ConstitutionEngine()
+        decision = body.get("decision", {})
+        result = engine.wrap_decision(
+            decision=decision,
+            actor=body.get("actor", "chris"),
+            principle_ids=body.get("principle_ids", []),
+            authority_stage=body.get("authority_stage", "suggest"),
+            dissent=body.get("dissent", ""),
+        )
+        return _json(result)
+
+    @app.get("/api/constitution/principles")
+    async def api_constitution_principles() -> JSONResponse:
+        from .constitution_engine import ConstitutionEngine
+        return _json(ConstitutionEngine().principle_reference_card())
+
+    # ── F2: Household modes v2 (Level 9) ──────────────────────────────────────
+
+    @app.get("/api/household/modes-v2/current")
+    async def api_modes_v2_current() -> JSONResponse:
+        from .household_modes import Level9ModeManager
+        mgr = Level9ModeManager()
+        return _json(mgr.get_status())
+
+    @app.post("/api/household/modes-v2/set")
+    async def api_modes_v2_set(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .household_modes import Level9ModeManager
+        mgr = Level9ModeManager()
+        try:
+            result = mgr.set_mode(
+                mode_id=body.get("mode_id", "normal"),
+                actor=body.get("actor", "chris"),
+                reason=body.get("reason", ""),
+                permission_level=body.get("permission_level", "admin"),
+            )
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        return _json(result)
+
+    @app.get("/api/household/modes-v2/list")
+    async def api_modes_v2_list() -> JSONResponse:
+        from .household_modes import Level9ModeManager
+        return _json(Level9ModeManager().list_modes())
+
+    @app.get("/api/household/modes-v2/{mode_id}/impact")
+    async def api_modes_v2_impact(mode_id: str) -> JSONResponse:
+        from .household_modes import Level9ModeManager
+        return _json(Level9ModeManager().get_behavior_impact(mode_id))
+
+    @app.post("/api/household/modes-v2/check-action")
+    async def api_modes_v2_check_action(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .household_modes import Level9ModeManager
+        mgr = Level9ModeManager()
+        return _json(mgr.check_action_permitted(
+            action_family=body.get("action_family", ""),
+            mode_id=body.get("mode_id", ""),
+        ))
+
+    @app.get("/api/household/modes-v2/history")
+    async def api_modes_v2_history() -> JSONResponse:
+        from .household_modes import Level9ModeManager
+        return _json({"history": Level9ModeManager().mode_history()})
+
+    # ── F3: Value simulation ───────────────────────────────────────────────────
+
+    @app.post("/api/value-simulation/simulate")
+    async def api_value_simulate(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .value_simulation import ValueSimulationEngine
+        engine = ValueSimulationEngine()
+        raw_options = body.get("options", [])
+        scored = []
+        for opt in raw_options:
+            scored.append(engine.score_option(
+                option_id=opt.get("option_id", str(len(scored))),
+                label=opt.get("label", ""),
+                description=opt.get("description", ""),
+                dimension_inputs=opt.get("dimension_inputs", {}),
+                weights=body.get("weights"),
+            ))
+        sim = engine.simulate(
+            actor=body.get("actor", "chris"),
+            question=body.get("question", ""),
+            context=body.get("context", ""),
+            domain=body.get("domain", "general"),
+            options=scored,
+            dissent=body.get("dissent", ""),
+            uncertainty=body.get("uncertainty", ""),
+            what_would_change_recommendation=body.get("what_would_change_recommendation", ""),
+            confidence=float(body.get("confidence", 0.7)),
+        )
+        from dataclasses import asdict
+        return _json(asdict(sim))
+
+    @app.get("/api/value-simulation/{simulation_id}")
+    async def api_value_get(simulation_id: str) -> JSONResponse:
+        from .value_simulation import ValueSimulationEngine
+        result = ValueSimulationEngine().get(simulation_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="simulation not found")
+        return _json(result)
+
+    @app.get("/api/value-simulation/{simulation_id}/compare")
+    async def api_value_compare(simulation_id: str) -> JSONResponse:
+        from .value_simulation import ValueSimulationEngine
+        return _json(ValueSimulationEngine().compare_summary(simulation_id))
+
+    @app.get("/api/value-simulations")
+    async def api_value_list(actor: str = "chris", limit: int = 20) -> JSONResponse:
+        from .value_simulation import ValueSimulationEngine
+        return _json({"simulations": ValueSimulationEngine().list_recent(actor, limit)})
+
+    # ── F4: Legacy archive ─────────────────────────────────────────────────────
+
+    @app.post("/api/legacy/entries")
+    async def api_legacy_add_entry(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .legacy_archive import LegacyArchiveStore
+        store = LegacyArchiveStore()
+        entry = store.add_entry(
+            entry_type=body.get("entry_type", "story"),
+            title=body.get("title", ""),
+            content=body.get("content", ""),
+            date=body.get("date", ""),
+            actor=body.get("actor", "chris"),
+            subjects=body.get("subjects"),
+            permission_level=body.get("permission_level", "family"),
+            provenance=body.get("provenance", "manual"),
+            tags=body.get("tags"),
+        )
+        from dataclasses import asdict
+        return _json(asdict(entry))
+
+    @app.get("/api/legacy/entries")
+    async def api_legacy_list_entries(
+        entry_type: str | None = None,
+        actor_permission: str = "family",
+        status: str = "active",
+    ) -> JSONResponse:
+        from .legacy_archive import LegacyArchiveStore
+        return _json({"entries": LegacyArchiveStore().list_entries(
+            entry_type=entry_type,
+            actor_permission=actor_permission,
+            status=status,
+        )})
+
+    @app.get("/api/legacy/entries/{entry_id}")
+    async def api_legacy_get_entry(entry_id: str) -> JSONResponse:
+        from .legacy_archive import LegacyArchiveStore
+        result = LegacyArchiveStore().get_entry(entry_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="entry not found")
+        return _json(result)
+
+    @app.post("/api/legacy/entries/{entry_id}/correct")
+    async def api_legacy_correct(entry_id: str, request: Request) -> JSONResponse:
+        body = await request.json()
+        from .legacy_archive import LegacyArchiveStore
+        result = LegacyArchiveStore().correct_entry(entry_id, body.get("actor", "chris"), body.get("correction", ""))
+        if not result:
+            raise HTTPException(status_code=404, detail="entry not found")
+        return _json(result)
+
+    @app.post("/api/legacy/entries/{entry_id}/dispute")
+    async def api_legacy_dispute(entry_id: str, request: Request) -> JSONResponse:
+        body = await request.json()
+        from .legacy_archive import LegacyArchiveStore
+        result = LegacyArchiveStore().dispute_entry(entry_id, body.get("actor", "chris"), body.get("dispute_note", ""))
+        if not result:
+            raise HTTPException(status_code=404, detail="entry not found")
+        return _json(result)
+
+    @app.post("/api/legacy/bundles")
+    async def api_legacy_create_bundle(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .legacy_archive import LegacyArchiveStore
+        store = LegacyArchiveStore()
+        bundle = store.create_bundle(
+            title=body.get("title", ""),
+            description=body.get("description", ""),
+            theme=body.get("theme", ""),
+            actor=body.get("actor", "chris"),
+            entry_ids=body.get("entry_ids", []),
+            permission_level=body.get("permission_level", "family"),
+            date_range_start=body.get("date_range_start", ""),
+            date_range_end=body.get("date_range_end", ""),
+        )
+        from dataclasses import asdict
+        return _json(asdict(bundle))
+
+    @app.get("/api/legacy/bundles")
+    async def api_legacy_list_bundles(actor_permission: str = "family") -> JSONResponse:
+        from .legacy_archive import LegacyArchiveStore
+        return _json({"bundles": LegacyArchiveStore().list_bundles(actor_permission)})
+
+    @app.get("/api/legacy/bundles/{bundle_id}/export")
+    async def api_legacy_export_bundle(bundle_id: str, actor: str = "chris") -> JSONResponse:
+        from .legacy_archive import LegacyArchiveStore
+        return _json(LegacyArchiveStore().export_bundle(bundle_id, actor))
+
+    # ── F5: Long-horizon reviews ───────────────────────────────────────────────
+
+    @app.post("/api/horizon-reviews")
+    async def api_horizon_create(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .long_horizon import LongHorizonStore
+        store = LongHorizonStore()
+        review = store.create_review(
+            actor=body.get("actor", "chris"),
+            cadence=body.get("cadence", "monthly"),
+            period_label=body.get("period_label", ""),
+            period_start=body.get("period_start", ""),
+            period_end=body.get("period_end", ""),
+            domain_reviews=body.get("domain_reviews", []),
+            overall_narrative=body.get("overall_narrative", ""),
+            key_lesson=body.get("key_lesson", ""),
+            what_changed_guidance=body.get("what_changed_guidance", ""),
+        )
+        from dataclasses import asdict
+        return _json(asdict(review))
+
+    @app.post("/api/horizon-reviews/{review_id}/complete")
+    async def api_horizon_complete(review_id: str, request: Request) -> JSONResponse:
+        body = await request.json()
+        from .long_horizon import LongHorizonStore
+        result = LongHorizonStore().complete_review(review_id, body.get("actor", "chris"))
+        if not result:
+            raise HTTPException(status_code=404, detail="review not found")
+        return _json(result)
+
+    @app.get("/api/horizon-reviews")
+    async def api_horizon_list(actor: str = "chris", cadence: str | None = None, limit: int = 24) -> JSONResponse:
+        from .long_horizon import LongHorizonStore
+        return _json({"reviews": LongHorizonStore().list_reviews(actor, cadence, limit)})
+
+    @app.get("/api/horizon-reviews/arc-summary")
+    async def api_horizon_arc(actor: str = "chris", cadence: str = "monthly", limit: int = 6) -> JSONResponse:
+        from .long_horizon import LongHorizonStore
+        return _json(LongHorizonStore().get_arc_summary(actor, cadence, limit))
+
+    @app.get("/api/horizon-reviews/domain-trend")
+    async def api_horizon_trend(actor: str = "chris", domain: str = "health", cadence: str = "monthly") -> JSONResponse:
+        from .long_horizon import LongHorizonStore
+        return _json(LongHorizonStore().get_domain_trend(actor, domain, cadence))
+
+    # ── F6: Household admin ────────────────────────────────────────────────────
+
+    @app.get("/api/admin/what-can-i-do")
+    async def api_admin_capabilities(actor_level: str = "admin") -> JSONResponse:
+        from .household_admin import HouseholdAdminStore
+        return _json(HouseholdAdminStore().what_can_i_do(actor_level))
+
+    @app.post("/api/admin/devices")
+    async def api_admin_register_device(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .household_admin import HouseholdAdminStore
+        store = HouseholdAdminStore()
+        try:
+            device = store.register_device(
+                display_name=body.get("display_name", ""),
+                device_type=body.get("device_type", "phone"),
+                owner=body.get("owner", ""),
+                permission_level=body.get("permission_level", "adult"),
+                actor=body.get("actor", "chris"),
+                actor_level=body.get("actor_level", "admin"),
+            )
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        from dataclasses import asdict
+        return _json(asdict(device))
+
+    @app.get("/api/admin/devices")
+    async def api_admin_list_devices(actor_level: str = "admin") -> JSONResponse:
+        from .household_admin import HouseholdAdminStore
+        try:
+            devices = HouseholdAdminStore().list_devices(actor_level)
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        return _json({"devices": devices})
+
+    @app.post("/api/admin/devices/{device_id}/revoke")
+    async def api_admin_revoke_device(device_id: str, request: Request) -> JSONResponse:
+        body = await request.json()
+        from .household_admin import HouseholdAdminStore
+        try:
+            result = HouseholdAdminStore().revoke_device(device_id, body.get("actor", "chris"), body.get("actor_level", "admin"))
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        if not result:
+            raise HTTPException(status_code=404, detail="device not found")
+        return _json(result)
+
+    @app.post("/api/admin/integrations")
+    async def api_admin_register_integration(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .household_admin import HouseholdAdminStore
+        try:
+            integration = HouseholdAdminStore().register_integration(
+                display_name=body.get("display_name", ""),
+                service_name=body.get("service_name", ""),
+                registered_by=body.get("registered_by", "chris"),
+                actor_level=body.get("actor_level", "admin"),
+            )
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        from dataclasses import asdict
+        return _json(asdict(integration))
+
+    @app.get("/api/admin/integrations")
+    async def api_admin_list_integrations(actor_level: str = "adult") -> JSONResponse:
+        from .household_admin import HouseholdAdminStore
+        try:
+            integrations = HouseholdAdminStore().list_integrations(actor_level)
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        return _json({"integrations": integrations})
+
+    @app.post("/api/admin/integrations/{integration_id}/toggle")
+    async def api_admin_toggle_integration(integration_id: str, request: Request) -> JSONResponse:
+        body = await request.json()
+        from .household_admin import HouseholdAdminStore
+        try:
+            result = HouseholdAdminStore().toggle_integration(
+                integration_id, body.get("enabled", True), body.get("actor", "chris"), body.get("actor_level", "admin")
+            )
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        if not result:
+            raise HTTPException(status_code=404, detail="integration not found")
+        return _json(result)
+
+    @app.post("/api/admin/permissions")
+    async def api_admin_grant_permission(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .household_admin import HouseholdAdminStore
+        try:
+            result = HouseholdAdminStore().grant_permission(
+                member=body.get("member", ""),
+                permission_level=body.get("permission_level", "adult"),
+                actor=body.get("actor", "chris"),
+                actor_level=body.get("actor_level", "admin"),
+                reason=body.get("reason", ""),
+            )
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        return _json(result)
+
+    @app.get("/api/admin/permissions/{member}")
+    async def api_admin_get_permission(member: str) -> JSONResponse:
+        from .household_admin import HouseholdAdminStore
+        return _json(HouseholdAdminStore().get_permission(member))
+
+    @app.get("/api/admin/audit")
+    async def api_admin_audit(actor_level: str = "admin", limit: int = 50) -> JSONResponse:
+        from .household_admin import HouseholdAdminStore
+        try:
+            entries = HouseholdAdminStore().get_audit_summary(actor_level, limit)
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
+        return _json({"audit": entries})
+
+    # ── F7: Continuity ────────────────────────────────────────────────────────
+
+    @app.post("/api/continuity/member-joined")
+    async def api_continuity_member_joined(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .continuity import ContinuityStore
+        from dataclasses import asdict
+        event = ContinuityStore().member_joined(
+            member_name=body.get("member_name", ""),
+            role=body.get("role", "guest"),
+            actor=body.get("actor", "chris"),
+            initial_permission=body.get("initial_permission", "guest"),
+        )
+        return _json(asdict(event))
+
+    @app.post("/api/continuity/member-departed")
+    async def api_continuity_member_departed(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .continuity import ContinuityStore
+        from dataclasses import asdict
+        event = ContinuityStore().member_departed(
+            member_name=body.get("member_name", ""),
+            actor=body.get("actor", "chris"),
+            reason=body.get("reason", ""),
+        )
+        return _json(asdict(event))
+
+    @app.post("/api/continuity/device-added")
+    async def api_continuity_device_added(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .continuity import ContinuityStore
+        from dataclasses import asdict
+        event = ContinuityStore().device_added(
+            device_name=body.get("device_name", ""),
+            device_type=body.get("device_type", "phone"),
+            owner=body.get("owner", ""),
+            actor=body.get("actor", "chris"),
+            permission_level=body.get("permission_level", "adult"),
+        )
+        return _json(asdict(event))
+
+    @app.post("/api/continuity/device-departed")
+    async def api_continuity_device_departed(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .continuity import ContinuityStore
+        from dataclasses import asdict
+        event = ContinuityStore().device_departed(
+            device_name=body.get("device_name", ""),
+            owner=body.get("owner", ""),
+            actor=body.get("actor", "chris"),
+            reason=body.get("reason", "decommissioned"),
+        )
+        return _json(asdict(event))
+
+    @app.post("/api/continuity/role-changed")
+    async def api_continuity_role_changed(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .continuity import ContinuityStore
+        from dataclasses import asdict
+        event = ContinuityStore().role_changed(
+            subject=body.get("subject", ""),
+            old_role=body.get("old_role", ""),
+            new_role=body.get("new_role", ""),
+            actor=body.get("actor", "chris"),
+            reason=body.get("reason", ""),
+        )
+        return _json(asdict(event))
+
+    @app.post("/api/continuity/memory-migrated")
+    async def api_continuity_memory_migrated(request: Request) -> JSONResponse:
+        body = await request.json()
+        from .continuity import ContinuityStore
+        from dataclasses import asdict
+        event = ContinuityStore().memory_migrated(
+            from_context=body.get("from_context", ""),
+            to_context=body.get("to_context", ""),
+            actor=body.get("actor", "chris"),
+            reason=body.get("reason", ""),
+        )
+        return _json(asdict(event))
+
+    @app.post("/api/continuity/events/{event_id}/advance-step")
+    async def api_continuity_advance_step(event_id: str, request: Request) -> JSONResponse:
+        body = await request.json()
+        from .continuity import ContinuityStore
+        result = ContinuityStore().advance_step(event_id, body.get("actor", "chris"), body.get("step_completed", ""))
+        if not result:
+            raise HTTPException(status_code=404, detail="event not found")
+        return _json(result)
+
+    @app.get("/api/continuity/events")
+    async def api_continuity_list_events(event_type: str | None = None, status: str | None = None) -> JSONResponse:
+        from .continuity import ContinuityStore
+        return _json({"events": ContinuityStore().list_events(event_type, status)})
+
+    @app.get("/api/continuity/events/{event_id}")
+    async def api_continuity_get_event(event_id: str) -> JSONResponse:
+        from .continuity import ContinuityStore
+        result = ContinuityStore().get(event_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="event not found")
+        return _json(result)
 
     # ── Sync ──────────────────────────────────────────────────────────────────
 
