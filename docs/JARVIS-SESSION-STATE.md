@@ -4,286 +4,610 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (Phases G–O complete — Level 9 roadmap done; 1281 tests passing)
+Last updated: 2026-06-10 (Phase 0 truth report landed; master plan active)
 
-## Honest Maturity Placement (code-verified 2026-06-09)
+## Current Maturity Placement
 
-- Level 2 (Unified Command Product): COMPLETE
-- Level 3 (Household OS): COMPLETE — Phase A all 10 rows done; home state returns
-  source='unavailable' not mock; recovery lifecycle fields (owner/root_cause/
-  prevention_note/closure_note); deployment context detects Docker vs local;
-  mission audit on closure; lessons_learned field; /api/apple/command-center live;
-  exit report at docs/JARVIS-LEVEL3-EXIT-REPORT.md; 687 tests passing
-- Level 4 (Governed Intelligence): COMPLETE — Trust zones, supervision plane,
-  promotion engine, sandbox execution, email draft staging, agent registry
-  contract all exist; all 10 governed action types enforce sequence gating;
-  negative-path tests cover deny/stage/allow across all bootstrapped zones;
-  canonical action taxonomy (50+ actions, 14 families); fail-closed unknown
-  actions; hard boundary families (money/legal/security/identity/children/
-  reputation/system) always deny; plain-language household governance UI;
-  child safety guard with homework coaching; 72 new B-phase tests; 760 total
-- Level 4 runtime: C-phase runtime complete — fail/complete lifecycle states;
-  queue idempotency/retry/backoff/dead-letter; zombie recovery on restart;
-  scheduler observability (/api/scheduler/health); 52 new C-phase tests
-- Level 5 (Ambient): ~90% — event fabric autonomous, all 6 delivery postures
-  live, interruption decisions recorded; presence override store live with TTL
-  (suppress/escalate/clear via POST /api/apple/presence-override); background→
-  foreground push escalation via _maybe_fire_escalation_push() debounced 5 min;
-  POST /api/apple/presence-heartbeat writes foreground_active=True with 5-min
-  TTL — _choose_delivery_mode upgrades hold_for_brief → badge_only when user
-  is actively watching; foreground_active in apple_status() response
-- Level 6 (Memory/Continuity): ~60% — partitioned memory with enforced
-  viewer access, memory genuinely read in chat/briefing context, learning
-  review live; retrieval is keyword-match not situation retrieval (GAP-7)
-- Level 7 (Formation): ~60% — faith and health loops real; season now wired
-  into Three Moves (LLM prompt + seasonal fallback moves) and daily faith word
-  prompt; season field in day card and daily_word result; GAP-9 resolved
-- Level 8 (Bounded Autonomy): ~65% — sandbox execution + promotion engine +
-  draft-only email staging real; foundry proposals live with governed approve;
-  POST /api/trust-zones/{id}/consent-promote unlocks system_agent to sandbox_live;
-  full foundry approve flow now executable after human consent promotion
-### TRUE-UP CORRECTION (2026-06-10)
+This section is now the placement of record until replaced by a later
+code-verified true-up.
 
-A second code-verified audit found the prior "Level 9 COMPLETE" claim does not
-meet this program's own completion standard ("a row is complete only when the
-behavior has code, persistence, governance, tests, RUNTIME PROOF, and honest
-user-facing state"). The Phase E/F modules are well-built, well-tested DATA
-CONTRACTS that are NOT wired into the runtime.
+| Level | Current realistic state | Target for Level 9 program |
+|---|---:|---:|
+| Level 1: Tool Bundle | Retired | Retired |
+| Level 2: Unified Command Product | >95% | Maintain >95% |
+| Level 3: Household Operating System | ~90% | >95% |
+| Level 4: Governed Intelligence System | ~90% | >95% |
+| Level 5: Ambient Household Intelligence | ~70% | >95% |
+| Level 6: Memory and Continuity Engine | ~45% | >95% |
+| Level 7: Formation and Stewardship Platform | ~45% | >95% |
+| Level 8: Bounded Autonomous Operator | ~50% | >95% |
+| Level 9: Family Civilization Layer | ~20% | >95% |
 
-KEY EVIDENCE: ConstitutionEngine, Level9ModeManager, ValueSimulationEngine,
-LegacyArchiveStore, LongHorizonStore, HouseholdAdminStore, and ContinuityStore
-are referenced ONLY in service.py route handlers. Zero references in runtime.py,
-scheduler.py, apple_api.py, or any agent code. Setting mode="crisis" writes a
-JSON field but does NOT suspend an agent, change TTS, or reroute a notification.
-constitution_engine.cite() has zero production callers. There are TWO unrelated
-mode systems (family_profiles.build_household_modes time-of-day + Level9ModeManager
-situation) that do not talk to each other.
+Overall placement: solid Level 4, partial Level 5. The next program is not a
+new mockup pass. It is a runtime integration, real-provider, hardware, memory,
+formation, autonomy, proof, and docs-truth program.
 
-HONEST PLACEMENT (code-verified 2026-06-10):
+## Level 9 Completion Contract
 
-- Level 2 (Unified Command Product): COMPLETE
-- Level 3 (Household OS): COMPLETE* (*home/safety blocked on HA credentials)
-- Level 4 (Governed Intelligence): COMPLETE — trust zones, supervision,
-  promotion, fail-closed, hard policy rails all wired into real decisions
-- Level 5 (Ambient): ~70% — event fabric/presence/interruption real; voice
-  full-duplex, noise-learning feedback, proactive orchestration partial
-- Level 6 (Memory/Continuity): ~45% — viewer enforcement real; situational
-  retrieval is keyword-match, provenance/correction/Chronicle-narrative not built
-- Level 7 (Formation): ~45% — health/faith STORES exist + season wired to Three
-  Moves; per-person/per-mode dynamic adaptation not driving real cards
-- Level 8 (Bounded Autonomy): ~50% — sandbox + foundry proposal/approve real;
-  agent GENERATION, real end-to-end automation, rollback-before-exec not running
-- Level 9 (Family Civilization): ~20% — data contracts + API surface exist;
-  ~zero runtime integration; no household-facing UI for legacy/admin/reviews
+No row below is DONE because a module exists, an API returns 200, a doc says it
+is designed, or a test uses only isolated stores. A row is DONE only when all
+applicable proof exists:
 
-OVERALL: solid Level 4, partial Level 5. The path to Level 9 is dominated by
-INTEGRATION (wiring existing modules into real decision paths), not new modules.
-See "Level 9 Completion Roadmap (Phases G–O)" below.
+- Code path: the runtime/client/server behavior exists in the real app.
+- UI/API path: a household user or operator can reach it without debug steps.
+- Persistence: state survives restart and deploy.
+- Governance: actor, authority, policy, audit, rollback, and child/privacy rules
+  apply wherever the action is consequential.
+- Negative tests: unauthorized, stale, missing, unsafe, invalid, and external
+  failure paths are proven blocked or truthfully unavailable.
+- Runtime proof: at least one integration/e2e/smoke proof shows downstream
+  behavior actually changes because of the feature.
+- Truth labels: live, stale, cached, inferred, unavailable, blocked, and
+  externally-blocked are not blurred together.
+- Production proof: hosted Hetzner/Cloudflare deployment is verified when the
+  feature is meant to be live.
+- Docs last: maturity claims are updated only after the proof exists.
 
-## Current Phase
+Target: every maturity level from 2 through 9 must clear >95% by this standard.
 
-PHASES G–O COMPLETE (2026-06-10). All 9 roadmap phases done.
-1281 tests passing (3 skipped/BLOCKED, 1 isolated env issue in Dexcom test).
+## Autonomous Execution Contract
 
-BLOCKED items (never changed):
-  N1: Home Assistant (needs HOME_ASSISTANT_URL + TOKEN)
-  N3: Perception hardware (cameras/presence sensors)
-  N4: Workshop device network access (Bambu/Cricut)
-  N5: Hardware procurement (always-on host/NAS/UPS)
+This contract governs all future autonomous Codex runs.
 
-Next phase work TBD — all Level 9 Roadmap items addressed.
+### Source of Truth
+
+`JARVIS-SESSION-STATE.md` is the authoritative execution document.
+
+If roadmap docs, maturity docs, checklists, prompts, comments, or prior
+reports conflict with this file, this file wins.
+
+Read this file before any work begins.
+
+### Unattended Execution
+
+Chris may be unavailable.
+
+Do not stop to ask questions.
+
+Do not wait for clarification.
+
+Make the best safe engineering decision from the codebase, tests,
+architecture, and documentation.
+
+If work requires:
+
+- credentials
+- provider access
+- hardware
+- entitlement approval
+- production approval
+- destructive migration
+- mature-live consent
+
+then:
+
+1. mark `EXTERNALLY BLOCKED`
+2. record exact dependency
+3. add setup path if appropriate
+4. add truthful unavailable state
+5. add tests where possible
+6. continue other work
+
+### Completion Contract
+
+A row is NOT complete because:
+
+- an API exists
+- a store exists
+- a route exists
+- a document exists
+- a mock works
+- a unit test passes
+
+A row IS complete only when applicable proof exists:
+
+- code path
+- UI/API path
+- persistence
+- governance
+- negative tests
+- runtime proof
+- truthful states
+- production proof (when applicable)
+
+Runtime behavior must actually change.
+
+### Execution Loop
+
+For every task:
+
+`evaluate -> inspect code -> implement -> test -> integration proof -> fix ->
+retest -> commit -> docs last`
+
+Never update maturity claims before proof exists.
+
+### Safety Rules
+
+Never:
+
+- hard-code secrets
+- fake providers
+- fake hardware
+- fake production state
+- fake integrations
+- fake maturity
+
+Truthful unavailable states are preferred over simulated success.
+
+### Git Rules
+
+Check `git status` first.
+
+Do not discard user work.
+
+Commit passing work frequently.
+
+Use coherent commit messages.
+
+Avoid large uncommitted diffs.
+
+Before stopping:
+
+- commit passing work
+- update session state
+- record resume point
+
+### Deployment Rules
+
+For low-risk completed work:
+
+1. commit
+2. push
+3. allow deployment pipeline to run
+4. verify deployment
+5. verify affected routes
+6. record proof
+
+For risky changes involving:
+
+- credentials
+- identity
+- finances
+- provider writes
+- destructive migrations
+
+stop at tested commits and mark blocked.
+
+### Testing Requirements
+
+Add:
+
+- integration tests
+- negative tests
+- restart-survival tests
+- permission tests
+- governance tests
+
+Run the broadest feasible suite.
+
+Fix regressions before proceeding.
+
+### Maturity Scoring
+
+Optimize for honest maturity percentage, not checklist count.
+
+Priority:
+
+1. Truth/Baseline
+2. Memory & Continuity
+3. Bounded Autonomy
+4. Civilization Layer
+5. Ambient Intelligence
+6. Formation & Stewardship
+7. Providers
+8. Proof Systems
+
+### Stop Condition
+
+Stop only when:
+
+- blocked by external dependency
+- blocked by failing tests
+- blocked by context limits
+
+Before stopping:
+
+- commit passing work
+- update session state
+- leave exact resume point
+
+Format:
+
+`Resume from LEVEL __ TASK __ using JARVIS-SESSION-STATE.md`
+
+## External Blockers
+
+These do not count as product-complete until connected, but they may be marked
+EXTERNALLY BLOCKED if JARVIS provides a safe adapter, a precise unavailable
+state, tests, and an operator-facing setup path.
+
+Scoring rule: if a dependency is not yet procured, connected, or consented,
+and JARVIS already exposes a truthful unavailable/setup state, it stays in the
+plan but is excluded from the maturity denominator until the household decides
+to bring it into scope.
+
+- Home Assistant: future integration hub if the household adopts it. Keep in
+  the plan, but exclude from maturity scoring until Chris chooses Home
+  Assistant or another unified home-control authority for JARVIS.
+- Perception: requires real camera/presence/audio hardware and privacy rollout.
+  Keep in the plan; exclude from maturity scoring until the hardware exists.
+- Workshop: requires reachable Bambu/Cricut/workshop device network access.
+  Keep in the plan; exclude from maturity scoring until the devices exist.
+- Always-on household footprint: Hetzner currently satisfies the real hosted
+  always-on requirement. A future local host/NAS/UPS/network footprint remains
+  in the plan as a local-first resilience upgrade, not a current maturity blocker.
+- CarPlay navigation depth: may require entitlement approval for deeper
+  route/navigation behavior.
+- Provider credentials: Google, Microsoft, Dexcom, Plaid, KDP, Weather, and
+  other providers must be configured with real tokens; missing tokens must not
+  produce fake data.
+
+# Master Level 9 Completion Plan
+
+## Phase 0: Truth, Baseline, And Program Control
+
+Goal: remove contradiction from status claims and create one living execution
+view for getting all levels above 95%.
+
+- [x] T0.1 Replace stale "Level 9 complete" language with this master plan.
+- [x] T0.2 Create a machine-readable level scorecard artifact with level,
+      percent, evidence links, open blockers, last verification date, and owner.
+- [x] T0.3 Add a verification command that reports local, GitHub, deployed,
+      Cloudflare, Docker, data-volume, and provider truth separately.
+- [ ] T0.4 Add a docs-truth check that fails when session state, maturity model,
+      roadmap, Level 9 checklist, and exit reports conflict on current level.
+- [x] T0.5 Add a "no fake data" audit command for connectors, local caches,
+      rendered summaries, fixtures, and development-only fallbacks.
+- [x] T0.6 Establish the current proof ledger: tests run, e2e status, live
+      provider status, production revision, and unresolved failures.
+- [x] T0.7 Define the rule that any future autonomous run updates this file only
+      after code/test/runtime proof changes.
+
+Proof landed 2026-06-10:
+
+- `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
+- Artifact: `artifacts/qa/level9-truth-report.json`
+- Tests: `python3 -m pytest tests/test_verify_level9_truth.py tests/test_truthful_seed_filtering.py tests/test_data_connectors.py -q`
+- Current unresolved truth findings from the artifact:
+  - provider battery still records one runner fetch failure
+  - no-fake-data audit still finds seeded/QA content in runtime data stores
+  - live deployed / Cloudflare truth remains explicitly unverified in local sandbox runs
+
+Exit gate: the team can answer "what level is JARVIS today?" from one artifact,
+and that answer matches code, tests, deployment, and docs.
+
+## Phase 1: Level 2 And Level 3 Final Closure (>95%)
+
+Goal: keep the unified command product real while closing the remaining
+household-day gaps and external-provider honesty gaps.
+
+- [ ] L3.1 Verify every primary experience route still loads locally and on the
+      hosted stack: Daily Brief, Command, Needs You, Legacy, Faith, Agents,
+      Intel, Forge, Catalyst, Workshop, Publishing, Huddle, Health, Dining,
+      Navigate, Journey, Vision, Foundry, Home, Calendar, Email, News, Social.
+- [ ] L3.2 Replace any remaining cached/static/sample summaries with connector
+      output or an honest unavailable state.
+- [ ] L3.3 Make provider status visible per module: Google, Microsoft, Dexcom,
+      Plaid, KDP, Weather, News, Home Assistant, Chronicle, Ghostwritr, HA.
+- [ ] L3.4 Close calendar/email/news/social truth gaps so disconnected states
+      never render as real household activity.
+- [ ] L3.5 Connect Home Assistant when credentials and entity map are available;
+      until then, keep home/safety explicitly unavailable with exact blocker.
+- [ ] L3.6 Make all daily-operating actions round-trip through the activity
+      spine: approvals, missions, health, calendar, email, navigation, home,
+      provider sync, recovery, and agent work.
+- [ ] L3.7 Add route/app launch checks for all primary experiences to the e2e
+      battery with screenshots and console/network-noise assertions.
+- [ ] L3.8 Prove a realistic household day: morning brief, calendar, weather,
+      route, health check-in, approval, mission update, provider sync, evening
+      review, restart, and recovery.
+- [ ] L3.9 Update `JARVIS-LEVEL3-EXIT-REPORT.md` only after the above live proof.
+
+Exit gate: JARVIS can run a normal household day without fake data, unexplained
+fallback, missing state, or split-brain web/iPhone behavior.
+
+## Phase 2: Level 4 Governance Final Closure (>95%)
+
+Goal: make governance universal, understandable, and fail-closed across every
+consequential action path.
+
+- [ ] L4.1 Audit every mutation route, Apple contract mutation, agent action,
+      connector write, sandbox job, home action, financial action, memory write,
+      publishing action, and provider sync for trust-zone enforcement.
+- [ ] L4.2 Route every consequential action through one action taxonomy with
+      family, risk tier, minimum authority, reversibility, audit requirement,
+      approval mode, and hard-boundary flag.
+- [ ] L4.3 Make unknown, under-classified, unauthenticated, suspended-zone,
+      paused-arena, and failed-policy cases fail closed everywhere.
+- [ ] L4.4 Add negative-path tests for money, legal, identity, security,
+      children, reputation, public publishing, home control, credentials, and
+      system mutation.
+- [ ] L4.5 Build household-readable governance views for capabilities,
+      blocked attempts, pending approvals, authority changes, agent scope, and
+      rollback posture.
+- [ ] L4.6 Add child/privacy product flows: parent review, child-safe memory,
+      tutoring boundaries, restricted faith/health/family data, and audit.
+- [ ] L4.7 Add a governance coverage report that shows every route/action and
+      its policy owner.
+- [ ] L4.8 Prove governance survives restart, provider outage, invalid actor,
+      stale token, and partial write failures.
+
+Exit gate: every consequential action is policy-owned, auditable,
+understandable, and fail-closed.
+
+## Phase 3: Level 5 Ambient Intelligence (>95%)
+
+Goal: JARVIS becomes present, helpful, and disciplined across surfaces without
+becoming noisy or voice-only.
+
+- [ ] L5.1 Build a stable full-duplex voice loop: wake phrase, listen, speak,
+      interrupt, resume, timeout, retry, and graceful fallback.
+- [ ] L5.2 Support both "Hey Jarvis" and "Jarvis" wake phrases where the active
+      voice surface allows wake-word control.
+- [ ] L5.3 Wire Siri/App Intents so Siri launches the session and JARVIS owns
+      the conversation, context, follow-up, and transcript.
+- [ ] L5.4 Complete browser, iPhone, and hosted voice-shell parity for typed,
+      spoken, interrupted, and resumed conversation.
+- [ ] L5.5 Prove driving-safe CarPlay behavior with constrained commands,
+      route-aware context, no broad non-driving workflows, and safety tests.
+- [ ] L5.6 Add real presence inputs: phone heartbeat, foreground/background,
+      focus state, driving, room, quiet hours, stale TTL, and manual override.
+- [ ] L5.7 Add noise-learning feedback: useful, noisy, wrong time, wrong
+      surface, missed urgency, and future routing changes based on feedback.
+- [ ] L5.8 Build proactive orchestration across calendar, weather, route, home,
+      health, approvals, provider status, mode, presence, and risk.
+- [ ] L5.9 Every proactive prompt must include why-now, source facts,
+      confidence, actions, snooze/dismiss, feedback, and audit event.
+- [ ] L5.10 Add ambient e2e proofs for quiet morning, urgent alert, driving,
+      family mode, sabbath/rest, crisis, and provider-down scenarios.
+
+Exit gate: JARVIS notices what matters, chooses the right surface, speaks only
+when useful, and records why it interrupted or stayed quiet.
+
+## Phase 4: Level 6 Memory And Continuity (>95%)
+
+Goal: memory becomes a trustworthy continuity engine, not keyword stuffing.
+
+- [ ] L6.1 Replace keyword relevance with situation retrieval using person,
+      domain, task, unresolved loop, prior resolution, season, relationship,
+      lesson, location, mode, and current decision.
+- [ ] L6.2 Add retrieval explanations so every memory included in reasoning
+      says why it was selected.
+- [ ] L6.3 Add provenance to every durable memory: observed fact, instruction,
+      inference, tentative pattern, approved belief, retired belief, source,
+      owner, subject, sensitivity, access policy, review state, and correction.
+- [ ] L6.4 Wire correction states into reasoning: corrected, disputed, retired,
+      superseded, and do-not-use must be excluded from future context.
+- [ ] L6.5 Make Chronicle the narrative memory layer for patterns, rituals,
+      faith records, decisions, milestones, lessons, and why they matter.
+- [ ] L6.6 Enforce Chronicle/JARVIS memory boundaries so faith-tagged content
+      routes to Chronicle or requires explicit sharing.
+- [ ] L6.7 Add household memory review UI for inspect, correct, dispute, retire,
+      export, forget, provenance, and impact.
+- [ ] L6.8 Add Obsidian or equivalent human-facing publishing for approved
+      long-form notes, Chronicle summaries, and executive memory.
+- [ ] L6.9 Add memory restart, permission, correction, retrieval, export, and
+      narrative e2e proofs.
+
+Exit gate: JARVIS remembers in a way the household can inspect, correct, trust,
+and benefit from across months.
+
+## Phase 5: Level 7 Formation And Stewardship (>95%)
+
+Goal: JARVIS helps the household become more aligned with its stated values,
+not merely more efficient.
+
+- [ ] L7.1 Wire health check-ins, readiness, Dexcom, sleep, movement, stress,
+      objectives, and review history into morning brief and Three Moves.
+- [ ] L7.2 Generate doctor packets from real accumulated health history once
+      enough data exists, with unavailable states before then.
+- [ ] L7.3 Wire faith/ritual loops into daily word, prayer capture, study
+      review, follow-up, Chronicle records, and future guidance.
+- [ ] L7.4 Make formation guidance change by person, season, household mode,
+      calendar load, health posture, stress, faith rhythm, and family context.
+- [ ] L7.5 Build child-safe tutoring and coaching with parent review, Socratic
+      boundaries, memory limits, and inspectable transcripts.
+- [ ] L7.6 Add parenting support loops: rituals, encouragement, correction
+      review, child-sensitive privacy, and adult-only reflection.
+- [ ] L7.7 Add "formation changed because..." citations so guidance names the
+      input facts it used.
+- [ ] L7.8 Prove formation loops across normal day, health recovery, school
+      day, sabbath/rest, child tutoring, and stale-prayer follow-up scenarios.
+
+Exit gate: daily guidance adapts truthfully to the person and season, and the
+family can inspect why.
+
+## Phase 6: Level 8 Bounded Autonomy (>95%)
+
+Goal: JARVIS completes useful delegated work in governed arenas without outrunning
+trust, rollback, or approval.
+
+- [ ] L8.1 Complete Foundry agent generation with real agent stubs, registry
+      entries, mission, trust zone, arena, tools, memory scope, and authority.
+- [ ] L8.2 Add newborn-agent lifecycle: propose, approve, sandbox, evaluate,
+      promote, demote, suspend, retire, and archive with audit.
+- [ ] L8.3 Finish Catalyst executive workflow routing as a first-class bounded
+      domain, not a generic workstream fallback.
+- [ ] L8.4 Ship one flagship automation: research -> synthesize -> draft ->
+      review -> approval -> publish/stage, with evidence and rollback.
+- [ ] L8.5 Add sandbox snapshots before every execution and rollback packets
+      for every supported job type.
+- [ ] L8.6 Add pause, cancel, resume, dead-letter, retry, timeout, and recovery
+      controls to every autonomous job surface.
+- [ ] L8.7 Add agent performance memory: success rate, boundary violations,
+      operator feedback, promotion evidence, demotion cause, and doctrine impact.
+- [ ] L8.8 Prove autonomous work in at least three domains: publishing, research,
+      household admin, workshop planning, finance review, or health prep.
+
+Exit gate: JARVIS can do real work while bounded, reviewable, reversible, and
+interruptible.
+
+## Phase 7: Level 9 Civilization Layer (>95%)
+
+Goal: JARVIS becomes long-horizon household infrastructure for identity,
+continuity, legacy, values, and flourishing.
+
+- [ ] L9.1 Encode the household constitution into runtime decisions, not only
+      docs: mandate, values, roles, hard boundaries, amendments, escalation.
+- [ ] L9.2 Make significant recommendations cite principle, authority basis,
+      uncertainty, dissent, override path, and what would change the answer.
+- [ ] L9.3 Make household modes change real behavior: priorities, alerts,
+      agents, rituals, autonomy ceiling, briefing posture, TTS, and UI posture.
+- [ ] L9.4 Complete value simulation for decisions across time, money, health,
+      faith, family, risk, opportunity, reputation, and long-term effects.
+- [ ] L9.5 Build legacy archive as a household-facing product: stories,
+      milestones, decisions, rituals, photos/media references, lessons,
+      permission tiers, correction, export, and provenance.
+- [ ] L9.6 Add monthly, seasonal, and yearly reviews across health, faith,
+      family, work, finances, learning, identity, and household systems.
+- [ ] L9.7 Show how prior lessons changed current guidance.
+- [ ] L9.8 Build household-operable admin for modes, memory, devices, agents,
+      integrations, permissions, autonomy, audits, backups, and emergency pause.
+- [ ] L9.9 Add personnel/device continuity flows: new member, changed role,
+      new device, lost device, offboarding, memory migration, permission update.
+- [ ] L9.10 Add non-builder household views so family members can benefit from
+      JARVIS directly at appropriate responsibility levels.
+- [ ] L9.11 Prove crisis day, travel week, health recovery, child formation,
+      legacy recall, automation, memory correction, governance pause, and
+      provider outage as end-to-end scenarios with restart survival.
+
+Exit gate: JARVIS is not just useful today; it compounds wisdom, memory,
+values, governance, and continuity across time.
+
+## Phase 8: Real-World Providers, Hardware, And Infrastructure
+
+Goal: connect the household world honestly and safely.
+
+- [ ] HW.1 Unified home-control authority chosen and wired. If Home Assistant
+      is adopted, connect credentials/entity map with service-call safety rails.
+      If another backbone is chosen, provide the equivalent governed adapter.
+      Exclude from scoring until a whole-home authority is intentionally adopted.
+- [ ] HW.2 Weather provider repaired or replaced; WeatherKit/OpenWeather status
+      truth visible; no fake weather cards.
+- [ ] HW.3 Google Gmail/Calendar and Microsoft Outlook status live, with token
+      refresh, degraded states, and per-account diagnostics.
+- [ ] HW.4 Dexcom live sync complete with clear "not worn recently" state.
+- [ ] HW.5 Plaid finance connector configured, linked, synced, and governed.
+- [ ] HW.6 KDP connector governed with credential safety, sync health, and no
+      unsafe publishing action.
+- [ ] HW.7 Perception feeds: porch, garage, room presence, phone arrival,
+      privacy state, mute indicators, and event resolution. Keep in plan;
+      exclude from scoring until perception hardware exists.
+- [ ] HW.8 Workshop devices: Bambu/Cricut/printer telemetry, job staging,
+      material context, safety checks, and device-unavailable states. Keep in
+      plan; exclude from scoring until workshop devices exist.
+- [ ] HW.9 Local-first resilience track: optional household host, NAS backup,
+      UPS graceful shutdown, segmented network, and recovery runbook applied to
+      the house. Hetzner already satisfies the current hosted always-on need.
+- [ ] HW.10 Live provider battery distinguishes configured, connected, stale,
+      blocked, permission-denied, and provider-error for every integration.
+
+Exit gate: every external dependency is either genuinely live or precisely
+blocked with a reversible setup path.
+
+## Phase 9: Mobile, Web, And Household UX Consolidation
+
+Goal: make JARVIS operable by the household without adding another pile of
+equal-weight screens.
+
+- [ ] UX.1 Keep web as full command/oversight surface, but remove fake or stale
+      provider signals from every experience.
+- [ ] UX.2 Reshape iPhone around Today, Focus, Family, Decisions, Navigate, and
+      Continuity while preserving live `/api/apple/*` truth.
+- [ ] UX.3 Add household-safe views for non-builder users with role-aware
+      complexity and permissions.
+- [ ] UX.4 Add settings paths for every connector and hardware dependency.
+- [ ] UX.5 Add global unavailable/partial/stale/error/loading patterns that are
+      consistent and truthful.
+- [ ] UX.6 Add accessibility and responsive checks for all primary experiences.
+- [ ] UX.7 Add manual verification scripts for web, iPhone, voice, and provider
+      surfaces.
+
+Exit gate: the product is not just technically wired; it is understandable,
+reviewable, and steerable by the household.
+
+## Phase 10: Proof, Release, And Maturity Advancement
+
+Goal: advance maturity only when the evidence earns it.
+
+- [ ] P.1 Build one Level 9 scenario suite covering Level 3 through Level 9
+      behaviors in integrated flows, not isolated stores.
+- [ ] P.2 Add production smoke tests for hosted API health, primary routes,
+      connector status, auth boundaries, and key mutation paths.
+- [ ] P.3 Add restart-survival tests for modes, agents, memory, missions,
+      health, rituals, provider sync, approvals, automations, and legacy.
+- [ ] P.4 Add browser e2e screenshots and console/network-noise checks for all
+      primary experiences.
+- [ ] P.5 Add Apple contract verification and Swift decode verification for
+      every changed `/api/apple/*` payload.
+- [ ] P.6 Add security and permission regression tests for every Level 4+ action.
+- [ ] P.7 Require proof ledger update before any checkbox changes to DONE.
+- [ ] P.8 Update maturity model, roadmap, exit reports, and this file only after
+      integrated proof passes.
+
+Exit gate: every level is >95%, all critical scenario proofs pass, production
+truth is verified, and docs agree.
+
+## First Execution Order
+
+1. T0 truth/status tool and docs consistency check.
+2. L3 no-fake-data/provider truth audit across all experiences.
+3. Home Assistant setup path and entity map, if credentials are available.
+4. L5 voice loop: "Hey Jarvis" conversational path, interrupt, resume.
+5. L6 situational memory retrieval and correction exclusion.
+6. L7 health/faith loops changing daily guidance.
+7. L8 flagship governed automation.
+8. L9 household modes, constitution citations, legacy/review UI.
+9. Hardware/provider rollout.
+10. End-to-end Level 9 proof suite and docs-last maturity update.
+
+## Resume Point
+
+Resume from LEVEL 0 TASK T0.4 using `JARVIS-SESSION-STATE.md`.
+
+Immediate next work:
+
+1. Add the docs-truth consistency check across session state, maturity model,
+   Level 9 checklist, and exit reports.
+2. Triage `artifacts/qa/level9-truth-report.json` findings, starting with
+   seeded/QA records still present in runtime-visible data stores.
+3. Re-run `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
+   after each truth-cleanup seam to reduce unresolved failures honestly.
+
+## Level 9 Exit Gate
+
+JARVIS may be called Level 9 only when all of the following are true:
+
+1. Levels 2 through 9 each score >95% against the completion contract above.
+2. No primary experience presents mock, sample, cached, or inferred data as live.
+3. Every consequential action is governed, auditable, reversible where possible,
+   and fail-closed.
+4. Ambient voice and proactive orchestration work across real user surfaces.
+5. Memory retrieval is situational, provenance-backed, and correctable.
+6. Formation loops actually change daily guidance and cite their inputs.
+7. At least one useful autonomous workflow completes under governance.
+8. Legacy, long-horizon review, household admin, and continuity are household
+   usable, not developer-only APIs.
+9. Real-world providers and hardware are live or explicitly externally blocked.
+10. The Level 9 scenario suite passes with restart survival and production-like
+    verification.
 
 ---
 
-# Level 9 Completion Roadmap (Phases G–O)
+## Archived Historical Notes
 
-Goal: every maturity level ≥90% complete, code+test+RUNTIME-PROOF verified,
-culminating in Level 9. Each row follows the existing Completion Standard
-(code path, UI/API path, persistence, governance, negative tests, runtime
-proof, truth labels, docs-last). A row is DONE only when a real decision,
-notification, agent action, or rendered surface CHANGES because of it — not
-when a store persists or an API returns 200.
-
-## The Integration Doctrine (why G–O differ from A–F)
-
-Phases A–F built data contracts and API surfaces. They are the right
-foundation. But the modules sit beside the runtime, not inside it. Phases G–O
-are dominated by WIRING those modules into real decision paths
-(runtime.assess_action_boundary, scheduler._tick, apple_api delivery routing,
-memory.py write/read paths, briefing/Three-Moves composition) plus the genuine
-net-new work for Levels 5–8. "Wire X into Y" means Y reads X and Y's output
-provably changes; prove it with an integration test that asserts the downstream
-effect, not the store contents.
-
-## Dependency ordering
-
-- G is the unblocker (runtime wiring) — MUST come first; everything leans on it.
-- H, I, J, K parallelize after G lands.
-- L (civilization layer) depends on G + I.
-- M (household UX) depends on G–L surfaces existing.
-- N (infra/hardware) partially blocked on Chris (HA creds, devices).
-- O (scenario proofs) is the final exit gate; runs against the integrated stack.
-
----
-
-## Phase G — Level 9 Runtime Integration  [unblocker; lifts L9 20%→55%] COMPLETE
-
-- [x] G1  scheduler reads current mode; agents in `suspended_agents` are actually
-      paused and `required_agents` actually run. PROOF: crisis mode sets
-      workshop-copilot in suspended_agents; TestSchedulerModeEnforcement confirms
-      agent is skipped during tick and payload carries active_mode.
-- [x] G2  notification routing honors mode `notification_level` + `alert_domains`
-      + `suppress_domains`. PROOF: sabbath suppresses work domain; critical breaks
-      through; guest/silent suppresses all non-critical.
-- [x] G3  `assess_action_boundary` caps requested stage at the active mode's
-      `autonomy_ceiling`. PROOF: sabbath (monitor ceiling) blocks sandbox_live;
-      normal allows it; crisis ceiling is suggest.
-- [x] G4  unify the two mode systems — `family_profiles` time-of-day modes and
-      `Level9ModeManager` situation modes resolve through ONE precedence function
-      in `jarvis/mode_resolver.py`. No split-brain mode state anywhere.
-- [x] G5  mode drives TTS enablement + briefing posture (verbosity/briefing_style).
-      PROOF: sabbath returns early card with tts_enabled=False, briefing_style=off;
-      crisis sets verbosity=minimal in LLM prompt.
-- [x] G6  `constitution_engine.cite()` wraps significant runtime recommendations.
-      PROOF: `converse()` return value carries constitutional_citation dict with
-      principle_ids, authority_basis, authority_stage, uncertainty, override_path.
-- [x] G7  `value_simulation` is invoked for real multi-option decisions. PROOF:
-      POST /api/decision/analyze returns ranked options, dissent, uncertainty, and
-      what_would_change_recommendation, plus constitutional_citation.
-- [x] G8  mode auto-exit triggers fire via scheduler. PROOF: crisis max_duration=48h;
-      TestModeAutoExit confirms scheduler calls set_mode("normal") when duration
-      exceeded; normal mode is indefinite (max_duration_hours=0).
-
-## Phase H — Level 5 Ambient completion  [70%→≥90%]
-
-- [ ] H1  voice full-duplex loop: wake → listen → speak → interrupt → resume,
-      proven across browser + iPhone with clear fallback. Integration/e2e proof.
-- [ ] H2  Siri / App Intents launch JARVIS conversation into the in-app engine
-      with context continuity (Siri starts it, JARVIS owns the thread).
-- [ ] H3  CarPlay driving-safe loop proven end-to-end: route-aware, constrained
-      action set, no broad non-driving workflows. Safety negative tests.
-- [ ] H4  noise-learning feedback: useful / noisy / wrong-time / wrong-surface /
-      missed-urgency feedback recorded AND future routing adapts while safety
-      overrides remain intact. Proof: feedback changes a later delivery decision.
-- [ ] H5  proactive prompt orchestration: combine calendar+weather+route+home+
-      health+approvals+presence+mode into one timely prompt with why-now,
-      confidence, source facts, actions, snooze/dismiss, and an audit event.
-
-## Phase I — Level 6 Memory completion  [45%→≥90%]
-
-- [ ] I1  situational retrieval replaces keyword match: retrieve by person,
-      domain, current task, unresolved loop, prior resolution, season,
-      relationship, lesson — and explain WHY each memory was selected.
-- [ ] I2  provenance on every durable memory: observed fact / instruction /
-      inference / tentative pattern / approved belief / retired belief, plus
-      source, owner, subject, sensitivity, access policy, review state.
-- [ ] I3  correction loop wired into reasoning: correct / dispute / retire /
-      supersede / "do-not-use-in-reasoning" — a corrected/retired memory is
-      provably EXCLUDED from future decision context. Negative test required.
-- [ ] I4  Chronicle becomes the narrative memory layer: explains patterns,
-      rituals, decisions, milestones, and why JARVIS thinks they matter;
-      inspectable with source + impact + correction options.
-- [ ] I5  `chronicle_boundary` wired into memory.py WRITE path: faith-tagged
-      content routes to Chronicle and is BLOCKED from JARVIS memory. Negative
-      test proves a faith write to JARVIS memory is rejected.
-
-## Phase J — Level 7 Formation completion  [45%→≥90%]
-
-- [ ] J1  `health_loop` wired into morning briefing + Three Moves (check-in
-      history actually shapes the day card and the moves).
-- [ ] J2  `ritual_loop` wired into daily card + formation guidance; a prayer/
-      study item is captured, resurfaced when stale, reviewed, and influences
-      later guidance.
-- [ ] J3  `AdaptationContextBuilder` drives real per-person / per-mode /
-      per-season formation cards that DIFFER appropriately and cite their inputs.
-- [ ] J4  parenting/tutoring child-safe loop with parent-review boundaries, wired
-      so child-facing guidance obeys permissions and is inspectable/correctable.
-- [ ] J5  doctor packet generated from real accumulated check-in history (not an
-      empty/unavailable shell) once ≥N days of data exist.
-
-## Phase K — Level 8 Autonomy completion  [50%→≥90%]  COMPLETE
-
-- [x] K1  foundry agent GENERATION: propose→approve→sandbox lifecycle with
-      FoundryBuilder.build() producing real agent stubs with role, mission,
-      zone, arena, authority_stage. 22 tests passing.
-- [x] K2  newborn-agent lifecycle: evaluate → promote or retire with audit;
-      AGENT_TRANSITIONS enforces valid state machine; audit_path written.
-- [x] K3  agent pipeline assignment endpoint exists in service.py.
-- [x] K5  sandbox snapshots: capture_sandbox_snapshot() + rollback_to_snapshot()
-      — pre-state capture and replay tested; rollback restores state/authority.
-- [ ] K4  `executive_workflow` Catalyst routing — DEFERRED (no Catalyst-specific
-      workflow module; workstream items route through existing foundry)
-
-## Phase L — Level 9 Civilization completion  [55%→≥90%]  COMPLETE
-
-- [x] L1  `long_horizon` reviews auto-triggered by scheduler; arc summary returns
-      actor/cadence/source/key_lessons/guidance_changes. 31 tests passing.
-- [x] L2  `legacy_archive` permission gating enforced: family/adults_only/
-      chris_only tiers; list_entries(actor_permission=) filters correctly.
-- [x] L3  `continuity` execute_step() dispatches real side effects to
-      HouseholdAdminStore (revoke/grant/register); verify_restricted_not_exposed()
-      confirms guest-level actors can't see restricted memory.
-- [x] L4  household control panel: /api/admin/household-control aggregates
-      agents/devices/integrations/permissions/mode; pause/resume endpoints live.
-- [x] L5  arc summary returns key_lessons + guidance_changes from real review
-      records; create_review() writes period_start/end/key_lesson/what_changed.
-
-## Phase M — Household UX layer  [non-developer operability]  COMPLETE
-
-- [x] M1  mode switcher API: /api/household/modes-v2/set + list + current +
-      impact endpoints live; Level9ModeManager backed.
-- [x] M2  decision-citation: DecisionCitationStore records constitutional
-      principles, authority_basis, uncertainty, override_path, plain_summary.
-      36 tests passing.
-- [x] M3  value-simulation: ValueSimulator ranks options against 7 value
-      dimensions, surfaces dissent, provides change_my_mind paths.
-- [x] M4  key household surfaces exist as real API endpoints; non-developer
-      accessible (no raw JSON required).
-- [x] M5  pause-all + activity-summary endpoints; plain-language governance
-      summary; hard-boundary policies unaffected by pause.
-
-## Phase N — Infrastructure + Hardware  [N2 COMPLETE; others BLOCKED]
-
-- [ ] N1  Home Assistant: **BLOCKED on HOME_ASSISTANT_URL / TOKEN + entity map.**
-- [x] N2  SQLite hybrid index (GAP-10): WAL-mode SQLite alongside preserved JSONL;
-      tables: approvals/memory_entries/trust_zones/agents/workstream_items;
-      rebuild() from source JSON; schema_version tracking. 16 tests passing.
-- [ ] N3  Perception feeds: **BLOCKED on perception hardware.**
-- [ ] N4  Workshop devices: **BLOCKED on device network access (Bambu/Cricut).**
-- [ ] N5  Always-on host/NAS/UPS: **BLOCKED on hardware procurement.**
-
-## Phase O — End-to-end Level 9 scenario proofs  [final exit gate]  COMPLETE
-
-All 24 O-scenario tests passing. 24/24 pass in isolation; full suite 1281 pass.
-
-- [x] O1  crisis day — mode flips, autonomy drops, only critical breaks through,
-      audit persists on restart simulation.
-- [x] O2  travel mode — Level9ModeManager sets travel, mode_id persists after
-      restart, auto_exit_triggers verified, ProactiveOrchestrator mode-aware.
-- [x] O3  child formation — tutoring redirect creates parent review approval;
-      child-level actor blocked from adults_only legacy entries.
-- [x] O4  health recovery — ValueSimulator recommends rest when health scores
-      favor it; AdaptationContextBuilder sets health_focus=True for depleted.
-- [x] O5  legacy recall — permission hierarchy (family < adults_only < chris_only)
-      enforced; bundle export respects permission_level.
-- [x] O6  automation — full foundry lifecycle (propose→approve→sandbox→evaluate→
-      promote) + snapshot/rollback end-to-end under governance.
-- [x] O7  correction — MemoryStore.correct_entry() marks approval_status=corrected;
-      MEMORY_EXCLUDED_FROM_REASONING includes corrected/disputed/retired/superseded;
-      correction persists after store reload.
-- [x] O8  governance pause — pause sets flag without changing lifecycle state;
-      resume clears flag; audit records agent_paused; no data corruption.
-
-## Level 9 EXIT GATE (all must be TRUE before any "Level 9" claim)
-
-1. Every level ≥90% with code + test + runtime proof (not store/API-only).
-2. Active mode provably changes scheduler, notifications, autonomy ceiling, TTS.
-3. constitution_engine cites REAL recommendations in the runtime.
-4. Situational memory retrieval live; corrected memories excluded from reasoning.
-5. At least one real automation completes end-to-end under governance.
-6. Household-operable UI for modes, admin, legacy, reviews (non-developer).
-7. Phase O scenario suite passes end-to-end WITH restart survival.
-8. Docs updated ONLY after proof (docs-last rule honored).
+The sections below preserve earlier audit and completion records. They may be
+useful evidence, but this file's active plan is the master checklist above.
 
 ---
 
