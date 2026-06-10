@@ -994,8 +994,17 @@ MEMORY_CORRECTION_STATUSES = frozenset({
     MEMORY_CORRECTION_STATUS_SUPERSEDED,
     MEMORY_CORRECTION_STATUS_DO_NOT_USE,
 })
+# I3: All non-active statuses are excluded from reasoning.
+# - corrected: user flagged as wrong; excluded until re-approved
+# - disputed: user questions accuracy; excluded while under dispute
+# - retired: permanently removed from use
+# - superseded: replaced by a newer fact; old version must not surface
+# - do_not_use: explicitly blocked
 MEMORY_EXCLUDED_FROM_REASONING = frozenset({
+    MEMORY_CORRECTION_STATUS_CORRECTED,
+    MEMORY_CORRECTION_STATUS_DISPUTED,
     MEMORY_CORRECTION_STATUS_RETIRED,
+    MEMORY_CORRECTION_STATUS_SUPERSEDED,
     MEMORY_CORRECTION_STATUS_DO_NOT_USE,
 })
 

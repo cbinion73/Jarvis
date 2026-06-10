@@ -277,6 +277,44 @@ Each object: {"move": "<action>", "why": "<one sentence reason>", "effort_level"
             if verbosity == "minimal"
             else ""
         )
+        # J1: Build health history context from accumulated health_state.
+        # This makes Three Moves actually respond to known conditions, medications,
+        # and trends — not just today's wearable readings.
+        health_context_lines: list[str] = []
+        if health_state:
+            conditions = []
+            try:
+                conds = health_state.get("medical_history", {}).get("known_conditions", [])
+                conditions = [c.get("name", "") for c in conds if c.get("name")]
+            except Exception:
+                pass
+            if conditions:
+                health_context_lines.append(f"  Active conditions: {', '.join(conditions[:4])}")
+
+            try:
+                meds = health_state.get("medications", {}).get("current", [])
+                med_names = [m.get("name", "") for m in meds if m.get("name")]
+                if med_names:
+                    health_context_lines.append(f"  Medications: {', '.join(med_names[:4])}")
+            except Exception:
+                pass
+
+            try:
+                targets = health_state.get("health_targets", {})
+                if targets:
+                    target_strs = [
+                        f"{k}={v}" for k, v in list(targets.items())[:3]
+                    ]
+                    health_context_lines.append(f"  Targets: {', '.join(target_strs)}")
+            except Exception:
+                pass
+
+        health_context_block = (
+            "\n".join(health_context_lines)
+            if health_context_lines
+            else "  No accumulated health profile loaded."
+        )
+
         user_prompt = f"""Today: {today}
 Day Type: {day_type}
 {season_line}
@@ -285,10 +323,13 @@ Day Type: {day_type}
 Chris's profile:
 {_CHRIS_PROFILE}
 
+Accumulated health context (J1 — shapes Three Moves beyond today's signals):
+{health_context_block}
+
 Today's readiness signals:
 {chr(10).join(signal_lines) if signal_lines else '  No wearable data available today.'}
 
-Generate Today's Three Moves — exactly 3 specific health actions matched to this day type and season.
+Generate Today's Three Moves — exactly 3 specific health actions matched to this day type, season, AND accumulated health context.
 For {day_type} day:
 - Recovery: gentle movement only, protein focus, sleep hygiene
 - Push: resistance training, time-restricted eating, bonus activity
@@ -296,6 +337,7 @@ For {day_type} day:
 - Medical Attention: minimum exertion, prepare for clinical contact
 - Constraint: adapted moves that work around external limits
 {f"Season context ({season}): tailor movement suggestions to seasonal conditions (indoor/outdoor, temperature, daylight)." if season else ""}
+Tailor moves to any active conditions listed above.
 
 Return ONLY a JSON array of exactly 3 move objects."""
 
@@ -533,6 +575,32 @@ async def run_morning_checkin(context: str = "") -> dict:
     # 6. If-then rule
     if_then_rule = _generate_if_then_rule(day_type, signals)
 
+    # J2: Load ritual summary to surface active prayer/study items in the day card.
+    # This wires the ritual loop into the morning guidance so prayer needs and
+    # study themes are visible without a separate app. Fail-safe: empty summary.
+    ritual_summary: dict[str, Any] = {}
+    try:
+        from .ritual_loop import RitualSummaryStore
+        ritual_store = RitualSummaryStore()
+        prayer_items = ritual_store.list_active_prayers(actor="chris")
+        study_items = ritual_store.list_study_items(actor="chris", status="open")
+        ritual_summary = {
+            "active_prayer_count": len(prayer_items),
+            "active_prayers": [
+                {"subject": p.get("subject", ""), "request": p.get("request", "")[:80]}
+                for p in prayer_items[:3]
+            ],
+            "open_study_count": len(study_items),
+            "open_study": [
+                {"title": s.get("title", ""), "category": s.get("category", "")}
+                for s in study_items[:2]
+            ],
+            "source": "ritual_loop",
+        }
+    except Exception as exc:
+        log.debug("daily_stewardship: ritual_loop unavailable (%s)", exc)
+        ritual_summary = {"source": "unavailable"}
+
     # Build day card — G5: include mode-driven posture fields
     day_card: dict[str, Any] = {
         "date": today,
@@ -558,6 +626,8 @@ async def run_morning_checkin(context: str = "") -> dict:
         "briefing_style": briefing_style,
         "tts_enabled": tts_enabled,
         "verbosity": verbosity,
+        # J2: ritual loop wired into morning card
+        "ritual_summary": ritual_summary,
     }
 
     # 7. Log to council decision log

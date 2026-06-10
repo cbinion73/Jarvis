@@ -2909,6 +2909,37 @@ def _choose_delivery_mode(
     except Exception:
         pass  # fail open — existing posture logic proceeds unchanged
 
+    # H4: Apply learned delivery feedback adjustments.
+    # If feedback history shows this domain is consistently noisy in the current
+    # mode, suppress it (non-critical only).  If feedback shows missed urgency,
+    # escalate immediately.  Fail open — feedback unavailable = no change.
+    try:
+        from .delivery_feedback import get_feedback_store
+        from .mode_resolver import get_active_mode_summary
+        _mode_id = "normal"
+        try:
+            _mode_id = get_active_mode_summary().get("mode_id", "normal")
+        except Exception:
+            pass
+        _adj = get_feedback_store().get_routing_adjustments(
+            active_mode=_mode_id, lookback=50
+        )
+        if notification_domain:
+            if notification_domain in (_adj.get("escalate_domains") or []):
+                if normalized_severity not in {"critical", "high"}:
+                    return (
+                        "badge_only",
+                        f"Feedback learning: '{notification_domain}' previously missed — upgrading delivery.",
+                    )
+            if notification_domain in (_adj.get("suppress_domains") or []):
+                if normalized_severity not in {"critical", "high"}:
+                    return (
+                        "suppress",
+                        f"Feedback learning: '{notification_domain}' marked noisy — suppressing.",
+                    )
+    except Exception:
+        pass  # fail open
+
     if posture_mode == "escalate":
         return "deliver_now", posture_reason
 
@@ -9106,8 +9137,15 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
                 status_code=400,
                 detail=f"feedback_type must be one of {sorted(allowed)}",
             )
+        actor = str(payload.get("actor") or "chris").strip()
+        domain = str(payload.get("domain") or "").strip().lower()
+        severity = str(payload.get("severity") or "info").strip().lower()
+        delivery_mode = str(payload.get("delivery_mode") or "").strip()
+        active_mode = str(payload.get("active_mode") or "normal").strip()
         note = str(payload.get("note") or "").strip()
-        record = {
+
+        # Persist to interruption decisions log (existing behaviour)
+        legacy_record = {
             "ts": _ts(),
             "item_id": str(item_id or ""),
             "event": "feedback",
@@ -9115,14 +9153,68 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "note": note,
         }
         try:
-            persistence_append_jsonl(_INTERRUPTION_DECISIONS_PATH, record)
+            persistence_append_jsonl(_INTERRUPTION_DECISIONS_PATH, legacy_record)
         except Exception as exc:
             logger.debug("interruption_feedback record failed: %s", exc)
+
+        # H4: Also persist to DeliveryFeedbackStore so routing adapts over time.
+        feedback_record: dict = {}
+        try:
+            from .delivery_feedback import get_feedback_store
+            feedback_record = get_feedback_store().record(
+                actor=actor,
+                feedback_type=feedback_type,
+                domain=domain,
+                severity=severity,
+                delivery_mode=delivery_mode,
+                active_mode=active_mode,
+                notification_id=str(item_id or ""),
+                note=note,
+            )
+        except Exception as exc:
+            logger.debug("delivery_feedback store record failed: %s", exc)
+
         return _ok({
             "recorded": True,
             "item_id": item_id,
             "feedback_type": feedback_type,
+            "feedback_id": feedback_record.get("feedback_id", ""),
+            "routing_adaptation": "active",
         })
+
+    # ------------------------------------------------------------------
+    # GET /api/apple/interruption/feedback/adjustments  (H4)
+    # Returns routing adjustments learned from accumulated delivery feedback.
+    # ------------------------------------------------------------------
+    @app.get("/api/apple/interruption/feedback/adjustments")
+    async def apple_feedback_adjustments():
+        try:
+            from .delivery_feedback import get_feedback_store
+            from .mode_resolver import get_active_mode_summary
+            mode_id = "normal"
+            try:
+                mode_id = get_active_mode_summary().get("mode_id", "normal")
+            except Exception:
+                pass
+            adj = get_feedback_store().get_routing_adjustments(active_mode=mode_id, lookback=50)
+            return _ok({
+                "active_mode": mode_id,
+                "suppress_domains": adj["suppress_domains"],
+                "escalate_domains": adj["escalate_domains"],
+                "surface_hints": adj["surface_hints"],
+                "records_analyzed": adj["records_analyzed"],
+                "source": "delivery_feedback",
+            })
+        except Exception as exc:
+            logger.warning("feedback_adjustments: %s", exc)
+            return _ok({
+                "active_mode": "normal",
+                "suppress_domains": [],
+                "escalate_domains": [],
+                "surface_hints": {},
+                "records_analyzed": 0,
+                "source": "unavailable",
+            })
 
     # ------------------------------------------------------------------
     # GET /api/apple/command-center

@@ -56,6 +56,20 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _season_label(d: "date") -> str:  # type: ignore[name-defined]
+    """Return a seasonal period label for a date: e.g. '2026-spring'."""
+    month = d.month
+    if month in (3, 4, 5):
+        season = "spring"
+    elif month in (6, 7, 8):
+        season = "summer"
+    elif month in (9, 10, 11):
+        season = "fall"
+    else:
+        season = "winter"
+    return f"{d.year}-{season}"
+
+
 @dataclass
 class AgentWorkItem:
     item_id: str
@@ -1853,6 +1867,9 @@ class AgentScheduler:
         # G8: Check whether the active Level9 mode has exceeded its max_duration_hours
         self._check_mode_auto_exit()
 
+        # L1: Auto-trigger long-horizon reviews (monthly/seasonal/yearly) when due.
+        self._check_long_horizon_reviews()
+
     _mode_advance_tick_count: int = 0
 
     # ------------------------------------------------------------------
@@ -1977,6 +1994,78 @@ class AgentScheduler:
                 ))
         except Exception as exc:
             logger.debug("_check_mode_auto_exit failed (non-fatal): %s", exc)
+
+    # L1 tick cadence: how often to check for overdue reviews.
+    # Monthly review: check every 1440 ticks (~24 h at 60 s/tick).
+    # Use a counter so the check doesn't fire on every 60-second tick.
+    _long_horizon_tick_count: int = 0
+    _LONG_HORIZON_MONTHLY_TICKS: int = 1440  # ~24 h
+
+    def _check_long_horizon_reviews(self) -> None:
+        """L1: Auto-trigger long-horizon reviews when a cadence period is overdue.
+
+        Runs on every scheduler tick but only fires the review logic every
+        _LONG_HORIZON_MONTHLY_TICKS ticks (~24 h) to avoid thrashing.
+        Best-effort; never raises.
+        """
+        self._long_horizon_tick_count += 1
+        if self._long_horizon_tick_count < self._LONG_HORIZON_MONTHLY_TICKS:
+            return
+        self._long_horizon_tick_count = 0
+
+        try:
+            from datetime import date, timedelta
+            from .long_horizon import LongHorizonStore, REVIEW_CADENCES
+
+            store = LongHorizonStore()
+            today = date.today()
+            actor = "chris"
+
+            for cadence in REVIEW_CADENCES:
+                if cadence == "monthly":
+                    # Due if no review in the current calendar month
+                    month_start = today.replace(day=1)
+                    period_label = today.strftime("%Y-%m")
+                    period_start = month_start.isoformat()
+                    period_end = today.isoformat()
+                    lookback_days = 35
+                elif cadence == "seasonal":
+                    # Due if no review in the last 90 days
+                    period_label = _season_label(today)
+                    period_start = (today - timedelta(days=90)).isoformat()
+                    period_end = today.isoformat()
+                    lookback_days = 95
+                else:  # yearly
+                    period_label = str(today.year)
+                    period_start = today.replace(month=1, day=1).isoformat()
+                    period_end = today.isoformat()
+                    lookback_days = 370
+
+                # Check if a review exists for this period already
+                existing = store.list_reviews(
+                    actor=actor, cadence=cadence,
+                    period_label=period_label,
+                )
+                if existing:
+                    continue  # already done for this period
+
+                # No review for this period — create a draft to prompt review
+                review = store.create_review(
+                    actor=actor,
+                    cadence=cadence,
+                    period_label=period_label,
+                    period_start=period_start,
+                    period_end=period_end,
+                    overall_narrative="",
+                    key_lesson="",
+                    what_changed_guidance="",
+                )
+                logger.info(
+                    "Scheduler L1: auto-created %s review draft %s for period %s",
+                    cadence, review.review_id, period_label,
+                )
+        except Exception as exc:
+            logger.debug("_check_long_horizon_reviews failed (non-fatal): %s", exc)
 
     def _maybe_auto_advance_mode(self) -> None:
         """

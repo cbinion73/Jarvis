@@ -127,6 +127,36 @@ class MemoryStore:
         self._save_json(self.entries_path, records)
 
     def add_entry(self, entry: MemoryEntry) -> dict:
+        # I5: Enforce Chronicle boundary at write time.
+        # Faith-tagged content must not be stored in JARVIS memory; it belongs
+        # to Chronicle.  Fail open (boundary check failure → allow write) so
+        # legitimate entries are never silently dropped.
+        try:
+            from .chronicle_boundary import enforce_routing
+            tags = list(entry.tags) if entry.tags else []
+            domain = str(getattr(entry, "lane", "") or "")
+            content = " ".join(filter(None, [
+                str(getattr(entry, "title", "") or ""),
+                str(getattr(entry, "summary", "") or ""),
+            ]))
+            routing = enforce_routing(
+                actor=str(entry.owner or "system"),
+                content_type="memory_entry",
+                tags=tags,
+                domain=domain,
+                content=content,
+            )
+            if not routing.get("allowed", True):
+                raise ValueError(
+                    f"Chronicle boundary: this entry belongs to Chronicle, not JARVIS memory. "
+                    f"Reason: {routing.get('reason', '')} "
+                    f"Action: {routing.get('action_required', '')}"
+                )
+        except ValueError:
+            raise  # re-raise boundary violations
+        except Exception:
+            pass  # fail open on unexpected errors
+
         records = self._entries()
         payload = asdict(entry)
         records.append(payload)

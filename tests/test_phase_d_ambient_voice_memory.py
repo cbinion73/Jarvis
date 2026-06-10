@@ -257,11 +257,14 @@ class TestCorrectionLoop(unittest.TestCase):
             self.assertIsNone(result)
 
     def test_retired_fact_excluded_from_reasoning(self):
+        # I3: all non-active statuses (corrected, disputed, superseded, retired, do_not_use)
+        # are now excluded from reasoning. Only "active" remains usable.
         from jarvis.models import MEMORY_EXCLUDED_FROM_REASONING
         self.assertIn("retired", MEMORY_EXCLUDED_FROM_REASONING)
         self.assertIn("do_not_use", MEMORY_EXCLUDED_FROM_REASONING)
-        self.assertNotIn("corrected", MEMORY_EXCLUDED_FROM_REASONING)
-        self.assertNotIn("disputed", MEMORY_EXCLUDED_FROM_REASONING)
+        self.assertIn("corrected", MEMORY_EXCLUDED_FROM_REASONING)
+        self.assertIn("disputed", MEMORY_EXCLUDED_FROM_REASONING)
+        self.assertIn("superseded", MEMORY_EXCLUDED_FROM_REASONING)
         self.assertNotIn("active", MEMORY_EXCLUDED_FROM_REASONING)
 
     def test_correction_statuses_constants(self):
