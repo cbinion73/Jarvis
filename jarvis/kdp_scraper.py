@@ -21,6 +21,9 @@ log = logging.getLogger("jarvis.kdp_scraper")
 _sync_status: str = "idle"          # idle | running | needs_2fa | done | error
 _2fa_future: "_asyncio.Future | None" = None
 _broadcast_fn = None                 # set by service.py at startup
+_sync_task: "_asyncio.Task | None" = None
+_last_error: str | None = None
+_sync_phase: str = "idle"
 
 
 def set_broadcast(fn) -> None:
@@ -38,15 +41,32 @@ def _broadcast(payload: dict) -> None:
         pass
 
 
+def _set_phase(phase: str) -> None:
+    global _sync_phase
+    _sync_phase = phase
+
+
 def get_sync_status() -> str:
     return _sync_status
 
 
-async def submit_2fa_code(code: str) -> None:
+def get_sync_state() -> dict[str, Any]:
+    return {
+        "status": _sync_status,
+        "phase": _sync_phase,
+        "running": bool(_sync_task and not _sync_task.done()),
+        "needs_2fa": _sync_status == "needs_2fa",
+        "last_error": _last_error,
+    }
+
+
+async def submit_2fa_code(code: str) -> bool:
     """Called by the API endpoint when the user submits their OTP."""
     global _2fa_future
     if _2fa_future and not _2fa_future.done():
         _2fa_future.set_result(code.strip())
+        return True
+    return False
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -568,19 +588,24 @@ async def run_full_sync(email: str, password: str) -> dict:
     Returns {"ok": True, "books": [...], "sales": {...}, "synced_at": ISO}
          or {"ok": False, "error": "..."}
     """
-    global _sync_status
+    global _sync_status, _last_error
     _sync_status = "running"
+    _last_error = None
+    _set_phase("starting")
 
     try:
         from playwright.async_api import async_playwright
     except ImportError:
         log.error("KDP: playwright not installed — run: pip install playwright")
         _sync_status = "error"
+        _last_error = "playwright_not_installed"
+        _set_phase("error")
         _broadcast({"type": "kdp.sync_complete", "ok": False, "error": "playwright_not_installed"})
         return {"ok": False, "error": "playwright_not_installed"}
 
     try:
         async with async_playwright() as pw:
+            _set_phase("launching_browser")
             browser = await pw.chromium.launch(
                 headless=True,
                 args=["--no-sandbox", "--disable-dev-shm-usage"],
@@ -596,6 +621,7 @@ async def run_full_sync(email: str, password: str) -> dict:
             page = await context.new_page()
 
             # ── Step 1: Try saved cookies ────────────────────────────────
+            _set_phase("restoring_session")
             cookies_loaded = await load_cookies(context)
             logged_in = False
 
@@ -614,22 +640,28 @@ async def run_full_sync(email: str, password: str) -> dict:
 
             # ── Step 2: Login if needed ──────────────────────────────────
             if not logged_in:
+                _set_phase("authenticating")
                 success = await login(page, email, password)
                 if not success:
                     await browser.close()
                     _sync_status = "error"
+                    _last_error = "login_failed"
+                    _set_phase("error")
                     _broadcast({"type": "kdp.sync_complete", "ok": False, "error": "login_failed"})
                     return {"ok": False, "error": "login_failed"}
                 logged_in = True
                 await save_cookies(context)
 
             # ── Step 3: Scrape bookshelf ─────────────────────────────────
+            _set_phase("scraping_bookshelf")
             books = await scrape_bookshelf(page)
 
             # ── Step 4: Scrape sales dashboard ───────────────────────────
+            _set_phase("scraping_sales")
             sales = await scrape_sales_dashboard(page)
 
             # ── Step 5: Scrape details for first 5 books ─────────────────
+            _set_phase("scraping_details")
             detail_books: list[dict] = []
             for book in books[:5]:
                 asin = book.get("asin", "")
@@ -653,12 +685,62 @@ async def run_full_sync(email: str, password: str) -> dict:
                 "sales": sales,
                 "synced_at": datetime.now(timezone.utc).isoformat(),
             }
+            _set_phase("saving_results")
             _sync_status = "done"
+            _last_error = None
+            _set_phase("done")
             _broadcast({"type": "kdp.sync_complete", "ok": True})
             return result
 
     except Exception as exc:
         log.error("KDP run_full_sync failed: %s", exc, exc_info=True)
         _sync_status = "error"
+        _last_error = str(exc)
+        _set_phase("error")
         _broadcast({"type": "kdp.sync_complete", "ok": False, "error": str(exc)})
         return {"ok": False, "error": str(exc)}
+
+
+async def _sync_worker() -> None:
+    global _sync_task, _sync_status, _last_error
+    try:
+        creds = load_credentials()
+        if not creds:
+            _sync_status = "error"
+            _last_error = "credentials_missing"
+            _set_phase("error")
+            _broadcast({"type": "kdp.sync_complete", "ok": False, "error": "credentials_missing"})
+            return
+        result = await _asyncio.wait_for(
+            run_full_sync(str(creds.get("email") or ""), str(creds.get("password") or "")),
+            timeout=180,
+        )
+        if result.get("ok"):
+            try:
+                from . import kdp_store
+            except ImportError:
+                import kdp_store  # type: ignore[no-redef]
+            kdp_store.save_sync_result(result)
+        elif not _last_error:
+            _last_error = str(result.get("error") or "sync_failed")
+    except _asyncio.TimeoutError:
+        _sync_status = "error"
+        _last_error = "sync_timeout"
+        _set_phase("timeout")
+        _broadcast({"type": "kdp.sync_complete", "ok": False, "error": "sync_timeout"})
+    finally:
+        _sync_task = None
+
+
+async def sync() -> dict[str, Any]:
+    global _sync_task, _sync_status, _last_error
+    creds = load_credentials()
+    if not creds:
+        return {"ok": False, "started": False, "available": True, "detail": "KDP credentials are required before syncing."}
+    if _sync_task and not _sync_task.done():
+        return {"ok": True, "started": False, "available": True, "status": _sync_status, "phase": _sync_phase, "detail": "KDP sync already running."}
+    _sync_status = "running"
+    _last_error = None
+    _set_phase("queued")
+    _sync_task = _asyncio.create_task(_sync_worker())
+    return {"ok": True, "started": True, "available": True, "status": _sync_status, "phase": _sync_phase}

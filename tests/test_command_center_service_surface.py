@@ -7,6 +7,7 @@ import sys
 import tempfile
 import types
 import unittest
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -106,6 +107,9 @@ if "fastapi" not in sys.modules:
 
     class _Request:
         base_url = "http://testserver/"
+
+        def __init__(self, base_url: str = "http://testserver/") -> None:
+            self.base_url = base_url
 
     class _UploadFile:
         filename = ""
@@ -2957,6 +2961,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("source_rows", module_payload)
         self.assertIn("trusted_actions", module_payload)
         self.assertIn("proof_paths", module_payload)
+        self.assertIn("local_today", module_payload)
         self.assertEqual(module_payload["proof_paths"]["module_route"], "/calendar-center")
         self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/calendar/module")
         self.assertEqual(module_payload["proof_paths"]["today_api"], "/api/home/calendar/today")
@@ -2966,6 +2971,13 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertEqual(module_payload["proof_paths"]["action_api"], "/api/calendar/module/action")
         self.assertIsInstance(module_payload["trusted_actions"], list)
         self.assertIsInstance(module_payload["source_rows"], list)
+        expected_local_today = (
+            self.runtime._local_now().date().isoformat()
+            if hasattr(self.runtime, "_local_now")
+            else datetime.now().astimezone().date().isoformat()
+        )
+        self.assertEqual(module_payload["today_payload"]["date"], expected_local_today)
+        self.assertEqual(module_payload["local_today"], expected_local_today)
 
         action_payload = self._json_body(
             asyncio.run(
@@ -3191,6 +3203,94 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(any(item.get("name") == "Progress Module Standalone Surface" for item in refreshed_progress["seam_persistence"]["records"]))
         self.assertTrue(any(item.get("related_kind") == "progress-seam" for item in activity_payload))
         self.assertTrue(any(item.get("related_label") == "Progress Module Standalone Surface" for item in activity_payload))
+
+    def test_dexcom_routes_are_registered_and_use_live_base_url(self) -> None:
+        from jarvis import dexcom_sync
+
+        status_endpoint = self._route("/api/health/dexcom/status", "GET")
+        connect_endpoint = self._route("/api/health/dexcom/connect", "GET")
+        callback_endpoint = self._route("/api/health/dexcom/callback", "GET")
+        current_endpoint = self._route("/api/health/dexcom/current", "GET")
+        sync_endpoint = self._route("/api/health/dexcom/sync", "POST")
+
+        request = service_module.Request("https://jarvis.teambinion.org/")
+
+        with patch.object(dexcom_sync, "get_connection_status", return_value={"connected": False, "configured": True, "message": "Not connected"}), patch.object(
+            dexcom_sync,
+            "build_auth_url",
+            return_value="https://api.dexcom.com/v3/oauth2/login?client_id=test",
+        ) as build_auth_url, patch.object(
+            dexcom_sync,
+            "exchange_code",
+            new=unittest.mock.AsyncMock(return_value={"access_token": "token"}),
+        ) as exchange_code, patch.object(
+            dexcom_sync,
+            "get_current_reading",
+            new=unittest.mock.AsyncMock(return_value={"glucose_mgdl": 120}),
+        ), patch.object(
+            dexcom_sync,
+            "sync_egvs",
+            new=unittest.mock.AsyncMock(return_value={"ok": True, "count": 3}),
+        ):
+            status_response = asyncio.run(status_endpoint())
+            connect_response = asyncio.run(connect_endpoint(request))
+            callback_html = asyncio.run(callback_endpoint(request, code="abc123"))
+            current_response = asyncio.run(current_endpoint())
+            sync_response = asyncio.run(sync_endpoint())
+
+        status_body = self._json_body(status_response)
+        current_body = self._json_body(current_response)
+        sync_body = self._json_body(sync_response)
+
+        self.assertTrue(status_body["ok"])
+        self.assertTrue(status_body["configured"])
+        self.assertEqual(build_auth_url.call_args.args[0], "https://jarvis.teambinion.org/api/health/dexcom/callback")
+        self.assertEqual(getattr(connect_response, "status_code", None), 302)
+        self.assertIn("Dexcom connected", callback_html)
+        exchange_code.assert_awaited_once_with("abc123", "https://jarvis.teambinion.org/api/health/dexcom/callback")
+        self.assertEqual(current_body["current"]["glucose_mgdl"], 120)
+        self.assertTrue(sync_body["ok"])
+        self.assertEqual(sync_body["count"], 3)
+
+    def test_kdp_routes_support_credentials_sync_and_2fa_submission(self) -> None:
+        from jarvis import kdp_scraper, kdp_store
+
+        class _JSONRequest:
+            def __init__(self, payload: dict) -> None:
+                self._payload = payload
+
+            async def json(self) -> dict:
+                return self._payload
+
+        credentials_get = self._route("/api/kdp/credentials", "GET")
+        credentials_post = self._route("/api/kdp/credentials", "POST")
+        sync_endpoint = self._route("/api/kdp/sync", "POST")
+        sync_status_endpoint = self._route("/api/kdp/sync-status", "GET")
+        two_factor_endpoint = self._route("/api/kdp/2fa-code", "POST")
+
+        with (
+            patch.object(kdp_store, "load_sync_meta", return_value={"last_synced_at": "2026-06-10T05:00:00+00:00", "book_count": 2, "status": "synced"}),
+            patch.object(kdp_scraper, "save_credentials") as save_credentials,
+            patch.object(kdp_scraper, "sync", new=unittest.mock.AsyncMock(return_value={"ok": True, "started": True, "status": "running"})),
+            patch.object(kdp_scraper, "get_sync_state", return_value={"status": "needs_2fa", "running": True, "needs_2fa": True, "last_error": None}),
+            patch.object(kdp_scraper, "submit_2fa_code", new=unittest.mock.AsyncMock(return_value=True)) as submit_code,
+            patch("pathlib.Path.exists", return_value=True),
+            patch("pathlib.Path.stat", return_value=SimpleNamespace(st_size=32)),
+        ):
+            credentials_body = self._json_body(asyncio.run(credentials_get()))
+            save_body = self._json_body(asyncio.run(credentials_post(_JSONRequest({"email": "author@example.com", "password": "secret"}))))
+            sync_body = self._json_body(asyncio.run(sync_endpoint()))
+            sync_status_body = self._json_body(asyncio.run(sync_status_endpoint()))
+            two_factor_body = self._json_body(asyncio.run(two_factor_endpoint(_JSONRequest({"code": "123456"}))))
+
+        self.assertTrue(credentials_body["configured"])
+        save_credentials.assert_called_once_with("author@example.com", "secret")
+        self.assertTrue(save_body["ok"])
+        self.assertTrue(sync_body["started"])
+        self.assertEqual(sync_status_body["status"], "needs_2fa")
+        self.assertTrue(sync_status_body["needs_2fa"])
+        submit_code.assert_awaited_once_with("123456")
+        self.assertTrue(two_factor_body["ok"])
 
 
 if __name__ == "__main__":

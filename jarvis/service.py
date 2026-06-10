@@ -21124,6 +21124,18 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # KDP (Kindle Direct Publishing) routes
     # ------------------------------------------------------------------
 
+    def _wire_kdp_broadcast(scraper_module: Any) -> None:
+        if not hasattr(scraper_module, "set_broadcast"):
+            return
+
+        def _emit(payload: dict[str, Any]) -> None:
+            try:
+                asyncio.create_task(hub.broadcast(payload))
+            except RuntimeError:
+                pass
+
+        scraper_module.set_broadcast(_emit)
+
     @app.get("/api/kdp/books")
     async def api_kdp_books() -> JSONResponse:
         """List KDP books from local store."""
@@ -21185,16 +21197,24 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             except ImportError:
                 return _json({"ok": False, "available": False, "message": "KDP scraper unavailable"})
         try:
+            _wire_kdp_broadcast(kdp_scraper)
             if hasattr(kdp_scraper, "sync"):
                 result = await kdp_scraper.sync()
-                return _json({"ok": True, "result": result})
-            return _json({"ok": False, "available": False, "message": "KDP sync requires credentials configured in Settings → Publishing → KDP."})
+                return _json(result)
+            return _json({"ok": False, "available": False, "detail": "KDP sync requires credentials configured in Settings → Publishing → KDP."})
         except Exception as exc:
             return _json({"ok": False, "available": False, "error": str(exc)})
 
     @app.get("/api/kdp/sync-status")
     async def api_kdp_sync_status() -> JSONResponse:
         """KDP sync status."""
+        try:
+            from . import kdp_scraper
+        except ImportError:
+            try:
+                import kdp_scraper  # type: ignore[no-redef]
+            except ImportError:
+                kdp_scraper = None  # type: ignore[assignment]
         try:
             from . import kdp_store
         except ImportError:
@@ -21204,7 +21224,8 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 return _json({"ok": False, "available": False})
         try:
             meta = kdp_store.load_sync_meta()
-            return _json({"ok": True, "available": True, **meta})
+            live_state = kdp_scraper.get_sync_state() if kdp_scraper and hasattr(kdp_scraper, "get_sync_state") else {}
+            return _json({"ok": True, "available": True, **meta, **live_state})
         except Exception as exc:
             return _json({"ok": False, "available": False, "error": str(exc)})
 
@@ -21216,6 +21237,30 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         configured = creds_path.exists() and creds_path.stat().st_size > 10
         return _json({"ok": True, "configured": configured, "available": True})
 
+    @app.post("/api/kdp/credentials")
+    async def api_kdp_credentials_save(request: Request) -> JSONResponse:
+        """Save KDP credentials for later sync."""
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"ok": False, "detail": "Invalid JSON"}, status_code=400)
+        email = str(body.get("email") or "").strip()
+        password = str(body.get("password") or "")
+        if not email or not password:
+            return _json({"ok": False, "detail": "Both email and password are required."}, status_code=400)
+        try:
+            from . import kdp_scraper
+        except ImportError:
+            try:
+                import kdp_scraper  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "detail": "KDP scraper unavailable"})
+        try:
+            kdp_scraper.save_credentials(email, password)
+            return _json({"ok": True, "available": True, "detail": "Credentials saved."})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "detail": str(exc)})
+
     @app.post("/api/kdp/2fa-code")
     async def api_kdp_2fa_code(request: Request) -> JSONResponse:
         """Submit a KDP 2FA verification code."""
@@ -21226,11 +21271,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         code = str(body.get("code") or "").strip()
         if not code:
             return _json({"ok": False, "error": "code required"})
-        return _json({
-            "ok": False,
-            "available": False,
-            "message": "KDP 2FA submission requires an active browser session. Configure KDP credentials in Settings.",
-        })
+        try:
+            from . import kdp_scraper
+        except ImportError:
+            try:
+                import kdp_scraper  # type: ignore[no-redef]
+            except ImportError:
+                return _json({"ok": False, "available": False, "detail": "KDP scraper unavailable"})
+        try:
+            accepted = await kdp_scraper.submit_2fa_code(code)
+            if not accepted:
+                return _json({"ok": False, "available": True, "detail": "No KDP verification prompt is currently active."}, status_code=409)
+            return _json({"ok": True, "available": True, "detail": "Verification code accepted."})
+        except Exception as exc:
+            return _json({"ok": False, "available": False, "detail": str(exc)})
 
     # ------------------------------------------------------------------
     # Publishing extended routes — launch-scan, launch/{id}
