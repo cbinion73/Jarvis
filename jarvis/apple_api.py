@@ -2721,6 +2721,8 @@ def _compute_interruption_posture(
     suppress_active = bool(watch_status.get("suppress_interruptions"))
     # escalate: operator-signalled emergency override (everything becomes deliver_now)
     escalate_active = bool(watch_status.get("escalate_interruptions")) or alert_count >= 3
+    # foreground_active: device heartbeat confirms user is watching right now (5-min TTL)
+    foreground_active = _foreground_active()
 
     mode = "active_hours"
     label = "Active hours"
@@ -2771,6 +2773,7 @@ def _compute_interruption_posture(
         "present_members": present_members,
         "suppress_active": suppress_active,
         "escalate_active": escalate_active,
+        "foreground_active": foreground_active,
         "updated_at": _ts(),
     }
 
@@ -2808,12 +2811,17 @@ def _choose_delivery_mode(
             return "badge_only", "Quiet hours are active, but higher-severity items remain visible."
         if normalized_category == "approval":
             return "badge_only", "Quiet hours are active, but approvals remain visible for morning command flow."
+        if posture.get("foreground_active"):
+            return "badge_only", "User is in foreground — item stays visible instead of waiting for Brief."
         return "hold_for_brief", posture_reason
 
     if normalized_severity == "critical":
         return "deliver_now", "Critical items should break through during active hours."
 
-    return str(default_mode or "badge_only"), posture_reason or "Normal household hours allow standard delivery."
+    resolved_mode = str(default_mode or "badge_only")
+    if posture.get("foreground_active") and resolved_mode == "hold_for_brief":
+        resolved_mode = "badge_only"
+    return resolved_mode, posture_reason or "Normal household hours allow standard delivery."
 
 
 def _record_interruption_decision(
@@ -2867,6 +2875,22 @@ def _write_presence_overrides(overrides: dict[str, Any]) -> None:
         atomic_write_json(_PRESENCE_OVERRIDES_PATH, overrides)
     except Exception:
         pass
+
+
+def _foreground_active() -> bool:
+    """Return True if the device reported active foreground presence within the last 5 minutes."""
+    try:
+        data = json.loads(_PRESENCE_OVERRIDES_PATH.read_text())
+        exp_str = data.get("foreground_expires_at")
+        if not exp_str:
+            return False
+        from datetime import datetime, timezone
+        exp = datetime.fromisoformat(str(exp_str))
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        return exp > datetime.now(timezone.utc)
+    except Exception:
+        return False
 
 
 def _fire_escalation_push(
@@ -8534,6 +8558,7 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "ts": _ts(),
             "suppress_interruptions": bool(presence.get("suppress_interruptions")),
             "escalate_interruptions": bool(presence.get("escalate_interruptions")),
+            "foreground_active": _foreground_active(),
         }
         return _ok(data)
 
@@ -8750,6 +8775,27 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
             "suppress_interruptions": suppress,
             "escalate_interruptions": escalate,
             "expires_at": expires_at,
+        })
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/presence-heartbeat
+    # Device signals it is in the foreground; sets a 5-minute TTL flag so
+    # delivery-mode decisions can upgrade hold_for_brief → badge_only.
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/presence-heartbeat")
+    async def apple_presence_heartbeat(payload: dict = {}):
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        expires_at = (now + timedelta(minutes=5)).isoformat()
+
+        overrides = _read_presence_overrides()
+        overrides["foreground_active"] = True
+        overrides["foreground_expires_at"] = expires_at
+        _write_presence_overrides(overrides)
+
+        return _ok({
+            "foreground_active": True,
+            "foreground_expires_at": expires_at,
         })
 
     # ------------------------------------------------------------------
