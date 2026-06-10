@@ -196,6 +196,30 @@ class MemoryStore:
             self._save_entries(remaining)
         return removed
 
+    def get_entry(self, entry_id: str) -> dict | None:
+        for item in self._entries():
+            if item.get("entry_id") == entry_id:
+                return item
+        return None
+
+    def correct_entry(self, entry_id: str, correction: str, actor: str) -> dict | None:
+        """Mark an entry as corrected, excluding it from reasoning queries."""
+        import time as _time
+        records = self._entries()
+        updated = None
+        for item in records:
+            if item.get("entry_id") == entry_id:
+                item["approval_status"] = "corrected"
+                item["correction_note"] = correction
+                item["corrected_by"] = actor
+                item["corrected_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                item["updated_at"] = item["corrected_at"]
+                updated = item
+                break
+        if updated is not None:
+            self._save_entries(records)
+        return updated
+
     def _proposals(self) -> list[dict]:
         payload = self._load_json(self.proposals_path, [])
         records = payload if isinstance(payload, list) else []
