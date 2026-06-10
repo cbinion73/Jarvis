@@ -171,7 +171,15 @@ Typical signs:
 
 JARVIS status:
 
-- COMPLETE (2026-06-10). Phase F capstone delivered:
+- ~20% (TRUE-UP CORRECTION 2026-06-10). The line below was written before a
+  second code-verified audit. HONEST status: the Phase F modules are unintegrated
+  data contracts — referenced only in service.py route handlers, with zero
+  callers in runtime.py / scheduler.py / apple_api.py / agent code. Setting a
+  mode changes a JSON field but does not change runtime behavior. The path to
+  real Level 9 is the integration roadmap (Phases G–O) in JARVIS-SESSION-STATE.md.
+  Retained verbatim below for audit history:
+
+- Phase F capstone (modules + tests, NOT runtime-integrated) delivered:
   - F1: Constitutional decision engine — every significant recommendation
     cites applicable principle, authority basis, uncertainty level, override path
   - F2: 9 situation-based household modes (normal/travel/crisis/sabbath/school/
@@ -206,9 +214,14 @@ If plotted honestly (code-verified true-up, 2026-06-10 — see
   in chat/briefing flows; retrieval is keyword-based, not semantic
 - Levels 7–8: faith and health loops real, formation loops live, foundry
   governed approve flow executable, catalyst/executive workflows built
-- Level 9: COMPLETE — constitution engine, household modes, value simulation,
+- Level 9: ~20% — constitution engine, household modes, value simulation,
   legacy archive, long-horizon reviews, household admin, continuity workflows
-  all implemented with honest unavailable states and 1042 tests
+  are implemented as TESTED DATA CONTRACTS but are NOT wired into the runtime
+  (no callers outside service.py route handlers). Real Level 9 requires the
+  integration roadmap (Phases G–O) in JARVIS-SESSION-STATE.md.
+
+Honest overall placement: solid Level 4, partial Level 5. See
+JARVIS-SESSION-STATE.md for the code-verified true-up and the G–O roadmap.
 
 ## What Must Happen Next
 

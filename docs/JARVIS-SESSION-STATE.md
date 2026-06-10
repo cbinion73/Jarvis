@@ -4,7 +4,8 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (Phase F / Level 9 complete; 1042 tests passing)
+Last updated: 2026-06-10 (TRUE-UP CORRECTION — honest placement is Level 4
+solid / Level 5 partial; Level 9 roadmap added as Phases G–O; 1042 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -42,24 +43,252 @@ Last updated: 2026-06-10 (Phase F / Level 9 complete; 1042 tests passing)
   draft-only email staging real; foundry proposals live with governed approve;
   POST /api/trust-zones/{id}/consent-promote unlocks system_agent to sandbox_live;
   full foundry approve flow now executable after human consent promotion
-- Level 9 (Capstone): COMPLETE — Phase E (Formation/Autonomy/Domains/Hardware/Infra)
-  + Phase F (Level 9 capstone) both done. F1: runtime constitution engine with
-  principle citations on every significant recommendation; F2: 9 Level 9 household
-  modes (normal/travel/crisis/sabbath/school/health_recovery/guest/sprint/emergency)
-  with full behavior contracts (autonomy ceiling, agents, rituals, alerts, tone);
-  F3: value simulation across 9 dimensions (time/money/health/faith/family/risk/
-  opportunity/reputation/long_term) with dissent/uncertainty/what-would-change-mind;
-  F4: legacy archive with permission gating (family/adults_only/chris_only/archive),
-  provenance, correction/dispute flow, exportable bundles; F5: long-horizon reviews
-  (monthly/seasonal/yearly) with arc summary showing prior lessons changed guidance,
-  persistent drift tracking, domain trends; F6: household-operable admin (devices,
-  integrations, permissions, audit — no developer tooling required); F7: continuity
-  step-based workflows for member/device/role changes with clean audit trail.
-  62 new F-phase tests + 5 scenario proofs; 1042 total passing
+### TRUE-UP CORRECTION (2026-06-10)
+
+A second code-verified audit found the prior "Level 9 COMPLETE" claim does not
+meet this program's own completion standard ("a row is complete only when the
+behavior has code, persistence, governance, tests, RUNTIME PROOF, and honest
+user-facing state"). The Phase E/F modules are well-built, well-tested DATA
+CONTRACTS that are NOT wired into the runtime.
+
+KEY EVIDENCE: ConstitutionEngine, Level9ModeManager, ValueSimulationEngine,
+LegacyArchiveStore, LongHorizonStore, HouseholdAdminStore, and ContinuityStore
+are referenced ONLY in service.py route handlers. Zero references in runtime.py,
+scheduler.py, apple_api.py, or any agent code. Setting mode="crisis" writes a
+JSON field but does NOT suspend an agent, change TTS, or reroute a notification.
+constitution_engine.cite() has zero production callers. There are TWO unrelated
+mode systems (family_profiles.build_household_modes time-of-day + Level9ModeManager
+situation) that do not talk to each other.
+
+HONEST PLACEMENT (code-verified 2026-06-10):
+
+- Level 2 (Unified Command Product): COMPLETE
+- Level 3 (Household OS): COMPLETE* (*home/safety blocked on HA credentials)
+- Level 4 (Governed Intelligence): COMPLETE — trust zones, supervision,
+  promotion, fail-closed, hard policy rails all wired into real decisions
+- Level 5 (Ambient): ~70% — event fabric/presence/interruption real; voice
+  full-duplex, noise-learning feedback, proactive orchestration partial
+- Level 6 (Memory/Continuity): ~45% — viewer enforcement real; situational
+  retrieval is keyword-match, provenance/correction/Chronicle-narrative not built
+- Level 7 (Formation): ~45% — health/faith STORES exist + season wired to Three
+  Moves; per-person/per-mode dynamic adaptation not driving real cards
+- Level 8 (Bounded Autonomy): ~50% — sandbox + foundry proposal/approve real;
+  agent GENERATION, real end-to-end automation, rollback-before-exec not running
+- Level 9 (Family Civilization): ~20% — data contracts + API surface exist;
+  ~zero runtime integration; no household-facing UI for legacy/admin/reviews
+
+OVERALL: solid Level 4, partial Level 5. The path to Level 9 is dominated by
+INTEGRATION (wiring existing modules into real decision paths), not new modules.
+See "Level 9 Completion Roadmap (Phases G–O)" below.
 
 ## Current Phase
 
-P2: GAP-1 DONE. Now wiring event fabric (GAP-2) + enforcement seams (GAP-3, GAP-5).
+PHASE G — Level 9 Runtime Integration. The unblocker phase: make existing
+modes/constitution/value-sim actually drive behavior. See roadmap below.
+
+---
+
+# Level 9 Completion Roadmap (Phases G–O)
+
+Goal: every maturity level ≥90% complete, code+test+RUNTIME-PROOF verified,
+culminating in Level 9. Each row follows the existing Completion Standard
+(code path, UI/API path, persistence, governance, negative tests, runtime
+proof, truth labels, docs-last). A row is DONE only when a real decision,
+notification, agent action, or rendered surface CHANGES because of it — not
+when a store persists or an API returns 200.
+
+## The Integration Doctrine (why G–O differ from A–F)
+
+Phases A–F built data contracts and API surfaces. They are the right
+foundation. But the modules sit beside the runtime, not inside it. Phases G–O
+are dominated by WIRING those modules into real decision paths
+(runtime.assess_action_boundary, scheduler._tick, apple_api delivery routing,
+memory.py write/read paths, briefing/Three-Moves composition) plus the genuine
+net-new work for Levels 5–8. "Wire X into Y" means Y reads X and Y's output
+provably changes; prove it with an integration test that asserts the downstream
+effect, not the store contents.
+
+## Dependency ordering
+
+- G is the unblocker (runtime wiring) — MUST come first; everything leans on it.
+- H, I, J, K parallelize after G lands.
+- L (civilization layer) depends on G + I.
+- M (household UX) depends on G–L surfaces existing.
+- N (infra/hardware) partially blocked on Chris (HA creds, devices).
+- O (scenario proofs) is the final exit gate; runs against the integrated stack.
+
+---
+
+## Phase G — Level 9 Runtime Integration  [unblocker; lifts L9 20%→55%]
+
+- [ ] G1  scheduler reads current mode; agents in `suspended_agents` are actually
+      paused and `required_agents` actually run. Proof: set crisis → scheduler
+      tick shows workshop-copilot paused; integration test asserts paused state.
+- [ ] G2  notification routing honors mode `notification_level` + `alert_domains`
+      + `suppress_domains`. Proof: sabbath → non-critical item routed to suppress;
+      test asserts delivery decision changes vs normal mode.
+- [ ] G3  `assess_action_boundary` caps requested stage at the active mode's
+      `autonomy_ceiling`. Proof: sabbath (monitor) blocks a sandbox_live action
+      that normal mode would allow; negative test proves the cap.
+- [ ] G4  unify the two mode systems — `family_profiles` time-of-day modes and
+      `Level9ModeManager` situation modes resolve through ONE precedence function
+      (situation overrides time-of-day). No split-brain mode state anywhere.
+- [ ] G5  mode drives TTS enablement + briefing posture (verbosity/briefing_style).
+      Proof: sabbath sets tts_enabled=False and briefing=off in the real briefing
+      composer, not just the contract.
+- [ ] G6  `constitution_engine.cite()` wraps every significant recommendation
+      produced in runtime (Three Moves, value-sim output, mission proposals,
+      foundry approvals). Proof: a real recommendation response carries a
+      constitutional_citation with principle + authority + override path.
+- [ ] G7  `value_simulation` is invoked for real multi-option decisions and the
+      recommendation/dissent/uncertainty surfaces in a response. Proof: a decision
+      prompt returns ranked options with what-would-change-my-mind.
+- [ ] G8  mode auto-exit triggers fire (max_duration_hours, location_home,
+      time-based) via scheduler. Proof: crisis auto-expires after its window in a
+      time-advanced test; transition audited.
+
+## Phase H — Level 5 Ambient completion  [70%→≥90%]
+
+- [ ] H1  voice full-duplex loop: wake → listen → speak → interrupt → resume,
+      proven across browser + iPhone with clear fallback. Integration/e2e proof.
+- [ ] H2  Siri / App Intents launch JARVIS conversation into the in-app engine
+      with context continuity (Siri starts it, JARVIS owns the thread).
+- [ ] H3  CarPlay driving-safe loop proven end-to-end: route-aware, constrained
+      action set, no broad non-driving workflows. Safety negative tests.
+- [ ] H4  noise-learning feedback: useful / noisy / wrong-time / wrong-surface /
+      missed-urgency feedback recorded AND future routing adapts while safety
+      overrides remain intact. Proof: feedback changes a later delivery decision.
+- [ ] H5  proactive prompt orchestration: combine calendar+weather+route+home+
+      health+approvals+presence+mode into one timely prompt with why-now,
+      confidence, source facts, actions, snooze/dismiss, and an audit event.
+
+## Phase I — Level 6 Memory completion  [45%→≥90%]
+
+- [ ] I1  situational retrieval replaces keyword match: retrieve by person,
+      domain, current task, unresolved loop, prior resolution, season,
+      relationship, lesson — and explain WHY each memory was selected.
+- [ ] I2  provenance on every durable memory: observed fact / instruction /
+      inference / tentative pattern / approved belief / retired belief, plus
+      source, owner, subject, sensitivity, access policy, review state.
+- [ ] I3  correction loop wired into reasoning: correct / dispute / retire /
+      supersede / "do-not-use-in-reasoning" — a corrected/retired memory is
+      provably EXCLUDED from future decision context. Negative test required.
+- [ ] I4  Chronicle becomes the narrative memory layer: explains patterns,
+      rituals, decisions, milestones, and why JARVIS thinks they matter;
+      inspectable with source + impact + correction options.
+- [ ] I5  `chronicle_boundary` wired into memory.py WRITE path: faith-tagged
+      content routes to Chronicle and is BLOCKED from JARVIS memory. Negative
+      test proves a faith write to JARVIS memory is rejected.
+
+## Phase J — Level 7 Formation completion  [45%→≥90%]
+
+- [ ] J1  `health_loop` wired into morning briefing + Three Moves (check-in
+      history actually shapes the day card and the moves).
+- [ ] J2  `ritual_loop` wired into daily card + formation guidance; a prayer/
+      study item is captured, resurfaced when stale, reviewed, and influences
+      later guidance.
+- [ ] J3  `AdaptationContextBuilder` drives real per-person / per-mode /
+      per-season formation cards that DIFFER appropriately and cite their inputs.
+- [ ] J4  parenting/tutoring child-safe loop with parent-review boundaries, wired
+      so child-facing guidance obeys permissions and is inspectable/correctable.
+- [ ] J5  doctor packet generated from real accumulated check-in history (not an
+      empty/unavailable shell) once ≥N days of data exist.
+
+## Phase K — Level 8 Autonomy completion  [50%→≥90%]
+
+- [ ] K1  foundry agent GENERATION: an approved proposal at sandbox_live creates
+      a real agent stub with role, mission, zone, arena, memory/tool scope, and
+      authority — the GAP-8 newborn-agent attachment.
+- [ ] K2  newborn-agent lifecycle: evaluate → promote or retire with audit;
+      authority cannot expand without recorded evidence.
+- [ ] K3  one REAL end-to-end automation runs under governance:
+      research → synthesis → draft → review → approval → publish/stage, with
+      evidence, approval gate, rollback, and a success record.
+- [ ] K4  `executive_workflow` routes real Catalyst work (strategy/writing/
+      pipeline/publishing/growth) with inspectable state, approvals, handoffs.
+- [ ] K5  `sandbox_rollback` wired BEFORE sandbox job execution: a rollback packet
+      (pre-state + reverse instructions) is captured pre-run and is replayable.
+
+## Phase L — Level 9 Civilization completion  [55%→≥90%]  (needs G + I)
+
+- [ ] L1  `long_horizon` reviews auto-triggered by scheduler (monthly/seasonal/
+      yearly); arc summary surfaces and demonstrably shows how prior lessons
+      changed current guidance.
+- [ ] L2  `legacy_archive` household-browsable: a family member can add, view,
+      and correct legacy entries through a real surface (not raw API), with
+      permission gating enforced in the UI.
+- [ ] L3  `continuity` workflow steps EXECUTE real effects (create profile, set
+      permission, revoke token, migrate memory) — not string-shuffling. Restricted
+      memory provably not exposed during a role/device change.
+- [ ] L4  `household_admin` household-facing control panel: pause/approve/demote/
+      revoke agents, modes, permissions, devices, integrations — no file edits,
+      JSON, or scripts.
+- [ ] L5  long-arc guidance proof: a recommendation THIS period visibly differs
+      because of a lesson recorded in a PRIOR review (end-to-end, not unit-mocked).
+
+## Phase M — Household UX layer  [non-developer operability]  (needs G–L)
+
+- [ ] M1  mode switcher UI (set/inspect/auto-exit visibility).
+- [ ] M2  decision-citation surface: "why did JARVIS recommend this" shows the
+      constitutional principle, authority basis, uncertainty, override path.
+- [ ] M3  value-simulation comparison UI (options ranked, dissent, change-my-mind).
+- [ ] M4  legacy / admin / continuity / long-horizon-review surfaces usable by
+      a non-developer household member.
+- [ ] M5  plain-language control panel: what JARVIS can do, what it did and why,
+      and a one-tap pause — household-operable safety.
+
+## Phase N — Infrastructure + Hardware  [partially BLOCKED on Chris]
+
+- [ ] N1  Home Assistant: real credentials + garage/climate/light/lock/leak entity
+      map → home/safety/modes live with audit + no voice-only unlock.
+      **BLOCKED on HOME_ASSISTANT_URL / HOME_ASSISTANT_TOKEN + entity map.**
+- [ ] N2  SQLite / hybrid index for active state (GAP-10): queryable, concurrency-
+      safe, migratable, while raw audit/artifact JSONL is preserved.
+- [ ] N3  perception feeds (porch/garage/room presence/phone arrival) + privacy
+      governance. **BLOCKED on perception hardware.**
+- [ ] N4  workshop devices (Bambu/resin/Cricut): device status, job staging,
+      safety checks, handoff. **BLOCKED on device network access.**
+- [ ] N5  always-on host / NAS / UPS / segmented network / voice+perception edges.
+      **BLOCKED on hardware procurement.**
+
+## Phase O — End-to-end Level 9 scenario proofs  [final exit gate]
+
+Each scenario must pass END-TO-END (UI → API → memory → governance → event →
+audit → restart), not as an isolated store unit test:
+
+- [ ] O1  crisis day — mode flips, autonomy drops, only critical breaks through,
+      everything audited, survives restart.
+- [ ] O2  travel week — travel mode, location-aware routing, home monitoring
+      reduced, auto-exit on return.
+- [ ] O3  child formation — child-safe tutoring/ritual with parent review,
+      permission-gated, correctable.
+- [ ] O4  health recovery — value-sim routes toward rest, health loop drives
+      briefing, demands reduced.
+- [ ] O5  legacy recall — permissioned legacy bundle browsable/exportable; child
+      blocked from adults_only content end-to-end.
+- [ ] O6  automation — one real automation completes under governance with
+      evidence + approval + rollback.
+- [ ] O7  correction — a wrong memory is corrected and provably excluded from a
+      later decision.
+- [ ] O8  governance pause — household pauses an agent mid-run; state recovers
+      cleanly with audit, no corruption.
+
+## Level 9 EXIT GATE (all must be TRUE before any "Level 9" claim)
+
+1. Every level ≥90% with code + test + runtime proof (not store/API-only).
+2. Active mode provably changes scheduler, notifications, autonomy ceiling, TTS.
+3. constitution_engine cites REAL recommendations in the runtime.
+4. Situational memory retrieval live; corrected memories excluded from reasoning.
+5. At least one real automation completes end-to-end under governance.
+6. Household-operable UI for modes, admin, legacy, reviews (non-developer).
+7. Phase O scenario suite passes end-to-end WITH restart survival.
+8. Docs updated ONLY after proof (docs-last rule honored).
+
+---
+
+## Legacy Current-Phase note (pre-true-up)
+
+P2: GAP-1 DONE. Event fabric (GAP-2), enforcement seams (GAP-3, GAP-5) resolved.
 
 ## Gap List (priority order)
 
