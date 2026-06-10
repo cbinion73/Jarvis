@@ -22217,6 +22217,56 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # above takes priority because it's registered first in FastAPI)
     # ------------------------------------------------------------------
 
+    # ── N2: SQLite hybrid index endpoints ─────────────────────────────────────
+
+    @app.get("/api/index/health")
+    async def api_index_health() -> JSONResponse:
+        """N2: SQLite index health — table counts, schema version, WAL status."""
+        from .sqlite_index import SQLiteIndex
+        return _json(SQLiteIndex().health())
+
+    @app.post("/api/index/rebuild")
+    async def api_index_rebuild(request: Request) -> JSONResponse:
+        """N2: Rebuild SQLite index from source JSON files (non-destructive on JSONL)."""
+        body = await request.json()
+        from .sqlite_index import SQLiteIndex
+        from pathlib import Path as _Path
+        root = _Path(body.get("root", "data"))
+        counts = SQLiteIndex().rebuild(root=root)
+        return _json({"ok": True, "counts": counts, "source": "jsonl_rebuild"})
+
+    @app.get("/api/index/query/approvals")
+    async def api_index_approvals(
+        status: str | None = None,
+        actor: str | None = None,
+        limit: int = 50,
+    ) -> JSONResponse:
+        """N2: Queryable approval index via SQLite."""
+        from .sqlite_index import SQLiteIndex
+        results = SQLiteIndex().query_approvals(status=status, actor=actor, limit=limit)
+        return _json({"results": results, "count": len(results), "source": "sqlite_index"})
+
+    @app.get("/api/index/query/agents")
+    async def api_index_agents(
+        state: str | None = None,
+        limit: int = 100,
+    ) -> JSONResponse:
+        """N2: Queryable agent index via SQLite."""
+        from .sqlite_index import SQLiteIndex
+        results = SQLiteIndex().query_agents(state=state, limit=limit)
+        return _json({"results": results, "count": len(results), "source": "sqlite_index"})
+
+    @app.get("/api/index/query/memory")
+    async def api_index_memory(
+        owner: str | None = None,
+        approval_status: str | None = None,
+        limit: int = 50,
+    ) -> JSONResponse:
+        """N2: Queryable memory entry index via SQLite."""
+        from .sqlite_index import SQLiteIndex
+        results = SQLiteIndex().query_memory(owner=owner, approval_status=approval_status, limit=limit)
+        return _json({"results": results, "count": len(results), "source": "sqlite_index"})
+
     @app.post("/api/{legacy_path:path}")
     async def api_legacy_post(
         legacy_path: str,
