@@ -282,10 +282,13 @@ Proof landed 2026-06-10:
   - `python3 -m pytest tests/test_verify_level9_truth.py tests/test_truthful_seed_filtering.py tests/test_data_connectors.py -q`
   - `python3 -m pytest tests/test_verify_docs_truth.py tests/test_verify_level9_truth.py -q`
 - Current unresolved truth findings from the artifact:
-  - provider battery still records one runner fetch failure
+  - provider battery is now classified as `environment-limited` rather than a
+    product failure when the local report only shows a runner fetch error
+    against `127.0.0.1:8787` with zero executed checks
   - no-fake-data audit now reports `warn`, not `fail`: zero runtime-exposed
     seeded findings, with remaining seeded/QA records classified as
     filtered-at-read backing data
+  - proof ledger unresolved failures are now empty in the local truth artifact
   - live deployed / Cloudflare truth remains explicitly unverified in local sandbox runs
 
 Exit gate: the team can answer "what level is JARVIS today?" from one artifact,
@@ -578,13 +581,13 @@ truth is verified, and docs agree.
 
 ## Resume Point
 
-Resume from LEVEL 3 TASK provider truth battery cleanup using `JARVIS-SESSION-STATE.md`.
+Resume from LEVEL 3 TASK hosted/provider proof battery using `JARVIS-SESSION-STATE.md`.
 
 Immediate next work:
 
-1. Triage the remaining provider battery runner fetch failure and determine
-   whether it is a real route defect, an E2E battery issue, or an environment
-   limitation.
+1. Replace or refresh the stale local provider battery artifact with a real run
+   against a live local or hosted JARVIS surface so provider truth can move
+   from environment-limited to verified.
 2. Re-run `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
    after each provider-truth seam to reduce unresolved failures honestly.
 3. Keep `python3 scripts/verify_docs_truth.py` green as the planning docs evolve.

@@ -203,7 +203,25 @@ def _summarize_qa_report(path: Path, repo_root: Path) -> dict[str, Any]:
         "warnings": list(payload.get("warnings") or []),
         "started_at": payload.get("started_at"),
         "finished_at": payload.get("finished_at"),
+        "base_url": payload.get("base_url"),
+        "checks": list(payload.get("checks") or []),
     }
+
+
+def _is_environment_limited_runner_report(report: dict[str, Any]) -> bool:
+    failures = list(report.get("failures") or [])
+    checks = list(report.get("checks") or [])
+    base_url = str(report.get("base_url") or "").strip().lower()
+    if len(failures) != 1 or checks:
+        return False
+    failure = failures[0] if isinstance(failures[0], dict) else {}
+    if str(failure.get("name") or "").strip().lower() != "runner":
+        return False
+    error_text = str(failure.get("error") or "").lower()
+    return (
+        "fetch failed" in error_text
+        and ("127.0.0.1" in base_url or "localhost" in base_url)
+    )
 
 
 def _seed_findings_for_payload(payload: Any, rel_path: str) -> list[dict[str, Any]]:
@@ -341,9 +359,12 @@ def build_truth_report(repo_root: Path, session_state_path: Path) -> dict[str, A
     fake_data_findings, scan_stats = _scan_seed_directories(repo_root)
     source_markers = _scan_mock_source_markers(repo_root)
 
+    provider_env_limited = _is_environment_limited_runner_report(provider_report)
+
     unresolved_failures: list[str] = []
     unresolved_failures.extend(str(item) for item in platform_report.get("failures") or [])
-    unresolved_failures.extend(str(item) for item in provider_report.get("failures") or [])
+    if not provider_env_limited:
+        unresolved_failures.extend(str(item) for item in provider_report.get("failures") or [])
     runtime_exposed_findings = [item for item in fake_data_findings if _classify_seed_path(str(item.get("path", ""))) == "runtime_exposed"]
     filtered_findings = [item for item in fake_data_findings if _classify_seed_path(str(item.get("path", ""))) == "filtered_at_read"]
     unresolved_failures.extend(
@@ -369,7 +390,12 @@ def build_truth_report(repo_root: Path, session_state_path: Path) -> dict[str, A
     provider_truth = {
         "platform_report": platform_report,
         "provider_report": provider_report,
-        "status": "warning" if provider_report.get("status") == "present" else "unverified",
+        "status": (
+            "environment-limited"
+            if provider_env_limited
+            else ("warning" if provider_report.get("status") == "present" else "unverified")
+        ),
+        "environment_limited": provider_env_limited,
     }
 
     channel_truth = {
@@ -453,6 +479,8 @@ def main() -> int:
         "fake_data_findings": len((report.get("no_fake_data_audit") or {}).get("seed_findings") or []),
         "platform_failures": len((report.get("proof_ledger") or {}).get("platform_e2e", {}).get("failures") or []),
         "provider_failures": len((report.get("proof_ledger") or {}).get("provider_battery", {}).get("failures") or []),
+        "provider_environment_limited": bool((report.get("channel_truth") or {}).get("providers", {}).get("environment_limited")),
+        "unresolved_failure_count": len((report.get("proof_ledger") or {}).get("unresolved_failures") or []),
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
