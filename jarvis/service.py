@@ -9754,6 +9754,147 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             ),
         })
 
+    # ── M2: Decision citation surface ─────────────────────────────────────────
+
+    @app.post("/api/decisions/cite")
+    async def api_decision_record(request: Request) -> JSONResponse:
+        """M2: Record a JARVIS decision citation (why + constitutional basis + override path)."""
+        body = await request.json()
+        from .decision_citation import DecisionCitationStore
+        try:
+            citation = DecisionCitationStore().record(
+                actor=body.get("actor", "jarvis"),
+                recommendation=body.get("recommendation", ""),
+                rationale=body.get("rationale", ""),
+                principles=body.get("principles", []),
+                authority_basis=body.get("authority_basis", "observe"),
+                uncertainty=body.get("uncertainty", "medium"),
+                override_path=body.get("override_path", "Tell JARVIS to reconsider."),
+                domain=body.get("domain", "general"),
+                labels=body.get("labels", []),
+            )
+            from dataclasses import asdict
+            return _json({"ok": True, "citation": asdict(citation)})
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @app.get("/api/decisions/{citation_id}")
+    async def api_decision_cite(citation_id: str) -> JSONResponse:
+        """M2: Get the 'why' surface for a JARVIS decision."""
+        from .decision_citation import DecisionCitationStore
+        citation = DecisionCitationStore().cite(citation_id)
+        if not citation:
+            raise HTTPException(status_code=404, detail="citation not found")
+        return _json(citation)
+
+    @app.get("/api/decisions")
+    async def api_decision_list(actor: str | None = None, domain: str | None = None, limit: int = 20) -> JSONResponse:
+        """M2: List recent JARVIS decision citations."""
+        from .decision_citation import DecisionCitationStore
+        return _json({"citations": DecisionCitationStore().list_recent(actor=actor, domain=domain, limit=limit)})
+
+    @app.post("/api/decisions/{citation_id}/outcome")
+    async def api_decision_outcome(citation_id: str, request: Request) -> JSONResponse:
+        """M2: Record what actually happened after a JARVIS recommendation."""
+        body = await request.json()
+        from .decision_citation import DecisionCitationStore
+        updated = DecisionCitationStore().record_outcome(
+            citation_id=citation_id,
+            reviewed_by=body.get("reviewed_by", "chris"),
+            outcome=body.get("outcome", ""),
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="citation not found")
+        return _json({"ok": True, "citation": updated})
+
+    # ── M3: Value-simulation comparison surface ────────────────────────────────
+
+    @app.post("/api/simulate/compare-options")
+    async def api_simulate_compare(request: Request) -> JSONResponse:
+        """M3: Compare options against JARVIS constitutional values."""
+        body = await request.json()
+        from .value_simulator import ValueSimulator
+        try:
+            sim = ValueSimulator().compare(
+                actor=body.get("actor", "chris"),
+                question=body.get("question", ""),
+                context=body.get("context", ""),
+                options=body.get("options", []),
+                weights=body.get("weights"),
+                domain=body.get("domain", "general"),
+            )
+            from dataclasses import asdict
+            return _json(asdict(sim))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @app.get("/api/simulate/{simulation_id}")
+    async def api_simulate_get(simulation_id: str) -> JSONResponse:
+        """M3: Retrieve a completed value simulation."""
+        from .value_simulator import ValueSimulator
+        sim = ValueSimulator().get(simulation_id)
+        if not sim:
+            raise HTTPException(status_code=404, detail="simulation not found")
+        return _json(sim)
+
+    # ── M5: Plain-language household safety control ────────────────────────────
+
+    @app.post("/api/household/pause-all")
+    async def api_household_pause_all(request: Request) -> JSONResponse:
+        """M5: One-tap pause — suspends all active agents and sets mode to pause.
+
+        Does NOT affect hard-boundary policies, active safety monitors, or
+        emergency mode. Paused state is visible in /api/admin/household-control.
+        """
+        body = await request.json()
+        actor = body.get("actor", "chris")
+        reason = body.get("reason", "household pause requested")
+        import time as _time
+        from .foundry import FoundryStore, AGENT_STATE_PROMOTED
+        store = FoundryStore()
+        records = store._load()
+        paused_count = 0
+        for r in records:
+            if r.get("state") == AGENT_STATE_PROMOTED and not r.get("paused"):
+                r["paused"] = True
+                r["paused_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                r["paused_by"] = actor
+                r["pause_reason"] = reason
+                r["updated_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                paused_count += 1
+        store._save(records)
+        return _json({
+            "ok": True,
+            "paused_agents": paused_count,
+            "actor": actor,
+            "reason": reason,
+            "resume_via": "/api/admin/agents/{agent_id}/resume",
+            "note": "Hard-boundary policies, safety monitors, and emergency mode are unaffected.",
+        })
+
+    @app.get("/api/household/activity-summary")
+    async def api_household_activity_summary(actor: str = "chris", limit: int = 10) -> JSONResponse:
+        """M5: Plain-language household activity summary — what JARVIS did and why."""
+        import time as _time
+        from .foundry import FoundryStore
+        from .decision_citation import DecisionCitationStore
+        agents = FoundryStore().list_all()
+        recent_decisions = DecisionCitationStore().list_recent(actor="jarvis", limit=limit)
+        active_agents = [a for a in agents if a.get("state") not in ("retired", "rejected") and not a.get("paused")]
+        paused_agents = [a for a in agents if a.get("paused")]
+        return _json({
+            "source": "live",
+            "generated_at": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+            "what_jarvis_can_do": {
+                "active_agents": len(active_agents),
+                "paused_agents": len(paused_agents),
+                "agent_names": [a.get("name") for a in active_agents[:10]],
+            },
+            "what_jarvis_did_recently": recent_decisions,
+            "one_tap_pause_via": "/api/household/pause-all",
+            "full_control_panel": "/api/admin/household-control",
+        })
+
     @app.post("/api/respond")
     async def api_respond(
         payload: dict[str, Any],
