@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Level 8 consent-promote complete; 611 tests passing)
+Last updated: 2026-06-09 (Level 5 presence heartbeat complete; 636 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
@@ -17,10 +17,13 @@ Last updated: 2026-06-09 (Level 8 consent-promote complete; 611 tests passing)
   promotion engine, sandbox execution, email draft staging, agent registry
   contract all exist; all 10 governed action types enforce sequence gating;
   negative-path tests cover deny/stage/allow across all bootstrapped zones
-- Level 5 (Ambient): ~80% — event fabric autonomous, all 6 delivery postures
+- Level 5 (Ambient): ~90% — event fabric autonomous, all 6 delivery postures
   live, interruption decisions recorded; presence override store live with TTL
   (suppress/escalate/clear via POST /api/apple/presence-override); background→
-  foreground push escalation via _maybe_fire_escalation_push() debounced 5 min
+  foreground push escalation via _maybe_fire_escalation_push() debounced 5 min;
+  POST /api/apple/presence-heartbeat writes foreground_active=True with 5-min
+  TTL — _choose_delivery_mode upgrades hold_for_brief → badge_only when user
+  is actively watching; foreground_active in apple_status() response
 - Level 6 (Memory/Continuity): ~60% — partitioned memory with enforced
   viewer access, memory genuinely read in chat/briefing context, learning
   review live; retrieval is keyword-match not situation retrieval (GAP-7)
@@ -188,13 +191,12 @@ safety, stray .tmp recovery, lock file creation. All pass.
 
 ## Next 3 Work Items
 
-1. Level 5 presence heartbeat: add POST /api/apple/presence-heartbeat that sets
-   a short-TTL (5 min) "foreground_active" flag in presence_overrides.json so
-   delivery-mode decisions know the user is actively watching (vs. background).
-   Wire into _choose_delivery_mode: if foreground_active=true, always badge_only
-   minimum (never hold_for_brief), because the user can see the notification.
-2. Level 8 foundry agent generation: when a proposal is approved at sandbox_live,
+1. Level 8 foundry agent generation: when a proposal is approved at sandbox_live,
    the foundry should create an agent stub (zone + supervision contract). This is
    the "newborn-agent zone attachment" described in GAP-8. Requires designing the
    minimal agent spec format and auto-bootstrap flow.
-3. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
+2. GAP-7 (blocked): Memory retrieval by situation — requires Fable 5 design session.
+3. Level 5 delivery audit: verify that all 7 _choose_delivery_mode call sites in
+   _reconcile_shared_notifications pass posture with foreground_active (they read
+   posture from _compute_interruption_posture which now includes it — should be
+   automatic, but worth an integration test).
