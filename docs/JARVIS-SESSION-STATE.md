@@ -4,15 +4,16 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-09 (Level 5 presence heartbeat complete; 636 tests passing)
+Last updated: 2026-06-09 (Phase A complete; 687 tests passing)
 
 ## Honest Maturity Placement (code-verified 2026-06-09)
 
 - Level 2 (Unified Command Product): COMPLETE
-- Level 3 (Household OS): COMPLETE — all 23 experiences live-backed or honestly
-  unavailable with no 500 escape paths; event log wired; stewardship HTTP routes
-  live; Phase 3 Slice 2 (escalate/defer/stage) live with governed boundary
-  checks; exit gate hardened 2026-06-09 (9 new tests, 550 total)
+- Level 3 (Household OS): COMPLETE — Phase A all 10 rows done; home state returns
+  source='unavailable' not mock; recovery lifecycle fields (owner/root_cause/
+  prevention_note/closure_note); deployment context detects Docker vs local;
+  mission audit on closure; lessons_learned field; /api/apple/command-center live;
+  exit report at docs/JARVIS-LEVEL3-EXIT-REPORT.md; 687 tests passing
 - Level 4 (Governed Intelligence): ~80% BUILT — Trust zones, supervision plane,
   promotion engine, sandbox execution, email draft staging, agent registry
   contract all exist; all 10 governed action types enforce sequence gating;
@@ -200,3 +201,18 @@ safety, stray .tmp recovery, lock file creation. All pass.
    _reconcile_shared_notifications pass posture with foreground_active (they read
    posture from _compute_interruption_posture which now includes it — should be
    automatic, but worth an integration test).
+
+## Phase A Completion Record (2026-06-09)
+
+All 10 Phase A rows complete or honestly blocked:
+- A1 DONE: _build_deployment_context() in runtime_posture.py; deployment section added
+- A2 DONE: Household OS coherence confirmed by prior session work
+- A3 DONE: background_cycle() autonomous; event fabric writes every 60s
+- A4 DONE: mission_lifecycle audit event on completed/blocked/abandoned; lessons_learned field
+- A5 DONE: Agent registry contract passes; 9 lifecycle states; heartbeat/pause/resume/interrupt
+- A6 DONE: recovery_cases.py: owner/root_cause/prevention_note/closure_note/close_case()
+- A7 DONE: _unavailable_home_state() source='unavailable'; _mock_home_state() deprecated
+- A8 DONE: GET /api/apple/command-center with Today/Focus/Family/Decisions/Navigate/Continuity
+- A9 BLOCKED: HA code complete; blocked on HOME_ASSISTANT_URL + HOME_ASSISTANT_TOKEN from Chris
+- A10 DONE: docs/JARVIS-LEVEL3-EXIT-REPORT.md created
+Commits: d936b5ef (Phase A), bbfb3523 (L5 heartbeat), 69534b10 (foreground TTL)
