@@ -15961,6 +15961,19 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "prayer_arc": patterns.get("prayer_arc", {}),
         })
 
+    @app.get("/api/chronicle/narrative-refs")
+    async def api_chronicle_narrative_refs(limit: int = 10) -> JSONResponse:
+        """I4: Chronicle narrative reference layer — structural refs JARVIS may cite.
+
+        Returns narrative reference objects from the Chronicle snapshot.
+        source="chronicle_snapshot" on every item — JARVIS never stores raw faith content.
+        """
+        from .chronicle_bridge import get_chronicle_narrative_store
+        store = get_chronicle_narrative_store()
+        refs = await asyncio.to_thread(store.get_narrative_refs, min(max(1, limit), 50))
+        summary = await asyncio.to_thread(store.narrative_summary)
+        return _json({"refs": refs, "summary": summary, "source": "chronicle_snapshot"})
+
     @app.get("/api/chronicle/search")
     async def api_chronicle_search(q: str = Query("", alias="q")) -> JSONResponse:
         payload = await _build_chronicle_recent_payload()

@@ -157,6 +157,23 @@ class MemoryStore:
         except Exception:
             pass  # fail open on unexpected errors
 
+        # I2: Enforce provenance field at write time.
+        # Entries with an unrecognised provenance value are rejected so garbage
+        # data cannot enter the memory store silently.
+        entry_provenance = str(getattr(entry, "provenance", "") or "").strip()
+        if entry_provenance:
+            try:
+                from .models import MEMORY_PROVENANCE_VALUES
+                if entry_provenance not in MEMORY_PROVENANCE_VALUES:
+                    raise ValueError(
+                        f"Provenance enforcement: '{entry_provenance}' is not a valid provenance value. "
+                        f"Must be one of: {sorted(MEMORY_PROVENANCE_VALUES)}"
+                    )
+            except ValueError:
+                raise
+            except Exception:
+                pass  # fail open if models import fails unexpectedly
+
         records = self._entries()
         payload = asdict(entry)
         records.append(payload)
@@ -319,9 +336,13 @@ class MemoryStore:
         actor: str,
         situation_context: dict,
     ) -> list[dict]:
-        """D8: Retrieve memory facts ranked by situational relevance.
+        """D8 / I1: Retrieve memory facts ranked by situational relevance.
 
-        situation_context keys (all optional): person, domain, task, season, relationship
+        situation_context keys (all optional):
+          person, domain, task, season, relationship  — original D8 dimensions
+          unresolved_loop — keyword; matches facts whose title/summary indicates
+                            an open loop or unresolved item
+          lesson          — if truthy, boosts facts tagged lesson/learned/mistake
         Returns facts sorted by match score descending, each with a retrieval_reason.
         """
         facts = self.list_profile_facts()
@@ -331,6 +352,12 @@ class MemoryStore:
         task = str(situation_context.get("task") or "").strip().lower()
         season = str(situation_context.get("season") or "").strip().lower()
         relationship = str(situation_context.get("relationship") or "").strip().lower()
+        # I1 additions
+        unresolved_loop = str(situation_context.get("unresolved_loop") or "").strip().lower()
+        lesson = bool(situation_context.get("lesson"))
+
+        _UNRESOLVED_MARKERS = frozenset({"open", "unresolved", "pending", "blocked", "loop", "follow-up"})
+        _LESSON_TAGS = frozenset({"lesson", "learned", "mistake", "retrospective", "post-mortem"})
 
         from .models import MEMORY_EXCLUDED_FROM_REASONING
         scored: list[tuple[int, str, dict]] = []
@@ -342,6 +369,7 @@ class MemoryStore:
             tags = [str(t).strip().lower() for t in (fact.get("tags") or [])]
             title_lower = str(fact.get("title") or "").strip().lower()
             summary_lower = str(fact.get("summary") or "").strip().lower()
+            text_blob = title_lower + " " + summary_lower
 
             score = 0
             reasons: list[str] = []
@@ -364,6 +392,26 @@ class MemoryStore:
             if season and (season in tags or season in summary_lower):
                 score += 1
                 reasons.append(f"season:{season}")
+
+            # I1: unresolved_loop dimension — keyword match + structural open-loop markers
+            if unresolved_loop and unresolved_loop in text_blob:
+                score += 3
+                reasons.append(f"unresolved_loop:{unresolved_loop}")
+            elif unresolved_loop and any(m in text_blob for m in _UNRESOLVED_MARKERS):
+                score += 2
+                reasons.append("unresolved_loop:marker")
+            elif any(t in tags for t in ("open", "unresolved", "pending", "loop")):
+                # Even without context key, open-loop facts get a passive boost
+                score += 1
+                reasons.append("open_loop_tag")
+
+            # I1: lesson dimension — facts about past mistakes or retrospectives
+            if lesson and any(t in tags for t in _LESSON_TAGS):
+                score += 3
+                reasons.append("lesson:tag")
+            elif lesson and any(kw in text_blob for kw in _LESSON_TAGS):
+                score += 2
+                reasons.append("lesson:text")
 
             if score == 0:
                 continue

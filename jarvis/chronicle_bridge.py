@@ -678,6 +678,177 @@ class ChronicleSnapshotReader:
 
 
 # ---------------------------------------------------------------------------
+# I4: ChronicleNarrativeStore — JARVIS-side narrative reference layer
+# ---------------------------------------------------------------------------
+
+class ChronicleNarrativeRef:
+    """A lightweight narrative reference pointer.
+
+    JARVIS stores the *reference* — title, summary, themes — never the raw
+    faith content.  source = "chronicle_snapshot" makes provenance unambiguous.
+    """
+
+    def __init__(
+        self,
+        *,
+        ref_id: str,
+        entry_type: str,
+        title: str,
+        summary: str,
+        themes: list[str],
+        date: str,
+        passage: str = "",
+        answered: bool = False,
+        source: str = "chronicle_snapshot",
+        captured_at: str = "",
+    ) -> None:
+        self.ref_id = ref_id
+        self.entry_type = entry_type
+        self.title = title
+        self.summary = summary
+        self.themes = themes
+        self.date = date
+        self.passage = passage
+        self.answered = answered
+        self.source = source
+        self.captured_at = captured_at
+
+    def to_dict(self) -> dict:
+        return {
+            "ref_id": self.ref_id,
+            "entry_type": self.entry_type,
+            "title": self.title,
+            "summary": self.summary,
+            "themes": self.themes,
+            "date": self.date,
+            "passage": self.passage,
+            "answered": self.answered,
+            "source": self.source,
+            "captured_at": self.captured_at,
+        }
+
+
+class ChronicleNarrativeStore:
+    """I4: JARVIS-side narrative reference layer for Chronicle content.
+
+    Reads from a ChronicleSnapshotReader and produces de-duplicated narrative
+    reference objects that the memory and proactive systems can cite.  JARVIS
+    never stores raw faith/prayer content — only structural references with
+    source="chronicle_snapshot".
+
+    Honest unavailable: if no Chronicle snapshot exists, returns empty lists.
+    """
+
+    def __init__(self, reader: "ChronicleSnapshotReader | None" = None) -> None:
+        self._reader = reader or ChronicleSnapshotReader()
+
+    def _ts(self) -> str:
+        from datetime import datetime
+        return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    def get_narrative_refs(self, limit: int = 10) -> list[dict]:
+        """Return up to `limit` Chronicle narrative references.
+
+        Sources: recent journal entries + active prayer items.
+        All refs carry source="chronicle_snapshot" — never raw faith data.
+        """
+        refs: list[dict] = []
+        captured_at = self._ts()
+
+        # Journal entries
+        try:
+            entries = self._reader.get_entries(limit=limit)
+            for e in entries:
+                ref = ChronicleNarrativeRef(
+                    ref_id=str(e.get("id") or e.get("date", "unknown")),
+                    entry_type=str(e.get("type", "journal")),
+                    title=str(e.get("title") or e.get("type", "Entry")),
+                    summary=str(e.get("content", ""))[:200],
+                    themes=list(e.get("themes", [])),
+                    date=str(e.get("date", "")),
+                    passage=str(e.get("passage", "")),
+                    source="chronicle_snapshot",
+                    captured_at=captured_at,
+                )
+                refs.append(ref.to_dict())
+        except Exception:
+            pass
+
+        # Prayer items (unanswered only — answered are narrative milestones, not active items)
+        try:
+            prayers = self._reader.get_prayer_items()
+            for p in prayers:
+                if p.get("answered"):
+                    continue
+                ref = ChronicleNarrativeRef(
+                    ref_id=str(p.get("id", "prayer-unknown")),
+                    entry_type="prayer",
+                    title=str(p.get("text", "Prayer item"))[:80],
+                    summary=str(p.get("text", "")),
+                    themes=[str(p.get("category", ""))] if p.get("category") else [],
+                    date=str(p.get("dateAdded", "")),
+                    source="chronicle_snapshot",
+                    captured_at=captured_at,
+                )
+                refs.append(ref.to_dict())
+        except Exception:
+            pass
+
+        # De-dup by ref_id
+        seen: set[str] = set()
+        deduped: list[dict] = []
+        for r in refs:
+            rid = r["ref_id"]
+            if rid not in seen:
+                seen.add(rid)
+                deduped.append(r)
+
+        return deduped[:limit]
+
+    def narrative_summary(self) -> dict:
+        """Compact narrative summary for use in context blocks.
+
+        Returns: total_refs, themes, most_recent_date, unanswered_prayers.
+        Honest unavailable: if Chronicle snapshot missing, ok=False.
+        """
+        try:
+            refs = self.get_narrative_refs(limit=20)
+            if not refs:
+                return {"ok": False, "reason": "No Chronicle snapshot available."}
+
+            themes: dict[str, int] = {}
+            unanswered_prayers = 0
+            dates: list[str] = []
+            for r in refs:
+                for t in r.get("themes", []):
+                    themes[t] = themes.get(t, 0) + 1
+                if r.get("entry_type") == "prayer" and not r.get("answered"):
+                    unanswered_prayers += 1
+                if r.get("date"):
+                    dates.append(r["date"])
+
+            top_themes = sorted(themes.keys(), key=lambda t: -themes[t])[:5]
+            most_recent = max(dates) if dates else ""
+            return {
+                "ok": True,
+                "total_refs": len(refs),
+                "top_themes": top_themes,
+                "most_recent_date": most_recent,
+                "unanswered_prayers": unanswered_prayers,
+                "source": "chronicle_snapshot",
+            }
+        except Exception as exc:
+            import logging
+            logging.getLogger("jarvis.chronicle_bridge").warning("narrative_summary failed: %s", exc)
+            return {"ok": False, "error": str(exc)}
+
+
+def get_chronicle_narrative_store() -> ChronicleNarrativeStore:
+    """Return a ChronicleNarrativeStore using the default snapshot reader."""
+    return ChronicleNarrativeStore()
+
+
+# ---------------------------------------------------------------------------
 # ChronicleBridge
 # ---------------------------------------------------------------------------
 
