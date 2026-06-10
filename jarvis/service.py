@@ -14919,6 +14919,23 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail=f"Prompt not found: {prompt_id}")
         return _json({"acted": True, "prompt": updated})
 
+    @app.post("/api/proactive/orchestrate")
+    async def api_proactive_orchestrate(payload: dict[str, Any] = {}) -> JSONResponse:
+        """H5: Run the proactive orchestrator — collect all signals and generate pending prompts."""
+        from .proactive import get_orchestrator
+        actor = str(payload.get("actor", "chris"))
+        orch = get_orchestrator(root=runtime.data_root / "proactive", runtime=runtime)
+        result = await asyncio.to_thread(orch.run, actor)
+        return _json(result)
+
+    @app.get("/api/proactive/pending")
+    async def api_proactive_pending(actor: str = "chris") -> JSONResponse:
+        """H5: Return all pending proactive prompts, sorted by priority."""
+        from .proactive import ProactivePromptStore
+        store = ProactivePromptStore(runtime.data_root / "proactive")
+        pending = await asyncio.to_thread(store.list_pending, actor)
+        return _json({"actor": actor, "pending_count": len(pending), "prompts": pending})
+
     # ------------------------------------------------------------------
     # Scheduler endpoints
     # ------------------------------------------------------------------
