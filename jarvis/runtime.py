@@ -15854,6 +15854,30 @@ class JarvisRuntime:
                 catalyst_captures=thread_captures[-12:],
             ) or assistant_thread
         self._invalidate_snapshot_cache(actor.display_name, surfaces=("chat_state",))
+
+        # G6: Attach a constitutional citation to every significant recommendation
+        # produced through the conversation path.  Fail-safe — never blocks response.
+        constitutional_citation: dict = {}
+        try:
+            from .constitution_engine import ConstitutionEngine
+            from .mode_resolver import get_active_mode_summary
+            _mode_summary = get_active_mode_summary()
+            _engine = ConstitutionEngine()
+            _citation = _engine.cite(
+                decision_id=resolved_conversation_id,
+                actor=actor.display_name.lower(),
+                recommendation_summary=(final_output_text[:120] + "…" if len(final_output_text) > 120 else final_output_text),
+                principle_ids=["III.3.legible_agency", "III.1.mandate_first"],
+                authority_stage=_mode_summary.get("autonomy_ceiling", "sandbox_live"),
+                uncertainty_level="low",
+                uncertainty_explanation="",
+                override_path="If household mode changes, recommendation posture may shift.",
+            )
+            from dataclasses import asdict
+            constitutional_citation = asdict(_citation)
+        except Exception:
+            pass
+
         return {
             "provider": result.provider,
             "model": result.model,
@@ -15865,6 +15889,7 @@ class JarvisRuntime:
             ),
             "learned_memory": learned_memory,
             "catalyst_capture": catalyst_capture or {},
+            "constitutional_citation": constitutional_citation,
         }
 
     def respond(self, actor_name: str, room: str, request: str) -> OpenAIResult:
@@ -20102,6 +20127,40 @@ class JarvisRuntime:
         action_type: str,
         requested_stage: str = "sandbox_live",
     ) -> dict[str, object]:
+        # G3: Cap the requested stage at the active household mode's autonomy_ceiling.
+        # This is applied BEFORE trust-zone logic so the mode ceiling is unconditional.
+        effective_stage = requested_stage
+        mode_ceiling_applied = False
+        active_mode_id = "normal"
+        try:
+            from .mode_resolver import get_active_mode_contract, STAGE_SEQUENCE
+            active_contract = get_active_mode_contract()
+            active_mode_id = active_contract.mode_id
+            ceiling = active_contract.autonomy_ceiling
+            ceiling_seq = STAGE_SEQUENCE.get(ceiling, 99)
+            requested_seq = STAGE_SEQUENCE.get(requested_stage, 0)
+            if requested_seq > ceiling_seq:
+                effective_stage = ceiling
+                mode_ceiling_applied = True
+                if effective_stage in {"monitor", "suggest"}:
+                    # Stages below sandbox → deny immediately; JARVIS must not act autonomously.
+                    return {
+                        "decision": "deny",
+                        "reason": (
+                            f"Active household mode '{active_mode_id}' caps autonomy at "
+                            f"'{ceiling}'. Requested stage '{requested_stage}' is not permitted."
+                        ),
+                        "trust_zone": zone_id,
+                        "authority_stage": effective_stage,
+                        "approval_mode": "deny",
+                        "arena_status": "mode_ceiling_applied",
+                        "action_type": action_type,
+                        "mode_ceiling": ceiling,
+                        "active_mode": active_mode_id,
+                    }
+        except Exception:
+            pass  # fail open — let existing trust-zone logic decide
+
         zone = self.trust_support.get_trust_zone(zone_id)
         if zone is None:
             return {
@@ -20150,11 +20209,13 @@ class JarvisRuntime:
         stage_lookup = {str(item.get("stage_id") or ""): item for item in stages}
         current_stage_id = str(zone.get("authority_stage") or "observe")
         current_stage = stage_lookup.get(current_stage_id, {})
-        requested_stage_id = requested_stage if requested_stage in stage_lookup else {
+        # G3: use effective_stage (mode-capped) instead of raw requested_stage
+        _lookup_stage = effective_stage if mode_ceiling_applied else requested_stage
+        requested_stage_id = _lookup_stage if _lookup_stage in stage_lookup else {
             "live": "mature_live",
             "staged": "stage_alert",
             "draft": "draft",
-        }.get(requested_stage, requested_stage)
+        }.get(_lookup_stage, _lookup_stage)
         requested = stage_lookup.get(requested_stage_id, {})
         current_sequence = int(current_stage.get("sequence") or 0)
         requested_sequence = int(requested.get("sequence") or current_sequence)

@@ -26139,7 +26139,7 @@ body::after {{
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
       <div>
         <div style="font-size:16px;font-weight:700;color:var(--text-1);">💰 Financial Setup</div>
-        <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Enter your real balances — nothing connects to your bank</div>
+        <div style="font-size:11px;color:var(--text-3);margin-top:3px;">Enter real balances manually or connect supported accounts with Plaid.</div>
       </div>
       <button onclick="closeFinanceSetup()" style="width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:var(--text-2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
@@ -26151,6 +26151,14 @@ body::after {{
     </div>
     <!-- Accounts panel -->
     <div id="finance-panel-accounts" class="finance-panel active">
+      <div class="finance-form" style="margin-bottom:12px;">
+        <div class="finance-form-title">Connected Accounts</div>
+        <div id="finance-plaid-status" class="finance-empty">Checking Plaid status…</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="finance-add-btn" type="button" onclick="connectFinancePlaid()">Connect Bank</button>
+          <button class="finance-add-btn" type="button" onclick="syncFinancePlaid()">Refresh Linked Data</button>
+        </div>
+      </div>
       <div id="finance-accounts-list"></div>
       <div class="finance-form">
         <div class="finance-form-title">Add Account</div>
@@ -47590,9 +47598,9 @@ async function _loadFiAccounts() {{
     const lbl = {{checking:'Checking',savings:'Savings',investment:'Investment',retirement:'Retirement',credit:'Credit Card',loan:'Loan',other:'Other'}};
     el.innerHTML = accounts.map(a=>`<div class="finance-row">
       <div style="flex:1;min-width:0;"><div class="finance-row-name">${{escHtml(a.name)}}</div>
-      <div class="finance-row-sub">${{lbl[a.account_type]||a.account_type}}${{a.institution?' · '+escHtml(a.institution):''}}</div></div>
+      <div class="finance-row-sub">${{lbl[a.account_type]||a.account_type}}${{a.institution?' · '+escHtml(a.institution):''}}${{a.is_manual===false?' · Linked via Plaid':''}}</div></div>
       <div class="finance-row-val" style="color:${{a.account_type==='credit'||a.account_type==='loan'?'var(--red)':'var(--text-1)'}}">${{fmt(a.balance)}}</div>
-      <button class="finance-row-del" onclick="deleteFinanceAccount('${{a.account_id}}','${{escHtml(a.name).replace(/'/g,'')}}')" title="Remove">✕</button>
+      ${{a.is_manual===false ? '<span class="sset-badge sset-badge-green">Linked</span>' : `<button class="finance-row-del" onclick="deleteFinanceAccount('${{a.account_id}}','${{escHtml(a.name).replace(/'/g,'')}}')" title="Remove">✕</button>`}}
     </div>`).join('');
   }} catch(e) {{ el.innerHTML='<div class="finance-empty">Could not load accounts.</div>'; }}
 }}
@@ -47685,6 +47693,74 @@ async function deleteFinanceGoal(id,name) {{
   if (!confirm('Remove "'+name+'"?')) return;
   await fetch('/api/finance/goals/'+encodeURIComponent(id),{{method:'DELETE'}});
   await _loadFiGoals(); showToast('Goal removed','ok'); setTimeout(()=>loadFiskCard(),600);
+}}
+async function connectFinancePlaid() {{
+  if (!window.Plaid || typeof window.Plaid.create !== 'function') {{
+    showToast('Plaid Link is not available in this build.', 'warn');
+    return;
+  }}
+  try {{
+    const tokenResp = await fetch('/api/finance/plaid/link-token', {{
+      method:'POST',
+      headers:{{'Content-Type':'application/json'}},
+      body:JSON.stringify({{user_id:'chris'}})
+    }});
+    const tokenData = await tokenResp.json();
+    if (!tokenResp.ok || !tokenData.link_token) {{
+      showToast(tokenData.detail || 'Could not start Plaid Link.', 'warn');
+      await _loadFiPlaidStatus();
+      return;
+    }}
+    const handler = window.Plaid.create({{
+      token: tokenData.link_token,
+      onSuccess: async (public_token, metadata) => {{
+        const institution = metadata?.institution || {{}};
+        const payload = {{
+          public_token,
+          owner_user_id: 'chris',
+          institution_name: institution.name || '',
+          institution_id: institution.institution_id || '',
+          accounts: Array.isArray(metadata?.accounts) ? metadata.accounts : [],
+        }};
+        const resp = await fetch('/api/finance/plaid/exchange-public-token', {{
+          method:'POST',
+          headers:{{'Content-Type':'application/json'}},
+          body:JSON.stringify(payload)
+        }});
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) {{
+          showToast(data.detail || 'Plaid connection failed.', 'warn');
+          return;
+        }}
+        showToast('Bank accounts connected', 'ok');
+        await loadFinanceSetupData();
+        setTimeout(()=>loadFiskCard(),600);
+      }},
+      onExit: async (err) => {{
+        if (err) showToast(err.display_message || err.error_message || 'Plaid exited early.', 'warn');
+        await _loadFiPlaidStatus();
+      }},
+    }});
+    handler.open();
+  }} catch(e) {{
+    showToast('Error: ' + e.message, 'warn');
+    await _loadFiPlaidStatus();
+  }}
+}}
+async function syncFinancePlaid() {{
+  try {{
+    const res = await fetch('/api/finance/plaid/sync', {{method:'POST'}});
+    const data = await res.json();
+    if (!res.ok || !data.ok) {{
+      showToast(data.detail || data.error || 'Could not refresh linked finance data.', 'warn');
+      return;
+    }}
+    showToast('Linked finance data refreshed', 'ok');
+    await loadFinanceSetupData();
+    setTimeout(()=>loadFiskCard(),600);
+  }} catch(e) {{
+    showToast('Error: ' + e.message, 'warn');
+  }}
 }}
 /* ════════════════════════════════════════════════════════════ */
 
@@ -51377,6 +51453,7 @@ function _navDarkMapStyles() {{
   </div>
 </div>
 
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 </body>
 </html>"""
     return _strip_ordered_html_titles(html)

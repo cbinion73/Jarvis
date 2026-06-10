@@ -233,7 +233,7 @@ async def classify_day_type(signals: dict, oracle_pathway: str) -> dict:
 # Three Moves generation
 # ---------------------------------------------------------------------------
 
-async def generate_three_moves(day_type: str, signals: dict, health_state: dict, season: str = "") -> list[dict]:
+async def generate_three_moves(day_type: str, signals: dict, health_state: dict, season: str = "", verbosity: str = "normal") -> list[dict]:
     """
     Use LLM (via Oracle's gateway) to generate Today's Three Moves.
     Each move: {move, why, effort_level (low/medium/high), domain (glucose/bp/sleep/nutrition/movement/mindset)}
@@ -270,9 +270,17 @@ Respond ONLY with valid JSON — an array of exactly 3 move objects.
 Each object: {"move": "<action>", "why": "<one sentence reason>", "effort_level": "<low|medium|high>", "domain": "<glucose|bp|sleep|nutrition|movement|mindset>"}"""
 
         season_line = f"Season: {season.capitalize()}" if season else ""
+        # G5: verbosity="minimal" → keep moves very short (crisis/sabbath/health_recovery modes)
+        verbosity_instruction = (
+            "Keep each move and why to one short phrase (≤10 words each). "
+            "Minimal output only — do not elaborate."
+            if verbosity == "minimal"
+            else ""
+        )
         user_prompt = f"""Today: {today}
 Day Type: {day_type}
 {season_line}
+{f"Verbosity: {verbosity}. {verbosity_instruction}" if verbosity_instruction else ""}
 
 Chris's profile:
 {_CHRIS_PROFILE}
@@ -467,6 +475,35 @@ async def run_morning_checkin(context: str = "") -> dict:
     generated_at = datetime.utcnow().isoformat()
     season = _current_season()
 
+    # G5: Read active household mode — drives briefing style, verbosity, and TTS.
+    active_mode_id = "normal"
+    briefing_style = "condensed"
+    tts_enabled = True
+    verbosity = "normal"
+    try:
+        from .mode_resolver import get_active_mode_contract
+        mode_contract = get_active_mode_contract()
+        active_mode_id = mode_contract.mode_id
+        briefing_style = mode_contract.briefing_style
+        tts_enabled = mode_contract.tts_enabled
+        verbosity = mode_contract.verbosity
+        # If the mode turns the briefing off entirely, return a minimal day card.
+        if briefing_style == "off":
+            log.info("daily_stewardship: mode=%s sets briefing_style=off — returning minimal card", active_mode_id)
+            return {
+                "date": today,
+                "day_type": "sabbath",
+                "readiness_score": 0,
+                "three_moves": [],
+                "briefing_style": "off",
+                "tts_enabled": False,
+                "active_mode": active_mode_id,
+                "generated_at": generated_at,
+                "source": "mode_suppressed",
+            }
+    except Exception as exc:
+        log.debug("daily_stewardship: mode_resolver failed (%s) — using defaults", exc)
+
     # 1. Signals
     signals = await get_morning_signals()
 
@@ -487,13 +524,16 @@ async def run_morning_checkin(context: str = "") -> dict:
     except Exception:
         health_state = {}
 
-    # 5. Generate Three Moves
-    three_moves = await generate_three_moves(day_type, signals, health_state, season=season)
+    # 5. Generate Three Moves (G5: verbosity from mode shapes prompt if minimal)
+    three_moves = await generate_three_moves(
+        day_type, signals, health_state, season=season,
+        verbosity=verbosity,
+    )
 
     # 6. If-then rule
     if_then_rule = _generate_if_then_rule(day_type, signals)
 
-    # Build day card
+    # Build day card — G5: include mode-driven posture fields
     day_card: dict[str, Any] = {
         "date": today,
         "day_type": day_type,
@@ -513,6 +553,11 @@ async def run_morning_checkin(context: str = "") -> dict:
         "context": context or None,
         "season": season,
         "generated_at": generated_at,
+        # G5 mode posture fields
+        "active_mode": active_mode_id,
+        "briefing_style": briefing_style,
+        "tts_enabled": tts_enabled,
+        "verbosity": verbosity,
     }
 
     # 7. Log to council decision log

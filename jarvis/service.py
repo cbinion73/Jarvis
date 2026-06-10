@@ -8108,6 +8108,195 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # Epic 13: Financial Intelligence endpoints (Fisk / Howard Stark / Daredevil)
     # ------------------------------------------------------------------
 
+    @app.get("/api/finance/accounts")
+    async def api_finance_accounts() -> JSONResponse:
+        try:
+            from dataclasses import asdict as _asdict
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None:
+                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
+            accounts = await asyncio.to_thread(fi._store.load_accounts)
+            return _json([_asdict(account) for account in accounts])
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/finance/accounts")
+    async def api_finance_add_account(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            import uuid as _uuid
+            from dataclasses import asdict as _asdict
+            from .financial_intelligence import Account, get_finance
+
+            fi = get_finance()
+            if fi is None:
+                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
+            name = str(payload.get("name", "")).strip()
+            if not name:
+                raise HTTPException(status_code=400, detail="name is required")
+            account = Account(
+                account_id=str(payload.get("account_id", "")).strip() or str(_uuid.uuid4()),
+                name=name,
+                account_type=str(payload.get("account_type", "checking")).strip() or "checking",
+                institution=str(payload.get("institution", "")).strip(),
+                balance=float(payload.get("balance", 0.0)),
+                currency=str(payload.get("currency", "USD")).strip() or "USD",
+                last_updated=str(payload.get("last_updated", "")).strip() or datetime.now(timezone.utc).isoformat(),
+                notes=str(payload.get("notes", "")).strip(),
+                is_manual=bool(payload.get("is_manual", True)),
+                hidden=bool(payload.get("hidden", False)),
+            )
+            await asyncio.to_thread(fi._store.upsert_account, account)
+            return _json({"ok": True, "account": _asdict(account)})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.delete("/api/finance/accounts/{account_id}")
+    async def api_finance_delete_account(account_id: str) -> JSONResponse:
+        try:
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None:
+                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
+            accounts = await asyncio.to_thread(fi._store.load_accounts)
+            target = next((account for account in accounts if account.account_id == account_id), None)
+            if target is None:
+                raise HTTPException(status_code=404, detail="Account not found")
+            if not target.is_manual:
+                raise HTTPException(status_code=409, detail="Linked Plaid accounts cannot be deleted here. Disconnect or resync the Plaid item instead.")
+            deleted = await asyncio.to_thread(fi._store.delete_account, account_id)
+            return _json({"ok": bool(deleted), "account_id": account_id})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get("/api/finance/passive-income/streams")
+    async def api_finance_streams() -> JSONResponse:
+        try:
+            from dataclasses import asdict as _asdict
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None:
+                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
+            streams = await asyncio.to_thread(fi._store.load_streams)
+            return _json([_asdict(stream) for stream in streams])
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.delete("/api/finance/passive-income/streams/{stream_id}")
+    async def api_finance_delete_stream(stream_id: str) -> JSONResponse:
+        try:
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None:
+                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
+            deleted = await asyncio.to_thread(fi._store.delete_stream, stream_id)
+            if not deleted:
+                raise HTTPException(status_code=404, detail="Stream not found")
+            return _json({"ok": True, "stream_id": stream_id})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.delete("/api/finance/goals/{goal_id}")
+    async def api_finance_delete_goal(goal_id: str) -> JSONResponse:
+        try:
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None:
+                raise HTTPException(status_code=503, detail="Financial intelligence not initialised")
+            deleted = await asyncio.to_thread(fi._store.delete_goal, goal_id)
+            if not deleted:
+                raise HTTPException(status_code=404, detail="Goal not found")
+            return _json({"ok": True, "goal_id": goal_id})
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.get("/api/finance/plaid/status")
+    async def api_finance_plaid_status() -> JSONResponse:
+        try:
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None or getattr(fi, "plaid", None) is None:
+                return _json({"available": False, "configured": False, "connected": False, "detail": "Plaid connector is not initialised."})
+            return _json(await asyncio.to_thread(fi.plaid.status))
+        except Exception as exc:
+            return _json({"available": False, "configured": False, "connected": False, "detail": str(exc)})
+
+    @app.post("/api/finance/plaid/link-token")
+    async def api_finance_plaid_link_token(payload: dict[str, Any] | None = None) -> JSONResponse:
+        payload = payload or {}
+        try:
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None or getattr(fi, "plaid", None) is None:
+                raise HTTPException(status_code=503, detail="Plaid connector is not initialised")
+            result = await asyncio.to_thread(fi.plaid.create_link_token, user_id=str(payload.get("user_id", "chris")).strip() or "chris")
+            if not result.get("ok", False):
+                raise HTTPException(status_code=400, detail=str(result.get("detail", "Could not create Plaid link token.")))
+            return _json(result)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/finance/plaid/exchange-public-token")
+    async def api_finance_plaid_exchange_public_token(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None or getattr(fi, "plaid", None) is None:
+                raise HTTPException(status_code=503, detail="Plaid connector is not initialised")
+            result = await asyncio.to_thread(
+                fi.plaid.exchange_public_token,
+                public_token=str(payload.get("public_token", "")).strip(),
+                owner_user_id=str(payload.get("owner_user_id", "chris")).strip() or "chris",
+                institution_name=str(payload.get("institution_name", "")).strip(),
+                institution_id=str(payload.get("institution_id", "")).strip(),
+                accounts_metadata=list(payload.get("accounts") or []),
+            )
+            if not result.get("ok", False):
+                raise HTTPException(status_code=400, detail=str(result.get("detail", "Could not exchange Plaid public token.")))
+            return _json(result)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    @app.post("/api/finance/plaid/sync")
+    async def api_finance_plaid_sync() -> JSONResponse:
+        try:
+            from .financial_intelligence import get_finance
+
+            fi = get_finance()
+            if fi is None or getattr(fi, "plaid", None) is None:
+                raise HTTPException(status_code=503, detail="Plaid connector is not initialised")
+            return _json(await asyncio.to_thread(fi.plaid.sync_all))
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     @app.get("/api/finance/snapshot")
     async def api_finance_snapshot() -> JSONResponse:
         """Fisk's wealth snapshot — net worth, cashflow, passive income, goals."""
@@ -11583,7 +11772,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_modes_v2_current() -> JSONResponse:
         from .household_modes import Level9ModeManager
         mgr = Level9ModeManager()
-        return _json(mgr.get_status())
+        status = mgr.get_status()
+        # G4: also include the unified resolved mode so callers see one truth.
+        try:
+            from .mode_resolver import get_active_mode_summary
+            status["resolved_mode"] = get_active_mode_summary()
+        except Exception:
+            pass
+        return _json(status)
+
+    @app.get("/api/household/mode/resolved")
+    async def api_mode_resolved() -> JSONResponse:
+        """G4: Single source of truth for the currently active mode."""
+        from .mode_resolver import get_active_mode_summary
+        return _json(get_active_mode_summary())
 
     @app.post("/api/household/modes-v2/set")
     async def api_modes_v2_set(request: Request) -> JSONResponse:
@@ -11674,6 +11876,95 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_value_list(actor: str = "chris", limit: int = 20) -> JSONResponse:
         from .value_simulation import ValueSimulationEngine
         return _json({"simulations": ValueSimulationEngine().list_recent(actor, limit)})
+
+    # G7: Multi-option decision analysis — value simulation + constitutional citation.
+    # This is the runtime-integrated decision-support endpoint.  The caller provides
+    # a question and 2–5 options; JARVIS runs the full value simulation across 9
+    # dimensions, adds a constitutional citation, and returns a complete decision
+    # packet: ranked options, recommendation, dissent, uncertainty, and
+    # what-would-change-my-mind.
+
+    @app.post("/api/decision/analyze")
+    async def api_decision_analyze(request: Request) -> JSONResponse:
+        body = await request.json()
+        actor = str(body.get("actor") or "chris")
+        question = str(body.get("question") or "")
+        context_text = str(body.get("context") or "")
+        domain = str(body.get("domain") or "general")
+        raw_options = body.get("options") or []
+
+        if not question:
+            raise HTTPException(status_code=400, detail="'question' is required")
+        if len(raw_options) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 options required for decision analysis")
+
+        from .value_simulation import ValueSimulationEngine, SimulatedOption
+        from .constitution_engine import ConstitutionEngine
+        from .mode_resolver import get_active_mode_summary
+        from dataclasses import asdict
+
+        engine = ValueSimulationEngine()
+        scored: list[SimulatedOption] = []
+        for opt in raw_options:
+            scored.append(engine.score_option(
+                option_id=str(opt.get("option_id") or str(len(scored) + 1)),
+                label=str(opt.get("label") or ""),
+                description=str(opt.get("description") or ""),
+                dimension_inputs=opt.get("dimension_inputs") or {},
+                weights=body.get("weights"),
+            ))
+
+        dissent = str(body.get("dissent") or "A reasonable person might weigh different dimensions depending on their priorities.")
+        uncertainty = str(body.get("uncertainty") or "Dimension scores are estimates — input data may be incomplete.")
+        what_would_change = str(
+            body.get("what_would_change_recommendation") or
+            "New information on long-term outcomes or faith alignment would change this recommendation."
+        )
+
+        sim = engine.simulate(
+            actor=actor,
+            question=question,
+            context=context_text,
+            domain=domain,
+            options=scored,
+            dissent=dissent,
+            uncertainty=uncertainty,
+            what_would_change_recommendation=what_would_change,
+            confidence=float(body.get("confidence") or 0.7),
+        )
+
+        # Constitutional citation wrapping (G6)
+        mode_summary = get_active_mode_summary()
+        citation_engine = ConstitutionEngine()
+        citation = citation_engine.cite(
+            decision_id=sim.simulation_id,
+            actor=actor,
+            recommendation_summary=sim.recommendation_summary,
+            principle_ids=["III.3.legible_agency", "III.1.mandate_first", "II.4.mission_priority"],
+            authority_stage=mode_summary.get("autonomy_ceiling", "sandbox_live"),
+            uncertainty_level="moderate" if float(body.get("confidence") or 0.7) < 0.8 else "low",
+            uncertainty_explanation=uncertainty,
+            override_path=what_would_change,
+            dissent=dissent,
+        )
+
+        compare = engine.compare_summary(sim.simulation_id)
+        return _json({
+            "simulation_id": sim.simulation_id,
+            "question": sim.question,
+            "recommended_option_id": sim.recommended_option_id,
+            "recommendation_summary": sim.recommendation_summary,
+            "dissent": sim.dissent,
+            "uncertainty": sim.uncertainty,
+            "what_would_change_recommendation": sim.what_would_change_recommendation,
+            "confidence": sim.confidence,
+            "options_ranked": compare.get("options_ranked", []),
+            "dimension_weights": compare.get("dimension_weights", {}),
+            "constitutional_citation": asdict(citation),
+            "active_mode": mode_summary.get("mode_id", "normal"),
+            "autonomy_ceiling": mode_summary.get("autonomy_ceiling", "sandbox_live"),
+            "source": "decision_analyze",
+        })
 
     # ── F4: Legacy archive ─────────────────────────────────────────────────────
 

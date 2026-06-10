@@ -2858,11 +2858,56 @@ def _choose_delivery_mode(
     severity: str,
     category: str,
     posture: dict[str, Any],
+    notification_domain: str = "",
 ) -> tuple[str, str]:
     posture_mode = str(posture.get("mode") or "active_hours")
     posture_reason = str(posture.get("reason") or "")
     normalized_severity = str(severity or "low").lower()
     normalized_category = str(category or "system").lower()
+
+    # G2: Apply household mode notification rules before posture evaluation.
+    # Mode suppression and notification_level are checked here; fail-safe if
+    # mode_resolver is unavailable.
+    try:
+        from .mode_resolver import get_active_mode_contract
+        mode_contract = get_active_mode_contract()
+        mode_notif_level = mode_contract.notification_level  # all/important/critical_only/silent
+        mode_suppress = set(mode_contract.suppress_domains)
+        mode_alerts = set(mode_contract.alert_domains)
+
+        # If the notification's domain is suppressed by this mode → silence it
+        # (critical items can still break through)
+        if notification_domain and notification_domain in mode_suppress:
+            if normalized_severity != "critical":
+                return (
+                    "suppress",
+                    f"Mode '{mode_contract.mode_id}' suppresses domain '{notification_domain}'.",
+                )
+
+        # Apply the mode's notification level gate
+        if mode_notif_level == "silent":
+            if normalized_severity != "critical":
+                return (
+                    "suppress",
+                    f"Mode '{mode_contract.mode_id}' is set to silent — non-critical notifications suppressed.",
+                )
+        elif mode_notif_level == "critical_only":
+            if normalized_severity not in {"critical", "high"}:
+                # Check if the domain is in alert_domains (those can still deliver)
+                if not notification_domain or notification_domain not in mode_alerts:
+                    return (
+                        "hold_for_brief",
+                        f"Mode '{mode_contract.mode_id}' (critical_only) defers non-critical notifications.",
+                    )
+        elif mode_notif_level == "important":
+            if normalized_severity in {"low", "info"}:
+                if not notification_domain or notification_domain not in mode_alerts:
+                    return (
+                        "hold_for_brief",
+                        f"Mode '{mode_contract.mode_id}' (important) defers low-priority notifications.",
+                    )
+    except Exception:
+        pass  # fail open — existing posture logic proceeds unchanged
 
     if posture_mode == "escalate":
         return "deliver_now", posture_reason

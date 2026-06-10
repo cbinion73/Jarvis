@@ -1779,7 +1779,30 @@ class AgentScheduler:
 
         self._maybe_fire_morning()
 
+        # G1: read current household mode to enforce agent suspension / required-agent runs.
+        suspended_agents: set[str] = set()
+        required_agents: set[str] = set()
+        active_mode_id = "normal"
+        try:
+            from .mode_resolver import get_active_mode_contract
+            active_contract = get_active_mode_contract()
+            active_mode_id = active_contract.mode_id
+            suspended_agents = set(active_contract.suspended_agents)
+            required_agents = set(active_contract.required_agents)
+        except Exception:
+            logger.debug("_tick: mode_resolver unavailable — no agent suspension applied")
+
         for agent_def in registry.list():
+            agent_id = agent_def.agent_id
+
+            # G1a: Suspended agents must NOT run while this mode is active.
+            if agent_id in suspended_agents:
+                logger.debug(
+                    "Scheduler: agent %s suspended by mode=%s — skipping cadence",
+                    agent_id, active_mode_id,
+                )
+                continue
+
             if self._should_run_now(agent_def):
                 item = AgentWorkItem(
                     item_id=str(uuid.uuid4()),
@@ -1787,13 +1810,17 @@ class AgentScheduler:
                     agent_label=agent_def.label,
                     trigger="cadence",
                     event_type="cadence",
-                    payload={},
+                    payload={"active_mode": active_mode_id},
                     queued_at=_now_iso(),
                     status="queued",
                     priority=5,
                 )
                 self._queue.enqueue(item)
                 logger.debug("Cadence-queued agent %s", agent_def.agent_id)
+
+        # G1b: Required agents that haven't run recently get priority-queued.
+        if required_agents:
+            self._ensure_required_agents_queued(required_agents, active_mode_id)
 
         # Periodic cleanup
         purged = self._queue.purge_old(max_age_hours=48)
@@ -1823,7 +1850,133 @@ class AgentScheduler:
         # Epic 10: Family mode auto-advance (every ~30 min via the 60-s tick counter)
         self._maybe_auto_advance_mode()
 
+        # G8: Check whether the active Level9 mode has exceeded its max_duration_hours
+        self._check_mode_auto_exit()
+
     _mode_advance_tick_count: int = 0
+
+    # ------------------------------------------------------------------
+    # G1 helper — required-agent enforcement
+    # ------------------------------------------------------------------
+
+    def _ensure_required_agents_queued(self, required_agents: set[str], mode_id: str) -> None:
+        """Queue required agents that are not currently queued or running.
+
+        Required agents must run during the active mode.  If they haven't
+        run in the last cadence window and aren't already queued, enqueue
+        them with priority=1 (urgent).
+        """
+        try:
+            registry = self._runtime.agent_registry
+        except AttributeError:
+            return
+
+        by_id = {}
+        try:
+            by_id = registry.by_id()
+        except Exception:
+            return
+
+        active_ids = {i.agent_id for i in self._queue.get_queued() + self._queue.get_running()}
+
+        for agent_id in required_agents:
+            if agent_id in active_ids:
+                continue  # already in flight
+            agent_def = by_id.get(agent_id)
+            # Guard: agent_def must be a real registry entry, not None or a stub
+            if agent_def is None:
+                logger.debug(
+                    "Scheduler: required agent %s (mode=%s) not in registry — skipping",
+                    agent_id, mode_id,
+                )
+                continue
+            # Extra guard: verify agent_id is a real string attribute (not a mock proxy)
+            real_aid = getattr(agent_def, "agent_id", None)
+            if not isinstance(real_aid, str):
+                logger.debug(
+                    "Scheduler: required agent %s returned non-real registry entry — skipping",
+                    agent_id,
+                )
+                continue
+
+            # Only force-queue if the agent hasn't run in the last 5 min
+            try:
+                state = self._state_store.load()
+                last_run_str = state.get("agents", {}).get(agent_id, {}).get("last_run_at", "")
+                if last_run_str:
+                    last_run = datetime.fromisoformat(last_run_str.replace("Z", "+00:00"))
+                    elapsed = datetime.now(timezone.utc).timestamp() - last_run.timestamp()
+                    if elapsed < 300:  # 5 min
+                        continue
+            except Exception:
+                pass
+
+            label = getattr(agent_def, "label", agent_id)
+            item = AgentWorkItem(
+                item_id=str(uuid.uuid4()),
+                agent_id=agent_id,
+                agent_label=str(label) if not isinstance(label, str) else label,
+                trigger="mode_required",
+                event_type="mode_required",
+                payload={"active_mode": mode_id, "reason": "required_agent"},
+                queued_at=_now_iso(),
+                status="queued",
+                priority=1,
+            )
+            self._queue.enqueue(item)
+            logger.info(
+                "Scheduler: force-queued required agent %s (mode=%s)",
+                agent_id, mode_id,
+            )
+
+    # ------------------------------------------------------------------
+    # G8 — Level9 mode auto-exit
+    # ------------------------------------------------------------------
+
+    def _check_mode_auto_exit(self) -> None:
+        """Auto-exit a Level9 mode when max_duration_hours has elapsed.
+
+        Runs every tick (~60 s).  Best-effort; never raises.
+        Audits the transition so the exit is traceable.
+        """
+        try:
+            from .household_modes import Level9ModeManager
+            manager = Level9ModeManager()
+            state = manager._load_state()
+            mode_id = state.get("current_mode", "normal")
+            if mode_id == "normal":
+                return  # nothing to expire
+
+            from .mode_resolver import get_active_mode_contract
+            contract = get_active_mode_contract()
+            max_hours = contract.max_duration_hours
+            if max_hours <= 0:
+                return  # indefinite — no auto-exit
+
+            set_at_str = state.get("set_at", "")
+            if not set_at_str:
+                return
+
+            try:
+                set_at = datetime.fromisoformat(set_at_str.replace("Z", "+00:00"))
+            except ValueError:
+                return
+
+            elapsed_hours = (
+                datetime.now(timezone.utc).timestamp() - set_at.timestamp()
+            ) / 3600.0
+
+            if elapsed_hours >= max_hours:
+                logger.info(
+                    "Scheduler G8: mode '%s' auto-expiring after %.1f h (max=%d h)",
+                    mode_id, elapsed_hours, max_hours,
+                )
+                manager.set_mode("normal", actor="scheduler", reason=(
+                    f"auto-exit: {mode_id} exceeded max_duration_hours={max_hours} "
+                    f"(elapsed={elapsed_hours:.1f}h)"
+                ))
+        except Exception as exc:
+            logger.debug("_check_mode_auto_exit failed (non-fatal): %s", exc)
 
     def _maybe_auto_advance_mode(self) -> None:
         """
