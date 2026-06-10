@@ -264,7 +264,7 @@ view for getting all levels above 95%.
       percent, evidence links, open blockers, last verification date, and owner.
 - [x] T0.3 Add a verification command that reports local, GitHub, deployed,
       Cloudflare, Docker, data-volume, and provider truth separately.
-- [ ] T0.4 Add a docs-truth check that fails when session state, maturity model,
+- [x] T0.4 Add a docs-truth check that fails when session state, maturity model,
       roadmap, Level 9 checklist, and exit reports conflict on current level.
 - [x] T0.5 Add a "no fake data" audit command for connectors, local caches,
       rendered summaries, fixtures, and development-only fallbacks.
@@ -276,8 +276,11 @@ view for getting all levels above 95%.
 Proof landed 2026-06-10:
 
 - `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
+- `python3 scripts/verify_docs_truth.py`
 - Artifact: `artifacts/qa/level9-truth-report.json`
-- Tests: `python3 -m pytest tests/test_verify_level9_truth.py tests/test_truthful_seed_filtering.py tests/test_data_connectors.py -q`
+- Tests:
+  - `python3 -m pytest tests/test_verify_level9_truth.py tests/test_truthful_seed_filtering.py tests/test_data_connectors.py -q`
+  - `python3 -m pytest tests/test_verify_docs_truth.py tests/test_verify_level9_truth.py -q`
 - Current unresolved truth findings from the artifact:
   - provider battery still records one runner fetch failure
   - no-fake-data audit still finds seeded/QA content in runtime data stores
@@ -573,16 +576,15 @@ truth is verified, and docs agree.
 
 ## Resume Point
 
-Resume from LEVEL 0 TASK T0.4 using `JARVIS-SESSION-STATE.md`.
+Resume from LEVEL 0 TASK seeded-data truth cleanup using `JARVIS-SESSION-STATE.md`.
 
 Immediate next work:
 
-1. Add the docs-truth consistency check across session state, maturity model,
-   Level 9 checklist, and exit reports.
-2. Triage `artifacts/qa/level9-truth-report.json` findings, starting with
+1. Triage `artifacts/qa/level9-truth-report.json` findings, starting with
    seeded/QA records still present in runtime-visible data stores.
-3. Re-run `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
+2. Re-run `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
    after each truth-cleanup seam to reduce unresolved failures honestly.
+3. Keep `python3 scripts/verify_docs_truth.py` green as the planning docs evolve.
 
 ## Level 9 Exit Gate
 

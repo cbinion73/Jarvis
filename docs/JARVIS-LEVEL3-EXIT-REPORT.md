@@ -8,9 +8,11 @@
 
 ## Summary
 
-Level 3 (Household OS) is COMPLETE. All Phase A rows have been implemented,
-tested, and committed. This document is the single authoritative record of
-what was done, what is real, and what remains blocked by external dependencies.
+This report captures the 2026-06-09 Phase A closeout snapshot. It is preserved
+as historical evidence of what was implemented at that point in time.
+
+It is not the current source of truth for JARVIS maturity placement. Current
+closure status and remaining gaps now live in `docs/JARVIS-SESSION-STATE.md`.
 
 ---
 
@@ -112,7 +114,7 @@ what was done, what is real, and what remains blocked by external dependencies.
 
 ---
 
-## What Level 3 Now Means (Code-Verified)
+## What Level 3 Meant At This Snapshot (Code-Verified On 2026-06-09)
 
 JARVIS can run a real household day without:
 - Unexplained fallback (every module is either live or honestly unavailable)
@@ -120,7 +122,10 @@ JARVIS can run a real household day without:
 - Silent mock data (no `source="mock"` anywhere in any production path)
 - Tool-hopping (missions, recovery, agents, approvals all have durable lifecycle)
 
-**Level 3 is COMPLETE.** Level 4 (Governed Intelligence) is ~80% built. Level 5 (Ambient) is ~90% built.
+At the time of this snapshot, the Phase A implementation was treated as a Level
+3 closeout. That historical conclusion has since been superseded by the
+2026-06-10 docs-truth reset in `docs/JARVIS-SESSION-STATE.md`, which now keeps
+Level 3 open until the broader completion contract is satisfied.
 
 ---
 

@@ -35,7 +35,8 @@ Typical signs:
 
 JARVIS status:
 
-- current primary level
+- >95% complete, but no longer the frontier. This level is maintained while the
+  current frontier sits higher.
 
 Evidence:
 
@@ -59,7 +60,8 @@ Typical signs:
 
 JARVIS status:
 
-- entering this level
+- ~90% complete, but not yet closed under the current Level 9 completion
+  contract.
 
 Gap to close:
 
@@ -83,8 +85,8 @@ Typical signs:
 
 JARVIS status:
 
-- philosophically defined
-- not yet implemented end to end
+- ~90% complete and part of the current frontier, with additional closure work
+  still required before it can be treated as >95%.
 
 ## Level 5: Ambient Household Intelligence
 
@@ -220,8 +222,9 @@ If plotted honestly (code-verified true-up, 2026-06-10 — see
   (no callers outside service.py route handlers). Real Level 9 requires the
   integration roadmap (Phases G–O) in JARVIS-SESSION-STATE.md.
 
-Honest overall placement: solid Level 4, partial Level 5. See
-JARVIS-SESSION-STATE.md for the code-verified true-up and the G–O roadmap.
+Honest overall placement: solid Level 4, partial Level 5. `docs/JARVIS-SESSION-STATE.md`
+is the authoritative source for current percentages, active execution order,
+and what is or is not closed today.
 
 ## What Must Happen Next
 

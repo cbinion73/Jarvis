@@ -19,8 +19,9 @@ This roadmap should be read after:
 - `docs/always-on-agent-backend-blueprint.md`
 - `docs/JARVIS-MATURITY-MODEL.md`
 
-If another roadmap or planning document conflicts with this one, this document
-wins unless deliberately revised.
+If planning documents disagree about current execution status, maturity
+placement, or what should be worked next, `docs/JARVIS-SESSION-STATE.md` wins.
+This roadmap remains the long-horizon strategy document.
 
 ## Canonical Frame
 
