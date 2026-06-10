@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -99,6 +100,19 @@ def _load_json_from_log(path: Path, default: Any) -> Any:
         pass
     import copy
     return copy.deepcopy(default)
+
+
+def _default_finance_root() -> Path:
+    explicit = str(os.getenv("JARVIS_FINANCE_DATA_PATH", "") or "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+    data_root = str(os.getenv("DATA_PATH", "") or "").strip()
+    if data_root:
+        return Path(data_root).expanduser() / "finance"
+    app_data = Path("/app/data")
+    if app_data.exists():
+        return app_data / "finance"
+    return Path.home() / ".jarvis" / "finance"
 
 
 # ---------------------------------------------------------------------------
@@ -191,12 +205,16 @@ class FinancialStore:
       ~/.jarvis/finance/compliance.json
     """
 
-    ROOT = Path.home() / ".jarvis" / "finance"
+    ROOT = _default_finance_root()
 
     def __init__(self) -> None:
+        configured_root = Path(getattr(type(self), "ROOT", _default_finance_root()))
+        default_root = _default_finance_root()
+        self.ROOT = configured_root if configured_root != default_root else default_root
         self.ROOT.mkdir(parents=True, exist_ok=True)
         self._accounts_path = self.ROOT / "accounts.json"
         self._transactions_path = self.ROOT / "transactions.jsonl"
+        self._linked_transactions_path = self.ROOT / "linked_transactions.json"
         self._goals_path = self.ROOT / "goals.json"
         self._passive_income_path = self.ROOT / "passive_income.json"
         self._compliance_path = self.ROOT / "compliance.json"
@@ -228,11 +246,38 @@ class FinancialStore:
         accounts.append(account)
         self.save_accounts(accounts)
 
+    def delete_account(self, account_id: str) -> bool:
+        accounts = self.load_accounts()
+        remaining = [account for account in accounts if account.account_id != account_id]
+        if len(remaining) == len(accounts):
+            return False
+        self.save_accounts(remaining)
+        return True
+
     # ------------------------------------------------------------------
     # Transactions (JSONL — append-only, efficient for large sets)
     # ------------------------------------------------------------------
 
     def load_transactions(self, month: str | None = None, category: str | None = None) -> list[Transaction]:
+        transactions = self._load_manual_transactions()
+        transactions.extend(self.load_linked_transactions())
+        deduped: dict[str, Transaction] = {}
+        ordered_ids: list[str] = []
+        for txn in transactions:
+            deduped[txn.transaction_id] = txn
+            if txn.transaction_id not in ordered_ids:
+                ordered_ids.append(txn.transaction_id)
+        filtered: list[Transaction] = []
+        for txn_id in ordered_ids:
+            txn = deduped[txn_id]
+            if month and not txn.date.startswith(month):
+                continue
+            if category and txn.category != category:
+                continue
+            filtered.append(txn)
+        return filtered
+
+    def _load_manual_transactions(self) -> list[Transaction]:
         if not self._transactions_path.exists():
             return []
         transactions = []
@@ -243,12 +288,7 @@ class FinancialStore:
                     continue
                 try:
                     data = json.loads(line)
-                    t = Transaction(**data)
-                    if month and not t.date.startswith(month):
-                        continue
-                    if category and t.category != category:
-                        continue
-                    transactions.append(t)
+                    transactions.append(Transaction(**data))
                 except Exception:
                     pass
         except OSError:
@@ -259,6 +299,33 @@ class FinancialStore:
         self._transactions_path.parent.mkdir(parents=True, exist_ok=True)
         with self._transactions_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(asdict(transaction)) + "\n")
+
+    def load_linked_transactions(self) -> list[Transaction]:
+        raw = _load_json(self._linked_transactions_path, default=[])
+        transactions = []
+        for item in (raw if isinstance(raw, list) else []):
+            try:
+                transactions.append(Transaction(**item))
+            except Exception:
+                pass
+        return transactions
+
+    def save_linked_transactions(self, transactions: list[Transaction]) -> None:
+        _save_json(self._linked_transactions_path, [asdict(txn) for txn in transactions])
+
+    def upsert_linked_transactions(self, transactions: list[Transaction]) -> None:
+        existing = {txn.transaction_id: txn for txn in self.load_linked_transactions()}
+        for txn in transactions:
+            existing[txn.transaction_id] = txn
+        merged = sorted(existing.values(), key=lambda txn: (txn.date, txn.transaction_id), reverse=True)
+        self.save_linked_transactions(merged)
+
+    def remove_linked_transactions(self, transaction_ids: list[str]) -> None:
+        if not transaction_ids:
+            return
+        ids = set(transaction_ids)
+        remaining = [txn for txn in self.load_linked_transactions() if txn.transaction_id not in ids]
+        self.save_linked_transactions(remaining)
 
     # ------------------------------------------------------------------
     # Goals
@@ -287,6 +354,14 @@ class FinancialStore:
         goals.append(goal)
         self.save_goals(goals)
 
+    def delete_goal(self, goal_id: str) -> bool:
+        goals = self.load_goals()
+        remaining = [goal for goal in goals if goal.goal_id != goal_id]
+        if len(remaining) == len(goals):
+            return False
+        self.save_goals(remaining)
+        return True
+
     # ------------------------------------------------------------------
     # Passive income streams
     # ------------------------------------------------------------------
@@ -313,6 +388,14 @@ class FinancialStore:
                 return
         streams.append(stream)
         self.save_streams(streams)
+
+    def delete_stream(self, stream_id: str) -> bool:
+        streams = self.load_streams()
+        remaining = [stream for stream in streams if stream.stream_id != stream_id]
+        if len(remaining) == len(streams):
+            return False
+        self.save_streams(remaining)
+        return True
 
     # ------------------------------------------------------------------
     # Compliance items
@@ -962,12 +1045,13 @@ class FinancialIntelligenceOrchestrator:
     Called weekly by the scheduler.
     """
 
-    def __init__(self, store: FinancialStore) -> None:
+    def __init__(self, store: FinancialStore, *, plaid: Any | None = None) -> None:
         self._store = store
         self.fisk = FiskAgent(store)
         self.howard = HowardStarkAgent(store)
         self.daredevil = DaredevilAgent(store)
         self.budget = BudgetTracker(store)
+        self.plaid = plaid
 
     def weekly_financial_check(self) -> dict[str, Any]:
         """
@@ -1183,7 +1267,15 @@ def init_finance(runtime: Any = None) -> FinancialIntelligenceOrchestrator:
 
     store = FinancialStore()
     _seed_if_empty(store)
-    orchestrator = FinancialIntelligenceOrchestrator(store)
+    plaid = None
+    try:
+        from .plaid_connector import PlaidConnector
+
+        config = getattr(runtime, "config", None) if runtime is not None else None
+        plaid = PlaidConnector(config=config, finance_store=store)
+    except Exception as exc:
+        logger.debug("Plaid connector unavailable: %s", exc)
+    orchestrator = FinancialIntelligenceOrchestrator(store, plaid=plaid)
     _finance_singleton = orchestrator
     logger.info("FinancialIntelligenceOrchestrator singleton initialised")
     return orchestrator

@@ -84,6 +84,10 @@ class AppConfig:
     microsoft_redirect_uri: str
     microsoft_token_path: Path
     microsoft_authority: str
+    plaid_client_id: str
+    plaid_secret: str
+    plaid_env: str
+    plaid_country_codes: str
     openviking_enabled: bool
     openviking_base_url: str
     openviking_api_key: str
@@ -252,6 +256,10 @@ class AppConfig:
                 )
             ),
             microsoft_authority=os.getenv("JARVIS_MICROSOFT_AUTHORITY", "common").strip().lower() or "common",
+            plaid_client_id=os.getenv("JARVIS_PLAID_CLIENT_ID", "").strip(),
+            plaid_secret=os.getenv("JARVIS_PLAID_SECRET", "").strip(),
+            plaid_env=os.getenv("JARVIS_PLAID_ENV", "sandbox").strip().lower() or "sandbox",
+            plaid_country_codes=os.getenv("JARVIS_PLAID_COUNTRY_CODES", "US").strip() or "US",
             openviking_enabled=_bool_env("JARVIS_OPENVIKING_ENABLED", False),
             openviking_base_url=os.getenv("OPENVIKING_BASE_URL", "http://127.0.0.1:1933").rstrip("/"),
             openviking_api_key=os.getenv("OPENVIKING_API_KEY", "").strip(),

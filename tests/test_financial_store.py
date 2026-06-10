@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from jarvis.financial_intelligence import Account, BudgetTracker, FinancialStore
+from jarvis.financial_intelligence import Account, BudgetTracker, FinancialStore, Transaction
 
 
 class FinancialStoreTests(unittest.TestCase):
@@ -43,6 +43,39 @@ class FinancialStoreTests(unittest.TestCase):
             replayed = tracker._load_budgets()
 
             self.assertEqual(replayed["food"], 950.0)
+
+    def test_merges_manual_and_linked_transactions_without_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            FinancialStore.ROOT = Path(tmp) / "finance"
+            store = FinancialStore()
+
+            manual = Transaction(
+                transaction_id="manual-1",
+                account_id="acct-manual",
+                date="2026-06-10",
+                description="Manual grocery",
+                amount=-42.5,
+                category="food",
+            )
+            linked = Transaction(
+                transaction_id="plaid:txn-1",
+                account_id="plaid:acct-1",
+                date="2026-06-09",
+                description="Linked salary",
+                amount=1200.0,
+                category="income",
+                source_agent="plaid",
+            )
+
+            store.append_transaction(manual)
+            store.upsert_linked_transactions([linked])
+
+            replayed = store.load_transactions()
+
+            self.assertEqual(len(replayed), 2)
+            ids = {txn.transaction_id for txn in replayed}
+            self.assertIn("manual-1", ids)
+            self.assertIn("plaid:txn-1", ids)
 
 
 if __name__ == "__main__":

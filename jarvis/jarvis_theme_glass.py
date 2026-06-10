@@ -47586,7 +47586,29 @@ function switchFinanceTab(tab) {{
     btn.classList.toggle('active', ['accounts','streams','goals'][i] === tab));
 }}
 async function loadFinanceSetupData() {{
-  await Promise.all([_loadFiAccounts(), _loadFiStreams(), _loadFiGoals()]);
+  await Promise.all([_loadFiPlaidStatus(), _loadFiAccounts(), _loadFiStreams(), _loadFiGoals()]);
+}}
+async function _loadFiPlaidStatus() {{
+  const el = document.getElementById('finance-plaid-status');
+  if (!el) return;
+  try {{
+    const status = await fetch('/api/finance/plaid/status').then(r=>r.json());
+    if (!status.configured) {{
+      el.innerHTML = '<div class="finance-empty">Plaid not configured yet. Add the Plaid env vars on the server before connecting live accounts.</div>';
+      return;
+    }}
+    const linked = parseInt(status.linked_account_count || 0, 10) || 0;
+    const items = parseInt(status.item_count || 0, 10) || 0;
+    const note = status.last_sync_at ? ' · Last sync ' + escHtml(status.last_sync_at) : '';
+    el.innerHTML = `<div class="finance-row" style="padding:0;border:none;background:none;">
+      <div style="flex:1;min-width:0;">
+        <div class="finance-row-name">${{items ? 'Plaid connected' : 'Ready to connect Plaid'}}</div>
+        <div class="finance-row-sub">${{escHtml(status.environment || 'sandbox')}} · ${{linked}} linked account(s)${{note}}</div>
+      </div>
+    </div>`;
+  }} catch(e) {{
+    el.innerHTML = '<div class="finance-empty">Could not load Plaid status.</div>';
+  }}
 }}
 async function _loadFiAccounts() {{
   const el = document.getElementById('finance-accounts-list');

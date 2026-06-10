@@ -3292,6 +3292,67 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         submit_code.assert_awaited_once_with("123456")
         self.assertTrue(two_factor_body["ok"])
 
+    def test_finance_routes_support_manual_and_plaid_connectors(self) -> None:
+        from jarvis.financial_intelligence import Account, Transaction
+
+        store = SimpleNamespace(
+            load_accounts=lambda: [
+                Account(
+                    account_id="manual-acct",
+                    name="Checking",
+                    account_type="checking",
+                    institution="Local Bank",
+                    balance=2500.0,
+                    currency="USD",
+                    last_updated="2026-06-10T00:00:00+00:00",
+                    is_manual=True,
+                ),
+                Account(
+                    account_id="plaid:acct-1",
+                    name="Linked Brokerage",
+                    account_type="investment",
+                    institution="Fidelity",
+                    balance=5000.0,
+                    currency="USD",
+                    last_updated="2026-06-10T00:00:00+00:00",
+                    is_manual=False,
+                ),
+            ],
+            upsert_account=lambda account: None,
+            delete_account=lambda account_id: account_id == "manual-acct",
+            load_streams=lambda: [],
+            delete_stream=lambda stream_id: True,
+            load_goals=lambda: [],
+            delete_goal=lambda goal_id: True,
+        )
+        plaid = SimpleNamespace(
+            status=lambda: {"available": True, "configured": True, "connected": False, "detail": "Ready", "item_count": 0, "linked_account_count": 1},
+            create_link_token=lambda user_id="chris": {"ok": True, "available": True, "link_token": "link-token"},
+            exchange_public_token=lambda **kwargs: {"ok": True, "available": True, "item_id": "item-1", "imported_accounts": 1, "imported_transactions": 2},
+            sync_all=lambda: {"ok": True, "available": True, "synced_items": 1, "imported_accounts": 1, "imported_transactions": 2},
+        )
+        finance = SimpleNamespace(
+            _store=store,
+            plaid=plaid,
+        )
+
+        with patch("jarvis.financial_intelligence.get_finance", return_value=finance):
+            accounts_body = self._json_body(asyncio.run(self._route("/api/finance/accounts", "GET")()))
+            create_body = self._json_body(asyncio.run(self._route("/api/finance/accounts", "POST")({"name": "Savings", "account_type": "savings", "institution": "Marcus", "balance": 1000})))
+            delete_body = self._json_body(asyncio.run(self._route("/api/finance/accounts/{account_id}", "DELETE")("manual-acct")))
+            plaid_status = self._json_body(asyncio.run(self._route("/api/finance/plaid/status", "GET")()))
+            link_token = self._json_body(asyncio.run(self._route("/api/finance/plaid/link-token", "POST")()))
+            exchange = self._json_body(asyncio.run(self._route("/api/finance/plaid/exchange-public-token", "POST")({"public_token": "public-123", "institution_name": "Plaid Bank"})))
+            sync = self._json_body(asyncio.run(self._route("/api/finance/plaid/sync", "POST")()))
+
+        self.assertEqual(len(accounts_body), 2)
+        self.assertEqual(create_body["account"]["name"], "Savings")
+        self.assertTrue(delete_body["ok"])
+        self.assertTrue(plaid_status["configured"])
+        self.assertEqual(link_token["link_token"], "link-token")
+        self.assertEqual(exchange["item_id"], "item-1")
+        self.assertEqual(sync["synced_items"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
