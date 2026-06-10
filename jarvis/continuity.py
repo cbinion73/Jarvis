@@ -377,6 +377,141 @@ class ContinuityStore:
             self._audit("step_advanced", actor, {"event_id": event_id, "step": step_completed})
         return updated
 
+    def execute_step(self, event_id: str, actor: str, step_completed: str) -> dict:
+        """L3: Execute the real side-effect for a continuity step, then advance it.
+
+        Returns a result dict: {"executed": bool, "effect": str, "advanced": bool, "details": ...}
+        Falls back to pure advance_step if no effect handler matches.
+        """
+        event = self.get(event_id)
+        if not event:
+            return {"executed": False, "effect": "none", "advanced": False, "error": "event not found"}
+
+        step_lower = step_completed.lower()
+        effect_result: dict[str, Any] = {"executed": False, "effect": "none"}
+
+        # ── Revoke device / access token ──────────────────────────────────────
+        if "revoke" in step_lower and any(k in step_lower for k in ("token", "access", "session", "device")):
+            try:
+                from .household_admin import HouseholdAdminStore
+                device_name = (
+                    event.get("subject") or
+                    event.get("new_state", {}).get("device_name") or
+                    event.get("old_state", {}).get("device_name") or ""
+                )
+                if device_name:
+                    admin = HouseholdAdminStore(root=self.root.parent / "household_admin")
+                    devices = admin.list_devices(actor_level="admin")
+                    match = next((d for d in devices if d.get("device_name") == device_name), None)
+                    if match:
+                        admin.revoke_device(match["device_id"], actor=actor, actor_level="admin")
+                        effect_result = {"executed": True, "effect": "revoke_device", "device": device_name}
+                    else:
+                        effect_result = {"executed": True, "effect": "revoke_device_noop", "reason": "device not registered"}
+                else:
+                    effect_result = {"executed": False, "effect": "revoke_device", "reason": "no device_name in event"}
+            except Exception as exc:
+                effect_result = {"executed": False, "effect": "revoke_device", "error": str(exc)}
+
+        # ── Grant / update permission ─────────────────────────────────────────
+        elif "permission" in step_lower and any(k in step_lower for k in ("update", "grant", "assign", "set")):
+            try:
+                from .household_admin import HouseholdAdminStore, ADMIN_PERMISSIONS
+                member = (
+                    event.get("subject") or
+                    event.get("new_state", {}).get("member") or ""
+                )
+                new_role = (
+                    event.get("new_state", {}).get("role") or
+                    event.get("new_state", {}).get("permission_level") or
+                    "adult"
+                )
+                if new_role not in ADMIN_PERMISSIONS:
+                    new_role = "adult"
+                if member:
+                    admin = HouseholdAdminStore(root=self.root.parent / "household_admin")
+                    admin.grant_permission(
+                        member=member, permission_level=new_role,
+                        actor=actor, actor_level="admin",
+                        reason=f"continuity:{event_id}",
+                    )
+                    effect_result = {"executed": True, "effect": "grant_permission", "member": member, "level": new_role}
+                else:
+                    effect_result = {"executed": False, "effect": "grant_permission", "reason": "no member in event"}
+            except Exception as exc:
+                effect_result = {"executed": False, "effect": "grant_permission", "error": str(exc)}
+
+        # ── Register device ───────────────────────────────────────────────────
+        elif ("register" in step_lower or "create" in step_lower) and "profile" not in step_lower:
+            if "device" in step_lower or "register" in step_lower:
+                try:
+                    from .household_admin import HouseholdAdminStore
+                    device_name = event.get("subject") or ""
+                    owner = event.get("actor") or actor
+                    if device_name:
+                        admin = HouseholdAdminStore(root=self.root.parent / "household_admin")
+                        admin.register_device(
+                            device_name=device_name,
+                            owner=owner,
+                            device_type=event.get("new_state", {}).get("device_type", "personal"),
+                            actor=actor,
+                            actor_level="admin",
+                        )
+                        effect_result = {"executed": True, "effect": "register_device", "device": device_name}
+                except Exception as exc:
+                    effect_result = {"executed": False, "effect": "register_device", "error": str(exc)}
+
+        # ── Verify restricted data not exposed ────────────────────────────────
+        elif "verify" in step_lower and "restricted" in step_lower:
+            try:
+                exposed = self.verify_restricted_not_exposed(event_id, actor)
+                effect_result = {
+                    "executed": True,
+                    "effect": "verify_restricted",
+                    "restricted_clear": exposed["restricted_clear"],
+                    "checked_entries": exposed["checked_entries"],
+                }
+            except Exception as exc:
+                effect_result = {"executed": False, "effect": "verify_restricted", "error": str(exc)}
+
+        # ── No matching effect — advance without side-effect ──────────────────
+        else:
+            effect_result = {"executed": False, "effect": "none", "reason": "no_effect_handler"}
+
+        # Advance the step (always, even if effect failed — caller can check executed flag)
+        advanced = self.advance_step(event_id, actor, step_completed)
+        return {**effect_result, "advanced": advanced is not None}
+
+    def verify_restricted_not_exposed(self, event_id: str, actor: str) -> dict[str, Any]:
+        """L3: Check that restricted memory entries are not accessible to guest-level actors.
+
+        Returns {"restricted_clear": bool, "checked_entries": int, "exposed_ids": list}
+        """
+        try:
+            from .legacy_archive import LegacyArchiveStore
+            store = LegacyArchiveStore(root=self.root.parent / "legacy_archive")
+            # Guest-level view must not contain chris_only or archive entries
+            guest_visible = store.list_entries(actor_permission="guest")
+            exposed = [
+                e["entry_id"]
+                for e in guest_visible
+                if e.get("permission_level") in ("chris_only", "archive")
+            ]
+            return {
+                "restricted_clear": len(exposed) == 0,
+                "checked_entries": len(guest_visible),
+                "exposed_ids": exposed,
+                "actor": actor,
+                "event_id": event_id,
+            }
+        except Exception as exc:
+            return {
+                "restricted_clear": False,
+                "checked_entries": 0,
+                "exposed_ids": [],
+                "error": str(exc),
+            }
+
     def fail_event(self, event_id: str, actor: str, reason: str) -> dict | None:
         records = self._load()
         updated = None

@@ -12277,6 +12277,123 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             raise HTTPException(status_code=403, detail=str(e))
         return _json({"audit": entries})
 
+    # ── L4: Unified household admin control panel ─────────────────────────────
+
+    @app.get("/api/admin/household-control")
+    async def api_admin_household_control(actor_level: str = "admin") -> JSONResponse:
+        """L4: Aggregated household control panel view — agents, modes, devices, integrations, permissions."""
+        import time as _time
+        from .household_admin import HouseholdAdminStore
+        from .foundry import FoundryStore
+        admin = HouseholdAdminStore()
+        foundry = FoundryStore()
+        try:
+            devices = admin.list_devices(actor_level=actor_level)
+        except PermissionError:
+            devices = []
+        try:
+            integrations = admin.list_integrations(actor_level=actor_level)
+        except PermissionError:
+            integrations = []
+        try:
+            permissions = admin.list_permissions(actor_level=actor_level)
+        except PermissionError:
+            permissions = []
+        agents = foundry.list_all()
+        active_agents = [a for a in agents if a.get("state") not in ("retired", "rejected")]
+        # Modes: pull from shared_doctrine for simplicity
+        try:
+            from .modes import get_modes_service
+            modes_svc = get_modes_service()
+            current_mode = modes_svc.get_current_mode()
+        except Exception:
+            current_mode = {"source": "unavailable"}
+        return _json({
+            "source": "live",
+            "generated_at": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
+            "actor_level": actor_level,
+            "agents": {
+                "total": len(agents),
+                "active": len(active_agents),
+                "by_state": {s: len([a for a in agents if a.get("state") == s]) for s in set(a.get("state") for a in agents)},
+                "records": active_agents[:20],
+            },
+            "devices": {"total": len(devices), "records": devices},
+            "integrations": {"total": len(integrations), "records": integrations},
+            "permissions": {"total": len(permissions), "records": permissions},
+            "current_mode": current_mode,
+        })
+
+    @app.post("/api/admin/agents/{agent_id}/pause")
+    async def api_admin_agent_pause(agent_id: str, request: Request) -> JSONResponse:
+        """L4: Pause a promoted agent without retiring it."""
+        body = await request.json()
+        actor = body.get("actor", "chris")
+        from .foundry import FoundryStore
+        store = FoundryStore()
+        agent = store.get(agent_id)
+        if not agent:
+            raise HTTPException(status_code=404, detail="agent not found")
+        import json as _json_lib
+        import time as _time
+        records = store._load()
+        updated = None
+        for r in records:
+            if r.get("agent_id") == agent_id:
+                r["paused"] = True
+                r["paused_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                r["paused_by"] = actor
+                r["updated_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                updated = r
+                break
+        if updated:
+            store._save(records)
+            store._audit("agent_paused", agent_id, actor, {})
+        return _json({"ok": True, "agent_id": agent_id, "paused": True})
+
+    @app.post("/api/admin/agents/{agent_id}/resume")
+    async def api_admin_agent_resume(agent_id: str, request: Request) -> JSONResponse:
+        """L4: Resume a paused agent."""
+        body = await request.json()
+        actor = body.get("actor", "chris")
+        from .foundry import FoundryStore
+        import time as _time
+        store = FoundryStore()
+        records = store._load()
+        updated = None
+        for r in records:
+            if r.get("agent_id") == agent_id:
+                r["paused"] = False
+                r["resumed_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                r["resumed_by"] = actor
+                r["updated_at"] = _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime())
+                updated = r
+                break
+        if updated:
+            store._save(records)
+            store._audit("agent_resumed", agent_id, actor, {})
+        return _json({"ok": True, "agent_id": agent_id, "paused": False})
+
+    # ── L3: Continuity step execution ─────────────────────────────────────────
+
+    @app.post("/api/continuity/events/{event_id}/execute-step")
+    async def api_continuity_execute_step(event_id: str, request: Request) -> JSONResponse:
+        """L3: Execute a real side-effect for a continuity step."""
+        body = await request.json()
+        from .continuity import ContinuityStore
+        result = ContinuityStore().execute_step(
+            event_id=event_id,
+            actor=body.get("actor", "chris"),
+            step_completed=body.get("step", ""),
+        )
+        return _json(result)
+
+    @app.get("/api/continuity/events/{event_id}/verify-restricted")
+    async def api_continuity_verify_restricted(event_id: str, actor: str = "chris") -> JSONResponse:
+        """L3: Verify restricted data is not exposed to guest-level actors."""
+        from .continuity import ContinuityStore
+        return _json(ContinuityStore().verify_restricted_not_exposed(event_id, actor))
+
     # ── F7: Continuity ────────────────────────────────────────────────────────
 
     @app.post("/api/continuity/member-joined")
