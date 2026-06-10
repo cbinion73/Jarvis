@@ -17,7 +17,11 @@ jobs:
           script: |
             git config --global --add safe.directory /home/jarvis/apps/jarvis
             cd /home/jarvis/apps/jarvis
-            git pull origin main
+            git fetch origin main
+            if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+              git stash push -u -m "pre-deploy-autostash-${GITHUB_SHA}"
+            fi
+            git reset --hard origin/main
             cd deploy
             docker compose up -d --build jarvis
             echo "✅ JARVIS deployed at $(date)"
