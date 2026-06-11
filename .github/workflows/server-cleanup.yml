@@ -49,8 +49,20 @@ jobs:
               docker run --rm -v jarvis-family_jarvis_data:/data alpine find /data -name "*.jsonl" -size +100M -exec du -sh {} \;
 
               echo ""
-              echo "--- Large files in jarvis_data (>50MB, any type) ---"
-              docker run --rm -v jarvis-family_jarvis_data:/data alpine find /data -size +50M -exec du -sh {} \; 2>/dev/null | sort -rh | head -20
+              echo "--- Drill into agents ---"
+              docker run --rm -v jarvis-family_jarvis_data:/data alpine sh -c "du -sh /data/agents/* 2>/dev/null | sort -rh | head -20"
+
+              echo ""
+              echo "--- Drill into settings ---"
+              docker run --rm -v jarvis-family_jarvis_data:/data alpine sh -c "du -sh /data/settings/* 2>/dev/null | sort -rh | head -20"
+
+              echo ""
+              echo "--- Drill into security ---"
+              docker run --rm -v jarvis-family_jarvis_data:/data alpine sh -c "du -sh /data/security/* 2>/dev/null | sort -rh | head -20"
+
+              echo ""
+              echo "--- File count by directory ---"
+              docker run --rm -v jarvis-family_jarvis_data:/data alpine sh -c "for d in agents settings security logs catalyst system; do echo \"\$(find /data/\$d -type f 2>/dev/null | wc -l) files in \$d\"; done"
             else
               echo ""
               echo "=== STEP 1: Docker prune ==="
