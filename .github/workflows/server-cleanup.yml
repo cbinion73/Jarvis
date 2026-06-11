@@ -65,41 +65,67 @@ jobs:
               docker run --rm -v jarvis-family_jarvis_data:/data alpine sh -c "for d in agents settings security logs catalyst system; do echo \"\$(find /data/\$d -type f 2>/dev/null | wc -l) files in \$d\"; done"
             else
               echo ""
-              echo "=== STEP 1: Docker prune ==="
-              docker system prune -af --volumes 2>/dev/null || docker system prune -af
-              echo "Docker prune done."
+              echo "=== STEP 1: Truncate runaway JSONL logs in Docker volume ==="
+              docker run --rm -v jarvis-family_jarvis_data:/data alpine sh -c '
+                truncate_log() {
+                  f="$1"
+                  if [ -f "$f" ]; then
+                    size=$(du -sh "$f" | cut -f1)
+                    echo "Truncating $f ($size)"
+                    > "$f"
+                  fi
+                }
+                # Runaway state logs — safe to clear (current state lives in .json files)
+                truncate_log /data/agents/event_bus_state_log.jsonl
+                truncate_log /data/agents/background_state_log.jsonl
+                truncate_log /data/agents/tick_log.jsonl
+                truncate_log /data/agents/event_bus_log.jsonl
+                truncate_log /data/settings/assistant_core_log.jsonl
+                truncate_log /data/settings/assistant_core_state_log.jsonl
+                truncate_log /data/settings/adaptation_profiles_log.jsonl
+                truncate_log /data/settings/adaptation_profiles_state_log.jsonl
+                truncate_log /data/settings/identity_log.jsonl
+                truncate_log /data/settings/identity_state_log.jsonl
+                truncate_log /data/security/weather_advisories_log.jsonl
+                # Any remaining *_log.jsonl or *_state_log.jsonl over 10MB
+                find /data -name "*_log.jsonl" -size +10M | while read f; do
+                  size=$(du -sh "$f" | cut -f1)
+                  echo "Truncating leftover $f ($size)"
+                  > "$f"
+                done
+                find /data -name "*_state_log.jsonl" -size +10M | while read f; do
+                  size=$(du -sh "$f" | cut -f1)
+                  echo "Truncating leftover $f ($size)"
+                  > "$f"
+                done
+                echo "Volume log truncation complete."
+              '
 
               echo ""
-              echo "=== STEP 2: Truncate oversized JSONL log files (>100MB) ==="
-              find /home/jarvis/apps/jarvis/data -name "*.jsonl" -size +100M | while read f; do
-                SIZE=$(du -sh "$f" | cut -f1)
-                echo "Truncating $f ($SIZE)"
-                > "$f"
-              done
+              echo "=== STEP 2: Remove .lock files from volume ==="
+              docker run --rm -v jarvis-family_jarvis_data:/data alpine sh -c '
+                find /data -name "*.lock" | while read f; do
+                  echo "Removing $f"
+                  rm -f "$f"
+                done
+                echo "Lock cleanup complete."
+              '
 
               echo ""
-              echo "=== STEP 3: Remove .lock files left by crashed processes ==="
-              find /home/jarvis/apps/jarvis/data -name "*.lock" | while read f; do
-                echo "Removing lock: $f"
-                rm -f "$f"
-              done
-
-              echo ""
-              echo "=== STEP 4: Git GC ==="
-              cd /home/jarvis/apps/jarvis
-              git gc --prune=now --aggressive 2>&1 | tail -5
-
-              echo ""
-              echo "=== STEP 5: Clear tmp/pack garbage ==="
-              find /home/jarvis/apps/jarvis/.git -name "tmp_pack_*" -delete 2>/dev/null && echo "tmp_pack files cleared" || echo "No tmp_pack files found"
+              echo "=== STEP 3: Docker build cache prune (not volumes) ==="
+              docker builder prune -af
+              echo "Build cache pruned."
 
               echo ""
               echo "=== DISK AFTER ==="
               df -h /
+              echo ""
+              echo "--- Volume sizes after ---"
+              docker system df -v 2>/dev/null | grep jarvis
 
               echo ""
-              echo "=== STEP 6: Redeploy JARVIS with clean slate ==="
+              echo "=== STEP 4: Restart JARVIS container to pick up clean state ==="
               cd /home/jarvis/apps/jarvis/deploy
-              docker compose up -d --build jarvis
-              echo "✅ Cleanup + redeploy done at $(date)"
+              docker compose restart jarvis
+              echo "✅ Volume cleanup + restart done at $(date)"
             fi
