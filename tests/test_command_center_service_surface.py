@@ -300,6 +300,8 @@ class _StubRuntime:
             "mission_id": mission_id,
             "title": "Stub Mission",
             "status": "active",
+            "continuity_callback": "We discussed this before: Health was previously stated as one of the highest priorities.",
+            "linked_memories": ["Health was previously stated as one of the highest priorities."],
             "selected_agents": ["ambient-router", "storm"],
             "task_agent_labels": ["Mission Planner"],
             "work_state_summary": {
@@ -312,6 +314,39 @@ class _StubRuntime:
                 "escalations": 0,
                 "duplicate_suppressions": 0,
             },
+        }
+
+    def mission_control_snapshot(self, actor_name: str = "Chris") -> dict:
+        return {
+            "generated_at": "2026-06-11T12:00:00Z",
+            "actor": actor_name,
+            "summary": {"active_missions": 1},
+            "active_missions": [
+                {
+                    "mission_id": "mission-1",
+                    "title": "Health Reset",
+                    "brief": "Rebuild steady health momentum.",
+                    "brief_summary": {"why_it_matters": "Health has received less attention than the other major missions."},
+                    "why_this_matters": "Health has received less attention than the other major missions.",
+                    "next_step": "Stage a travel-resistant workout plan.",
+                    "progress_signal": "Consistency matters more than intensity right now.",
+                    "linked_memories": [
+                        "Health was previously stated as one of the highest priorities.",
+                    ],
+                    "continuity_callback": "We discussed this before: Health was previously stated as one of the highest priorities.",
+                    "background_prepared_outputs": [
+                        {"summary": "Travel-resistant workout plan drafted."},
+                    ],
+                    "accountability_update": {
+                        "headline": "Mission is active and ready for the next review.",
+                    },
+                    "mission_review": {
+                        "carry_message": "You do not need to carry the whole health mission mentally today.",
+                    },
+                }
+            ],
+            "conversation_routes": [{"route": "/health-center", "route_label": "Open Health"}],
+            "recommended_route": {"route": "/health-center", "route_label": "Open Health"},
         }
 
     def mission_work_state_snapshot(self, mission_id: str) -> dict:
@@ -688,6 +723,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Refresh Daily Brief", briefing_html)
         self.assertIn("Generate Live Brief", briefing_html)
         self.assertIn("Recent Brief Continuity", briefing_html)
+        self.assertIn("Things You May Have Forgotten", briefing_html)
+        self.assertIn("Health was previously stated as one of the highest priorities.", briefing_html)
         self.assertIn("status", briefing_snapshot)
         self.assertIn("briefing_text", briefing_snapshot)
         self.assertIn("today_board", briefing_snapshot)
@@ -786,6 +823,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Save Mission Detail", mission_board_html)
         self.assertIn("Inspect Mission", mission_board_html)
         self.assertIn("Recent Mission Continuity", mission_board_html)
+        self.assertIn("Continuity Callback", mission_board_html)
+        self.assertIn("Relevant Memory", mission_board_html)
         self.assertIn("Mission Workspaces", mission_board_html)
         self.assertIn("Handoff Console", mission_board_html)
         self.assertIn("Create Handoff", mission_board_html)

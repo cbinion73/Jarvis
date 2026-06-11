@@ -12,102 +12,105 @@ JARVIS keeps getting pulled back toward familiar shapes:
 
 That is not the correct frame.
 
+Read this after `docs/JARVIS-LIFE-OPERATING-OFFICER.md`.
+
+If this document conflicts with the Life Operating Officer directive, the Life
+Operating Officer directive wins.
+
 ## Canonical Statement
 
-JARVIS is an always-on orchestrator composed of around 60 specialized agents,
-with more continuously emerging.
+JARVIS is a conversation-first Life Operating Officer for Chris.
 
-Each agent has a defined purpose, scope, cadence, and responsibility.
+JARVIS helps Chris steward life across domains by transforming conversations
+into missions, missions into action, and action into measurable progress.
 
-They work on my behalf at all times.
+JARVIS should feel like one continuous presence that:
 
-When I engage directly, the relevant agents shift their attention toward me and
-coordinate in the foreground.
-
-When I am not engaging directly, they continue operating in the background on
-ongoing responsibilities, delegated projects, monitoring, preparation, and
-stewardship work.
-
-JARVIS is therefore an always-on, multi-agent orchestrator working on my
-behalf across life domains.
-
-Its primary job is not merely to answer me, but to:
-
-- maintain continuity
-- advance delegated work
-- supervise specialist agents
-- surface what matters
-- stage or execute bounded action
-- let me direct, review, approve, or override the system when needed
+- understands intent
+- builds missions from objectives
+- carries continuity across time
+- does useful work between conversations
+- surfaces what matters without making Chris hunt
+- reduces cognitive burden through stewardship
+- stages or executes bounded action when appropriate
 
 JARVIS is:
 
-- orchestration-first
+- conversation-first
+- mission-first
+- stewardship-first
 - continuity-first
-- oversight-first
-- delegation-first
-- voice-enabled, not voice-first
+- voice-first
+- autonomy-backed
 
-At its highest level, JARVIS exists to reduce the gap between a household's
-stated values and its lived daily reality.
+At its highest level, JARVIS exists to reduce the gap between Chris's stated
+values and his lived daily reality, then extend that stewardship outward to
+the household.
 
 It is not merely a convenience layer. It is meant to help a household become
 more like what it already said it wanted to be.
 
 ## Non-Negotiables
 
-### 1. JARVIS is not primarily reactive
+### 1. JARVIS turns objectives into missions
 
-It does not wait passively for prompts before doing useful work.
+The most important product behavior is:
 
-Specialist agents continue operating in the background:
+`Chris expresses an objective -> JARVIS creates a mission -> JARVIS helps complete it`
 
-- monitoring
-- reviewing
-- preparing
-- staging
-- escalating
-- synthesizing
+If a feature does not strengthen mission creation, mission tracking, mission
+execution, or mission stewardship, it should be questioned.
 
-When I engage directly, the right parts of the system turn toward me without
-ceasing to be an always-on society of agents.
+### 2. Conversation is the operating system
 
-### 2. Voice is optional, not central
+Navigation is subordinate.
 
-Voice matters, but it is not the primary product assumption.
+Menus are subordinate.
 
-The system must work beautifully when I:
+Dashboards are subordinate.
 
-- cannot speak
-- do not want to speak
-- need to scan quickly
-- need to tap, review, approve, defer, or resume work silently
+The user should speak naturally, and JARVIS should bring the right workspace,
+state, and actions into view.
 
-If a design assumes spoken interaction as the default path, it is drifting.
+Voice is Tier Zero. If reliable natural conversation is absent, the core
+product experience does not exist.
 
-### 3. The user experience is oversight and steering
+### 3. JARVIS is not primarily reactive
+
+JARVIS should continue useful work between conversations.
+
+The user should regularly discover:
+
+`I didn't ask for this, but it is useful.`
+
+Autonomy exists to strengthen stewardship, not to showcase agents.
+
+### 4. The user experience is guidance, not navigation
 
 The core human experience is not "ask a question and get an answer."
 
 It is:
 
-- see what matters now
-- understand what changed
-- inspect what agents are doing
-- redirect priorities
-- approve or deny actions
-- resume unfinished work
-- dive deep when needed
+- express an objective
+- receive a mission
+- understand what matters
+- see what changed
+- receive a recommendation
+- review what JARVIS did
+- act on the next right step
 
-### 4. Backend work must strengthen the agent society
+### 5. Backend work must strengthen life stewardship
 
 The backend is not merely an API layer.
 
-It is the operating substrate for a governed society of specialist agents.
+It is the operating substrate for mission creation, continuity, memory,
+background progress, and governed action on Chris's behalf.
 
-Priority backend categories therefore include:
+Priority backend categories include:
 
-- agent runtime and lifecycle
+- mission creation and lifecycle
+- voice reliability and conversational continuity
+- memory and open-loop continuity
 - registry and mission ownership
 - event bus and scheduler fabric
 - handoff and delegation
@@ -119,28 +122,28 @@ Priority backend categories therefore include:
 Where practical, backend decisions should bias toward durable event history,
 replayability, auditability, and explanation rather than opaque mutable state.
 
-### 5. Frontend work must strengthen command and continuity
+### 6. Frontend work must strengthen conversation and visible stewardship
 
 Frontend is not a gallery of disconnected screens.
 
 Its job is to help me:
 
-- command the system
+- speak naturally
+- see the workspace that matches the conversation
 - understand the current state
 - see what changed while I was away
-- take fast silent action
-- trust the system without reading everything
+- trust JARVIS without hunting
+- move from objective to plan to progress quickly
 
 If frontend work drifts toward generic dashboards, chat shells, or feature menus, it is drifting.
 
-### 6. JARVIS must become operable by the household, not only by one builder
+### 7. JARVIS must become operable by the household, not only by one builder
 
 JARVIS cannot remain a one-person-operated system that merely emits outputs for
 everyone else.
 
-The long-term target is a governed household intelligence that different family
-members can benefit from directly at the right level of complexity,
-responsibility, and trust.
+The long-term target is a governed household intelligence that family members
+can benefit from at the right level of complexity, responsibility, and trust.
 
 That means future work should preserve space for:
 
@@ -153,34 +156,20 @@ That means future work should preserve space for:
 
 Every major decision should be tested against these questions:
 
-1. Does this make JARVIS more like an always-on orchestrator, or more like a reactive assistant?
-2. Does this strengthen persistent delegated work, or only one-off interaction?
-3. Does this help me supervise and steer an active system, or just use another app screen?
-4. Does this preserve voice as optional rather than central?
-5. Does this make the agent society more real, more governed, and more continuous?
-6. Does this help close the gap between stated values and lived reality?
-7. Does this make JARVIS more household-operable instead of more builder-dependent?
+1. Does this make JARVIS more like a Life Operating Officer and less like a tool?
+2. Does this help conversation become mission, and mission become progress?
+3. Does this reduce cognitive burden and increase stewardship?
+4. Does this strengthen reliable voice and conversational continuity?
+5. Does this help JARVIS do useful work between conversations?
+6. Does this surface insight instead of raw information?
+7. Does this help close the gap between stated values and lived reality?
+8. Does this make JARVIS more household-operable instead of more builder-dependent?
 
 If the answer is no, the work is probably drifting.
 
-## Relationship To Other Docs
+## Role In The Canon
 
-This document is the shortest canonical framing.
+This document is the operating-rule layer.
 
-Use it as the first alignment check before:
-
-- roadmap updates
-- mockup generation
-- frontend redesign
-- backend architecture changes
-- checklist rewrites
-
-Supporting documents:
-
-- `docs/always-on-agent-backend-blueprint.md`
-- `docs/branch-integration-rubric.md`
-- `docs/jarvis-desktop-command-center-model.md`
-- `artifacts/mockups/jarvis-numbered-outline-checklist.html`
-- `artifacts/mockups/jarvis-desktop-command-center.html`
-
-If another document conflicts with this one, this document wins unless deliberately revised.
+Use it to judge product, UI, and architecture decisions after reading the
+directive and session-state docs.

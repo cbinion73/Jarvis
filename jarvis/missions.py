@@ -405,21 +405,44 @@ class MissionSupport:
         now = str(dossier.get("updated_at", "")).strip() or _now_iso()
         work_states = dict(dossier.get("agent_work_states") or {})
         title = str(dossier.get("title", "Mission")).strip() or "Mission"
+        objective = str(dossier.get("objective", "")).strip() or title
+        next_step = str(dossier.get("next_step", "")).strip() or f"Advance {title.lower()}."
+        why_this_matters = str(dossier.get("why_this_matters", "")).strip()
+        success_definition = str(dossier.get("success_definition", "")).strip()
+        progress_signal = str(dossier.get("progress_signal", "")).strip()
+        recommendation = str(dossier.get("recommendation", "")).strip()
+        primary_domain = str(dossier.get("primary_domain", "")).strip() or "general"
+        next_actions = [dict(item) for item in list(dossier.get("next_actions") or []) if isinstance(item, dict)]
+        milestones = [dict(item) for item in list(dossier.get("milestones") or []) if isinstance(item, dict)]
         mission_id = str(dossier.get("mission_id", "")).strip()
         selected = [str(agent_id).strip() for agent_id in list(dossier.get("selected_agents", [])) if str(agent_id).strip()]
         for index, agent_id in enumerate(selected):
             details = self._agent_display_payload(agent_id)
+            role_name = str((details.get("mission_roles") or ["support"])[0]).strip() or "support"
+            lead_task_title = str((next_actions[0] or {}).get("title", "")).strip() if next_actions else next_step
+            lead_task_summary = (
+                progress_signal
+                or why_this_matters
+                or f"Build visible momentum for {objective.lower()}."
+            )
+            support_review_title = str((milestones[0] or {}).get("title", "")).strip() if milestones else "Review mission success definition"
+            support_review_summary = (
+                success_definition
+                or recommendation
+                or f"Review how this {primary_domain} mission should contribute to the next move."
+            )
+            support_focus = recommendation or f"Support {objective.lower()}."
             default_task = self._task_ref(
-                title="Support mission continuity",
+                title=lead_task_title if index == 0 else f"Support {title}",
                 status="active" if index == 0 else "queued",
-                summary=f"Advance {title.lower()} without losing partial work or ownership clarity.",
+                summary=lead_task_summary if index == 0 else support_review_summary,
                 source="mission-bootstrap",
                 updated_at=now,
             )
             default_review = self._task_ref(
-                title="Review mission brief",
+                title=support_review_title,
                 status="pending",
-                summary="Inspect the mission frame, constraints, and current evidence.",
+                summary=support_review_summary,
                 source="mission-bootstrap",
                 updated_at=now,
             )
@@ -428,7 +451,11 @@ class MissionSupport:
                 from_agent="jarvis-orchestrator",
                 to_agent=agent_id,
                 subject=title,
-                summary=f"You are attached to {title}. Keep continuity, ownership, and review posture explicit.",
+                summary=(
+                    f"Objective: {objective}. "
+                    f"{'Lead the next move.' if index == 0 else 'Support the mission with a clear contribution.'} "
+                    f"Next step: {next_step}"
+                ),
                 created_at=now,
                 status="delivered",
             )
@@ -437,31 +464,51 @@ class MissionSupport:
                 work_states[agent_id] = self._new_workspace(
                     mission_id=mission_id,
                     agent_id=agent_id,
-                    role=str((details.get("mission_roles") or ["support"])[0]),
+                    role=role_name,
                     ownership_mode="lead" if index == 0 else "supporting",
                     status="active" if index == 0 else "ready",
-                    current_focus=title,
+                    current_focus=next_step if index == 0 else support_focus,
                     inbox=[initial_message],
                     active_tasks=[default_task] if index == 0 else [],
                     pending_reviews=[] if index == 0 else [default_review],
-                    decisions=[self._decision(summary="Mission accepted into workspace", rationale="Mission dossier created and assigned.", created_at=now)],
-                    hypotheses=[self._hypothesis(summary=f"{title} likely needs {details.get('label', agent_id)} on {details.get('domain', 'general')} continuity.", timestamp=now)],
+                    decisions=[
+                        self._decision(
+                            summary="Mission accepted into workspace",
+                            rationale=why_this_matters or "Mission dossier created and assigned.",
+                            created_at=now,
+                        )
+                    ],
+                    hypotheses=[
+                        self._hypothesis(
+                            summary=(
+                                success_definition
+                                or f"{title} likely needs {details.get('label', agent_id)} on {details.get('domain', 'general')} continuity."
+                            ),
+                            timestamp=now,
+                        )
+                    ],
                     updated_at=now,
                 )
                 continue
             state.setdefault("mission_id", mission_id)
             state.setdefault("agent_id", agent_id)
-            state.setdefault("role", str((details.get("mission_roles") or ["support"])[0]))
+            state.setdefault("role", role_name)
             state.setdefault("status", "ready")
             state.setdefault("ownership_mode", "lead" if index == 0 else "supporting")
-            state.setdefault("current_focus", title)
+            state.setdefault("current_focus", next_step if index == 0 else support_focus)
             state["inbox"] = list(state.get("inbox") or []) or [initial_message]
             state["outbox"] = list(state.get("outbox") or [])
-            state["active_tasks"] = list(state.get("active_tasks") or [])
+            state["active_tasks"] = list(state.get("active_tasks") or []) or ([default_task] if index == 0 else [])
             state["blocked_tasks"] = list(state.get("blocked_tasks") or [])
-            state["pending_reviews"] = list(state.get("pending_reviews") or [])
-            state["recent_decisions"] = self._trim_records(list(state.get("recent_decisions") or []))
-            state["current_hypotheses"] = self._trim_records(list(state.get("current_hypotheses") or []))
+            state["pending_reviews"] = list(state.get("pending_reviews") or []) or ([] if index == 0 else [default_review])
+            state["recent_decisions"] = self._trim_records(
+                list(state.get("recent_decisions") or [])
+                or [self._decision(summary="Mission accepted into workspace", rationale=why_this_matters or "Mission dossier created and assigned.", created_at=now)]
+            )
+            state["current_hypotheses"] = self._trim_records(
+                list(state.get("current_hypotheses") or [])
+                or [self._hypothesis(summary=success_definition or f"{title} needs a clear next move and continuity.", timestamp=now)]
+            )
             state.setdefault("last_handoff_at", "")
             state["updated_at"] = str(state.get("updated_at", "")).strip() or now
             work_states[agent_id] = state
@@ -471,6 +518,7 @@ class MissionSupport:
         dossier["escalations"] = list(dossier.get("escalations") or [])
         dossier["ownership_transfers"] = list(dossier.get("ownership_transfers") or [])
         dossier["duplicate_suppressions"] = list(dossier.get("duplicate_suppressions") or [])
+        dossier["background_prepared_outputs"] = [dict(item) for item in list(dossier.get("background_prepared_outputs") or []) if isinstance(item, dict)]
         return dossier
 
     def _load_mission(self, mission_id: str) -> dict[str, Any] | None:
@@ -1286,9 +1334,26 @@ class MissionSupport:
     ) -> dict[str, Any]:
         now = _now_iso()
         primary_domain = self._infer_primary_domain(request)
+        objective = self._mission_objective(request)
         trust_zone = self._trust_zone_for_domain(primary_domain)
         title = self._mission_title(request, primary_domain)
         brief = self._mission_brief(request, primary_domain)
+        mission_type = self._mission_type(request, primary_domain)
+        why_this_matters = self._why_this_matters(primary_domain, request)
+        success_definition = self._success_definition(primary_domain, request)
+        time_horizon = self._time_horizon(request, primary_domain)
+        momentum = self._initial_momentum(request, primary_domain)
+        milestones = self._milestones_for_request(request, primary_domain)
+        next_actions = self._next_actions_for_request(request, primary_domain)
+        recommendation = self._recommendation_for_request(request, primary_domain)
+        risks = self._risks_for_request(request, primary_domain)
+        mission_open_loops = self._open_loops_for_request(request, primary_domain)
+        accountability_cadence = self._accountability_cadence(primary_domain)
+        progress_signal = self._initial_progress_signal(primary_domain, request)
+        support_message = self._support_message(primary_domain, request)
+        workspace_route = "/mission-board"
+        truth_labels = self._truth_labels_for_mission()
+        target_metrics = self._target_metrics_for_request(request, primary_domain)
         mission_id = f"mission-{uuid.uuid4().hex[:10]}"
         selected_agents = self._select_core_agents(request, primary_domain)
         task_template = self._template_for_request(request, primary_domain)
@@ -1311,6 +1376,12 @@ class MissionSupport:
             action_decisions.append(MissionActionDecision(**decision))
             if decision.get("approval_request_id"):
                 approval_ids.append(str(decision["approval_request_id"]))
+        brief_summary = {
+            "title": title,
+            "why_it_matters": why_this_matters,
+            "status": "pending-approval" if approval_ids else "active",
+            "top_next_action": str((next_actions[0] if next_actions else {}).get("title", "")).strip(),
+        }
         subtasks = [
             MissionSubtask(
                 subtask_id=f"sub-{uuid.uuid4().hex[:8]}",
@@ -1388,6 +1459,26 @@ class MissionSupport:
             family_impact=family_impact,
             created_at=now,
             updated_at=now,
+            origin="conversation",
+            objective=objective,
+            mission_type=mission_type,
+            why_this_matters=why_this_matters,
+            success_definition=success_definition,
+            time_horizon=time_horizon,
+            momentum=momentum,
+            milestones=milestones,
+            next_actions=next_actions,
+            next_step=str((next_actions[0] if next_actions else {}).get("title", "")).strip(),
+            recommendation=recommendation,
+            risks=risks,
+            open_loops=mission_open_loops,
+            accountability_cadence=accountability_cadence,
+            progress_signal=progress_signal,
+            support_message=support_message,
+            workspace_route=workspace_route,
+            brief_summary=brief_summary,
+            truth_labels=truth_labels,
+            target_metrics=target_metrics,
         )
         payload = self._normalize_work_states(asdict(dossier))
         self.save_mission(payload)
@@ -1630,13 +1721,46 @@ class MissionSupport:
         if dossier is None:
             raise KeyError(f"Unknown mission: {mission_id}")
         outputs = list(dossier.get("outputs", []))
+        existing_key = (
+            str(payload.get("kind", "")).strip(),
+            str(payload.get("title", "")).strip(),
+            str(payload.get("status", "")).strip(),
+        )
+        if any(
+            (
+                str(item.get("kind", "")).strip(),
+                str(item.get("title", "")).strip(),
+                str(item.get("status", "")).strip(),
+            ) == existing_key
+            for item in outputs
+        ):
+            return dossier
         outputs.append(payload)
         dossier["outputs"] = outputs
         dossier["updated_at"] = _now_iso()
         return self.save_mission(dossier)
 
+    def set_background_prepared_outputs(self, mission_id: str, outputs: list[dict[str, Any]]) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        normalized = [dict(item) for item in outputs if isinstance(item, dict)]
+        if list(dossier.get("background_prepared_outputs") or []) == normalized:
+            return dossier
+        dossier["background_prepared_outputs"] = normalized
+        dossier["updated_at"] = _now_iso()
+        return self.save_mission(dossier)
+
     def _infer_primary_domain(self, request: str) -> str:
         lowered = request.lower()
+        if any(token in lowered for token in ("weight", "workout", "exercise", "sleep", "nutrition", "blood pressure", "health", "fitness", "longevity")):
+            return "health"
+        if any(token in lowered for token in ("book sales", "book", "writing", "article", "publish", "publishing", "audience", "campaign", "content")):
+            return "writing"
+        if any(token in lowered for token in ("jarvis", "roadmap", "feature", "build slice", "implementation", "product rescope")):
+            return "jarvis-development"
+        if any(token in lowered for token in ("summer camp", "scout", "scouting", "troop", "camp", "advancement", "service project")):
+            return "scouting"
         if any(token in lowered for token in ("weather", "storm", "travel", "route", "campout", "outing", "forecast")):
             return "weather"
         if any(token in lowered for token in ("calendar", "meeting", "email", "task", "project", "inbox")):
@@ -1653,6 +1777,10 @@ class MissionSupport:
 
     def _trust_zone_for_domain(self, domain: str) -> str:
         mapping = {
+            "health": "family-bmad.personal-local",
+            "writing": "family-bmad.personal-local",
+            "jarvis-development": "family-bmad.personal-local",
+            "scouting": "family-bmad.family-ops",
             "weather": "family-bmad.family-ops",
             "family": "family-bmad.family-ops",
             "communications": "family-bmad.communications",
@@ -1665,6 +1793,15 @@ class MissionSupport:
 
     def _mission_title(self, request: str, primary_domain: str) -> str:
         trimmed = request.strip()
+        lowered = trimmed.lower()
+        if "lose" in lowered and "pound" in lowered:
+            return "Health mission: lose weight with a real plan"
+        if "book sales" in lowered or ("increase" in lowered and "sales" in lowered):
+            return "Writing mission: increase book sales"
+        if "retirement" in lowered:
+            return "Finance mission: prepare for retirement"
+        if "summer camp" in lowered:
+            return "Scouting mission: summer camp readiness"
         if trimmed:
             lead = trimmed.split(".")[0].split("?")[0].strip()
             if len(lead) > 72:
@@ -1672,6 +1809,10 @@ class MissionSupport:
             if lead:
                 return lead[0].upper() + lead[1:]
         labels = {
+            "health": "Health mission",
+            "writing": "Writing and publishing mission",
+            "jarvis-development": "JARVIS development mission",
+            "scouting": "Scouting and service mission",
             "weather": "Weather and route mission",
             "communications": "Communications and calendar mission",
             "family": "Family operations mission",
@@ -1683,6 +1824,10 @@ class MissionSupport:
 
     def _mission_brief(self, request: str, primary_domain: str) -> str:
         summaries = {
+            "health": "Turn the health objective into a practical plan with milestones, consistency, and accountability.",
+            "writing": "Turn the publishing objective into a campaign with milestones, content actions, and momentum tracking.",
+            "jarvis-development": "Turn the product objective into a focused build mission with visible progress and the next clean implementation step.",
+            "scouting": "Turn the scouting objective into a readiness plan with missing items, logistics, and timing visibility.",
             "weather": "Translate live weather into practical guidance, route timing, and family-safe next actions.",
             "communications": "Triage communications, schedule pressure, and next drafts without losing tone or timing.",
             "family": "Reduce household friction and sequence the next clean family moves.",
@@ -1699,7 +1844,15 @@ class MissionSupport:
     def _select_core_agents(self, request: str, primary_domain: str) -> list[str]:
         lowered = request.lower()
         selected = ["ambient-router"]
-        if primary_domain == "weather":
+        if primary_domain == "health":
+            selected.extend(["executive-watch", "memory-curator"])
+        elif primary_domain == "writing":
+            selected.extend(["catalyst-personal", "memory-curator", "executive-watch"])
+        elif primary_domain == "jarvis-development":
+            selected.extend(["system-steward", "executive-watch", "memory-curator"])
+        elif primary_domain == "scouting":
+            selected.extend(["family-logistics", "watchtower", "executive-watch"])
+        elif primary_domain == "weather":
             selected.extend(["storm", "watchtower", "family-logistics"])
         elif primary_domain == "communications":
             selected.extend(["catalyst-personal", "executive-watch", "memory-curator"])
@@ -1727,20 +1880,28 @@ class MissionSupport:
             return "communicator"
         if any(token in lowered for token in ("analyze", "assess", "decide")):
             return "analyst"
-        if primary_domain in {"workshop", "weather", "finance"}:
+        if primary_domain in {"workshop", "weather", "finance", "health", "writing", "jarvis-development", "scouting"}:
             return "domain-specialist"
         return "planner"
 
     def _needs_task_agent(self, request: str, primary_domain: str, selected_agents: list[str]) -> bool:
         lowered = request.lower()
-        if primary_domain in {"workshop", "finance"}:
+        if primary_domain in {"workshop", "finance", "health", "writing", "jarvis-development", "scouting"}:
             return True
         return any(token in lowered for token in ("together", "figure out", "build", "route", "trip", "project", "compare", "organize"))
 
     def _planned_actions_for_domain(self, domain: str, request: str) -> list[str]:
         lowered = request.lower()
         actions: list[str] = ["briefing-generation"]
-        if domain == "weather":
+        if domain == "health":
+            actions.extend(["reminder"])
+        elif domain == "writing":
+            actions.extend(["email-draft", "reminder"])
+        elif domain == "jarvis-development":
+            actions.extend(["briefing-generation"])
+        elif domain == "scouting":
+            actions.extend(["family-alert", "reminder"])
+        elif domain == "weather":
             actions.append("route-weather-check")
             if any(token in lowered for token in ("warn", "alert", "family")):
                 actions.append("family-alert")
@@ -1758,6 +1919,8 @@ class MissionSupport:
 
     def _family_impact(self, domain: str, request: str) -> list[str]:
         alerts = []
+        if domain == "scouting":
+            alerts.append("This mission affects readiness, logistics, and family planning around upcoming scouting events.")
         if domain == "weather":
             alerts.append("Weather timing could affect departures, events, or outdoor plans.")
         if any(token in request.lower() for token in ("kids", "school", "family", "home")):
@@ -1766,6 +1929,14 @@ class MissionSupport:
 
     def _follow_ups(self, domain: str, request: str) -> list[str]:
         follow_ups = ["Capture the result and keep the next clean move visible."]
+        if domain == "health":
+            follow_ups.append("Review consistency before intensity when you check progress.")
+        if domain == "writing":
+            follow_ups.append("Use campaign feedback to refine the next publishing move.")
+        if domain == "jarvis-development":
+            follow_ups.append("Keep the next implementation slice visible in the mission workspace and the Daily Brief.")
+        if domain == "scouting":
+            follow_ups.append("Re-check readiness before the event window closes.")
         if domain == "weather":
             follow_ups.append("Re-check live weather before the relevant departure or event window.")
         if domain == "communications":
@@ -1773,6 +1944,192 @@ class MissionSupport:
         if "project" in request.lower() or domain == "workshop":
             follow_ups.append("Break the mission into a sequenced execution path once evidence is gathered.")
         return follow_ups
+
+    def _mission_objective(self, request: str) -> str:
+        cleaned = request.strip()
+        return cleaned[0].upper() + cleaned[1:] if cleaned else "Advance this mission with a practical plan."
+
+    def _mission_type(self, request: str, primary_domain: str) -> str:
+        lowered = request.lower()
+        if primary_domain == "health":
+            return "goal-pursuit"
+        if primary_domain == "writing":
+            return "campaign"
+        if primary_domain == "scouting":
+            return "readiness-check"
+        if primary_domain == "jarvis-development":
+            return "plan-build"
+        if "ready" in lowered:
+            return "readiness-check"
+        return "goal-pursuit"
+
+    def _why_this_matters(self, primary_domain: str, request: str) -> str:
+        mapping = {
+            "health": "Health progress compounds into better energy, clarity, and long-term stewardship.",
+            "writing": "Publishing momentum grows audience, revenue, and creative leverage over time.",
+            "jarvis-development": "A tighter build mission creates visible product progress instead of architecture drift.",
+            "scouting": "Readiness reduces last-minute stress and protects the quality of the scouting experience.",
+        }
+        return mapping.get(primary_domain, f"This matters because it affects real stewardship, not just task completion. Request: {request.strip()}")
+
+    def _success_definition(self, primary_domain: str, request: str) -> str:
+        mapping = {
+            "health": "Success means a realistic plan is active, progress is measurable, and consistency is easier to maintain.",
+            "writing": "Success means a visible campaign is in motion with clear next actions and measurable momentum.",
+            "jarvis-development": "Success means the next build slice is clearly defined, active, and reflected in the product surfaces.",
+            "scouting": "Success means readiness gaps are visible, the plan is sequenced, and key logistics are under control.",
+        }
+        return mapping.get(primary_domain, f"Success means this request becomes a visible mission with next actions and follow-through: {request.strip()}")
+
+    def _time_horizon(self, request: str, primary_domain: str) -> str:
+        lowered = request.lower()
+        if any(token in lowered for token in ("today", "tomorrow", "tonight")):
+            return "today"
+        if any(token in lowered for token in ("this week", "weekly", "summer camp", "camp")):
+            return "this-week"
+        if any(token in lowered for token in ("month", "30 days", "four weeks")):
+            return "this-month"
+        if any(token in lowered for token in ("quarter", "retirement")):
+            return "this-quarter"
+        return "ongoing" if primary_domain in {"health", "writing", "jarvis-development"} else "this-week"
+
+    def _initial_momentum(self, request: str, primary_domain: str) -> str:
+        lowered = request.lower()
+        if any(token in lowered for token in ("stalled", "behind", "not moved")):
+            return "slipping"
+        if any(token in lowered for token in ("ready", "improve", "build", "increase", "prepare")):
+            return "building"
+        return "steady"
+
+    def _milestones_for_request(self, request: str, primary_domain: str) -> list[dict[str, object]]:
+        milestones_map = {
+            "health": [
+                "Establish target and current health baseline",
+                "Create a realistic weekly consistency plan",
+                "Track progress against the first milestone window",
+            ],
+            "writing": [
+                "Define the campaign goal and offer focus",
+                "Build the first content and promotion sequence",
+                "Review momentum and adjust the next move",
+            ],
+            "jarvis-development": [
+                "Frame the next product slice clearly",
+                "Implement the smallest visible improvement",
+                "Verify the slice in the real product surface",
+            ],
+            "scouting": [
+                "Identify readiness gaps and missing items",
+                "Sequence logistics and coordination steps",
+                "Confirm readiness before the event window",
+            ],
+        }
+        labels = milestones_map.get(primary_domain, [
+            "Clarify the mission frame",
+            "Create the first practical plan",
+            "Advance the mission with a visible next step",
+        ])
+        results = []
+        for idx, label in enumerate(labels[:5], start=1):
+            results.append({"milestone_id": f"ms-{idx}", "title": label, "status": "pending"})
+        return results
+
+    def _next_actions_for_request(self, request: str, primary_domain: str) -> list[dict[str, object]]:
+        actions_map = {
+            "health": [
+                "Log the current baseline and target for this plan",
+                "Review the first week consistency plan",
+            ],
+            "writing": [
+                "Review the first three campaign actions JARVIS prepared",
+                "Choose the first content push to stage",
+            ],
+            "jarvis-development": [
+                "Start the smallest visible product slice for this mission",
+                "Verify the mission appears correctly in the product surface",
+            ],
+            "scouting": [
+                "Confirm which readiness items are still missing",
+                "Review the first logistics checklist JARVIS assembled",
+            ],
+        }
+        labels = actions_map.get(primary_domain, ["Review the first plan and take the next clean step."])
+        results = []
+        for idx, label in enumerate(labels[:3], start=1):
+            results.append({"action_id": f"act-{idx}", "title": label, "status": "pending"})
+        return results
+
+    def _recommendation_for_request(self, request: str, primary_domain: str) -> str:
+        mapping = {
+            "health": "Start with consistency, not intensity, for the first phase of this mission.",
+            "writing": "Begin with one focused campaign sequence rather than scattering effort across channels.",
+            "jarvis-development": "Build the smallest product slice that changes what Chris can feel immediately.",
+            "scouting": "Solve readiness gaps before adding new optional work or purchases.",
+        }
+        return mapping.get(primary_domain, "Start with the clearest next move and keep the mission visible.")
+
+    def _risks_for_request(self, request: str, primary_domain: str) -> list[str]:
+        mapping = {
+            "health": ["Inconsistency is a bigger risk than ambition right now."],
+            "writing": ["Momentum may decay without a visible campaign cadence."],
+            "jarvis-development": ["Architecture drift could outrun visible product progress."],
+            "scouting": ["Last-minute logistics could create stress if readiness stays implicit."],
+        }
+        return mapping.get(primary_domain, ["This mission could drift without visible follow-through."])
+
+    def _open_loops_for_request(self, request: str, primary_domain: str) -> list[str]:
+        mapping = {
+            "health": ["Baseline confirmation is still needed.", "The first accountability check-in is not yet complete."],
+            "writing": ["The first promotion sequence needs review.", "Campaign success criteria should stay visible."],
+            "jarvis-development": ["The next implementation slice must stay visible in the mission workspace."],
+            "scouting": ["Readiness gaps still need confirmation.", "The final logistics pass is still open."],
+        }
+        return mapping.get(primary_domain, ["The next clean move should remain visible."])
+
+    def _accountability_cadence(self, primary_domain: str) -> str:
+        return {
+            "health": "weekly",
+            "writing": "weekly",
+            "jarvis-development": "twice-weekly",
+            "scouting": "event-countdown",
+        }.get(primary_domain, "weekly")
+
+    def _initial_progress_signal(self, primary_domain: str, request: str) -> str:
+        return {
+            "health": "A realistic health mission is now framed and ready to build momentum.",
+            "writing": "The campaign now has a first structure instead of remaining a vague growth goal.",
+            "jarvis-development": "This mission now has a concrete slice instead of staying at the idea level.",
+            "scouting": "Readiness is now being made explicit so the remaining gaps can be closed.",
+        }.get(primary_domain, "This mission now has a visible first structure.")
+
+    def _support_message(self, primary_domain: str, request: str) -> str:
+        return {
+            "health": "Let’s recover or build momentum without overcorrecting.",
+            "writing": "We do not need to solve the whole growth engine at once. We need the first useful push.",
+            "jarvis-development": "Keep the slice small enough to ship and visible enough to feel.",
+            "scouting": "You do not need to carry all of this mentally. We can track readiness step by step.",
+        }.get(primary_domain, "JARVIS has the first pass framed. Now we keep it visible and moving.")
+
+    def _truth_labels_for_mission(self) -> dict[str, str]:
+        return {
+            "objective": "confirmed",
+            "primary_domain": "inferred",
+            "success_definition": "inferred",
+            "milestones": "inferred",
+            "next_actions": "inferred",
+            "progress_signal": "inferred",
+        }
+
+    def _target_metrics_for_request(self, request: str, primary_domain: str) -> list[str]:
+        if primary_domain == "health":
+            return ["Baseline captured", "Weekly consistency tracked"]
+        if primary_domain == "writing":
+            return ["Campaign launched", "Momentum reviewed"]
+        if primary_domain == "jarvis-development":
+            return ["Visible slice shipped", "Surface verified"]
+        if primary_domain == "scouting":
+            return ["Readiness gaps closed", "Logistics confirmed"]
+        return []
 
     def _resolve_action(
         self,

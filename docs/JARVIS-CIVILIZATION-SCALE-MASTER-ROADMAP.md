@@ -15,9 +15,9 @@ It exists to answer five questions clearly:
 
 This roadmap should be read after:
 
+- `docs/JARVIS-LIFE-OPERATING-OFFICER.md`
 - `docs/jarvis-canonical-operating-model.md`
-- `docs/always-on-agent-backend-blueprint.md`
-- `docs/JARVIS-MATURITY-MODEL.md`
+- `docs/JARVIS-SESSION-STATE.md`
 
 If planning documents disagree about current execution status, maturity
 placement, or what should be worked next, `docs/JARVIS-SESSION-STATE.md` wins.
@@ -27,19 +27,22 @@ This roadmap remains the long-horizon strategy document.
 
 JARVIS is not a chat interface, dashboard, or smart-home wrapper.
 
-JARVIS is an always-on orchestrator composed of specialized agents operating on
-behalf of a household across time.
+JARVIS is a conversation-first Life Operating Officer that helps Chris steward
+life across domains.
 
-Direct interaction is only one operating mode inside a continuously running
-system.
+Its magic begins when a conversation becomes a mission, a mission becomes
+visible coordinated work, and coordinated work becomes measurable progress.
+
+Always-on orchestration, agents, memory, governance, and interfaces matter as
+supporting machinery only insofar as they strengthen that felt experience.
 
 The household should experience:
 
-- one governed intelligence layer
+- one trusted conversational presence
 - one continuity engine across time
-- one institutional memory system
-- one command-and-oversight surface for live steering
-- one background society of agents doing bounded delegated work
+- one mission system that turns intention into execution
+- one background intelligence layer doing bounded delegated work
+- one stewardship surface that brings the right view into the conversation
 
 The final category is not "assistant software."
 
@@ -61,42 +64,55 @@ The deepest promise is:
 
 **you're not carrying this alone**
 
+Operational restatement:
+
+**JARVIS helps Chris run his life by carrying the burden of life
+administration on his behalf.**
+
 ## Roadmap Doctrine
 
-Everything below this point should obey six non-negotiables.
+Everything below this point should obey these non-negotiables.
 
 ### 1. Always-on beats reactive
 
 JARVIS must continue useful work when no one is actively using an interface.
 
-### 2. Oversight beats chat
+### 2. Conversation beats navigation
 
 The core user experience is:
 
-- what changed
-- what matters
-- what is underway
-- what needs approval
-- what should be redirected
+- speak naturally
+- have JARVIS understand the real objective
+- see the right workspace appear
+- receive guidance, insight, and next actions
+- review what JARVIS did while away
 
-### 3. Governance beats raw autonomy
+### 3. Mission creation beats feature sprawl
+
+The most important product loop is:
+
+`conversation -> mission -> visible workspace -> progress -> accountability`
+
+Anything that does not strengthen that loop is secondary.
+
+### 4. Governance beats raw autonomy
 
 No expansion of agent authority should outrun supervision, auditability,
 rollback posture, or trust boundaries.
 
-### 4. Event truth beats opaque mutable state
+### 5. Event truth beats opaque mutable state
 
 Where practical, the event log should become the system ground truth, with
 state derived from typed, versioned, replayable history.
 
-### 5. Household-operable beats builder-dependent
+### 6. Household-operable beats builder-dependent
 
 The long-term target is not "Chris can operate everything."
 
 It is "the household can benefit from JARVIS directly, at the right level of
 responsibility and complexity."
 
-### 6. Earned authority beats assumed authority
+### 7. Earned authority beats assumed authority
 
 The promotion engine is a core civilization primitive.
 
@@ -113,7 +129,17 @@ Civilization scale does not come from more features.
 
 It comes from a small set of load-bearing systems becoming real.
 
-### 1. Always-on runtime kernel
+### 1. Conversation and voice reliability
+
+If Chris cannot naturally speak with JARVIS and receive intelligent,
+context-aware responses, the core product promise is not real.
+
+### 2. Mission creation and stewardship engine
+
+JARVIS needs durable mission creation, planning, tracking, accountability,
+recommendation, and follow-through across life domains.
+
+### 3. Always-on runtime kernel
 
 JARVIS needs durable agent lifecycle control:
 
@@ -125,7 +151,7 @@ JARVIS needs durable agent lifecycle control:
 - escalate
 - retire
 
-### 2. Event-grounded system truth
+### 4. Event-grounded system truth
 
 JARVIS needs append-only, typed, versioned history for:
 
@@ -136,7 +162,7 @@ JARVIS needs append-only, typed, versioned history for:
 - promotion
 - failure
 
-### 3. Governed agent society
+### 5. Governed agent society
 
 JARVIS needs a real supervision plane for:
 
@@ -147,7 +173,7 @@ JARVIS needs a real supervision plane for:
 - rollback posture
 - doctrine formation
 
-### 4. Institutional memory and continuity
+### 6. Institutional memory and continuity
 
 JARVIS needs memory that compounds and is actually used:
 
@@ -158,7 +184,7 @@ JARVIS needs memory that compounds and is actually used:
 - lessons learned
 - prior resolutions
 
-### 5. Household command and participation
+### 7. Household command and participation
 
 JARVIS needs product surfaces that make the society visible and steerable:
 
@@ -169,7 +195,7 @@ JARVIS needs product surfaces that make the society visible and steerable:
 - household-safe controls
 - role-aware participation
 
-### 6. Promotion and earned authority
+### 8. Promotion and earned authority
 
 JARVIS needs the mechanism that converts track record into bounded authority.
 
@@ -179,8 +205,8 @@ This is the bridge from "sandbox intelligence" to "governed real work."
 
 JARVIS is no longer just a speculative architecture.
 
-It is in the transition from a multi-surface intelligent product to a real
-always-on household operating system.
+It is in transition from an ambitious multi-surface product into a real Life
+Operating Officer.
 
 ### Already real
 
@@ -190,7 +216,7 @@ always-on household operating system.
 - real command surfaces across the major household tabs
 - recurring runtime verification discipline
 - doctrine for trust zones, sandboxing, staged authority, and governed action
-- canonical docs that define JARVIS as an always-on orchestrator
+- canonical docs now aligned to the Life Operating Officer rescope
 - backend foundations for registry, runtime, routing, supervision, and work
   state
 

@@ -4,13 +4,29 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (Companion Vision directive added)
+Last updated: 2026-06-10 (Life Operating Officer directive aligned)
 
 ---
 
 # SHIP THE FEELING — HARD OVERRIDE
 
 **This is the top directive. It overrides all other priorities.**
+
+Read `docs/JARVIS-LIFE-OPERATING-OFFICER.md` before making implementation
+decisions.
+
+For a clean read order during this rescope, start with
+`docs/JARVIS-RESCOPE-ENTRYPOINT.md`.
+
+That document now defines the product identity of JARVIS:
+
+- conversation-first
+- mission-first
+- stewardship-first
+- voice Tier Zero
+
+Future work must treat agents, dashboards, and architectural sophistication as
+supporting machinery, not the product itself.
 
 Chris wants to feel the magic of his AI companion.
 

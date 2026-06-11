@@ -715,6 +715,30 @@ class MissionDossier:
     family_impact: list[str] = field(default_factory=list)
     created_at: str = ""
     updated_at: str = ""
+    origin: str = "conversation"
+    objective: str = ""
+    mission_type: str = ""
+    why_this_matters: str = ""
+    success_definition: str = ""
+    time_horizon: str = "ongoing"
+    momentum: str = "unknown"
+    milestones: list[dict[str, object]] = field(default_factory=list)
+    next_actions: list[dict[str, object]] = field(default_factory=list)
+    next_step: str = ""
+    recommendation: str = ""
+    risks: list[str] = field(default_factory=list)
+    open_loops: list[str] = field(default_factory=list)
+    accountability_cadence: str = ""
+    progress_signal: str = ""
+    support_message: str = ""
+    workspace_route: str = "/mission-board"
+    brief_summary: dict[str, object] = field(default_factory=dict)
+    truth_labels: dict[str, str] = field(default_factory=dict)
+    target_metrics: list[str] = field(default_factory=list)
+    due_date: str = ""
+    secondary_domains: list[str] = field(default_factory=list)
+    linked_memories: list[str] = field(default_factory=list)
+    background_prepared_outputs: list[dict[str, object]] = field(default_factory=list)
 
 
 @dataclass(slots=True)

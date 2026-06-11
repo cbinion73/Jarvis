@@ -2574,6 +2574,59 @@ def render_agent_ops_module_page(payload: dict) -> str:
       return `<span class="chip ${{esc(klass)}}">${{esc(label)}}</span>`;
     }}
 
+    function asList(value) {{
+      if (Array.isArray(value)) return value;
+      return [];
+    }}
+
+    function formatMetric(value) {{
+      if (value === null || value === undefined) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "number" || typeof value === "boolean") return String(value);
+      if (typeof value === "object") {{
+        const label = String(value.label || value.name || value.metric || value.title || "").trim();
+        const target = String(value.target || value.goal || value.value || "").trim();
+        const status = String(value.status || value.note || "").trim();
+        return [label, target, status].filter(Boolean).join(" - ").trim();
+      }}
+      return "";
+    }}
+
+    function formatAction(value) {{
+      if (!value && value !== 0) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "object") {{
+        const title = String(value.title || value.label || value.name || "").trim();
+        const detail = String(value.detail || value.note || value.summary || "").trim();
+        return [title, detail].filter(Boolean).join(": ");
+      }}
+      return "";
+    }}
+
+    function formatMilestone(value) {{
+      if (!value && value !== 0) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "object") {{
+        const title = String(value.title || value.label || value.name || "").trim();
+        const status = String(value.status || value.state || "").trim();
+        const detail = String(value.detail || value.summary || value.note || "").trim();
+        return [title, status, detail].filter(Boolean).join(" - ").trim();
+      }}
+      return "";
+    }}
+
+    function listBlock(title, items, emptyText) {{
+      const rows = asList(items)
+        .map((item) => formatMilestone(item) || formatAction(item) || formatMetric(item) || String(item || "").trim())
+        .filter(Boolean);
+      return `
+        <div>
+          <label>${{esc(title)}}</label>
+          <strong>${{rows.length ? rows.map((item) => esc(item)).join("<br />") : esc(emptyText)}}</strong>
+        </div>
+      `;
+    }}
+
     function rosterItems(payload) {{
       return Array.isArray((payload.agent_ops_roster || {{}}).items) ? payload.agent_ops_roster.items : [];
     }}
@@ -4273,6 +4326,7 @@ def render_mission_board_module_page(payload: dict) -> str:
       <section class="panel span-12">
         <h2>Mission Authoring</h2>
         <div id="mission-authoring"></div>
+        <div id="mission-created-preview"></div>
       </section>
       <section class="panel span-12">
         <h2>Mission Lanes</h2>
@@ -4320,6 +4374,7 @@ def render_mission_board_module_page(payload: dict) -> str:
     const heroBlocked = document.getElementById("hero-blocked");
     const heroCompleted = document.getElementById("hero-completed");
     const authoringEl = document.getElementById("mission-authoring");
+    const createdPreviewEl = document.getElementById("mission-created-preview");
     const boardEl = document.getElementById("mission-board");
     const detailEl = document.getElementById("mission-detail");
     const evidenceEl = document.getElementById("mission-evidence-list");
@@ -4346,6 +4401,91 @@ def render_mission_board_module_page(payload: dict) -> str:
 
     function chip(label, klass = "") {{
       return `<span class="chip ${{esc(klass)}}">${{esc(label)}}</span>`;
+    }}
+
+    function asList(value) {{
+      return Array.isArray(value) ? value : [];
+    }}
+
+    function formatMetric(value) {{
+      if (value === null || value === undefined) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "number" || typeof value === "boolean") return String(value);
+      if (typeof value === "object") {{
+        const label = String(value.label || value.name || value.metric || value.title || "").trim();
+        const target = String(value.target || value.goal || value.value || "").trim();
+        const status = String(value.status || value.note || "").trim();
+        return [label, target, status].filter(Boolean).join(" - ").trim();
+      }}
+      return "";
+    }}
+
+    function formatAction(value) {{
+      if (!value && value !== 0) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "object") {{
+        const title = String(value.title || value.label || value.name || "").trim();
+        const detail = String(value.detail || value.note || value.summary || "").trim();
+        return [title, detail].filter(Boolean).join(": ");
+      }}
+      return "";
+    }}
+
+    function formatMilestone(value) {{
+      if (!value && value !== 0) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "object") {{
+        const title = String(value.title || value.label || value.name || "").trim();
+        const status = String(value.status || value.state || "").trim();
+        const detail = String(value.detail || value.summary || value.note || "").trim();
+        return [title, status, detail].filter(Boolean).join(" - ").trim();
+      }}
+      return "";
+    }}
+
+    function listBlock(title, items, emptyText) {{
+      const rows = asList(items)
+        .map((item) => formatMilestone(item) || formatAction(item) || formatMetric(item) || String(item || "").trim())
+        .filter(Boolean);
+      return `
+        <div>
+          <label>${{esc(title)}}</label>
+          <strong>${{rows.length ? rows.map((item) => esc(item)).join("<br />") : esc(emptyText)}}</strong>
+        </div>
+      `;
+    }}
+
+    function renderCreatedMissionPreview(mission) {{
+      if (!createdPreviewEl) return;
+      if (!mission || typeof mission !== "object" || !mission.mission_id) {{
+        createdPreviewEl.innerHTML = "";
+        return;
+      }}
+      const milestoneRows = asList(mission.milestones).map((item) => formatMilestone(item)).filter(Boolean);
+      const nextActionRows = asList(mission.next_actions).map((item) => formatAction(item)).filter(Boolean);
+      const metricRows = asList(mission.target_metrics).map((item) => formatMetric(item)).filter(Boolean);
+      createdPreviewEl.innerHTML = `
+        <div class="mission-card" style="margin-top: 1rem;">
+          <strong>What JARVIS Just Built</strong>
+          <span>${{esc(mission.objective || mission.title || "Mission created.")}}</span>
+          <div class="chips">
+            ${{chip(mission.primary_domain || "general")}}
+            ${{mission.mission_type ? chip(mission.mission_type, "steady") : ""}}
+            ${{mission.time_horizon ? chip(mission.time_horizon, "steady") : ""}}
+          </div>
+          <div class="meta">
+            <div><label>Why This Matters</label><strong>${{esc(mission.why_this_matters || mission.brief || "Mission importance is being established.")}}</strong></div>
+            <div><label>Success Definition</label><strong>${{esc(mission.success_definition || "Success criteria are being staged.")}}</strong></div>
+            <div><label>First Recommendation</label><strong>${{esc(mission.recommendation || mission.next_step || "JARVIS is staging the next move.")}}</strong></div>
+            <div><label>First Visible Step</label><strong>${{esc(mission.next_step || "Review the created workspace.")}}</strong></div>
+          </div>
+          <div class="meta">
+            ${{listBlock("Milestones", milestoneRows, "Milestones are still being built.")}}
+            ${{listBlock("Next Actions", nextActionRows, "Next actions are still being staged.")}}
+            ${{listBlock("Target Metrics", metricRows, "Target metrics are not defined yet.")}}
+          </div>
+        </div>
+      `;
     }}
 
     function missions(payload) {{
@@ -4702,6 +4842,7 @@ def render_mission_board_module_page(payload: dict) -> str:
           throw new Error(payload.detail || payload.error || "Mission creation failed");
         }}
         selectedMissionId = String(payload.mission_id || "").trim();
+        renderCreatedMissionPreview(payload);
         const recorded = await recordMissionActivity({{
           actor,
           domain: "mission-board",
@@ -4827,6 +4968,22 @@ def render_mission_board_module_page(payload: dict) -> str:
       }});
       const ownershipTransfers = Array.isArray(detail.ownership_transfers) ? detail.ownership_transfers : [];
       const handoffOptions = missionAgentOptions(detail, workState);
+      const truthLabels = detail.truth_labels || {{}};
+      const truthChips = Object.entries(truthLabels)
+        .map(([key, value]) => {{
+          const cleanKey = String(key || "").trim().replace(/_/g, " ");
+          const cleanValue = String(value || "").trim();
+          if (!cleanKey || !cleanValue) return "";
+          return chip(`${{cleanKey}}: ${{cleanValue}}`, "steady");
+        }})
+        .filter(Boolean)
+        .join("");
+      const metricRows = asList(detail.target_metrics).map((item) => formatMetric(item)).filter(Boolean);
+      const nextActionRows = asList(detail.next_actions).map((item) => formatAction(item)).filter(Boolean);
+      const milestoneRows = asList(detail.milestones).map((item) => formatMilestone(item)).filter(Boolean);
+      const openLoopRows = asList(detail.open_loops).map((item) => String(item || "").trim()).filter(Boolean);
+      const linkedMemoryRows = asList(detail.linked_memories).map((item) => String(item || "").trim()).filter(Boolean);
+      const missionReview = detail.mission_review || {{}};
       detailEl.innerHTML = `
         <div class="mission-card">
           <strong>${{esc(mission.title || mission.mission_id || "Mission")}}</strong>
@@ -4835,8 +4992,18 @@ def render_mission_board_module_page(payload: dict) -> str:
             ${{chip(mission.lane || "next", mission.lane_class || "")}}
             ${{chip(mission.primary_domain || "general")}}
             ${{chip(mission.owner_agent || "jarvis-orchestrator")}}
+            ${{detail.mission_type ? chip(detail.mission_type, "steady") : ""}}
+            ${{detail.time_horizon ? chip(detail.time_horizon, "steady") : ""}}
           </div>
           <div class="meta">
+            <div><label>Objective</label><strong>${{esc(detail.objective || mission.title || "No objective recorded yet.")}}</strong></div>
+            <div><label>Why This Matters</label><strong>${{esc(detail.why_this_matters || mission.brief || "Mission importance has not been captured yet.")}}</strong></div>
+            <div><label>Success Definition</label><strong>${{esc(detail.success_definition || "Success criteria have not been defined yet.")}}</strong></div>
+            <div><label>Progress Signal</label><strong>${{esc(detail.progress_signal || mission.brief || "No progress signal captured yet.")}}</strong></div>
+            <div><label>Momentum</label><strong>${{esc(detail.momentum || "Momentum has not been assessed yet.")}}</strong></div>
+            <div><label>Recommendation</label><strong>${{esc(detail.recommendation || mission.next_step || "No recommendation staged yet.")}}</strong></div>
+            <div><label>Support</label><strong>${{esc(detail.support_message || "No support message captured yet.")}}</strong></div>
+            <div><label>Accountability</label><strong>${{esc(detail.accountability_cadence || "No accountability cadence recorded yet.")}}</strong></div>
             <div><label>Mission ID</label><strong>${{esc(mission.mission_id || "not recorded")}}</strong></div>
             <div><label>Next Step</label><strong>${{esc(mission.next_step || "Review mission brief")}}</strong></div>
             <div><label>Updated</label><strong>${{esc(mission.updated_at || "not recorded")}}</strong></div>
@@ -4846,7 +5013,24 @@ def render_mission_board_module_page(payload: dict) -> str:
             <div><label>Pending Reviews</label><strong>${{esc(summary.pending_reviews || 0)}}</strong></div>
             <div><label>Duplicate Suppressions</label><strong>${{esc(summary.duplicate_suppressions || 0)}}</strong></div>
           </div>
+          <div class="meta">
+            ${{listBlock("Milestones", milestoneRows, "Mission milestones will appear once JARVIS builds the plan.")}}
+            ${{listBlock("Next Actions", nextActionRows, "JARVIS has not staged the next actions yet.")}}
+            ${{listBlock("Target Metrics", metricRows, "Target metrics have not been defined yet.")}}
+            ${{listBlock("Open Loops", openLoopRows, "No open loops are captured for this mission right now.")}}
+          </div>
+          <div class="meta">
+            <div><label>Stewardship Review</label><strong>${{esc(missionReview.headline || "No stewardship review has been prepared yet.")}}</strong></div>
+            <div><label>Carry Message</label><strong>${{esc(missionReview.carry_message || "JARVIS has not yet reduced the mental burden here.")}}</strong></div>
+            <div><label>Next Attention</label><strong>${{esc(missionReview.next_attention || mission.next_step || "Review the next step.")}}</strong></div>
+            <div><label>Review Status</label><strong>${{esc(missionReview.status || "watch")}}</strong></div>
+            <div><label>Continuity Callback</label><strong>${{esc(detail.continuity_callback || "JARVIS has not yet tied this mission back to prior context.")}}</strong></div>
+          </div>
+          <div class="meta">
+            ${{listBlock("Relevant Memory", linkedMemoryRows, "No durable continuity signal has been linked yet.")}}
+          </div>
           <div class="chips">
+            ${{truthChips}}
             ${{selectedAgents.length ? selectedAgents.map((item) => chip(item)).join("") : chip("No selected agents")}}
             ${{taskAgents.length ? taskAgents.map((item) => chip(item, "steady")).join("") : chip("No task agents", "steady")}}
           </div>
@@ -5098,7 +5282,7 @@ def render_mission_board_module_page(payload: dict) -> str:
       authoringEl.innerHTML = `
         <div class="mission-card">
           <strong>Create Mission</strong>
-          <span>Start a real mission from this standalone board so it immediately appears in the now/next workflow with seeded agents, subtasks, and mission state.</span>
+          <span>State the objective naturally. JARVIS will turn it into a mission with a plan, seeded workspace posture, and a visible next move.</span>
           <div class="meta">
             <div>
               <label>Actor</label>
@@ -5115,7 +5299,7 @@ def render_mission_board_module_page(payload: dict) -> str:
             </div>
             <div>
               <label>Mission Request</label>
-              <input id="mission-author-request" value="" placeholder="What should JARVIS take forward right now?" />
+              <input id="mission-author-request" value="" placeholder="Examples: I want to lose 40 pounds. I want to increase book sales. I want to prepare for retirement." />
             </div>
           </div>
           <div class="action-row">
@@ -5129,6 +5313,9 @@ def render_mission_board_module_page(payload: dict) -> str:
           actionNote.textContent = `Mission creation failed: ${{String(error)}}`;
         }});
       }});
+      if (!selectedMissionId) {{
+        renderCreatedMissionPreview(null);
+      }}
 
       boardEl.innerHTML = lanes.map((lane) => {{
         const laneItems = items.filter((item) => String(item.lane || "next") === lane.key);
@@ -5140,7 +5327,9 @@ def render_mission_board_module_page(payload: dict) -> str:
                 <div class="chips">
                   ${{chip(item.primary_domain || "general")}}
                   ${{chip(item.owner_agent || "jarvis-orchestrator")}}
+                  ${{item.mission_type ? chip(item.mission_type, "steady") : ""}}
                 </div>
+                <span>${{esc(item.progress_signal || item.next_step || "Review mission brief")}}</span>
                 <span>${{esc(item.next_step || "Review mission brief")}}</span>
                 <div class="action-row">
                   <button type="button" data-select-mission="${{esc(item.mission_id || "")}}">Inspect Mission</button>
@@ -7361,7 +7550,7 @@ def render_progress_module_page(payload: dict) -> str:
 
 
 def render_daily_brief_module_page(payload: dict) -> str:
-    """Render the companion-style Morning Brief — Magic Moment 1."""
+    """Render the companion-style Daily Brief — Magic Moment 1."""
     raw_json = json.dumps(payload, indent=2)
     brief = payload.get("morning_brief") or {}
 
@@ -7399,6 +7588,23 @@ def render_daily_brief_module_page(payload: dict) -> str:
     prepared = _bullets(brief.get("jarvis_prepared") or [])
     recommendation = _esc(brief.get("recommendation") or "Check open loops before starting new work.")
     truth_labels = brief.get("truth_labels") or {}
+    recommended_route = dict(payload.get("recommended_route") or {})
+    recommended_route_title = _esc(recommended_route.get("title") or "No guided workspace selected yet.")
+    recommended_route_detail = _esc(recommended_route.get("detail") or recommended_route.get("reason") or "Conversation-following routing will appear here when a mission has a stronger surface target.")
+    recommended_route_href = _esc(recommended_route.get("route") or "/mission-board")
+    recommended_route_label = _esc(recommended_route.get("route_label") or "Open Mission Board")
+    recent_brief_continuity = _bullets(
+        [
+            " — ".join(
+                part for part in [
+                    str(item.get("title") or "").strip() or "Brief continuity",
+                    str(item.get("detail") or item.get("subtitle") or "").strip(),
+                ] if part
+            )
+            for item in list(payload.get("recent_activity") or [])[:6]
+            if isinstance(item, dict)
+        ]
+    )
 
     def _truth_chips(keys: list[str]) -> str:
         chips = []
@@ -7427,7 +7633,7 @@ def render_daily_brief_module_page(payload: dict) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JARVIS Morning Brief</title>
+  <title>JARVIS Daily Brief</title>
   <style>
     :root {{
       color-scheme: dark;
@@ -7596,7 +7802,8 @@ def render_daily_brief_module_page(payload: dict) -> str:
 
     <div class="topbar">
       <select id="actor-select">{actor_options}</select>
-      <button id="btn-regenerate" type="button">Regenerate Brief</button>
+      <button id="btn-regenerate" type="button">Refresh Daily Brief</button>
+      <button id="btn-live-brief" type="button">Generate Live Brief</button>
       <span class="spacer"></span>
       <a href="/command-center">Command Center</a>
       <span class="generated-at" id="generated-at">Generated: {generated_at}</span>
@@ -7606,7 +7813,7 @@ def render_daily_brief_module_page(payload: dict) -> str:
 
     <!-- Greeting -->
     <div class="greeting" id="greeting-block">
-      <div class="eyebrow">JARVIS Morning Brief</div>
+      <div class="eyebrow">JARVIS Daily Brief</div>
       <h1 id="greeting-text">{greeting}</h1>
       <p class="sub">I've been paying attention.</p>
     </div>
@@ -7659,6 +7866,30 @@ def render_daily_brief_module_page(payload: dict) -> str:
     <div class="recommendation" id="section-rec">
       <div class="rec-label">Recommendation</div>
       <p id="rec-text">{recommendation}</p>
+    </div>
+
+    <div class="section" id="section-conversation-route">
+      <div class="section-head">
+        <h2>Follow The Conversation</h2>
+        <div class="truth-chips">{agent_chips}</div>
+      </div>
+      <div class="section-body">
+        <ul>
+          <li><strong>{recommended_route_title}</strong></li>
+          <li>{recommended_route_detail}</li>
+          <li><a href="{recommended_route_href}">{recommended_route_label}</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section" id="section-recent-brief">
+      <div class="section-head">
+        <h2>Recent Brief Continuity</h2>
+        <div class="truth-chips"></div>
+      </div>
+      <div class="section-body">
+        <ul id="list-recent-brief">{recent_brief_continuity}</ul>
+      </div>
     </div>
 
     <!-- Signal status -->
@@ -7738,6 +7969,7 @@ def render_daily_brief_module_page(payload: dict) -> str:
     }}
 
     document.getElementById("btn-regenerate")?.addEventListener("click", regenerate);
+    document.getElementById("btn-live-brief")?.addEventListener("click", regenerate);
     document.getElementById("actor-select")?.addEventListener("change", regenerate);
 
     // Show any errors from initial load

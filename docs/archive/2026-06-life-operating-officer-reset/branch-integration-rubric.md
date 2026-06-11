@@ -35,7 +35,7 @@ Every returning branch must answer these before merge:
 1. What exact problem did this branch solve?
 2. Which numbered checklist item(s) did it advance?
 3. How does this make JARVIS more like an always-on orchestrator?
-4. How does this preserve voice-enabled, not voice-first behavior?
+4. How does this strengthen voice-first, conversation-first behavior?
 5. What assumptions does this branch introduce?
 6. What downstream branches are affected?
 

@@ -5183,6 +5183,72 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except Exception as exc:
             payload["errors"].append(f"briefing: {exc}")
 
+        mission_control_snapshot = getattr(runtime, "mission_control_snapshot", None)
+        if callable(mission_control_snapshot):
+            try:
+                mission_control = await asyncio.wait_for(asyncio.to_thread(mission_control_snapshot, actor_display), timeout=12.0)
+                active_missions = [dict(item) for item in list((mission_control or {}).get("active_missions") or []) if isinstance(item, dict)]
+                if active_missions:
+                    matters = list(payload["morning_brief"].get("what_matters") or [])
+                    prepared = list(payload["morning_brief"].get("jarvis_prepared") or [])
+                    for mission in active_missions[:2]:
+                        title = str(mission.get("title", "")).strip() or "Mission"
+                        why = str(((mission.get("brief_summary") or {}).get("why_it_matters") or mission.get("why_this_matters") or mission.get("brief") or "")).strip()
+                        next_step = str(mission.get("next_step", "")).strip()
+                        progress_signal = str(mission.get("progress_signal", "")).strip()
+                        linked_memories = [str(item).strip() for item in list(mission.get("linked_memories") or []) if str(item).strip()]
+                        continuity_callback = str(mission.get("continuity_callback", "")).strip()
+                        matter_line = f"{title}: {why or progress_signal or 'Mission is active.'}"
+                        if matter_line not in matters:
+                            matters.insert(0, matter_line)
+                        prepared_line = f"{title}: {next_step or progress_signal or 'Next move is staged.'}"
+                        if prepared_line not in prepared:
+                            prepared.insert(0, prepared_line)
+                        for output in [dict(item) for item in list(mission.get("background_prepared_outputs") or []) if isinstance(item, dict)][:2]:
+                            prepared_summary = str(output.get("summary", "")).strip() or str(output.get("title", "")).strip()
+                            if not prepared_summary:
+                                continue
+                            prepared_output_line = f"{title}: {prepared_summary}"
+                            if prepared_output_line not in prepared:
+                                prepared.insert(0, prepared_output_line)
+                        accountability = dict(mission.get("accountability_update") or {})
+                        accountability_headline = str(accountability.get("headline", "")).strip()
+                        if accountability_headline:
+                            accountability_line = f"{title}: {accountability_headline}"
+                            if accountability_line not in matters:
+                                matters.insert(0, accountability_line)
+                        review = dict(mission.get("mission_review") or {})
+                        carry_message = str(review.get("carry_message", "")).strip()
+                        if carry_message:
+                            carry_line = f"{title}: {carry_message}"
+                            if carry_line not in matters:
+                                matters.append(carry_line)
+                        if continuity_callback:
+                            continuity_line = f"{title}: {continuity_callback}"
+                            forgotten = list(payload["morning_brief"].get("may_have_forgotten") or [])
+                            if continuity_line not in forgotten:
+                                forgotten.insert(0, continuity_line)
+                            payload["morning_brief"]["may_have_forgotten"] = forgotten[:6]
+                        elif linked_memories:
+                            forgotten = list(payload["morning_brief"].get("may_have_forgotten") or [])
+                            remembered_line = f"{title}: {linked_memories[0]}"
+                            if remembered_line not in forgotten:
+                                forgotten.insert(0, remembered_line)
+                            payload["morning_brief"]["may_have_forgotten"] = forgotten[:6]
+                    payload["morning_brief"]["what_matters"] = matters[:6]
+                    payload["morning_brief"]["jarvis_prepared"] = prepared[:8]
+                    payload["conversation_routes"] = list((mission_control or {}).get("conversation_routes") or [])[:4]
+                    payload["recommended_route"] = dict((mission_control or {}).get("recommended_route") or {})
+                    lead = active_missions[0]
+                    payload["summary"] = str(
+                        ((lead.get("brief_summary") or {}).get("why_it_matters"))
+                        or lead.get("progress_signal")
+                        or lead.get("brief")
+                        or payload.get("summary")
+                    ).strip() or payload.get("summary", "")
+            except Exception as exc:
+                payload["errors"].append(f"mission_control_brief: {exc}")
+
         try:
             builder = get_briefing_builder()
             if builder is not None:
@@ -6115,6 +6181,33 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         seam_tracker = dict(command_center.get("seam_tracker") or {})
         items = list(mission_task_board.get("items") or [])
         counts = dict(mission_task_board.get("counts") or {})
+        runtime_mission_list_snapshot = getattr(runtime, "mission_list_snapshot", None)
+        if callable(runtime_mission_list_snapshot):
+            try:
+                runtime_board = await asyncio.to_thread(runtime_mission_list_snapshot, "Chris", True, 12)
+            except TypeError:
+                runtime_board = await asyncio.to_thread(runtime_mission_list_snapshot, "Chris")
+            except Exception:
+                runtime_board = {}
+            runtime_items = [dict(item) for item in list((runtime_board or {}).get("missions") or []) if isinstance(item, dict)]
+            if runtime_items:
+                items = runtime_items
+                counts = dict((runtime_board or {}).get("summary") or {})
+                mission_task_board["items"] = items
+                mission_task_board["item_count"] = len(items)
+                mission_task_board["counts"] = {
+                    "now": int(counts.get("active_missions", len(items)) or len(items)),
+                    "next": int(counts.get("pending_reviews", 0) or 0),
+                    "blocked": int(counts.get("blocked_tasks", 0) or 0),
+                    "completed": int(counts.get("completed", 0) or 0),
+                }
+                lead_item = dict(items[0])
+                mission_task_board["summary"] = str(
+                    lead_item.get("progress_signal")
+                    or ((lead_item.get("brief_summary") or {}).get("why_it_matters"))
+                    or lead_item.get("brief")
+                    or f"{len(items)} mission(s) are active."
+                ).strip() or f"{len(items)} mission(s) are active."
         payload: dict[str, Any] = {
             "generated_at": command_center.get("generated_at", ""),
             "available": True,

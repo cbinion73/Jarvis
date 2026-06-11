@@ -60,6 +60,69 @@ class AgentWorkStateTests(unittest.TestCase):
         supporting_agents = [state for agent_id, state in work_states.items() if agent_id != "ambient-router"]
         self.assertTrue(any(len(state["pending_reviews"]) >= 1 for state in supporting_agents))
 
+    def test_create_mission_populates_v1_contract_fields(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="I want to increase book sales.",
+        )
+
+        self.assertEqual(dossier["primary_domain"], "writing")
+        self.assertEqual(dossier["origin"], "conversation")
+        self.assertTrue(dossier["objective"].startswith("I want to increase book sales"))
+        self.assertEqual(dossier["mission_type"], "campaign")
+        self.assertTrue(dossier["success_definition"])
+        self.assertTrue(dossier["milestones"])
+        self.assertTrue(dossier["next_actions"])
+        self.assertEqual(dossier["next_step"], dossier["next_actions"][0]["title"])
+        self.assertTrue(dossier["recommendation"])
+        self.assertTrue(dossier["progress_signal"])
+        self.assertEqual(dossier["workspace_route"], "/mission-board")
+        self.assertEqual(dossier["brief_summary"]["title"], dossier["title"])
+
+    def test_create_mission_bootstraps_contract_driven_workspace_focus(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="I want to lose 40 pounds.",
+        )
+
+        lead = dossier["agent_work_states"][dossier["selected_agents"][0]]
+        self.assertEqual(lead["current_focus"], dossier["next_step"])
+        self.assertTrue(any(task["title"] == dossier["next_step"] for task in lead["active_tasks"]))
+
+        supporting_agents = [dossier["agent_work_states"][agent_id] for agent_id in dossier["selected_agents"][1:]]
+        self.assertTrue(any(state["current_focus"] for state in supporting_agents))
+        self.assertTrue(any(state["pending_reviews"] for state in supporting_agents))
+
+    def test_create_mission_exposes_conversation_route_target(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="I want to increase book sales.",
+        )
+
+        route = dossier.get("workspace_route")
+        self.assertEqual(route, "/mission-board")
+
+    def test_blocked_mission_can_support_stewardship_review_signals(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="Prepare for retirement.",
+        )
+
+        lead_agent = dossier["selected_agents"][0]
+        mission_id = dossier["mission_id"]
+        updated = self.support.update_agent_work_state(
+            mission_id,
+            lead_agent,
+            status="blocked",
+            note="Waiting on missing assumptions before the next move.",
+        )
+
+        self.assertEqual(updated["agent_work_states"][lead_agent]["status"], "blocked")
+
     def test_handoff_requires_ack_for_ownership_transfer(self) -> None:
         dossier = self.support.create_mission(
             actor="Chris",

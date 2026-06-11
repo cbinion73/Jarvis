@@ -16819,6 +16819,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
 
     function packetFromRequest(request) {{
       const lowered = request.toLowerCase();
+      if (lowered.includes("i want to") || lowered.includes("let's build") || lowered.includes("help me build") || lowered.includes("goal") || lowered.includes("plan for")) return "mission-control";
       if (lowered.includes("dashboard") || lowered.includes("full report")) return "dashboard";
       if (lowered.includes("finance review for passive income") || lowered.includes("wealth") || lowered.includes("fisk") || lowered.includes("passive income") || lowered.includes("market intelligence")) return "wealth";
       if (lowered.includes("family finances") || lowered.includes("family finance") || lowered.includes("spending") || lowered.includes("budget") || lowered.includes("cash") || lowered.includes("runway") || lowered.includes("finance review") || lowered.includes("finance")) return "finance-review";

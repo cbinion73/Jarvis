@@ -7694,6 +7694,11 @@ class JarvisRuntime:
                     "binding": binding,
                 },
             }
+            mission_control = self.mission_control_snapshot(actor.display_name)
+            recommended_route = dict((mission_control.get("recommended_route") or {}))
+            if recommended_route:
+                payload["conversation_routes"] = list(mission_control.get("conversation_routes") or [])[:4]
+                payload["recommended_route"] = recommended_route
             if self._is_degraded_payload(board_cognition):
                 payload["degraded"] = {
                     "active": True,
@@ -15841,7 +15846,11 @@ class JarvisRuntime:
                 output_text=result.output_text,
             )
         else:
-            result = run_response_graph(self, plan, continuity_context=continuity_context)
+            mission_result = self._try_handle_mission_creation(actor_name, room, request)
+            if mission_result is not None:
+                result = mission_result
+            else:
+                result = run_response_graph(self, plan, continuity_context=continuity_context)
             self.audit_log.log_response(
                 plan,
                 provider=result.provider,
@@ -15939,6 +15948,16 @@ class JarvisRuntime:
                 output_text=result.output_text,
             )
             return result
+        mission_result = self._try_handle_mission_creation(actor_name, room, request)
+        if mission_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=mission_result.provider,
+                model=mission_result.model,
+                active_nodes=["mission-engine"],
+                output_text=mission_result.output_text,
+            )
+            return mission_result
         # ── Reminder intercept ────────────────────────────────────────────────
         reminder_result = self._try_handle_reminder(request)
         if reminder_result is not None:
@@ -15982,6 +16001,50 @@ class JarvisRuntime:
             output_text=result.output_text,
         )
         return result
+
+    _MISSION_CREATE_RE = re.compile(
+        r"\b(?:i\s+want\s+to|help\s+me|let'?s\s+build|let'?s\s+create|i\s+need\s+to|i\s+want\s+jarvis\s+to)\b",
+        re.IGNORECASE,
+    )
+    _MISSION_EXCLUDE_RE = re.compile(
+        r"\b(?:remind(?:er)?|set\s+(?:a\s+)?reminder|add\s+(?:a\s+)?task|schedule|calendar|email|message|draft|note\s+to\s+self)\b",
+        re.IGNORECASE,
+    )
+
+    def _try_handle_mission_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        cleaned = str(request or "").strip()
+        if not cleaned:
+            return None
+        lowered = cleaned.lower()
+        if not self._MISSION_CREATE_RE.search(cleaned):
+            return None
+        if self._MISSION_EXCLUDE_RE.search(cleaned):
+            return None
+        if len(cleaned.split()) < 4:
+            return None
+        domain = self.mission_support._infer_primary_domain(cleaned)
+        if domain in {"communications", "weather"} and "mission" not in lowered and "goal" not in lowered:
+            return None
+        mission = self.create_mission(actor_name, cleaned, room)
+        objective = str(mission.get("objective", "")).strip() or cleaned
+        recommendation = str(mission.get("recommendation", "")).strip() or str(mission.get("next_step", "")).strip()
+        next_step = str(mission.get("next_step", "")).strip() or "Open the mission workspace."
+        route = str(((mission.get("conversation_route") or {}).get("route")) or mission.get("workspace_route") or "/mission-board").strip()
+        route_label = str(((mission.get("conversation_route") or {}).get("route_label")) or "Open Mission Board").strip()
+        continuity_callback = str(mission.get("continuity_callback", "")).strip()
+        response = (
+            f"Understood. Let's build a plan for {objective}.\n\n"
+            f"I created the mission \"{str(mission.get('title', 'Mission')).strip() or 'Mission'}\" and staged the first move: {next_step}.\n\n"
+            f"{recommendation}\n\n"
+        )
+        if continuity_callback:
+            response += f"{continuity_callback}\n\n"
+        response += f"{route_label}: {route}"
+        return OpenAIResult(
+            provider="mission-engine",
+            model="mission-engine",
+            output_text=response,
+        )
 
     # ── Reminder helper ───────────────────────────────────────────────────────
 
@@ -16480,6 +16543,80 @@ class JarvisRuntime:
             "house_note": self.snapshot.house_note,
         }
 
+    def _mission_relevant_history(
+        self,
+        actor: UserProfile,
+        dossier: dict[str, Any],
+    ) -> dict[str, Any]:
+        request = str(dossier.get("request", "")).strip()
+        mission_id = str(dossier.get("mission_id", "")).strip()
+        domain = str(dossier.get("primary_domain", "")).strip().lower()
+        objective = str(dossier.get("objective", "")).strip() or request
+        linked_memories = [
+            str(item).strip()
+            for item in self._relevant_profile_facts(actor, request or objective, limit=3)
+            if str(item).strip()
+        ]
+        request_tokens = {
+            token
+            for token in re.findall(r"[a-z0-9]{4,}", f"{request} {objective}".lower())
+            if token not in {"that", "with", "have", "this", "from", "your", "what", "when", "into", "want", "goal", "plan"}
+        }
+        prior_candidates: list[tuple[int, dict[str, Any]]] = []
+        for item in self.mission_support.list_missions(actor=actor.display_name, include_completed=True, limit=16):
+            prior = dict(item or {})
+            prior_id = str(prior.get("mission_id", "")).strip()
+            if not prior_id or prior_id == mission_id:
+                continue
+            prior_text = " ".join(
+                [
+                    str(prior.get("title", "")).strip(),
+                    str(prior.get("objective", "")).strip(),
+                    str(prior.get("request", "")).strip(),
+                    str(prior.get("primary_domain", "")).strip(),
+                ]
+            ).lower()
+            overlap = sum(1 for token in request_tokens if token in prior_text)
+            score = overlap
+            if domain and str(prior.get("primary_domain", "")).strip().lower() == domain:
+                score += 2
+            if score > 0:
+                prior_candidates.append((score, prior))
+        prior_candidates.sort(key=lambda item: (-item[0], str(item[1].get("updated_at", ""))), reverse=False)
+        prior_missions: list[str] = []
+        for _, prior in prior_candidates[:2]:
+            prior_title = str(prior.get("title", "")).strip() or "Earlier mission"
+            prior_status = str(prior.get("status", "")).strip() or "active"
+            prior_next = str(prior.get("next_step", "")).strip()
+            if prior_status.lower() in {"completed", "archived", "retired"}:
+                line = f'We discussed this before in "{prior_title}", which is {prior_status}.'
+            else:
+                line = f'We discussed this before in "{prior_title}", which is still {prior_status}.'
+            if prior_next:
+                line = f"{line} Last staged step: {prior_next}"
+            prior_missions.append(line)
+
+        snapshot = dict(dossier.get("memory_snapshot") or {})
+        continuity_callback = ""
+        if linked_memories:
+            continuity_callback = f"We discussed this before: {linked_memories[0]}"
+        elif prior_missions:
+            continuity_callback = prior_missions[0]
+        elif isinstance(snapshot.get("open_loops"), dict) and snapshot.get("open_loops"):
+            top_loop = next(
+                (
+                    f"{key.replace('_', ' ')} is already being tracked."
+                    for key, value in dict(snapshot.get("open_loops") or {}).items()
+                    if value
+                ),
+                "",
+            )
+            continuity_callback = top_loop
+        return {
+            "linked_memories": _merge_unique(linked_memories, prior_missions, limit=4),
+            "continuity_callback": continuity_callback.strip(),
+        }
+
     def _mission_live_contributions(self, dossier: dict[str, Any]) -> list[dict[str, Any]]:
         contributions: list[dict[str, Any]] = []
         selected_agents = {str(item).strip() for item in list(dossier.get("selected_agents", []))}
@@ -16560,13 +16697,253 @@ class JarvisRuntime:
         if not dossier:
             return {}
         enriched = _deep_copy_json(dossier)
+        actor_name = str(enriched.get("actor", "")).strip() or "Chris"
+        continuity = self._mission_relevant_history(self.get_actor(actor_name), enriched)
+        linked_memories = [str(item).strip() for item in list(continuity.get("linked_memories") or []) if str(item).strip()]
+        continuity_callback = str(continuity.get("continuity_callback", "")).strip()
+        changed = False
+        if linked_memories != [str(item).strip() for item in list(enriched.get("linked_memories") or []) if str(item).strip()]:
+            enriched["linked_memories"] = linked_memories
+            changed = True
+        if continuity_callback and continuity_callback != str(enriched.get("continuity_callback", "")).strip():
+            enriched["continuity_callback"] = continuity_callback
+            changed = True
+        if changed:
+            enriched["updated_at"] = datetime.now(timezone.utc).isoformat()
+            self.mission_support.save_mission(enriched)
         for contribution in self._mission_live_contributions(enriched):
             self.mission_support.add_mission_evidence(str(enriched.get("mission_id", "")).strip(), contribution)
+        prepared_outputs = self._mission_background_prepared_outputs(enriched)
+        if prepared_outputs:
+            self.mission_support.set_background_prepared_outputs(str(enriched.get("mission_id", "")).strip(), prepared_outputs)
+            for item in prepared_outputs[:2]:
+                self.mission_support.add_mission_output(
+                    str(enriched.get("mission_id", "")).strip(),
+                    {
+                        "output_id": str(item.get("output_id", "")).strip(),
+                        "kind": str(item.get("kind", "background-prepared")).strip() or "background-prepared",
+                        "title": str(item.get("title", "Prepared output")).strip() or "Prepared output",
+                        "summary": str(item.get("summary", "")).strip() or "JARVIS prepared a mission update.",
+                        "status": str(item.get("status", "prepared")).strip() or "prepared",
+                        "timestamp": str(item.get("timestamp", "")).strip() or datetime.now(timezone.utc).isoformat(),
+                        "payload_ref": str(item.get("route", "")).strip() or str(enriched.get("workspace_route", "/mission-board")).strip(),
+                    },
+                )
         refreshed = self.mission_support.get_mission(str(enriched.get("mission_id", "")).strip()) or enriched
+        refreshed["route"] = str(refreshed.get("workspace_route") or f"/mission-board?mission_id={str(refreshed.get('mission_id', '')).strip()}").strip()
+        refreshed["workspace_route"] = str(refreshed.get("workspace_route") or refreshed["route"]).strip()
+        if not str(refreshed.get("next_step", "")).strip():
+            next_actions = list(refreshed.get("next_actions") or [])
+            refreshed["next_step"] = str((next_actions[0] if next_actions else {}).get("title", "")).strip()
+        if not isinstance(refreshed.get("brief_summary"), dict) or not refreshed.get("brief_summary"):
+            refreshed["brief_summary"] = {
+                "title": str(refreshed.get("title", "")).strip(),
+                "why_it_matters": str(refreshed.get("why_this_matters", "")).strip() or str(refreshed.get("brief", "")).strip(),
+                "status": str(refreshed.get("status", "")).strip(),
+                "top_next_action": str(refreshed.get("next_step", "")).strip(),
+            }
         refreshed["approvals_detail"] = self.mission_support.mission_approvals(str(refreshed.get("mission_id", "")).strip())
         refreshed["agent_profiles"] = self.mission_support.mission_agents(str(refreshed.get("mission_id", "")).strip())
         refreshed["work_state_summary"] = self.mission_support.mission_work_state(str(refreshed.get("mission_id", "")).strip()).get("summary", {})
+        refreshed["accountability_update"] = self._mission_accountability_update(refreshed)
+        refreshed["background_prepared_outputs"] = [dict(item) for item in list(refreshed.get("background_prepared_outputs") or []) if isinstance(item, dict)]
+        refreshed["conversation_route"] = self._mission_surface_target(refreshed)
+        refreshed["mission_review"] = self._mission_review_packet(refreshed)
+        refreshed["continuity_callback"] = str(refreshed.get("continuity_callback", "")).strip()
+        refreshed["linked_memories"] = [str(item).strip() for item in list(refreshed.get("linked_memories") or []) if str(item).strip()]
         return refreshed
+
+    def _mission_background_prepared_outputs(self, dossier: dict[str, Any]) -> list[dict[str, Any]]:
+        mission_id = str(dossier.get("mission_id", "")).strip()
+        if not mission_id:
+            return []
+        title = str(dossier.get("title", "")).strip() or "Mission"
+        next_step = str(dossier.get("next_step", "")).strip() or "Review the mission workspace."
+        recommendation = str(dossier.get("recommendation", "")).strip() or next_step
+        progress_signal = str(dossier.get("progress_signal", "")).strip() or "Mission is active."
+        support_message = str(dossier.get("support_message", "")).strip() or "JARVIS is keeping this in view."
+        milestones = [dict(item) for item in list(dossier.get("milestones") or []) if isinstance(item, dict)]
+        next_actions = [dict(item) for item in list(dossier.get("next_actions") or []) if isinstance(item, dict)]
+        open_loops = [str(item).strip() for item in list(dossier.get("open_loops") or []) if str(item).strip()]
+        now = datetime.now(timezone.utc).isoformat()
+        outputs: list[dict[str, Any]] = [
+            {
+                "output_id": f"{mission_id}-prepared-next-step",
+                "kind": "background-prepared",
+                "title": "Next step staged",
+                "summary": next_step,
+                "detail": recommendation,
+                "status": "prepared",
+                "timestamp": now,
+                "route": str(dossier.get("workspace_route", "/mission-board")).strip() or "/mission-board",
+            },
+            {
+                "output_id": f"{mission_id}-progress-reading",
+                "kind": "progress-reading",
+                "title": "Progress reading",
+                "summary": progress_signal,
+                "detail": support_message,
+                "status": "monitoring",
+                "timestamp": now,
+                "route": str(dossier.get("workspace_route", "/mission-board")).strip() or "/mission-board",
+            },
+        ]
+        if milestones:
+            first_milestone = str((milestones[0] or {}).get("title", "")).strip() or "First milestone"
+            outputs.append(
+                {
+                    "output_id": f"{mission_id}-milestone-readiness",
+                    "kind": "milestone-readiness",
+                    "title": "Milestone readiness",
+                    "summary": first_milestone,
+                    "detail": str((milestones[0] or {}).get("detail", "")).strip() or "JARVIS framed the first milestone so progress can be reviewed visibly.",
+                    "status": "prepared",
+                    "timestamp": now,
+                    "route": str(dossier.get("workspace_route", "/mission-board")).strip() or "/mission-board",
+                }
+            )
+        elif next_actions:
+            first_action = str((next_actions[0] or {}).get("title", "")).strip() or next_step
+            outputs.append(
+                {
+                    "output_id": f"{mission_id}-action-readiness",
+                    "kind": "action-readiness",
+                    "title": "Action readiness",
+                    "summary": first_action,
+                    "detail": "JARVIS prepared the first concrete action so you do not need to start cold.",
+                    "status": "prepared",
+                    "timestamp": now,
+                    "route": str(dossier.get("workspace_route", "/mission-board")).strip() or "/mission-board",
+                }
+            )
+        if open_loops:
+            outputs.append(
+                {
+                    "output_id": f"{mission_id}-open-loop-watch",
+                    "kind": "open-loop-watch",
+                    "title": "Open loop watch",
+                    "summary": open_loops[0],
+                    "detail": "JARVIS is tracking the most important unresolved constraint in this mission.",
+                    "status": "monitoring",
+                    "timestamp": now,
+                    "route": str(dossier.get("workspace_route", "/mission-board")).strip() or "/mission-board",
+                }
+            )
+        linked_memories = [str(item).strip() for item in list(dossier.get("linked_memories") or []) if str(item).strip()]
+        continuity_callback = str(dossier.get("continuity_callback", "")).strip()
+        if continuity_callback or linked_memories:
+            outputs.append(
+                {
+                    "output_id": f"{mission_id}-continuity-memory",
+                    "kind": "continuity-memory",
+                    "title": "Continuity callback",
+                    "summary": continuity_callback or linked_memories[0],
+                    "detail": linked_memories[1] if len(linked_memories) > 1 else "JARVIS connected this mission to what already matters.",
+                    "status": "remembered",
+                    "timestamp": now,
+                    "route": str(dossier.get("workspace_route", "/mission-board")).strip() or "/mission-board",
+                }
+            )
+        return outputs[:4]
+
+    def _mission_accountability_update(self, dossier: dict[str, Any]) -> dict[str, Any]:
+        next_step = str(dossier.get("next_step", "")).strip() or "Review the mission board."
+        cadence = str(dossier.get("accountability_cadence", "")).strip() or "Regular review is still needed."
+        progress_signal = str(dossier.get("progress_signal", "")).strip() or "Mission is active."
+        support_message = str(dossier.get("support_message", "")).strip() or "JARVIS is keeping this in view."
+        summary = dict(dossier.get("work_state_summary") or {})
+        blocked = int(summary.get("blocked_tasks", 0) or 0)
+        pending_reviews = int(summary.get("pending_reviews", 0) or 0)
+        status = "on-track"
+        headline = progress_signal
+        if blocked > 0:
+            status = "needs-attention"
+            headline = f"{blocked} blocked task(s) need attention before this mission can move cleanly."
+        elif pending_reviews > 0:
+            status = "awaiting-review"
+            headline = f"{pending_reviews} review item(s) are waiting, but the mission remains in motion."
+        return {
+            "status": status,
+            "headline": headline,
+            "cadence": cadence,
+            "next_check_in": next_step,
+            "support_message": support_message,
+        }
+
+    def _mission_surface_target(self, dossier: dict[str, Any]) -> dict[str, Any]:
+        domain = str(dossier.get("primary_domain", "")).strip().lower()
+        mission_id = str(dossier.get("mission_id", "")).strip()
+        title = str(dossier.get("title", "")).strip() or "Mission"
+        next_step = str(dossier.get("next_step", "")).strip() or "Review mission detail."
+        recommendation = str(dossier.get("recommendation", "")).strip() or next_step
+        mapping = {
+            "health": ("/health-center", "Open Health", "health", "health"),
+            "writing": ("/publish", "Open Publishing", "publish", "marketing"),
+            "jarvis-development": ("/progress-center", "Open Progress Center", "activity", "systems"),
+            "formation": ("/chronicle-center", "Open Chronicle", "chronicle", "chronicle"),
+            "workshop": ("/workshop", "Open Workshop", "workshop", "workshop"),
+        }
+        route, route_label, fallback_view, packet = mapping.get(
+            domain,
+            (str(dossier.get("workspace_route", "")).strip() or "/mission-board", "Open Mission Board", "mission", "mission-control"),
+        )
+        if route == "/mission-board" and mission_id:
+            route = f"/mission-board?mission_id={mission_id}"
+        return {
+            "title": title,
+            "route": route,
+            "route_label": route_label,
+            "fallback_view": fallback_view,
+            "packet": packet,
+            "reason": recommendation,
+            "detail": next_step,
+            "mission_id": mission_id,
+        }
+
+    def _mission_review_packet(self, dossier: dict[str, Any]) -> dict[str, Any]:
+        summary = dict(dossier.get("work_state_summary") or {})
+        blocked = int(summary.get("blocked_tasks", 0) or 0)
+        pending_reviews = int(summary.get("pending_reviews", 0) or 0)
+        pending_handoffs = int(summary.get("pending_handoffs", 0) or 0)
+        duplicate_suppressions = int(summary.get("duplicate_suppressions", 0) or 0)
+        title = str(dossier.get("title", "")).strip() or "Mission"
+        progress_signal = str(dossier.get("progress_signal", "")).strip() or "Mission is active."
+        support_message = str(dossier.get("support_message", "")).strip() or "JARVIS is keeping this in view."
+        recommendation = str(dossier.get("recommendation", "")).strip() or str(dossier.get("next_step", "")).strip() or "Review the mission."
+        open_loops = [str(item).strip() for item in list(dossier.get("open_loops") or []) if str(item).strip()]
+        risks = [str(item).strip() for item in list(dossier.get("risks") or []) if str(item).strip()]
+        status = "on-track"
+        headline = progress_signal
+        carry_message = f"You can stop carrying {title} mentally for now."
+        next_attention = recommendation
+        if blocked > 0:
+            status = "needs-attention"
+            headline = f"{title} has {blocked} blocked task(s) that need intervention."
+            carry_message = f"{title} still needs attention today."
+            next_attention = open_loops[0] if open_loops else recommendation
+        elif pending_reviews > 0 or pending_handoffs > 0:
+            status = "watch-closely"
+            headline = (
+                f"{title} is moving, but {pending_reviews} review item(s) and {pending_handoffs} handoff(s) still need closure."
+            )
+            carry_message = f"{title} is not in trouble, but it should stay visible."
+            next_attention = recommendation
+        elif risks:
+            status = "drift-risk"
+            headline = f"{title} is on track, but drift risk is forming around {risks[0]}"
+            carry_message = f"You do not need to worry broadly about {title}, only the emerging drift signal."
+            next_attention = risks[0]
+        elif duplicate_suppressions > 0:
+            status = "contained"
+            headline = f"{title} is protected from duplicate effort and remains contained."
+        return {
+            "status": status,
+            "headline": headline,
+            "support_message": support_message,
+            "carry_message": carry_message,
+            "next_attention": next_attention,
+            "stewardship_summary": f"{blocked} blocked · {pending_reviews} review · {pending_handoffs} handoff",
+        }
 
     def create_mission(self, actor_name: str, request: str, room: str = "office") -> dict[str, Any]:
         actor = self.get_actor(actor_name)
@@ -16601,11 +16978,24 @@ class JarvisRuntime:
         actor = self.get_actor(actor_name)
         summary = self.mission_support.mission_control_summary(actor=actor.display_name, limit=12)
         active_missions = [self._enriched_mission(item) for item in list(summary.get("active_missions", []))]
+        conversation_routes: list[dict[str, Any]] = []
+        seen_routes: set[str] = set()
+        for mission in active_missions:
+            route = dict(mission.get("conversation_route") or {})
+            route_key = str(route.get("route", "")).strip()
+            if not route_key or route_key in seen_routes:
+                continue
+            conversation_routes.append(route)
+            seen_routes.add(route_key)
+            if len(conversation_routes) >= 4:
+                break
         return {
             "generated_at": summary.get("generated_at"),
             "actor": actor.display_name,
             "summary": dict(summary.get("summary", {})),
             "active_missions": active_missions,
+            "conversation_routes": conversation_routes,
+            "recommended_route": conversation_routes[0] if conversation_routes else {},
             "pending_approvals": list(summary.get("pending_approvals", [])),
             "family_alerts": list(summary.get("family_alerts", [])),
             "work_state_overview": {

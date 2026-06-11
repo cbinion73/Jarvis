@@ -29,7 +29,7 @@ JARVIS is:
 - an oversight surface
 - a continuity engine
 - a command center for real life domains
-- voice-enabled, not voice-first
+- voice-first, conversation-first
 
 The frontend is therefore not:
 
