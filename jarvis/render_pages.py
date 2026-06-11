@@ -7361,373 +7361,390 @@ def render_progress_module_page(payload: dict) -> str:
 
 
 def render_daily_brief_module_page(payload: dict) -> str:
+    """Render the companion-style Morning Brief — Magic Moment 1."""
     raw_json = json.dumps(payload, indent=2)
+    brief = payload.get("morning_brief") or {}
+
+    def _esc(v: object) -> str:
+        return (
+            str(v or "")
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
+
+    def _bullets(items: list) -> str:
+        if not items:
+            return '<li class="empty">Nothing to report.</li>'
+        out = []
+        for item in items:
+            text = str(item or "")
+            if text.startswith("  ·"):
+                out.append(f'<li class="sub">{_esc(text.lstrip())}</li>')
+            else:
+                out.append(f'<li>{_esc(text)}</li>')
+        return "\n".join(out)
+
+    def _numbered(items: list) -> str:
+        if not items:
+            return '<li class="empty">Nothing to report.</li>'
+        return "\n".join(f'<li><span class="num">{i + 1}</span>{_esc(item)}</li>' for i, item in enumerate(items))
+
+    greeting = _esc(brief.get("greeting") or f"Good morning, {payload.get('actor', 'Chris')}.")
+    generated_at = _esc(brief.get("generated_at") or payload.get("generated_at") or "")
+    what_changed = _bullets(brief.get("what_changed") or [])
+    what_matters = _numbered(brief.get("what_matters") or [])
+    forgotten = _bullets(brief.get("may_have_forgotten") or [])
+    prepared = _bullets(brief.get("jarvis_prepared") or [])
+    recommendation = _esc(brief.get("recommendation") or "Check open loops before starting new work.")
+    truth_labels = brief.get("truth_labels") or {}
+
+    def _truth_chips(keys: list[str]) -> str:
+        chips = []
+        for k in keys:
+            val = str(truth_labels.get(k, ""))
+            if not val:
+                continue
+            css = "live" if val == "live" else ("unavail" if "unavailable" in val else "warn")
+            chips.append(f'<span class="truth {css}" title="{_esc(val)}">{_esc(k.replace("_", " "))}: {_esc(val.split("—")[0].strip())}</span>')
+        return " ".join(chips)
+
+    git_chips = _truth_chips(["git_activity"])
+    mem_chips = _truth_chips(["memory", "profile_facts"])
+    ws_chips = _truth_chips(["workstreams"])
+    agent_chips = _truth_chips(["agents"])
+    conn_chips = _truth_chips(["health_data", "calendar", "email"])
+
+    actor = _esc(payload.get("actor") or "Chris")
+    actor_options = "".join(
+        f'<option value="{_esc(o.get("id", ""))}"{" selected" if o.get("id") == payload.get("actor") else ""}>{_esc(o.get("label", ""))}</option>'
+        for o in (payload.get("actor_options") or [])
+    )
+
     return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JARVIS Daily Brief</title>
+  <title>JARVIS Morning Brief</title>
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #071018;
-      --bg-2: #091522;
-      --panel: rgba(9, 20, 33, 0.92);
-      --line: rgba(121, 216, 255, 0.14);
-      --text: #edf7ff;
-      --muted: #9eb8cb;
+      --bg: #050c14;
+      --bg2: #07111c;
+      --panel: rgba(8, 18, 30, 0.94);
+      --line: rgba(100, 190, 255, 0.13);
+      --accent: #79d8ff;
+      --accent2: #a8f0c8;
+      --text: #e8f4ff;
+      --muted: #8bafc5;
+      --dim: rgba(255,255,255,0.04);
+      --radius: 20px;
     }}
-    * {{ box-sizing: border-box; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{
-      margin: 0;
-      font-family: "SF Pro Display", "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at top, rgba(121, 216, 255, 0.12), transparent 36%),
-        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+      font-family: "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(ellipse at 50% 0%, rgba(79,148,255,0.09) 0%, transparent 55%),
+                  linear-gradient(180deg, #040b12 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }}
+    .shell {{ max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }}
+
+    /* ---- Top bar ---- */
+    .topbar {{
+      display: flex; align-items: center; gap: 12px; margin-bottom: 36px; flex-wrap: wrap;
+    }}
+    .topbar a, .topbar button, .topbar select {{
+      padding: 8px 16px; border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--dim);
+      color: var(--text); font: inherit; font-size: 13px;
+      cursor: pointer; text-decoration: none;
+      transition: background 0.15s;
+    }}
+    .topbar button:hover, .topbar a:hover {{ background: rgba(121,216,255,0.12); }}
+    .topbar select {{ padding-right: 8px; }}
+    .topbar .spacer {{ flex: 1; }}
+    .generated-at {{ font-size: 12px; color: var(--muted); }}
+
+    /* ---- Greeting ---- */
+    .greeting {{
+      margin-bottom: 32px;
+    }}
+    .greeting .eyebrow {{
+      font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 10px;
+    }}
+    .greeting h1 {{
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 600; line-height: 1.2;
       color: var(--text);
     }}
-    .shell {{ max-width: 1420px; margin: 0 auto; padding: 36px 24px 60px; }}
-    .hero {{
-      padding: 28px;
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      background: linear-gradient(180deg, rgba(10, 22, 35, 0.96), rgba(7, 16, 27, 0.92));
-      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.28);
+    .greeting .sub {{
+      margin-top: 8px; font-size: 15px; color: var(--muted);
     }}
-    .eyebrow {{ color: #79d8ff; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }}
-    h1 {{ margin: 10px 0 12px; font-size: clamp(34px, 5vw, 56px); }}
-    h2 {{ margin-top: 0; }}
-    p {{ color: var(--muted); line-height: 1.6; }}
-    .stats {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      margin-top: 22px;
-    }}
-    .stat, .panel {{
+
+    /* ---- Sections ---- */
+    .section {{
+      margin-bottom: 32px;
       background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
+      border-radius: var(--radius);
+      overflow: hidden;
     }}
-    .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
-    .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
-    .layout {{
-      margin-top: 18px;
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 18px;
+    .section-head {{
+      padding: 16px 22px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
     }}
-    .span-4 {{ grid-column: span 4; }}
-    .span-6 {{ grid-column: span 6; }}
-    .span-8 {{ grid-column: span 8; }}
-    .span-12 {{ grid-column: span 12; }}
-    ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
-    li {{
-      padding: 12px 14px;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.03);
+    .section-head h2 {{
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--accent);
     }}
-    li strong {{ display: block; margin-bottom: 4px; }}
-    li span {{ color: var(--muted); display: block; }}
-    .actions {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }}
-    .controls {{ display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }}
-    a, button {{
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(121, 216, 255, 0.12);
-      color: var(--text);
-      text-decoration: none;
-      font: inherit;
-      cursor: pointer;
+    .truth-chips {{ display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }}
+    .truth {{
+      font-size: 10px; padding: 3px 8px; border-radius: 999px;
+      border: 1px solid; text-transform: lowercase; white-space: nowrap;
     }}
-    select, textarea, input {{
-      width: 100%;
-      border-radius: 14px;
-      border: 1px solid var(--line);
-      background: rgba(4, 12, 20, 0.92);
-      color: var(--text);
-      padding: 12px 14px;
-      font: inherit;
+    .truth.live   {{ color: var(--accent2); border-color: rgba(168,240,200,0.3); background: rgba(168,240,200,0.07); }}
+    .truth.unavail {{ color: #ff9d9d;       border-color: rgba(255,157,157,0.3); background: rgba(255,157,157,0.07); }}
+    .truth.warn   {{ color: #ffd37d;        border-color: rgba(255,211,125,0.3); background: rgba(255,211,125,0.07); }}
+
+    .section-body ul {{
+      list-style: none; padding: 18px 22px; display: grid; gap: 10px;
     }}
-    pre {{
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      border-radius: 16px;
-      padding: 14px;
-      border: 1px solid var(--line);
-      background: rgba(3, 10, 18, 0.9);
-      color: #d7e8f4;
-      overflow-x: auto;
+    .section-body li {{
+      font-size: 14px; line-height: 1.55; color: var(--text);
+      padding-left: 18px; position: relative;
     }}
-    .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
-    .loop-actions {{ display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }}
-    .loop-actions select {{ max-width: 220px; }}
-    @media (max-width: 980px) {{
-      .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
-      .controls {{ flex-direction: column; align-items: stretch; }}
+    .section-body li::before {{
+      content: "·"; position: absolute; left: 0; color: var(--accent); font-size: 16px; line-height: 1.4;
+    }}
+    .section-body li.sub {{
+      padding-left: 32px; color: var(--muted); font-size: 13px;
+    }}
+    .section-body li.sub::before {{ left: 16px; color: var(--muted); }}
+    .section-body li.empty {{ color: var(--muted); font-style: italic; }}
+    .section-body li.empty::before {{ content: ""; }}
+
+    /* numbered list */
+    .section-body li .num {{
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(121,216,255,0.12); border: 1px solid var(--line);
+      font-size: 11px; font-weight: 600; color: var(--accent);
+      margin-right: 10px; flex-shrink: 0; vertical-align: middle;
+      position: absolute; left: 0; top: 1px;
+    }}
+    .numbered li {{ padding-left: 34px; }}
+    .numbered li::before {{ content: ""; }}
+
+    /* ---- Recommendation ---- */
+    .recommendation {{
+      margin-bottom: 32px;
+      padding: 22px 26px;
+      background: linear-gradient(135deg, rgba(121,216,255,0.08), rgba(168,240,200,0.06));
+      border: 1px solid rgba(121,216,255,0.22);
+      border-radius: var(--radius);
+    }}
+    .recommendation .rec-label {{
+      font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent2); margin-bottom: 10px;
+    }}
+    .recommendation p {{
+      font-size: 16px; line-height: 1.6; color: var(--text); font-weight: 500;
+    }}
+
+    /* ---- Signal status footer ---- */
+    .signal-footer {{
+      margin-top: 16px; padding: 16px 20px;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }}
+    .signal-footer .label {{ font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-right: 4px; }}
+
+    /* ---- Loading overlay ---- */
+    #loading-overlay {{
+      display: none; position: fixed; inset: 0; z-index: 999;
+      background: rgba(4,10,18,0.8); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center;
+      font-size: 15px; color: var(--accent); letter-spacing: 0.06em;
+    }}
+    #loading-overlay.active {{ display: flex; }}
+
+    /* ---- Status bar ---- */
+    .status-bar {{
+      margin-bottom: 20px; padding: 10px 16px;
+      border-radius: 12px; font-size: 13px; color: var(--muted);
+      border: 1px solid var(--line); background: var(--dim);
+      min-height: 36px;
+    }}
+
+    @media (max-width: 600px) {{
+      .shell {{ padding: 20px 14px 60px; }}
+      .topbar {{ gap: 8px; }}
+      .section-body li {{ font-size: 13px; }}
     }}
   </style>
 </head>
 <body>
+  <div id="loading-overlay">Regenerating brief…</div>
   <main class="shell">
-    <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
-      <h1>JARVIS Daily Brief</h1>
-      <p>A dedicated daily-brief workspace inside JARVIS with live briefing text, today-board priorities, calendar context, open-loop pressure, and inline follow-through actions. This promotes Daily Brief out of the shell packet into a real day-operations module.</p>
-      <div class="controls">
-        <select id="brief-actor"></select>
-        <a href="/command-center">Back to Command Center</a>
-        <button type="button" id="refresh-brief">Refresh Daily Brief</button>
-        <button type="button" id="generate-live-brief">Generate Live Brief</button>
-      </div>
-      <div class="stats">
-        <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
-        <div class="stat"><span>Priorities</span><strong id="hero-priorities">0</strong></div>
-        <div class="stat"><span>Waiting On You</span><strong id="hero-waiting">0</strong></div>
-        <div class="stat"><span>Notifications</span><strong id="hero-notifications">0</strong></div>
-      </div>
-      <p class="status-note" id="brief-status-note">Loading daily brief module state…</p>
-    </section>
-    <div class="layout">
-      <section class="panel span-4">
-        <h2>Module Status</h2>
-        <ul id="module-status-list"></ul>
-      </section>
-      <section class="panel span-8">
-        <h2>Briefing Text</h2>
-        <pre id="briefing-text"></pre>
-      </section>
-      <section class="panel span-6">
-        <h2>Today Priorities</h2>
-        <ul id="priorities-list"></ul>
-      </section>
-      <section class="panel span-6">
-        <h2>Carry Forward</h2>
-        <ul id="carry-list"></ul>
-      </section>
-      <section class="panel span-6">
-        <h2>Calendar</h2>
-        <ul id="calendar-list"></ul>
-      </section>
-      <section class="panel span-6">
-        <h2>Live Brief Packet</h2>
-        <pre id="live-brief-output">Generate a live brief packet to inspect the richer builder output.</pre>
-      </section>
-      <section class="panel span-12">
-        <h2>Open Loops</h2>
-        <ul id="open-loops-list"></ul>
-        <p class="status-note" id="open-loop-note">Apply an open-loop action here to turn the daily brief into a real follow-through surface.</p>
-      </section>
-      <section class="panel span-6">
-        <h2>Recent Brief Continuity</h2>
-        <ul id="brief-activity-list"></ul>
-      </section>
-      <section class="panel span-6">
-        <h2>Assistant Notifications</h2>
-        <ul id="notifications-list"></ul>
-      </section>
-      <section class="panel span-6">
-        <h2>Payload Preview</h2>
-        <pre id="payload-preview"></pre>
-      </section>
+
+    <div class="topbar">
+      <select id="actor-select">{actor_options}</select>
+      <button id="btn-regenerate" type="button">Regenerate Brief</button>
+      <span class="spacer"></span>
+      <a href="/command-center">Command Center</a>
+      <span class="generated-at" id="generated-at">Generated: {generated_at}</span>
     </div>
+
+    <div id="status-bar" class="status-bar"></div>
+
+    <!-- Greeting -->
+    <div class="greeting" id="greeting-block">
+      <div class="eyebrow">JARVIS Morning Brief</div>
+      <h1 id="greeting-text">{greeting}</h1>
+      <p class="sub">I've been paying attention.</p>
+    </div>
+
+    <!-- What Changed Since Yesterday -->
+    <div class="section" id="section-changed">
+      <div class="section-head">
+        <h2>What Changed Since Yesterday</h2>
+        <div class="truth-chips">{git_chips}</div>
+      </div>
+      <div class="section-body">
+        <ul id="list-changed">{what_changed}</ul>
+      </div>
+    </div>
+
+    <!-- What Matters Today -->
+    <div class="section" id="section-matters">
+      <div class="section-head">
+        <h2>What Matters Today</h2>
+        <div class="truth-chips">{ws_chips}</div>
+      </div>
+      <div class="section-body">
+        <ul class="numbered" id="list-matters">{what_matters}</ul>
+      </div>
+    </div>
+
+    <!-- What May Have Been Forgotten -->
+    <div class="section" id="section-forgotten">
+      <div class="section-head">
+        <h2>Things You May Have Forgotten</h2>
+        <div class="truth-chips">{mem_chips}</div>
+      </div>
+      <div class="section-body">
+        <ul id="list-forgotten">{forgotten}</ul>
+      </div>
+    </div>
+
+    <!-- What JARVIS Prepared -->
+    <div class="section" id="section-prepared">
+      <div class="section-head">
+        <h2>I Prepared For You</h2>
+        <div class="truth-chips">{agent_chips}</div>
+      </div>
+      <div class="section-body">
+        <ul id="list-prepared">{prepared}</ul>
+      </div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="recommendation" id="section-rec">
+      <div class="rec-label">Recommendation</div>
+      <p id="rec-text">{recommendation}</p>
+    </div>
+
+    <!-- Signal status -->
+    <div class="signal-footer">
+      <span class="label">Signals:</span>
+      {conn_chips}
+      <span class="truth unavail" title="Connect for full operating picture">health data: unavailable</span>
+    </div>
+
   </main>
   <script>
-    const initialPayload = {raw_json};
-    const actorSelect = document.getElementById("brief-actor");
-    const heroStatus = document.getElementById("hero-status");
-    const heroPriorities = document.getElementById("hero-priorities");
-    const heroWaiting = document.getElementById("hero-waiting");
-    const heroNotifications = document.getElementById("hero-notifications");
-    const statusNote = document.getElementById("brief-status-note");
-    const moduleStatusList = document.getElementById("module-status-list");
-    const briefingText = document.getElementById("briefing-text");
-    const prioritiesList = document.getElementById("priorities-list");
-    const carryList = document.getElementById("carry-list");
-    const calendarList = document.getElementById("calendar-list");
-    const notificationsList = document.getElementById("notifications-list");
-    const openLoopsList = document.getElementById("open-loops-list");
-    const briefActivityList = document.getElementById("brief-activity-list");
-    const payloadPreview = document.getElementById("payload-preview");
-    const liveBriefOutput = document.getElementById("live-brief-output");
-    let currentPayload = initialPayload;
+    const PAGE_PAYLOAD = {raw_json};
+    const overlay = document.getElementById("loading-overlay");
+    const statusBar = document.getElementById("status-bar");
 
-    function esc(value) {{
-      return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
+    function esc(v) {{
+      return String(v || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
     }}
 
-    function li(title, summary, detail = "") {{
-      return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    function bullets(items) {{
+      if (!Array.isArray(items) || !items.length) return '<li class="empty">Nothing to report.</li>';
+      return items.map(item => {{
+        const t = String(item || "");
+        if (t.startsWith("  ·")) return `<li class="sub">${{esc(t.trim())}}</li>`;
+        return `<li>${{esc(t)}}</li>`;
+      }}).join("\\n");
     }}
 
-    function actorOptionsMarkup(items, selectedId) {{
-      return (Array.isArray(items) ? items : []).map((item) => {{
-        const value = item.id || item.label || "Chris";
-        const selected = value === selectedId ? " selected" : "";
-        return `<option value="${{esc(value)}}"${{selected}}>${{esc(item.label || value)}}</option>`;
-      }}).join("");
+    function numbered(items) {{
+      if (!Array.isArray(items) || !items.length) return '<li class="empty">Nothing to report.</li>';
+      return items.map((item, i) => `<li><span class="num">${{i+1}}</span>${{esc(item)}}</li>`).join("\\n");
     }}
 
-    function actionOptionsMarkup(actions) {{
-      return (Array.isArray(actions) ? actions : []).map((action) => `<option value="${{esc(action.id || "")}}">${{esc(action.label || action.id || "Action")}}</option>`).join("");
+    function truthChip(key, val) {{
+      const css = val === "live" ? "live" : (val.includes("unavailable") ? "unavail" : "warn");
+      const label = key.replace(/_/g, " ");
+      const short = val.split("—")[0].trim();
+      return `<span class="truth ${{css}}" title="${{esc(val)}}">${{esc(label)}}: ${{esc(short)}}</span>`;
     }}
 
-    function render(payload) {{
-      currentPayload = payload;
-      const counts = payload.counts || {{}};
-      const board = payload.today_board || {{}};
-      const boardOpenLoops = (board.open_loops || {{}}).summary || {{}};
-      const priorities = Array.isArray(board.priorities) ? board.priorities : [];
-      const carry = Array.isArray(board.carry) ? board.carry : [];
-      const calendar = Array.isArray(board.calendar) ? board.calendar : [];
-      const notifications = Array.isArray(board.assistant_notifications) ? board.assistant_notifications : [];
-      const openLoops = Array.isArray((payload.open_loops || {{}}).items) ? payload.open_loops.items : [];
+    function renderBrief(brief) {{
+      if (!brief) return;
+      const greet = document.getElementById("greeting-text");
+      if (greet && brief.greeting) greet.textContent = brief.greeting;
+      const ts = document.getElementById("generated-at");
+      if (ts && brief.generated_at) ts.textContent = "Generated: " + brief.generated_at.replace("T"," ").slice(0,19) + " UTC";
 
-      actorSelect.innerHTML = actorOptionsMarkup(payload.actor_options, payload.actor || "Chris");
-      heroStatus.textContent = payload.status || "Stubbed";
-      heroPriorities.textContent = String(counts.priority_count || priorities.length || 0);
-      heroWaiting.textContent = String(counts.waiting_on_you || boardOpenLoops.waiting_on_you || 0);
-      heroNotifications.textContent = String(counts.notification_count || notifications.length || 0);
-      statusNote.textContent = payload.summary || "No daily brief summary captured yet.";
-
-      moduleStatusList.innerHTML = [
-        li("What Became Real", payload.what_became_real || "No brief seam note recorded yet."),
-        li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
-        li("Proof API", "/api/briefing/module", "/api/briefing, /api/today-board, /api/open-loops"),
-        li("Headline", payload.headline || "No briefing headline captured yet."),
-        li("Needs Revisit", String(counts.needs_revisit || boardOpenLoops.needs_revisit || 0)),
-      ].join("");
-
-      briefingText.textContent = payload.briefing_text || "No briefing text captured yet.";
-      prioritiesList.innerHTML = priorities.map((item) => li(
-        item.title || "Priority",
-        item.next_action || item.status || "No next action recorded.",
-        item.owner_agent || ""
-      )).join("") || '<li><strong>No priorities loaded.</strong><span>The today board will populate priorities here when available.</span></li>';
-      carryList.innerHTML = carry.map((item, index) => li(`Carry ${{index + 1}}`, item)).join("") || '<li><strong>No carry-forward lines.</strong><span>The day is currently light.</span></li>';
-      calendarList.innerHTML = calendar.map((item) => li(
-        item.summary || "(Untitled event)",
-        item.start || item.when || "No start time recorded.",
-        item.source || ""
-      )).join("") || '<li><strong>No calendar items loaded.</strong><span>Upcoming events will appear here.</span></li>';
-      notificationsList.innerHTML = notifications.map((item) => li(
-        item.title || item.summary || "Notification",
-        item.summary || item.detail || "No detail recorded.",
-        item.channel || item.urgency || ""
-      )).join("") || '<li><strong>No unread assistant notifications.</strong><span>Fresh assistant notices will appear here.</span></li>';
-      openLoopsList.innerHTML = openLoops.map((item) => `
-        <li data-domain="${{esc(item.domain || "")}}" data-item-id="${{esc(item.item_id || "")}}" data-item-title="${{esc(item.title || "Open loop")}}" data-item-summary="${{esc(item.summary || item.next_action || "No summary recorded.")}}">
-          <strong>${{esc(item.title || "Open loop")}}</strong>
-          <span>${{esc(item.summary || item.next_action || "No summary recorded.")}}</span>
-          <span>${{esc(`${{item.domain || "general"}} · ${{item.status || "open"}} · ${{item.owner_agent || "JARVIS"}}`)}}</span>
-          <div class="loop-actions">
-            <select class="open-loop-action">${{actionOptionsMarkup(item.available_actions)}}</select>
-            <button type="button" class="apply-open-loop-action">Apply Action</button>
-          </div>
-        </li>
-      `).join("") || '<li><strong>No open loops surfaced.</strong><span>The day currently has no visible follow-through pressure.</span></li>';
-      briefActivityList.innerHTML = (Array.isArray(payload.recent_activity) ? payload.recent_activity : []).length
-        ? payload.recent_activity.map((item) => li(item.title || "Brief action", item.subtitle || item.actor || "Operator continuity", item.detail || item.route_label || "")).join("")
-        : '<li><strong>No brief continuity yet.</strong><span>Daily Brief actions will show up here once you move live open-loop work forward.</span></li>';
-      payloadPreview.textContent = JSON.stringify(payload, null, 2);
+      const sets = [
+        ["list-changed",   bullets(brief.what_changed)],
+        ["list-matters",   numbered(brief.what_matters)],
+        ["list-forgotten", bullets(brief.may_have_forgotten)],
+        ["list-prepared",  bullets(brief.jarvis_prepared)],
+      ];
+      sets.forEach(([id, html]) => {{
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+      }});
+      const rec = document.getElementById("rec-text");
+      if (rec && brief.recommendation) rec.textContent = brief.recommendation;
     }}
 
-    async function refreshBrief() {{
-      const actor = actorSelect.value || "Chris";
-      statusNote.textContent = `Refreshing daily brief for ${{actor}}…`;
+    async function regenerate() {{
+      const actor = document.getElementById("actor-select")?.value || "Chris";
+      overlay.classList.add("active");
+      statusBar.textContent = "Regenerating brief…";
       try {{
-        const response = await fetch(`/api/briefing/module?actor=${{encodeURIComponent(actor)}}`);
-        const payload = await response.json();
-        render(payload);
-        statusNote.textContent = payload.summary || "Daily brief refreshed.";
-      }} catch (error) {{
-        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
+        const resp = await fetch(`/api/briefing/morning?actor=${{encodeURIComponent(actor)}}`);
+        if (!resp.ok) throw new Error(`HTTP ${{resp.status}}`);
+        const data = await resp.json();
+        renderBrief(data.morning_brief || data);
+        statusBar.textContent = "Brief regenerated at " + new Date().toLocaleTimeString();
+      }} catch (err) {{
+        statusBar.textContent = "Regeneration failed: " + String(err);
+      }} finally {{
+        overlay.classList.remove("active");
       }}
     }}
 
-    async function generateLiveBrief() {{
-      const actor = actorSelect.value || "Chris";
-      liveBriefOutput.textContent = `Generating live brief for ${{actor}}…`;
-      try {{
-        const response = await fetch(`/api/briefing/live?actor=${{encodeURIComponent(actor)}}`);
-        const payload = await response.json();
-        liveBriefOutput.textContent = JSON.stringify(payload, null, 2);
-      }} catch (error) {{
-        liveBriefOutput.textContent = `Live brief failed: ${{String(error)}}`;
-      }}
-    }}
+    document.getElementById("btn-regenerate")?.addEventListener("click", regenerate);
+    document.getElementById("actor-select")?.addEventListener("change", regenerate);
 
-    async function applyOpenLoopAction(button) {{
-      const host = button.closest("li[data-domain]");
-      if (!host) return;
-      const actionSelect = host.querySelector(".open-loop-action");
-      const actor = actorSelect.value || "Chris";
-      const note = document.getElementById("open-loop-note");
-      note.textContent = "Applying open-loop action…";
-      try {{
-        const response = await fetch("/api/open-loops/action", {{
-          method: "POST",
-          headers: {{ "Content-Type": "application/json" }},
-          body: JSON.stringify({{
-            actor,
-            domain: host.getAttribute("data-domain") || "",
-            item_id: host.getAttribute("data-item-id") || "",
-            action: actionSelect ? actionSelect.value : "",
-            item_title: host.getAttribute("data-item-title") || "Open loop",
-            item_summary: host.getAttribute("data-item-summary") || "",
-            route: "/briefing-center",
-            route_label: "Open Daily Brief",
-            activity_domain: "briefing",
-            why_now: "Daily Brief follow-through moved a live open-loop item forward.",
-            result_summary: "Daily Brief continuity updated from an open-loop action.",
-            related_kind: "open-loop",
-            related_label: host.getAttribute("data-item-title") || "Open loop",
-          }}),
-        }});
-        const payload = await response.json();
-        note.textContent = payload.ok ? `Applied ${{payload.action || "action"}}.` : "Open-loop action returned a response.";
-        await refreshBrief();
-      }} catch (error) {{
-        note.textContent = `Open-loop action failed: ${{String(error)}}`;
-      }}
+    // Show any errors from initial load
+    const errors = PAGE_PAYLOAD.errors || [];
+    if (errors.length) {{
+      statusBar.textContent = "Note: " + errors.slice(0,2).join(" | ");
     }}
-
-    document.getElementById("refresh-brief").addEventListener("click", () => {{
-      refreshBrief().catch((error) => {{
-        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
-      }});
-    }});
-    document.getElementById("generate-live-brief").addEventListener("click", () => {{
-      generateLiveBrief().catch((error) => {{
-        liveBriefOutput.textContent = `Live brief failed: ${{String(error)}}`;
-      }});
-    }});
-    actorSelect.addEventListener("change", () => {{
-      refreshBrief().catch((error) => {{
-        statusNote.textContent = `Refresh failed: ${{String(error)}}`;
-      }});
-    }});
-    openLoopsList.addEventListener("click", (event) => {{
-      const button = event.target.closest(".apply-open-loop-action");
-      if (!button) return;
-      applyOpenLoopAction(button).catch((error) => {{
-        document.getElementById("open-loop-note").textContent = `Open-loop action failed: ${{String(error)}}`;
-      }});
-    }});
-    render(initialPayload);
   </script>
 </body>
 </html>

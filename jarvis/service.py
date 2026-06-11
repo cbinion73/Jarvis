@@ -5091,6 +5091,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     async def _build_daily_brief_module_payload(actor_name: str = "Chris") -> dict[str, Any]:
         from datetime import datetime, timezone
+        from .morning_brief_pipeline import generate_morning_brief
 
         actor_lookup = getattr(runtime, "get_actor", None)
         actor = actor_lookup(actor_name) if callable(actor_lookup) else None
@@ -5108,10 +5109,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "available": True,
             "status": "Useful",
-            "summary": "Daily Brief now has a dedicated module route with live briefing text, today-board posture, and open-loop follow-through actions inside JARVIS.",
+            "summary": "",
             "headline": "",
-            "what_became_real": "Daily Brief is now a standalone app module instead of only a shell packet and preview panel, with durable follow-through continuity visible inside the route.",
-            "remains_partial": "Broader module drill-ins and richer phone-native brief drill-downs still need follow-on slices, but Daily Brief now has real open-loop follow-through across web and Apple surfaces.",
+            "morning_brief": {},
             "briefing_text": "",
             "live_briefing": {},
             "today_board": {},
@@ -5128,6 +5128,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "proof_paths": {
                 "module_route": "/briefing-center",
                 "module_api": "/api/briefing/module",
+                "morning_brief_api": f"/api/briefing/morning?actor={actor_display}",
                 "briefing_api": f"/api/briefing?actor={actor_display}",
                 "live_brief_api": f"/api/briefing/live?actor={actor_display}",
                 "today_board_api": f"/api/today-board?actor={actor_display}",
@@ -5137,6 +5138,26 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             },
             "errors": [],
         }
+
+        # --- Morning Brief Pipeline (Magic Moment 1) ---
+        try:
+            brief_result = await asyncio.to_thread(generate_morning_brief, actor_display)
+            from dataclasses import asdict
+            payload["morning_brief"] = asdict(brief_result)
+            payload["headline"] = brief_result.greeting
+            payload["summary"] = f"Morning Brief generated for {actor_display} at {brief_result.generated_at[:16]} UTC."
+        except Exception as exc:
+            payload["errors"].append(f"morning_brief: {exc}")
+            payload["morning_brief"] = {
+                "greeting": f"Good morning, {actor_display}.",
+                "what_changed": ["Morning Brief pipeline encountered an error — check server logs."],
+                "what_matters": [],
+                "may_have_forgotten": [],
+                "jarvis_prepared": [],
+                "recommendation": "Check server logs for morning brief pipeline errors.",
+                "truth_labels": {},
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
 
         open_loops: dict[str, Any] = {}
         try:
@@ -5153,16 +5174,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["counts"]["priority_count"] = len(list(today_board.get("priorities") or []))
             payload["counts"]["notification_count"] = len(list(today_board.get("assistant_notifications") or []))
             payload["counts"]["calendar_count"] = len(list(today_board.get("calendar") or []))
-            if not payload["summary"]:
-                payload["summary"] = "Daily brief module hydrated from the live today board."
         except Exception as exc:
             payload["errors"].append(f"today_board: {exc}")
 
         try:
             briefing_text = await asyncio.to_thread(runtime.morning_brief, actor_display)
             payload["briefing_text"] = briefing_text
-            lines = [line.strip() for line in str(briefing_text).splitlines() if line.strip()]
-            payload["headline"] = lines[0] if lines else ""
         except Exception as exc:
             payload["errors"].append(f"briefing: {exc}")
 
@@ -5176,27 +5193,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         payload["recent_activity"] = _module_recent_activity(route="/briefing-center", domain="briefing")
         payload["counts"]["recent_activity_count"] = len(payload["recent_activity"])
 
-        if payload["counts"]["priority_count"] or payload["counts"]["waiting_on_you"]:
-            payload["summary"] = (
-                f"Daily brief for {actor_display} loaded "
-                f"{payload['counts']['priority_count']} priority item(s) and "
-                f"{payload['counts']['waiting_on_you']} item(s) waiting on a decision."
-            )
-
-        if payload["errors"]:
-            payload["status"] = "Wired"
-            if not payload["briefing_text"] and not payload["today_board"]:
-                payload["available"] = False
-                payload["summary"] = "Daily brief route is live, but key briefing sources did not fully hydrate."
-                payload["remains_partial"] = "Live briefing and today-board sources still need repair or population in this runtime."
-            else:
-                payload["summary"] = "Daily brief route is live with partial briefing and day-state hydration."
-                payload["remains_partial"] = "Some briefing sources still failed to hydrate; inspect the payload preview for details."
         return payload
 
     @app.get("/api/briefing/module")
     async def api_briefing_module(actor: str = "Chris") -> JSONResponse:
         return _json(await _build_daily_brief_module_payload(actor))
+
+    @app.get("/api/briefing/morning")
+    async def api_briefing_morning(actor: str = "Chris") -> JSONResponse:
+        """Generate a fresh Morning Brief from live data sources."""
+        from .morning_brief_pipeline import generate_morning_brief
+        from dataclasses import asdict
+        try:
+            result = await asyncio.to_thread(generate_morning_brief, actor)
+            return _json({"morning_brief": asdict(result), "actor": actor})
+        except Exception as exc:
+            return _json({"error": str(exc), "actor": actor, "morning_brief": None})
 
     async def _build_progress_module_payload() -> dict[str, Any]:
         command_center = build_command_center_index()

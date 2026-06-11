@@ -913,19 +913,58 @@ truth is verified, and docs agree.
 9. Hardware/provider rollout.
 10. End-to-end Level 9 proof suite and docs-last maturity update.
 
+## Phase D Completion Record (2026-06-10)
+
+Magic Moment 1 — Morning Brief Pipeline — SHIPPED:
+
+- D1 DONE: `jarvis/morning_brief_pipeline.py` — live signal gathering + synthesis
+  - Pulls real git commits (last 24h), memory entries/profile facts, workstream
+    status, agent health, open loops — all from live local data files
+  - Synthesizes into 5 companion sections with honest truth labels
+  - Never fakes data; missing signals labelled as unavailable
+  - `generate_morning_brief()` / `generate_morning_brief_async()` entry points
+- D2 DONE: `/briefing-center` UI redesigned as companion-style Morning Brief
+  - Replaces generic dashboard with letter-format brief in companion voice
+  - Five sections: What Changed, What Matters, May Have Forgotten, I Prepared,
+    Recommendation
+  - Truth chips per section (live / unavailable / warn)
+  - Regenerate button via JS → `/api/briefing/morning`
+- D3 DONE: `GET /api/briefing/morning` endpoint — generates fresh brief on demand
+- D4 DONE: 18 tests in `tests/test_morning_brief_pipeline.py` — all pass
+- D5 DONE: Commit `0c84228c`
+
+Live output on commit:
+  - 39 commits in last 24h (real)
+  - 6 degraded/blocked agents (real)
+  - 43 memory entries + 30 profile facts for Chris (real)
+  - 24 workstream items in research phase (real)
+  - Health, calendar, email: honestly labelled unavailable
+
+Tests: 1338 passing (up from 1320). 4 pre-existing flaky failures unchanged.
+
 ## Resume Point
 
-Resume from LEVEL 3 TASK hosted/provider live verification using `JARVIS-SESSION-STATE.md`.
+Resume from COMPANION VISION — Magic Moment 2 using `JARVIS-SESSION-STATE.md`.
 
-Immediate next work:
+Magic Moment 1 is LIVE at `/briefing-center`.
 
-1. Run the provider battery against a live reachable JARVIS surface so provider
-   truth can move from `environment-limited` to `verified`. The local battery
-   now reports runtime unavailability truthfully; the remaining gap is live
-   runtime reachability, not battery semantics.
-2. Re-run `python3 scripts/verify_level9_truth.py --output artifacts/qa/level9-truth-report.json`
-   after each provider-truth seam to reduce unresolved failures honestly.
-3. Keep `python3 scripts/verify_docs_truth.py` green as the planning docs evolve.
+Next priorities:
+
+1. **Deploy to Hetzner** — push to main triggers CI/CD. Verify `/briefing-center`
+   renders on the live server. The brief will reflect the server's git history and
+   data volume.
+
+2. **Magic Moment 2** — "What JARVIS Did While You Were Away": build a dedicated
+   activity timeline showing what agents ran, what changed, and what JARVIS produced
+   while Chris was absent. Route: `/activity` or as a tab inside `/briefing-center`.
+
+3. **Enrich the brief with runtime signals**: when running on the server, wire in
+   `runtime.unified_open_loops()` results into the morning brief pipeline so the
+   "What Matters" section reflects real open loops.
+
+4. **Scheduler: daily 7:00 AM brief** — add a scheduled job that runs
+   `generate_morning_brief()` at 7:00 AM and caches the result so the page loads
+   instantly at that time.
 
 ## Level 9 Exit Gate
 
