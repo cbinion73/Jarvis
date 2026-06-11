@@ -34011,17 +34011,20 @@ function renderDailyBriefDesktop(data) {{
     ['dailybrief-pillar-rhythm', dailyBriefSnippet(firstLightCue || faithWord.passage || 'Abide. Pray. Listen. Let God set the pace, not urgency.', 150)],
   ].forEach(([id, value]) => dailyBriefText(id, value));
 
+  // Pipeline-sourced "what matters" items take priority over board data
+  const mbWhatMatters = Array.isArray(morningBrief.what_matters) ? morningBrief.what_matters.filter(Boolean) : [];
+  const mbForgotten = Array.isArray(morningBrief.may_have_forgotten) ? morningBrief.may_have_forgotten.filter(Boolean) : [];
   const matterCards = [
     {{
       tone: 'key',
       label: 'Key Mission',
-      title: priorities[0]?.title || leadProject?.title || 'Protect the morning window',
-      copy: priorities[0]?.next_action || leadProject?.category || 'Choose the highest leverage move and keep it protected.',
+      title: mbWhatMatters[0] || priorities[0]?.title || leadProject?.title || 'Protect the morning window',
+      copy: mbWhatMatters[1] || priorities[0]?.next_action || leadProject?.category || 'Choose the highest leverage move and keep it protected.',
     }},
     {{
       tone: 'risk',
       label: 'Key Risk',
-      title: decisionLoop?.title || blockedTask?.title || blockedAgentName?.replace(/-/g, ' ') || 'No major risk surfaced',
+      title: mbWhatMatters[2] || decisionLoop?.title || blockedTask?.title || blockedAgentName?.replace(/-/g, ' ') || 'No major risk surfaced',
       copy: decisionLoop?.summary || blockedTask?.blocked_reason || (blockedAgentName ? 'An agent lane is blocked and may need judgment or repair.' : 'No major risk is currently crossing the threshold.'),
     }},
     {{
@@ -34038,9 +34041,9 @@ function renderDailyBriefDesktop(data) {{
     }},
     {{
       tone: 'stewardship',
-      label: 'Key Stewardship',
-      title: carry[0] || reminders[0]?.title || 'Protect your margin',
-      copy: carry[1] || reminders[0]?.list || 'Guard attention, energy, and the household calendar.',
+      label: 'May Have Forgotten',
+      title: mbForgotten[0] || carry[0] || reminders[0]?.title || 'Protect your margin',
+      copy: mbForgotten.slice(1, 3).join(' · ') || carry[1] || reminders[0]?.list || 'Guard attention, energy, and the household calendar.',
     }},
   ];
   dailyBriefHtml('dailybrief-whatmatters-list', matterCards.map(item => `<div class="dailybrief-matter-card ${{item.tone}}"><div class="dailybrief-matter-label">${{escHtml(item.label)}}</div><strong>${{escHtml(item.title || '—')}}</strong><span>${{escHtml(item.copy || '')}}</span></div>`).join(''));
