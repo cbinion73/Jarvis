@@ -33011,9 +33011,9 @@ let _layoutState    = null;
 let _activeAlert    = null;
 let _alertDismissTimer = null;
 
-async function _fetchJsonSafe(url) {{
+async function _fetchJsonSafe(url, timeoutMs = 20000) {{
   try {{
-    const res = await fetch(url);
+    const res = await fetch(url, {{ signal: AbortSignal.timeout(timeoutMs) }});
     if (!res.ok) return null;
     return await res.json();
   }} catch (_) {{
@@ -34182,7 +34182,7 @@ async function loadDailyBriefDesktop(layoutState = _layoutState, actorOverride =
   dailyBriefRuntimeNote(`Loading Daily Brief for ${{actor}}…`);
   const liveBriefPromise = fetch(`/api/briefing/live?actor=${{encodeURIComponent(actor)}}`).catch(() => null);
   const [modulePayload, faithWord, home, approvalsPayload, agents, tasksPayload, healthPayload, projectsPayload, remindersPayload, chronicle, connectedDevices, liveBriefResponse] = await Promise.all([
-    _fetchJsonSafe(`/api/briefing/module?actor=${{encodeURIComponent(actor)}}`),
+    _fetchJsonSafe(`/api/briefing/module?actor=${{encodeURIComponent(actor)}}`, 60000),
     _fetchJsonSafe('/api/faith/daily-word'),
     _fetchJsonSafe('/api/home/dashboard'),
     _fetchJsonSafe('/api/approvals'),
