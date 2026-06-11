@@ -58,6 +58,23 @@ def atomic_write_json(
                 tmp_path.unlink()
 
 
+# Log files are capped at this size. When exceeded, the oldest half is dropped so
+# the file stays bounded without losing all recent history.
+_JSONL_ROTATE_BYTES: int = 50 * 1024 * 1024  # 50 MB
+
+
+def _rotate_if_needed(path: Path, encoding: str) -> None:
+    """Trim the oldest half of a JSONL file once it exceeds _JSONL_ROTATE_BYTES."""
+    try:
+        if path.stat().st_size <= _JSONL_ROTATE_BYTES:
+            return
+        lines = path.read_text(encoding=encoding).splitlines(keepends=True)
+        keep = lines[len(lines) // 2 :]
+        path.write_text("".join(keep), encoding=encoding)
+    except (OSError, ValueError):
+        pass
+
+
 def append_jsonl(
     path: Path,
     payload: Any,
@@ -73,6 +90,7 @@ def append_jsonl(
             handle.write(serialized)
             handle.flush()
             os.fsync(handle.fileno())
+        _rotate_if_needed(path, encoding)
 
 
 def atomic_write_jsonl(
