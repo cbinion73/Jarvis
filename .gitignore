@@ -47,6 +47,11 @@ data/security/
 # Family activity history and trust runtime state
 data/family/mode_history.jsonl
 data/trust/trust_zones.json
+data/**/*.lock
+data/**/*_log.jsonl
+data/**/*_state_log.jsonl
+data/state/
+data/infra/
 
 # Settings generated or updated at runtime
 data/settings/adaptation_profiles.json
@@ -79,6 +84,7 @@ vendor/stable-fast-3d/.venv/
 vendor/trellis-mac/.venv/
 vendor/trellis-mac/deps/
 vendor/trellis-mac/TRELLIS.2/
+vendor/trellis-mac/
 vendor/**/*.so
 vendor/**/*.dylib
 vendor/**/__pycache__/
