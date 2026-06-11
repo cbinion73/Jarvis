@@ -4,7 +4,7 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (SHIP THE FEELING directive added)
+Last updated: 2026-06-10 (Companion Vision directive added)
 
 ---
 
@@ -29,6 +29,156 @@ If no: defer it unless it's a hard blocker for the feeling.
 Infrastructure, maturity scoring, backend wiring, proof systems — all of it
 is secondary to the felt experience. A beautiful incomplete companion is worth
 more than a complete invisible one.
+
+---
+
+# THE COMPANION VISION
+
+## The Daily Magic Standard
+
+**JARVIS should produce at least one "How did it know that?" moment every day.**
+
+Not through surveillance. Through continuity, memory, observation, and
+intelligent synthesis.
+
+## The Three Magic Moments
+
+### Magic Moment 1 — JARVIS understands the state of your life better than you do
+
+Opening JARVIS at 7:00 AM should feel like this:
+
+```
+Good Morning, Chris
+
+I've been working while you were away.
+
+What Changed Since Yesterday
+• Summer camp departure is now 4 days away.
+• Your pool chemistry is stabilizing, but CYA is still missing.
+• No meaningful health activity has been logged this week.
+• JARVIS build activity advanced overnight.
+• Two active writing projects have not moved in 6 days.
+
+What Matters Today
+1. Finalize summer camp logistics.
+2. Review overnight JARVIS progress.
+3. Block time for Thermo Fisher strategic work.
+
+Things You May Have Forgotten
+• Fishing cash was not included in camp fees.
+• Summer camp gear inspection is Thursday.
+• CYA still needs to be added to the pool.
+
+I Prepared For You
+• Overnight code summary from Claude/Codex.
+• Camp readiness checklist.
+• Health recovery plan for this week.
+
+Recommendation
+Spend 30 minutes reviewing JARVIS progress before making any new roadmap decisions.
+```
+
+The reaction Chris should have: *"Dang… it actually knows what's going on."*
+
+### Magic Moment 2 — What JARVIS Did While You Were Away
+
+Not what happened. What JARVIS *did*.
+
+```
+• Reviewed overnight coding activity.
+• Detected 3 roadmap conflicts.
+• Consolidated duplicate requirements.
+• Updated project priorities.
+• Generated tomorrow's Daily Brief.
+• Prepared a draft email.
+• Monitored AI news relevant to Thermo Fisher.
+```
+
+JARVIS feels active. Not a chatbot. Not an app. An employee.
+
+### Magic Moment 3 — JARVIS connects dots you didn't ask it to
+
+```
+Chris, you've spent more time discussing pool chemistry this week than
+health goals. Summer camp departs in four days. Historically, your health
+routines disappear during travel weeks. I recommend scheduling three
+30-minute walks before departure.
+```
+
+That is when it begins to feel intelligent.
+
+## The Four Core Screen Questions
+
+Every JARVIS view should answer these four questions. If they are excellent,
+the system will feel more like a companion than a hundred additional services.
+
+1. **What matters?**
+2. **What changed?**
+3. **What is JARVIS doing?**
+4. **What should I do next?**
+
+## Experience Tiers
+
+### Tier 1 — Presence (build this first)
+
+- Daily Brief
+- What Changed
+- What JARVIS Did
+- Open Loops
+- Mission Tracker
+- Memory Timeline
+
+### Tier 2 — Orchestration Visibility
+
+Show Chris what agents are active, what they're working on, their progress,
+blockers, and expected outcomes. Not infrastructure. Results.
+
+```
+Scout Agent       Preparing summer camp readiness package.    87% complete.
+Health Agent      Detected missing exercise activity.          Preparing plan.
+Builder Agent     Analyzing overnight JARVIS commits.
+Chronicle Agent   Captured 14 new memories.
+```
+
+### Tier 3 — Initiative
+
+The day JARVIS says: *"While you slept I found three opportunities to advance
+the roadmap and prepared implementation plans"* — that is when it starts
+feeling like the companion Chris has been describing.
+
+## The Observation Layer
+
+JARVIS should be capable of saying things like:
+
+> *"Chris, I noticed something. Every time you travel, your pool becomes a
+> major source of stress. Summer camp starts soon. Would you like me to build
+> a departure checklist for the pool so you never think about this again?"*
+
+> *"Three months ago you said: 'I want JARVIS to work for me while I'm
+> asleep.' Last night you spent four hours reviewing implementation plans.
+> I think you're still acting as the orchestrator. Would you like me to
+> propose tasks I can own instead?"*
+
+> *"You've spent 11 hours this week discussing JARVIS architecture. You've
+> spent less than 30 minutes discussing what JARVIS should actually do for
+> you. I think you're drifting toward building the machine instead of using
+> the machine."*
+
+## The Five Companion Properties
+
+| Property | What it means |
+|---|---|
+| Context | JARVIS knows what is happening |
+| Memory | JARVIS remembers what mattered |
+| Pattern Recognition | JARVIS sees things Chris doesn't |
+| Initiative | JARVIS acts before being asked |
+| Trust | JARVIS suggestions are usually right |
+
+The target moment: Chris opens JARVIS and it says *"I think you're solving
+the wrong problem"* — and after reading the reasoning, he realizes it's
+correct. That is when he says: **"Okay… now this feels like JARVIS."**
+
+---
 
 ---
 
