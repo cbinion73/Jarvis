@@ -455,6 +455,18 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/activity/operator-action", html)
         self.assertIn("Refresh Huddle", html)
 
+    def test_render_glass_shell_avoids_noisy_background_transport_probes(self) -> None:
+        html = render_glass_shell(self.runtime)
+
+        self.assertIn("const GLASS_EVENT_STREAM_PATH = '/ws/events';", html)
+        self.assertIn("function glassEventStreamEnabled()", html)
+        self.assertIn("if (glassEventStreamEnabled()) connectWebSocket();", html)
+        self.assertIn("if (!glassEventStreamEnabled()) return;", html)
+        self.assertIn("fetch('/api/respond', {", html)
+        self.assertNotIn("fetch('/api/agent/stream', {", html)
+        self.assertNotIn("fetch('http://127.0.0.1:8788/'", html)
+        self.assertNotIn("const WS_URL         = 'ws://' + location.host + '/ws';", html)
+
     def test_render_glass_shell_wires_desktop_card_sequence_controller(self) -> None:
         html = render_glass_shell(self.runtime)
 

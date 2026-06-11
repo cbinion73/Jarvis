@@ -23,7 +23,8 @@
     "access_policy": "personal",
     "boundary_label": "",
     "source_type": "user-stated",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "96437703-a375-4a1a-aabb-2a8aec67d701",
@@ -48,7 +49,8 @@
     "access_policy": "restricted",
     "boundary_label": "",
     "source_type": "user-stated",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "06f86d06-1550-40fe-baa1-ec61cf493c61",
@@ -75,7 +77,8 @@
     "access_policy": "shared",
     "boundary_label": "",
     "source_type": "user-stated",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "1dd3fd32-0c40-48db-afe8-ca3227448da4",
@@ -101,7 +104,8 @@
     "access_policy": "personal",
     "boundary_label": "child-private",
     "source_type": "user-stated",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "2d38f282-7330-4ffe-8df0-d263038ea0c9",
@@ -129,7 +133,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "4e05cf1e-d3d6-4065-8023-802122e04977",
@@ -155,7 +160,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "fb34f841-1da4-475c-b1f8-b97d94a22385",
@@ -181,7 +187,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "93804c9d-f732-4215-9f43-3d8589d5fa72",
@@ -207,7 +214,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "2dfeb6bc-a0ec-4b51-8ea9-77609c077e98",
@@ -233,7 +241,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "27d0b8db-2a5c-470d-92cc-a0d8f5b7d559",
@@ -260,7 +269,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "3d44f32a-30a3-4e46-9cde-520b3eaf2338",
@@ -287,7 +297,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "fa5f4ece-b220-4814-9fa0-29ef5f534fde",
@@ -314,7 +325,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "559ff7f8-eaec-4867-9b66-926637c9c4cf",
@@ -342,7 +354,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "b11ae457-c2a1-4fbe-b600-2fdbcdd61bf5",
@@ -369,7 +382,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "dbe2e69d-a839-4515-a974-c214f093f535",
@@ -396,7 +410,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "66d43dd9-f58e-43fa-aca8-65f7735b452a",
@@ -423,7 +438,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "seed-import-chatgpt",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "d48e9670-da18-4435-a2af-8b1e64d27bf3",
@@ -450,7 +466,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "conversation-explicit",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "329c4f6c-4161-4d86-8d77-721f7c333b03",
@@ -477,7 +494,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "conversation-explicit",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "0863dede-c87a-4a85-a8c0-7c6be5ed7cf3",
@@ -504,7 +522,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "conversation-explicit",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "06d755db-11db-4143-9773-3ffc8ae80019",
@@ -531,7 +550,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "conversation-explicit",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "8afd39dd-8cb3-41f7-b21f-2b0a8ddb9322",
@@ -557,7 +577,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "c46dbc4e-7d47-4ffc-9b4b-9572fdb4105e",
@@ -583,7 +604,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "19a624a8-ba71-43a8-b5ca-d13b9a9b87d5",
@@ -611,7 +633,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "1351e7f4-36ec-4227-9b4c-c14db7913ad6",
@@ -638,7 +661,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "14c7a239-5757-41ce-8887-4850f50fe8e2",
@@ -664,7 +688,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "e7b80442-8dba-495e-a4c3-c2d38b908c14",
@@ -691,7 +716,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "6943ff45-8892-41eb-bedd-31ed199aae0d",
@@ -718,7 +744,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "2e397717-a7c6-409d-baa2-a0d854e7e6b8",
@@ -745,7 +772,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "0e454635-756d-4261-8c81-20995947162b",
@@ -774,7 +802,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "1e6bfb04-1810-4464-bcc8-c2c7a713188d",
@@ -801,7 +830,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "a921e7c5-97e3-495e-a9c8-c5455277b989",
@@ -828,7 +858,8 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "1a603390-9a3e-43ab-a718-36019ff028ec",
@@ -855,7 +886,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "whitepaper-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "7fa61985-4405-418c-95da-03c8e2c27126",
@@ -882,7 +914,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "e5bef522-f678-4699-942f-2c67e508f69f",
@@ -909,7 +942,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "303c294f-ea1c-4c4b-92fe-e7aefe225d41",
@@ -936,7 +970,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "c378a46a-3fe2-4c66-b57a-0846815e45a0",
@@ -963,7 +998,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "e962e393-cc62-483f-b255-a529e4b404f7",
@@ -990,7 +1026,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "9131d752-9db0-495b-aa2d-f1a5307d84c7",
@@ -1017,7 +1054,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "fdd04950-8a15-4bd1-898a-12b519f43111",
@@ -1044,7 +1082,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "b673aa9d-e550-499f-b613-1c19db208645",
@@ -1071,7 +1110,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "f42eed8a-466b-43ac-8c54-12eee9d0be97",
@@ -1098,7 +1138,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "e982e8b8-83d1-48a0-9599-656f3f8453b5",
@@ -1125,7 +1166,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "bf2251b8-ff5a-41bc-a727-843a330aedaa",
@@ -1152,7 +1194,8 @@
     "access_policy": "personal",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   },
   {
     "entry_id": "0ebba82b-4676-40df-a083-6c632cd60b8e",
@@ -1180,6 +1223,7 @@
     "access_policy": "shared",
     "boundary_label": "personal",
     "source_type": "constitution-import",
-    "confidence": "confirmed"
+    "confidence": "confirmed",
+    "provenance": "observed_fact"
   }
 ]

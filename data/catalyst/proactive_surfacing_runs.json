@@ -14,5 +14,35 @@
     ],
     "raw_output": "Opportunities:\nThe Friday agenda decision is the cleanest leverage point. Resolve whether the strategy block moves to Friday afternoon, then identify the minimum deck reviewers before anything hardens into calendar law. Also worth capturing the personal-safe follow-up workflow now, since it will reduce post-meeting drift without letting the machine get overconfident.\n\nRisks:\nThe agenda question is duplicated, which usually means it is either important or merely haunting the inbox. Either way, unanswered by tomorrow will create avoidable friction. The follow-up workflow must remain draft-only until you approve it; otherwise we are simply automating surprise, which is a magnificent but ill-advised hobby.\n\nRecommended Focus:\nHandle the Friday agenda decision first. Confirm the time move and the required reviewers, then stage the deck-review path behind a manual approval step. After that, draft the strategy-meeting follow-up workflow so it can produce next steps, but not take liberties.",
     "timestamp": "2026-05-11T04:15:46.564117+00:00"
+  },
+  {
+    "run_id": "b4416500-2a49-4b7c-92c3-1f0040e95649",
+    "actor": "Chris",
+    "horizon": "today",
+    "opportunities": [],
+    "risks": [],
+    "recommended_focus": [],
+    "raw_output": "AI fallback in effect: OPENAI_API_KEY is missing.. Take a quieter manual path: surface one Scripture passage, one reflection question, and one short prayer or journal note.",
+    "timestamp": "2026-06-10T14:56:56.655799+00:00"
+  },
+  {
+    "run_id": "7878361d-b73e-42af-9a52-45583b660033",
+    "actor": "Chris",
+    "horizon": "today",
+    "opportunities": [],
+    "risks": [],
+    "recommended_focus": [],
+    "raw_output": "AI fallback in effect: OPENAI_API_KEY is missing.. Take a quieter manual path: surface one Scripture passage, one reflection question, and one short prayer or journal note.",
+    "timestamp": "2026-06-10T14:56:57.726289+00:00"
+  },
+  {
+    "run_id": "f310f176-e473-4e62-b5ed-d1d5ff5a9d9d",
+    "actor": "Chris",
+    "horizon": "today",
+    "opportunities": [],
+    "risks": [],
+    "recommended_focus": [],
+    "raw_output": "AI fallback in effect: OPENAI_API_KEY is missing.. Take a quieter manual path: surface one Scripture passage, one reflection question, and one short prayer or journal note.",
+    "timestamp": "2026-06-10T14:56:58.516128+00:00"
   }
 ]

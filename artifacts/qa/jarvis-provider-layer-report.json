@@ -1,37 +1,102 @@
 {
-  "started_at": "2026-06-10T14:54:41.061Z",
-  "finished_at": "2026-06-10T14:54:41.062Z",
+  "started_at": "2026-06-10T23:43:47.059Z",
   "base_url": "http://127.0.0.1:8787",
-  "status": "environment-limited",
-  "environment_limited": true,
-  "runtime": {
-    "available": false,
-    "health_url": "http://127.0.0.1:8787/health",
-    "healthcheck": {
-      "ok": false,
-      "error": "TypeError: fetch failed"
-    }
-  },
   "checks": [
     {
-      "name": "Provider battery preflight",
+      "name": "Speech provider readiness endpoint",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "TTS provider returns audio",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Settings modal exposes provider controls",
+      "status": "failed",
+      "details": "page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#modal-layer.open') to be visible\u001b[22m\n\n    at /Users/chris/Desktop/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs:191:16\n    at async check (/Users/chris/Desktop/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs:137:7)\n    at async run (/Users/chris/Desktop/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs:187:3)",
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Google status endpoint shape",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Google account records are well formed",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Google snapshot loads for Chris Gmail",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Google connect handoff route exists for Chris Gmail",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Google snapshot loads for Chris Google",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Integration status endpoint shape",
+      "status": "passed",
+      "details": null,
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Integration status disagrees with connected Google accounts",
+      "status": "warning",
+      "details": "google-workspace reports blocked: No Google accounts are currently connected.",
+      "screenshot": null,
+      "kind": "automated"
+    },
+    {
+      "name": "Live Home Assistant action checks",
       "status": "skipped",
-      "details": "Local runtime at http://127.0.0.1:8787 was unavailable before provider checks: TypeError: fetch failed",
+      "details": "Home Assistant not ready: Home Assistant is not connected.",
       "screenshot": null,
       "kind": "automated"
     }
   ],
-  "failures": [],
+  "failures": [
+    {
+      "name": "Settings modal exposes provider controls",
+      "error": "page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#modal-layer.open') to be visible\u001b[22m\n\n    at /Users/chris/Desktop/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs:191:16\n    at async check (/Users/chris/Desktop/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs:137:7)\n    at async run (/Users/chris/Desktop/JARVIS/tests/e2e/jarvis-provider-layer.e2e.cjs:187:3)"
+    }
+  ],
   "warnings": [
     {
-      "name": "runtime-unavailable",
-      "details": "Local runtime at http://127.0.0.1:8787 was unavailable before provider checks: TypeError: fetch failed"
+      "name": "Integration status disagrees with connected Google accounts",
+      "details": "google-workspace reports blocked: No Google accounts are currently connected."
     }
   ],
   "summary": {
-    "passed": 0,
-    "failed": 0,
+    "passed": 8,
+    "failed": 1,
     "skipped": 1,
     "warned": 1
-  }
+  },
+  "finished_at": "2026-06-10T23:44:07.058Z"
 }

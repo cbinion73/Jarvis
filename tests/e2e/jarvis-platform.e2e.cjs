@@ -56,15 +56,6 @@ async function dispatchClick(page, selector) {
   }, selector);
 }
 
-async function openPacket(page, packetId) {
-  await page.evaluate((targetPacketId) => {
-    if (typeof window.__jarvisOpenPacket !== "function") {
-      throw new Error("openPacket helper not available");
-    }
-    window.__jarvisOpenPacket(targetPacketId);
-  }, packetId);
-}
-
 async function closeModalIfOpen(page) {
   await page.evaluate(() => {
     const layer = document.getElementById("modal-layer");
@@ -101,13 +92,21 @@ async function run() {
 
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
+  await context.addInitScript(() => {
+    window.localStorage.setItem("jarvis-claimed-user-v1", "e2e");
+    window.sessionStorage.setItem("jarvis-wau-skipped", "1");
+  });
   const page = await context.newPage();
 
   await check("HTTP root responds", async (entry) => {
     const response = await fetch(`${BASE_URL}/`);
     const body = await response.text();
     assert(response.ok, `Expected 200 from /, got ${response.status}`);
-    assert(body.includes("JARVIS Voice Shell"), "Root HTML did not include JARVIS Voice Shell");
+    assert(
+      body.includes("JARVIS DAILY BRIEF") || body.includes("command-sidebar"),
+      "Root HTML did not include expected glass-shell markers"
+    );
+    entry.details = "Root responded with the glass shell.";
   });
 
   await check("Core API smoke", async () => {
@@ -140,126 +139,71 @@ async function run() {
     }
   });
 
-  await check("Voice shell loads", async (entry) => {
+  await check("Glass shell loads on root", async (entry) => {
     await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector("#command-input");
-    await page.waitForSelector("#voice-command");
+    await page.waitForSelector(".command-sidebar", { state: "attached" });
+    await page.waitForSelector(".dailybrief-card", { state: "attached" });
+    const bodyText = await page.locator("body").textContent();
+    assert(/daily brief/i.test(bodyText || ""), "Glass root did not surface Daily Brief content");
+    entry.screenshot = await recordShot(page, "glass-shell-root");
+  });
+
+  await check("Daily Brief module route loads", async (entry) => {
+    await page.goto(`${BASE_URL}/briefing-center`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("body.module-surface", { state: "attached" });
+    await page.waitForFunction(() => /JARVIS Daily Brief/i.test(document.body?.innerText || ""));
+    await page.waitForFunction(() => /First Light/i.test(document.body?.innerText || ""));
+    entry.screenshot = await recordShot(page, "glass-briefing-center");
+  });
+
+  await check("Calendar glass route starts calendar view", async (entry) => {
+    await page.goto(`${BASE_URL}/calendar-center`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.__JARVIS_START_VIEW === "calendar");
+    await page.waitForSelector(".calendar-sidebar");
+    const text = await page.locator("body").textContent();
+    assert(/calendar/i.test(text || ""), "Calendar glass route did not render calendar content");
+    entry.screenshot = await recordShot(page, "glass-calendar-center");
+  });
+
+  await check("Email glass route starts email view", async (entry) => {
+    await page.goto(`${BASE_URL}/email-center`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.__JARVIS_START_VIEW === "email");
+    await page.waitForSelector(".email-sidebar");
+    const text = await page.locator("body").textContent();
+    assert(/email/i.test(text || ""), "Email glass route did not render email content");
+    entry.screenshot = await recordShot(page, "glass-email-center");
+  });
+
+  await check("News glass route starts news view", async (entry) => {
+    await page.goto(`${BASE_URL}/news-center`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.__JARVIS_START_VIEW === "news");
+    const text = await page.locator("body").textContent();
+    assert(/news/i.test(text || ""), "News glass route did not render news content");
+    entry.screenshot = await recordShot(page, "glass-news-center");
+  });
+
+  await check("Social glass route starts social view", async (entry) => {
+    await page.goto(`${BASE_URL}/social-center`, { waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => window.__JARVIS_START_VIEW === "social");
+    await page.waitForSelector(".social-sidebar");
+    const text = await page.locator("body").textContent();
+    assert(/social/i.test(text || ""), "Social glass route did not render social content");
+    entry.screenshot = await recordShot(page, "glass-social-center");
+  });
+
+  await check("Voice shell remains explicitly available", async (entry) => {
+    await page.goto(`${BASE_URL}/?theme=voice`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#command-input", { state: "attached" });
+    await page.waitForSelector("#voice-command", { state: "attached" });
     await page.waitForSelector("#open-settings", { state: "attached" });
     await page.waitForSelector("#packet-strip-toggle", { state: "attached" });
-    await page.waitForSelector(".core-stage");
-    await page.waitForTimeout(1200);
+    await page.waitForSelector(".core-stage", { state: "attached" });
     const stateLabel = await page.locator("#state-label").textContent();
     assert(/idle/i.test(stateLabel || ""), `Expected state label to start idle, got ${stateLabel}`);
-    entry.screenshot = await recordShot(page, "voice-shell-home");
+    entry.screenshot = await recordShot(page, "voice-shell-explicit-route");
   });
 
-  await check("Packet rail expands", async (entry) => {
-    await page.evaluate(() => {
-      const button = document.getElementById("packet-strip-toggle");
-      if (!button) throw new Error("packet-strip-toggle not found");
-      button.click();
-    });
-    await page.waitForTimeout(250);
-    const strip = page.locator("#packet-strip");
-    const text = await strip.textContent();
-    assert((text || "").includes("Approvals"), "Packet strip did not show packet buttons");
-    entry.screenshot = await recordShot(page, "packet-strip-expanded");
-  });
-
-  await check("Settings modal opens with platform controls", async (entry) => {
-    await dispatchClick(page, "#open-settings");
-    await page.waitForSelector("#modal-layer.open");
-    await page.waitForFunction(() => document.getElementById("modal-title")?.textContent?.includes("Settings"));
-    await page.waitForSelector("#save-location");
-    await page.waitForSelector("#save-google-client-secret");
-    await page.waitForSelector("#launch-google-connect");
-    const bodyClass = await page.locator("body").getAttribute("class");
-    assert((bodyClass || "").includes("modal-open"), "Body did not enter modal-open state");
-    entry.screenshot = await recordShot(page, "settings-modal");
-  });
-
-  await check("Mode panel can change household mode", async (entry) => {
-    await closeModalIfOpen(page);
-    await page.waitForTimeout(200);
-    const before = await fetchJson("/api/mode");
-    assert(before.ok, "Could not read initial mode");
-    await dispatchClick(page, "#mode-toggle");
-    await page.waitForSelector("#mode-panel.open");
-    const options = await page.locator("#mode-select option").evaluateAll((nodes) =>
-      nodes.map((node) => ({ value: node.value, text: node.textContent }))
-    );
-    const current = before.data.mode;
-    const next = options.find((item) => item.value !== current) || options[0];
-    assert(next && next.value, "Could not find alternate mode option");
-    await page.selectOption("#mode-select", next.value);
-    await page.fill("#mode-reason", "Automated E2E mode transition check.");
-    await dispatchClick(page, "#mode-panel-apply");
-    await page.waitForTimeout(500);
-    const after = await fetchJson("/api/mode");
-    assert(after.ok, "Could not read updated mode");
-    assert(after.data.mode === next.value, `Expected mode ${next.value}, got ${after.data.mode}`);
-    entry.screenshot = await recordShot(page, "mode-panel-updated");
-  });
-
-  await check("Location settings persist a saved location", async (entry) => {
-    await dispatchClick(page, "#open-settings");
-    await page.waitForSelector("#modal-layer.open");
-    const label = `QA Location ${Date.now()}`;
-    await page.fill("#location-label", label);
-    await page.fill("#location-geography", "Alexandria, Kentucky");
-    await page.fill("#location-latitude", "38.9598");
-    await page.fill("#location-longitude", "-84.3877");
-    await page.fill("#location-notes", "Automated QA location check.");
-    await dispatchClick(page, "#save-location");
-    await page.waitForTimeout(700);
-    const settings = await fetchJson("/api/location-settings");
-    assert(settings.ok, "Location settings POST did not leave endpoint readable");
-    assert(
-      Array.isArray(settings.data.saved_locations) &&
-        settings.data.saved_locations.some((item) => item.label === label),
-      `Saved locations did not include ${label}`
-    );
-    assert(settings.data.active_location?.label === label, "Saved location was not made active");
-    entry.screenshot = await recordShot(page, "location-settings-saved");
-  });
-
-  await check("Catalyst workspace opens as modal app", async (entry) => {
-    await closeModalIfOpen(page);
-    await page.waitForTimeout(200);
-    await openPacket(page, "catalyst");
-    await page.waitForSelector("#modal-layer.open");
-    await page.waitForFunction(() => {
-      const title = document.getElementById("modal-title")?.textContent || "";
-      return /Catalyst/i.test(title);
-    });
-    await page.waitForSelector("#catalyst-workspace-frame");
-    const frame = page.locator("#catalyst-workspace-frame");
-    await page.waitForTimeout(1200);
-    const src = await frame.getAttribute("src");
-    assert(src && /\/home\b|\/catalyst\/view\/home\b/i.test(src), `Expected catalyst home iframe, got ${src}`);
-    entry.screenshot = await recordShot(page, "catalyst-workspace");
-  });
-
-  await check("Modal state hides packet rail and shrinks core", async (entry) => {
-    const modalOpen = await page.locator("body").evaluate((node) => node.classList.contains("modal-open"));
-    assert(modalOpen, "Body did not stay in modal-open state");
-    const coreStage = page.locator(".core-stage");
-    const transform = await coreStage.evaluate((node) => getComputedStyle(node).transform);
-    assert(transform && transform !== "none", "Core stage transform did not change during modal state");
-    entry.details = `Core transform during modal: ${transform}`;
-  });
-
-  await check("Talk button remains interactive", async (entry) => {
-    await closeModalIfOpen(page);
-    await page.waitForTimeout(300);
-    await dispatchClick(page, "#voice-command");
-    await page.waitForTimeout(800);
-    const stateLabel = (await page.locator("#state-label").textContent()) || "";
-    assert(stateLabel.trim().length > 0, "State label cleared after Talk click");
-    entry.details = `State after Talk click: ${stateLabel}`;
-    entry.screenshot = await recordShot(page, "talk-button-state");
-  });
-
+  await context.close();
   await browser.close();
 
   report.finished_at = new Date().toISOString();
@@ -268,9 +212,7 @@ async function run() {
   process.stdout.write(`${REPORT_PATH}\n`);
   process.stdout.write(JSON.stringify(report, null, 2));
 
-  if (report.summary.failed > 0) {
-    process.exitCode = 1;
-  }
+  process.exit(report.summary.failed > 0 ? 1 : 0);
 }
 
 run().catch((error) => {

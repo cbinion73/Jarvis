@@ -1,11 +1,11 @@
 {
-  "started_at": "2026-05-15T16:12:54.786Z",
+  "started_at": "2026-06-09T19:26:00.644Z",
   "base_url": "http://127.0.0.1:8787",
   "checks": [
     {
       "name": "HTTP root responds",
       "status": "passed",
-      "details": null,
+      "details": "Root responded with the glass shell.",
       "screenshot": null
     },
     {
@@ -15,91 +15,52 @@
       "screenshot": null
     },
     {
-      "name": "Voice shell loads",
-      "status": "failed",
-      "details": "page.waitForSelector: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle') to be visible\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:119:16\n    at async check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:7)\n    at async run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:114:3)",
-      "screenshot": null
+      "name": "Glass shell loads on root",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots/glass-shell-root.png"
     },
     {
-      "name": "Packet rail expands",
-      "status": "failed",
-      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:128:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:127:9)",
-      "screenshot": null
+      "name": "Daily Brief module route loads",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots/glass-briefing-center.png"
     },
     {
-      "name": "Settings modal opens with platform controls",
-      "status": "failed",
-      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    47 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:138:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:137:9)",
-      "screenshot": null
+      "name": "Calendar glass route starts calendar view",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots/glass-calendar-center.png"
     },
     {
-      "name": "Mode panel can change household mode",
-      "status": "failed",
-      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:150:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:149:9)",
-      "screenshot": null
+      "name": "Email glass route starts email view",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots/glass-email-center.png"
     },
     {
-      "name": "Location settings persist a saved location",
-      "status": "failed",
-      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    38 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:173:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:172:9)",
-      "screenshot": null
+      "name": "News glass route starts news view",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots/glass-news-center.png"
     },
     {
-      "name": "Catalyst workspace opens as modal app",
-      "status": "failed",
-      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:195:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:194:9)",
-      "screenshot": null
+      "name": "Social glass route starts social view",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots/glass-social-center.png"
     },
     {
-      "name": "Modal state hides packet rail and shrinks core",
-      "status": "failed",
-      "details": "locator.boundingBox: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:214:72\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:213:9)",
-      "screenshot": null
-    },
-    {
-      "name": "Talk button remains interactive",
-      "status": "failed",
-      "details": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:223:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:222:9)",
-      "screenshot": null
+      "name": "Voice shell remains explicitly available",
+      "status": "passed",
+      "details": null,
+      "screenshot": "/Users/chris/Desktop/JARVIS/artifacts/qa/screenshots/voice-shell-explicit-route.png"
     }
   ],
-  "failures": [
-    {
-      "name": "Voice shell loads",
-      "error": "page.waitForSelector: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle') to be visible\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:119:16\n    at async check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:7)\n    at async run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:114:3)"
-    },
-    {
-      "name": "Packet rail expands",
-      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:128:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:127:9)"
-    },
-    {
-      "name": "Settings modal opens with platform controls",
-      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    47 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:138:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:137:9)"
-    },
-    {
-      "name": "Mode panel can change household mode",
-      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:150:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:149:9)"
-    },
-    {
-      "name": "Location settings persist a saved location",
-      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#open-settings')\u001b[22m\n\u001b[2m    - locator resolved to <button type=\"button\" id=\"open-settings\" class=\"ghost-toggle\">Settings</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    38 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div id=\"modal-layer\" aria-hidden=\"false\" class=\"modal-layer open\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:173:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:172:9)"
-    },
-    {
-      "name": "Catalyst workspace opens as modal app",
-      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:195:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:194:9)"
-    },
-    {
-      "name": "Modal state hides packet rail and shrinks core",
-      "error": "locator.boundingBox: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#packet-strip-toggle')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:214:72\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:213:9)"
-    },
-    {
-      "name": "Talk button remains interactive",
-      "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#close-modal')\u001b[22m\n\n    at /Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:223:16\n    at check (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:62:13)\n    at run (/Users/chris/Desktop/CODE/JARVIS/tests/e2e/jarvis-platform.e2e.cjs:222:9)"
-    }
-  ],
+  "failures": [],
   "summary": {
-    "passed": 2,
-    "failed": 8
+    "passed": 9,
+    "failed": 0
   },
-  "finished_at": "2026-05-15T16:17:12.597Z"
+  "finished_at": "2026-06-09T19:26:32.361Z"
 }

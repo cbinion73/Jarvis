@@ -352,5 +352,34 @@
     },
     "created_at": "2026-06-01T23:42:19.784686+00:00",
     "updated_at": "2026-06-01T23:42:19.784686+00:00"
+  },
+  {
+    "arena_id": "system.agent-sandbox",
+    "name": "Agent Self-Improvement Sandbox Arena",
+    "resource_type": "self_improvement_sandbox",
+    "linked_zone_id": "system_agent",
+    "owner_principal": "chris",
+    "risk_class": "medium",
+    "limits": {
+      "action_budget": {
+        "max_jobs_per_day": 10,
+        "max_concurrent_jobs": 2
+      }
+    },
+    "pause_conditions": [
+      "principal_override",
+      "worktree_failure",
+      "repeated_test_failure"
+    ],
+    "status": "active",
+    "description": "Bounded arena for isolated worktree sandbox runs of self-improvement jobs.",
+    "resource_refs": {
+      "executor": "sandbox_worktree_executor"
+    },
+    "promotion_eligibility": {
+      "enabled": false
+    },
+    "created_at": "2026-06-09T23:47:24.946648+00:00",
+    "updated_at": "2026-06-09T23:47:24.946648+00:00"
   }
 ]

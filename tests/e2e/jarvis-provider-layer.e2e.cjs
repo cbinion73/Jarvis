@@ -159,6 +159,7 @@ async function run() {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
   const page = await context.newPage();
+  page.setDefaultTimeout(15000);
 
   await check("Speech provider readiness endpoint", async () => {
     const response = await fetchResponse("/api/voice-options");
@@ -184,7 +185,8 @@ async function run() {
   });
 
   await check("Settings modal exposes provider controls", async (entry) => {
-    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}/?theme=voice`, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#open-settings");
     await page.click("#open-settings");
     await page.waitForSelector("#modal-layer.open");
     await page.waitForSelector("#save-google-client-secret");

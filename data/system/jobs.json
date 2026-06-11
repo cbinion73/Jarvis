@@ -125,24 +125,79 @@
     "source": "repo-health",
     "evidence": {
       "git_status_excerpt": [
-        "M .agents/skills/bmad-advanced-elicitation/methods.csv",
-        " M .agents/skills/bmad-agent-analyst/SKILL.md",
-        " M .agents/skills/bmad-agent-architect/SKILL.md",
-        " M .agents/skills/bmad-agent-dev/SKILL.md",
-        " M .agents/skills/bmad-agent-dev/customize.toml",
-        " M .agents/skills/bmad-agent-pm/SKILL.md",
-        " M .agents/skills/bmad-agent-pm/customize.toml",
-        " M .agents/skills/bmad-agent-tech-writer/SKILL.md",
-        " M .agents/skills/bmad-agent-ux-designer/SKILL.md",
-        " M .agents/skills/bmad-agent-ux-designer/customize.toml",
-        " M .agents/skills/bmad-brainstorming/steps/step-03-technique-execution.md",
-        " M .agents/skills/bmad-brainstorming/workflow.md"
+        "M artifacts/generated/jarvis-approval-queue.html",
+        " M artifacts/generated/jarvis-approval-queue.json",
+        " M artifacts/qa/jarvis-platform-report.json",
+        " M data/catalyst/proactive_surfacing_runs.json",
+        " M data/catalyst/work_lifecycle.json",
+        " M data/family/mode_history_state_log.jsonl",
+        " M data/memory/entries.json",
+        " M data/memory/entries_log.jsonl",
+        " M data/memory/entries_state_log.jsonl",
+        " M data/memory/profile_facts.json",
+        " M data/memory/profile_facts_log.jsonl",
+        " M data/memory/profile_facts_state_log.jsonl"
       ]
     },
     "created_at": "2026-06-02T11:21:09.443642+00:00",
-    "updated_at": "2026-06-02T11:57:41.654720+00:00",
-    "last_result": {},
-    "last_run_at": ""
+    "updated_at": "2026-06-10T15:47:14.156205+00:00",
+    "last_result": {
+      "ok": true,
+      "record": {
+        "generated_at": "2026-06-10T14:16:49.066227+00:00",
+        "compile_ok": true,
+        "compile_stdout": "",
+        "compile_stderr": "",
+        "git_available": true,
+        "branch": "main",
+        "dirty": true,
+        "diff_count": 102,
+        "git_status_excerpt": [
+          "M artifacts/generated/jarvis-approval-queue.html",
+          " M artifacts/generated/jarvis-approval-queue.json",
+          " M artifacts/qa/jarvis-platform-report.json",
+          " M data/catalyst/work_lifecycle.json",
+          " M data/family/mode_history_state_log.jsonl",
+          " M data/memory/entries.json",
+          " M data/memory/entries_log.jsonl",
+          " M data/memory/entries_state_log.jsonl",
+          " M data/memory/profile_facts.json",
+          " M data/memory/profile_facts_log.jsonl",
+          " M data/memory/profile_facts_state_log.jsonl",
+          " M data/memory/proposals_log.jsonl",
+          " M data/memory/proposals_state_log.jsonl",
+          " M data/settings/shared_doctrine.json",
+          " M data/system/guardian_events.jsonl",
+          " M data/system/guardian_state.json",
+          " M data/system/jobs.json",
+          " M data/system/runs.json",
+          " M data/trust/resource_arenas.json",
+          " M data/trust/trust_zones_log.jsonl"
+        ],
+        "tracked_files": [
+          "jarvis/runtime.py",
+          "jarvis/service.py",
+          "jarvis/voice_ui.py",
+          "jarvis/main.py",
+          "jarvis/assistant_core.py",
+          "jarvis/self_improvement.py",
+          "ops/install_launchd_services.sh",
+          "ops/launchd/com.jarvis.runtime.plist.template",
+          "ops/launchd/com.jarvis.assistant-autonomy.plist.template"
+        ],
+        "compiled_python_files": [
+          "jarvis/runtime.py",
+          "jarvis/service.py",
+          "jarvis/voice_ui.py",
+          "jarvis/main.py",
+          "jarvis/assistant_core.py",
+          "jarvis/self_improvement.py"
+        ]
+      },
+      "stdout": "Repo drift was refreshed.",
+      "stderr": ""
+    },
+    "last_run_at": "2026-06-10T14:16:48.020640+00:00"
   },
   {
     "job_id": "747ac40c-38a3-43aa-880c-bd6bcf5ad095",
@@ -178,8 +233,49 @@
       "heavy": true
     },
     "created_at": "2026-06-02T11:21:13.272891+00:00",
-    "updated_at": "2026-06-02T11:57:41.654720+00:00",
+    "updated_at": "2026-06-10T15:47:14.156205+00:00",
     "last_result": {},
+    "last_run_at": ""
+  },
+  {
+    "job_id": "1ef79e71-c439-460f-ac78-46d1daaf1f6b",
+    "job_key": "tool-gap::rg",
+    "title": "Resolve missing tool: rg",
+    "summary": "JARVIS depends on rg for its local maintenance posture, but that tool is not available on this machine.",
+    "job_type": "resolve-tool-gap",
+    "target": "rg",
+    "status": "resolved",
+    "domain": "system",
+    "lane": "self-improvement-and-maintenance",
+    "owner_agent": "Autoforge",
+    "risk_level": "moderate",
+    "review_level": "review-before-tool-install",
+    "auto_allowed": false,
+    "mutation_route": {
+      "route": "approval-required",
+      "summary": "JARVIS may prepare the mutation, rationale, and validation path, but a principal must approve live execution.",
+      "reason": "Broad tooling, dependency, connector, or daemon changes widen system capability and require explicit principal approval.",
+      "execution_allowed": false,
+      "requires_sandbox": false,
+      "requires_approval": true,
+      "blocked": false
+    },
+    "source": "tool-inventory",
+    "evidence": {
+      "tool": {
+        "name": "rg",
+        "available": false,
+        "required": true,
+        "installable": false
+      }
+    },
+    "created_at": "2026-06-09T19:44:18.813698+00:00",
+    "updated_at": "2026-06-10T15:46:59.763940+00:00",
+    "last_result": {
+      "ok": true,
+      "summary": "The triggering maintenance condition is no longer active.",
+      "resolved_at": "2026-06-10T15:46:59.763940+00:00"
+    },
     "last_run_at": ""
   }
 ]

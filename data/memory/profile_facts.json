@@ -20,7 +20,10 @@
     "source_type": "user-stated",
     "boundary_label": "child-private",
     "created_at": "2026-05-10T05:53:17.566170+00:00",
-    "updated_at": "2026-05-10T05:53:23.981748+00:00"
+    "updated_at": "2026-05-10T05:53:23.981748+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "98e323c40d853c3e24504980",
@@ -45,7 +48,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.188878+00:00",
-    "updated_at": "2026-05-11T14:18:58.188879+00:00"
+    "updated_at": "2026-05-11T14:18:58.188879+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "5917c4365c45f985beb82648",
@@ -68,7 +74,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.203858+00:00",
-    "updated_at": "2026-05-11T14:18:58.203860+00:00"
+    "updated_at": "2026-05-11T14:18:58.203860+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "7754966a24d9ef4851ca8dd2",
@@ -91,7 +100,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.218654+00:00",
-    "updated_at": "2026-05-11T14:18:58.218656+00:00"
+    "updated_at": "2026-05-11T14:18:58.218656+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "8bbe8d908bd67e165f291193",
@@ -114,7 +126,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.233707+00:00",
-    "updated_at": "2026-05-11T14:18:58.233708+00:00"
+    "updated_at": "2026-05-11T14:18:58.233708+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "e8890cc9d37925cf91789ab5",
@@ -137,7 +152,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.248990+00:00",
-    "updated_at": "2026-05-11T14:18:58.248992+00:00"
+    "updated_at": "2026-05-11T14:18:58.248992+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "377c93886fe25171122e0630",
@@ -161,7 +179,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.264414+00:00",
-    "updated_at": "2026-05-11T14:18:58.264415+00:00"
+    "updated_at": "2026-05-11T14:18:58.264415+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "cbd2e1d35a3f2a4a4648a559",
@@ -185,7 +206,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.279646+00:00",
-    "updated_at": "2026-05-11T14:18:58.279647+00:00"
+    "updated_at": "2026-05-11T14:18:58.279647+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "7bd157172c395a801b1b0505",
@@ -209,7 +233,10 @@
     "source_type": "seed-import-chatgpt",
     "boundary_label": "personal",
     "created_at": "2026-05-11T14:18:58.295007+00:00",
-    "updated_at": "2026-05-11T14:18:58.295009+00:00"
+    "updated_at": "2026-05-11T14:18:58.295009+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "a431e168ae2e6f4ef3ab703b",
@@ -232,7 +259,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:43.910699+00:00",
-    "updated_at": "2026-05-12T03:45:43.910706+00:00"
+    "updated_at": "2026-05-12T03:45:43.910706+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "20a9eaa1cc499f9faf50ff25",
@@ -255,7 +285,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:43.931749+00:00",
-    "updated_at": "2026-05-12T03:45:43.931753+00:00"
+    "updated_at": "2026-05-12T03:45:43.931753+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "c9adfdd0b858d29d325e9673",
@@ -280,7 +313,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:43.952839+00:00",
-    "updated_at": "2026-05-12T03:45:43.952845+00:00"
+    "updated_at": "2026-05-12T03:45:43.952845+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "0d1c6e9f71bba17ef4ecd755",
@@ -304,7 +340,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:43.974132+00:00",
-    "updated_at": "2026-05-12T03:45:43.974152+00:00"
+    "updated_at": "2026-05-12T03:45:43.974152+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "9e151f8a1371ea24988e1ca9",
@@ -327,7 +366,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:43.995555+00:00",
-    "updated_at": "2026-05-12T03:45:43.995562+00:00"
+    "updated_at": "2026-05-12T03:45:43.995562+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "25937b2961af3214c01125dc",
@@ -351,7 +393,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:44.017461+00:00",
-    "updated_at": "2026-05-12T03:45:44.017466+00:00"
+    "updated_at": "2026-05-12T03:45:44.017466+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "6675bb73d487a9e7a2adcb13",
@@ -375,7 +420,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:44.038828+00:00",
-    "updated_at": "2026-05-12T03:45:44.038831+00:00"
+    "updated_at": "2026-05-12T03:45:44.038831+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "1bb896e82126b40f45599faa",
@@ -399,7 +447,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:44.062690+00:00",
-    "updated_at": "2026-05-12T03:45:44.062697+00:00"
+    "updated_at": "2026-05-12T03:45:44.062697+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "206b8fcf4dd3123d93038727",
@@ -425,7 +476,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:44.085071+00:00",
-    "updated_at": "2026-05-12T03:45:44.085078+00:00"
+    "updated_at": "2026-05-12T03:45:44.085078+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "94320b924abf93abbfdd92a5",
@@ -449,7 +503,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:45:44.106825+00:00",
-    "updated_at": "2026-05-12T03:45:44.106829+00:00"
+    "updated_at": "2026-05-12T03:45:44.106829+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "59ef62f0933dbe89968508fa",
@@ -473,7 +530,10 @@
     "source_type": "whitepaper-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:46:19.665401+00:00",
-    "updated_at": "2026-05-12T03:46:19.665413+00:00"
+    "updated_at": "2026-05-12T03:46:19.665413+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "44aad9338f5a268935e77943",
@@ -497,7 +557,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.220235+00:00",
-    "updated_at": "2026-05-12T03:49:13.220241+00:00"
+    "updated_at": "2026-05-12T03:49:13.220241+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "e58b89977007712f8bb1f54f",
@@ -521,7 +584,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.245290+00:00",
-    "updated_at": "2026-05-12T03:49:13.245295+00:00"
+    "updated_at": "2026-05-12T03:49:13.245295+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "01b7e9b7d6cef8653c63299f",
@@ -545,7 +611,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.271471+00:00",
-    "updated_at": "2026-05-12T03:49:13.271487+00:00"
+    "updated_at": "2026-05-12T03:49:13.271487+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "df6154eabe73e89e37ac1119",
@@ -569,7 +638,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.296031+00:00",
-    "updated_at": "2026-05-12T03:49:13.296035+00:00"
+    "updated_at": "2026-05-12T03:49:13.296035+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "556904bcff7c34f6afce5c27",
@@ -593,7 +665,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.322093+00:00",
-    "updated_at": "2026-05-12T03:49:13.322100+00:00"
+    "updated_at": "2026-05-12T03:49:13.322100+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "f6bffacc8ef3c562e2271dbf",
@@ -617,7 +692,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.346740+00:00",
-    "updated_at": "2026-05-12T03:49:13.346743+00:00"
+    "updated_at": "2026-05-12T03:49:13.346743+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "9487cad26f23eea95f54f6d5",
@@ -641,7 +719,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.377456+00:00",
-    "updated_at": "2026-05-12T03:49:13.377461+00:00"
+    "updated_at": "2026-05-12T03:49:13.377461+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "c3e5b08b3ccc27b8fae2d543",
@@ -665,7 +746,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.402060+00:00",
-    "updated_at": "2026-05-12T03:49:13.402071+00:00"
+    "updated_at": "2026-05-12T03:49:13.402071+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "505485a9532b33164cba8826",
@@ -689,7 +773,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.426400+00:00",
-    "updated_at": "2026-05-12T03:49:13.426405+00:00"
+    "updated_at": "2026-05-12T03:49:13.426405+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "e6f235d9d1a8f751185a8d47",
@@ -713,7 +800,10 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.451209+00:00",
-    "updated_at": "2026-05-12T03:49:13.451216+00:00"
+    "updated_at": "2026-05-12T03:49:13.451216+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   },
   {
     "fact_id": "ee1e43d57ef9228708dbaf89",
@@ -737,6 +827,9 @@
     "source_type": "constitution-import",
     "boundary_label": "personal",
     "created_at": "2026-05-12T03:49:13.475665+00:00",
-    "updated_at": "2026-05-12T03:49:13.475670+00:00"
+    "updated_at": "2026-05-12T03:49:13.475670+00:00",
+    "provenance": "observed_fact",
+    "correction_note": "",
+    "superseded_by": ""
   }
 ]

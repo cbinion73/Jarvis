@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-05-15T18:52:06Z",
+  "generated_at": "2026-06-10T14:20:50Z",
   "guardian": {
     "label": "com.jarvis.guardian",
-    "repo_root": "/Users/chris/Desktop/CODE/JARVIS",
-    "python": "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python"
+    "repo_root": "/Users/chris/Desktop/JARVIS",
+    "python": "/Users/chris/Desktop/JARVIS/.venv/bin/python"
   },
   "runtime_health_url": "http://127.0.0.1:8787/health",
   "runtime": {
@@ -14,10 +14,10 @@
       "service": "fastapi",
       "runtime": {
         "role": "runtime",
-        "pid": 28524,
-        "started_at": "2026-05-15T18:42:50.058598+00:00",
-        "build_fingerprint": "a75fc62e638be5148d3e915b4487ffee71c5a63a433bd9f01782e269df48e0d1",
-        "disk_fingerprint": "a75fc62e638be5148d3e915b4487ffee71c5a63a433bd9f01782e269df48e0d1",
+        "pid": 1941,
+        "started_at": "2026-06-10T14:04:37.422562+00:00",
+        "build_fingerprint": "9b5f2b8020cb1e28001e10da711abea9c99651a1de5b05c084e622a593c5d7ab",
+        "disk_fingerprint": "9b5f2b8020cb1e28001e10da711abea9c99651a1de5b05c084e622a593c5d7ab",
         "drift": {
           "startup_vs_disk": false,
           "live_probe_vs_disk": false,
@@ -25,89 +25,17 @@
         },
         "guardian": {
           "active": true,
-          "generated_at": "2026-05-15T18:51:15Z"
+          "generated_at": "2026-06-10T14:20:01Z"
         }
       },
       "openviking": {
-        "ok": false,
-        "enabled": true,
-        "base_url": "http://127.0.0.1:1933",
-        "memory_uri_root": "viking://user/chris/memories/",
-        "detail": "HTTPConnectionPool(host='127.0.0.1', port=1933): Max retries exceeded with url: /health (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=1933): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+        "enabled": false,
+        "base_url": "",
+        "probe": "skipped"
       },
       "brain_graph": {
-        "active_provider": "ollama",
-        "active_model": "qwen2.5:7b",
-        "last_module": "household-associate",
-        "last_timestamp": "2026-05-15T15:58:38.093675+00:00",
-        "active_nodes": [
-          "router",
-          "second-brain",
-          "memory-core",
-          "household-associate"
-        ],
-        "secondary_brain": {
-          "enabled": true,
-          "healthy": true,
-          "model_available": true,
-          "provider": "ollama",
-          "model": "qwen2.5:7b",
-          "summarize_model": "qwen2.5:7b",
-          "background_model": "qwen2.5:7b",
-          "base_url": "http://127.0.0.1:11434"
-        },
-        "nodes": [
-          {
-            "id": "router",
-            "label": "Router",
-            "status": "ready"
-          },
-          {
-            "id": "primary-brain",
-            "label": "Primary",
-            "status": "ready"
-          },
-          {
-            "id": "second-brain",
-            "label": "Second",
-            "status": "ready"
-          },
-          {
-            "id": "memory-core",
-            "label": "Memory",
-            "status": "ready"
-          },
-          {
-            "id": "catalyst-personal",
-            "label": "Catalyst",
-            "status": "ready"
-          },
-          {
-            "id": "household-associate",
-            "label": "Ambient",
-            "status": "ready"
-          },
-          {
-            "id": "family-logistics",
-            "label": "Family",
-            "status": "ready"
-          },
-          {
-            "id": "executive-work",
-            "label": "Work",
-            "status": "ready"
-          },
-          {
-            "id": "faith-and-formation",
-            "label": "Chronicle",
-            "status": "ready"
-          },
-          {
-            "id": "workshop-copilot",
-            "label": "Workshop",
-            "status": "ready"
-          }
-        ]
+        "probe": "skipped",
+        "second_brain_enabled": true
       }
     },
     "detail": ""
@@ -115,15 +43,15 @@
   "compile": {
     "ok": true,
     "command": [
-      "/Users/chris/Desktop/CODE/JARVIS/.venv/bin/python",
+      "/Users/chris/Desktop/JARVIS/.venv/bin/python",
       "-m",
       "py_compile",
-      "/Users/chris/Desktop/CODE/JARVIS/jarvis/runtime.py",
-      "/Users/chris/Desktop/CODE/JARVIS/jarvis/service.py",
-      "/Users/chris/Desktop/CODE/JARVIS/jarvis/assistant_core.py",
-      "/Users/chris/Desktop/CODE/JARVIS/jarvis/voice_ui.py",
-      "/Users/chris/Desktop/CODE/JARVIS/jarvis/self_improvement.py",
-      "/Users/chris/Desktop/CODE/JARVIS/jarvis/main.py"
+      "/Users/chris/Desktop/JARVIS/jarvis/runtime.py",
+      "/Users/chris/Desktop/JARVIS/jarvis/service.py",
+      "/Users/chris/Desktop/JARVIS/jarvis/assistant_core.py",
+      "/Users/chris/Desktop/JARVIS/jarvis/voice_ui.py",
+      "/Users/chris/Desktop/JARVIS/jarvis/self_improvement.py",
+      "/Users/chris/Desktop/JARVIS/jarvis/main.py"
     ],
     "returncode": 0,
     "stdout": "",
@@ -143,7 +71,7 @@
     "autonomy_label": "com.jarvis.assistant-autonomy"
   },
   "last_recovery": {
-    "triggered_at": "2026-05-15T16:03:10Z",
+    "triggered_at": "2026-06-10T14:04:34Z",
     "actions": [
       {
         "ok": true,

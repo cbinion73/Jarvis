@@ -4,7 +4,156 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (Phase 0 truth report landed; master plan active)
+Last updated: 2026-06-10 (Presence & Operating Picture directive added; wiring gaps L5–L9 closed)
+
+---
+
+# JARVIS PRESENCE & OPERATING PICTURE DIRECTIVE
+
+## Purpose
+
+JARVIS must evolve from a collection of features into a continuous intelligence
+that feels present in Chris's life.
+
+The goal is not completion of roadmap items.
+
+The goal is that when Chris opens JARVIS he immediately feels:
+
+- JARVIS knows who I am.
+- JARVIS knows what matters.
+- JARVIS remembers what I forgot.
+- JARVIS has been paying attention.
+- JARVIS is helping me move forward.
+
+Every implementation decision should be evaluated against this objective.
+
+## Priority Override
+
+Effective immediately:
+
+**Presence > Infrastructure**
+
+**Continuity > Architecture**
+
+**Useful Today > Useful Someday**
+
+**Visible Capability > Invisible Capability**
+
+When choosing between work that improves user perception and work that only
+improves backend maturity, prefer user perception unless the backend work is
+a hard blocker.
+
+## Chris Operating Picture
+
+The first fully realized human model in JARVIS is Chris.
+
+Before expanding to family-wide intelligence, JARVIS must maintain a
+continuously updated operating picture for Chris.
+
+### Identity
+
+Chris Binion
+
+Roles: Husband · Father · Scoutmaster · Director of Digital Innovation ·
+Author · Builder of JARVIS · Christian disciple
+
+### Active Missions
+
+Current missions (living objects with status, momentum, blockers, next actions,
+open loops, and recent progress):
+
+- Build JARVIS
+- Thermo Fisher Leadership
+- Family Stewardship
+- Health Improvement
+- Faith & Discipleship
+- Writing & Publishing
+- Troop 95 Leadership
+
+## Open Loop Engine
+
+Create and maintain a system of unresolved commitments:
+
+- unfinished projects
+- pending decisions
+- promises made
+- deadlines and obligations
+- follow-ups and recurring responsibilities
+
+Open loops accumulate automatically through user activity. JARVIS continuously
+surfaces new, neglected, overdue, and critical loops.
+
+## Daily Brief Redefined
+
+The Daily Brief is the primary JARVIS experience. It is not a dashboard. It
+is the answer to: **"What does Chris need to know right now?"**
+
+Sections (to be built progressively):
+
+- **What Changed** — since the last interaction
+- **What Matters** — highest-priority items requiring attention
+- **What Is At Risk** — projects, commitments, health, or responsibilities showing neglect
+- **What Is Waiting** — people or systems waiting on Chris
+- **What JARVIS Did** — actions, summaries, monitoring results completed while Chris was away
+- **Suggested Next Action** — single highest-leverage action
+
+## Presence Requirements
+
+JARVIS should increasingly demonstrate awareness without being asked:
+
+- surface forgotten commitments
+- identify approaching deadlines
+- highlight preparation needs
+- connect related projects
+- identify conflicts
+- organize information before requests occur
+
+The objective is **anticipation, not reaction**.
+
+## What JARVIS Did While You Were Away
+
+This is a first-class experience. Every session should answer:
+"What happened while I was gone?"
+
+Examples: project progress, completed summaries, new insights, detected risks,
+notable changes, newly created open loops.
+
+JARVIS should feel active even when Chris is absent.
+
+## Memory Timeline
+
+Create a persistent timeline of meaningful events:
+
+- decisions, commitments, milestones
+- project progress, important conversations
+- achievements, setbacks
+
+Goal: continuity across months and years.
+
+## Initiative Queue
+
+Maintain a queue of actions JARVIS believes are valuable (reports to prepare,
+plans to draft, information to gather, follow-ups, event preparation). Items
+remain suggestions until authorized.
+
+## User-Visible Delivery Rule
+
+Every significant development cycle must produce at least one visible
+capability — something Chris can see, interact with, test, and evaluate.
+
+Avoid long periods of infrastructure work that create no observable improvement.
+
+## Success Criterion
+
+The measure of success is not roadmap completion.
+
+The measure of success is whether Chris increasingly describes JARVIS as:
+**aware · helpful · proactive · trustworthy · continuous · present**
+
+Target experience: *"It feels like JARVIS knows what is going on in my life
+and is helping me manage it."*
+
+---
 
 ## Current Maturity Placement
 
@@ -196,16 +345,22 @@ Fix regressions before proceeding.
 
 Optimize for honest maturity percentage, not checklist count.
 
+**Overriding principle:** Presence > Infrastructure. Visible capability >
+invisible capability. Work that Chris can perceive takes priority over backend
+maturity work unless the backend work is a hard blocker.
+
 Priority:
 
-1. Truth/Baseline
-2. Memory & Continuity
-3. Bounded Autonomy
-4. Civilization Layer
-5. Ambient Intelligence
-6. Formation & Stewardship
-7. Providers
-8. Proof Systems
+1. Presence & Operating Picture (Daily Brief, Open Loops, Memory Timeline,
+   "What JARVIS Did", Initiative Queue — things Chris can directly feel)
+2. Truth/Baseline
+3. Memory & Continuity
+4. Bounded Autonomy
+5. Civilization Layer
+6. Ambient Intelligence
+7. Formation & Stewardship
+8. Providers
+9. Proof Systems
 
 ### Stop Condition
 

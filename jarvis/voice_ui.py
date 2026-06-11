@@ -5212,7 +5212,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       alwaysOnMicEnabled: true,
       recognitionMode: "idle",
       wakeWord: "hey jarvis",
-      followUpWindowMs: 60000,
+      followUpWindowMs: 120000,
       followUpUntil: 0,
       awaitingImmediateReply: false,
       recognitionRestartTimer: null,
@@ -5326,6 +5326,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     const CATALYST_API_BASE_URL = "http://127.0.0.1:3001";
     const CATALYST_APP_BASE_URL = "http://127.0.0.1:5173";
     const CHRONICLE_APP_BASE_URL = "http://127.0.0.1:5175";
+    const SHELL_EVENT_STREAM_PATH = "/ws/events";
 
     function escapeHtml(value) {{
       return String(value ?? "")
@@ -5333,6 +5334,10 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;");
+    }}
+
+    function shellEventStreamEnabled() {{
+      return window.__JARVIS_ENABLE_EVENT_STREAM === true;
     }}
 
     function formatAttachmentBytes(value = 0) {{
@@ -7947,7 +7952,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     }}
 
     function wakeWordPattern() {{
-      return /\\b(?:hey\\s+jarvis|jarvis)\\b[\\s,.:;-]*/i;
+      return /^(?:hey[\\s,]+jarvis|hi[\\s,]+jarvis|ok(?:ay)?[\\s,]+jarvis|jarvis)\\b[\\s,.:;-]*/i;
     }}
 
     function conversationWindowActive() {{
@@ -7984,10 +7989,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     }}
 
     function armImmediateReplyWindow(text) {{
+      extendConversationWindow();
       if (isImmediateQuestion(text)) {{
-        extendConversationWindow();
-      }} else {{
-        clearConversationWindow();
+        state.followUpUntil = Date.now() + Math.max(state.followUpWindowMs, 180000);
       }}
     }}
 
@@ -17404,8 +17408,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     }}, true);
 
     function connectEventStream() {{
+      if (!shellEventStreamEnabled()) {{
+        return;
+      }}
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const socket = new WebSocket(`${{protocol}}://${{window.location.host}}/ws/events`);
+      const socket = new WebSocket(`${{protocol}}://${{window.location.host}}${{SHELL_EVENT_STREAM_PATH}}`);
       socket.addEventListener("message", (event) => {{
         try {{
           const payload = JSON.parse(event.data);
@@ -17821,7 +17828,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       const el = document.querySelector('.briefing-items');
       if (!el) return;
       if (!items || items.length === 0) {{
-        el.innerHTML = '<p class="zone-empty">I\'ve been watching. Here\'s what matters.</p>';
+        el.innerHTML = '<p class="zone-empty">I\\'ve been watching. Here\\'s what matters.</p>';
         return;
       }}
       el.innerHTML = items.map(item => `
@@ -18001,7 +18008,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
     renderSpeechOutputToggle();
     state.browserAlertsEnabled = loadBrowserAlertsEnabled();
     state.browserAlertsPermission = browserAlertsSupported() ? Notification.permission : "unsupported";
-    connectEventStream();
+    if (shellEventStreamEnabled()) {{
+      connectEventStream();
+    }}
     scheduleAssistantAutonomy();
     scheduleAssistantBackgroundRun();
     state.lastAssistantSurfaceKey = loadAssistantSurfaceKey();
