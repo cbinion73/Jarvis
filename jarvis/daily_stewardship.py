@@ -233,7 +233,14 @@ async def classify_day_type(signals: dict, oracle_pathway: str) -> dict:
 # Three Moves generation
 # ---------------------------------------------------------------------------
 
-async def generate_three_moves(day_type: str, signals: dict, health_state: dict, season: str = "", verbosity: str = "normal") -> list[dict]:
+async def generate_three_moves(
+    day_type: str,
+    signals: dict,
+    health_state: dict,
+    season: str = "",
+    verbosity: str = "normal",
+    ritual_context: dict | None = None,
+) -> list[dict]:
     """
     Use LLM (via Oracle's gateway) to generate Today's Three Moves.
     Each move: {move, why, effort_level (low/medium/high), domain (glucose/bp/sleep/nutrition/movement/mindset)}
@@ -315,6 +322,41 @@ Each object: {"move": "<action>", "why": "<one sentence reason>", "effort_level"
             else "  No accumulated health profile loaded."
         )
 
+        # L7.3: Build ritual context block so Three Moves can reference prayer/study needs.
+        ritual_block = ""
+        if ritual_context and ritual_context.get("source") != "unavailable":
+            prayer_count = ritual_context.get("active_prayer_count", 0)
+            study_count = ritual_context.get("open_study_count", 0)
+            prayer_items = ritual_context.get("active_prayers", [])
+            study_items = ritual_context.get("open_study", [])
+            lines = []
+            if prayer_count:
+                subjects = ", ".join(p.get("subject", "") for p in prayer_items[:3] if p.get("subject"))
+                lines.append(f"  Active prayers ({prayer_count}): {subjects}" if subjects else f"  Active prayers: {prayer_count}")
+            if study_count:
+                titles = ", ".join(s.get("title", "") for s in study_items[:2] if s.get("title"))
+                lines.append(f"  Open study items ({study_count}): {titles}" if titles else f"  Open study items: {study_count}")
+            if lines:
+                ritual_block = "Spiritual rhythm context (consider integrating faith practice into one move):\n" + "\n".join(lines)
+
+        # L7.1: Build subjective check-in trend block from HealthLoopStore history.
+        checkin_trend_block = ""
+        checkin_trend = signals.get("_checkin_trend", [])
+        if checkin_trend:
+            trend_lines = []
+            for entry in checkin_trend[-3:]:
+                parts = []
+                if entry.get("mood"):
+                    parts.append(f"mood={entry['mood']}")
+                if entry.get("energy"):
+                    parts.append(f"energy={entry['energy']}")
+                if entry.get("sleep_quality"):
+                    parts.append(f"sleep={entry['sleep_quality']}")
+                if parts:
+                    trend_lines.append(f"  {entry.get('date', '?')}: {', '.join(parts)}")
+            if trend_lines:
+                checkin_trend_block = "Subjective check-in trend (last 3 days):\n" + "\n".join(trend_lines)
+
         user_prompt = f"""Today: {today}
 Day Type: {day_type}
 {season_line}
@@ -328,7 +370,8 @@ Accumulated health context (J1 — shapes Three Moves beyond today's signals):
 
 Today's readiness signals:
 {chr(10).join(signal_lines) if signal_lines else '  No wearable data available today.'}
-
+{f"{chr(10)}{checkin_trend_block}" if checkin_trend_block else ""}
+{f"{chr(10)}{ritual_block}" if ritual_block else ""}
 Generate Today's Three Moves — exactly 3 specific health actions matched to this day type, season, AND accumulated health context.
 For {day_type} day:
 - Recovery: gentle movement only, protein focus, sleep hygiene
@@ -549,6 +592,28 @@ async def run_morning_checkin(context: str = "") -> dict:
     # 1. Signals
     signals = await get_morning_signals()
 
+    # L7.1: Augment signals with recent HealthLoopStore subjective check-in history
+    # so generate_three_moves() can reflect mood/energy trends, not just wearable data.
+    try:
+        from .health_loop import HealthLoopStore
+        health_loop_store = HealthLoopStore()
+        recent_checkins = health_loop_store.list_checkins(actor="chris", limit=5)
+        if recent_checkins:
+            signals["_checkin_trend"] = [
+                {
+                    "date": c.get("date", ""),
+                    "mood": c.get("mood", ""),
+                    "energy": c.get("energy", ""),
+                    "sleep_quality": c.get("sleep_quality", ""),
+                }
+                for c in recent_checkins
+            ]
+            # Use most recent check-in sleep_hours as fallback if wearable missing
+            if signals.get("sleep_hours") is None and recent_checkins[-1].get("sleep_hours"):
+                signals["sleep_hours"] = recent_checkins[-1]["sleep_hours"]
+    except Exception as exc:
+        log.debug("daily_stewardship: health_loop unavailable (%s)", exc)
+
     # 2. Oracle pathway
     oracle_pathway, oracle_summary = await _get_oracle_pathway_lightweight()
 
@@ -566,18 +631,7 @@ async def run_morning_checkin(context: str = "") -> dict:
     except Exception:
         health_state = {}
 
-    # 5. Generate Three Moves (G5: verbosity from mode shapes prompt if minimal)
-    three_moves = await generate_three_moves(
-        day_type, signals, health_state, season=season,
-        verbosity=verbosity,
-    )
-
-    # 6. If-then rule
-    if_then_rule = _generate_if_then_rule(day_type, signals)
-
-    # J2: Load ritual summary to surface active prayer/study items in the day card.
-    # This wires the ritual loop into the morning guidance so prayer needs and
-    # study themes are visible without a separate app. Fail-safe: empty summary.
+    # L7.3: Load ritual summary BEFORE Three Moves so prayer/study needs can shape guidance.
     ritual_summary: dict[str, Any] = {}
     try:
         from .ritual_loop import RitualSummaryStore
@@ -600,6 +654,18 @@ async def run_morning_checkin(context: str = "") -> dict:
     except Exception as exc:
         log.debug("daily_stewardship: ritual_loop unavailable (%s)", exc)
         ritual_summary = {"source": "unavailable"}
+
+    # 5. Generate Three Moves (G5: verbosity from mode shapes prompt if minimal)
+    three_moves = await generate_three_moves(
+        day_type, signals, health_state, season=season,
+        verbosity=verbosity,
+        ritual_context=ritual_summary,
+    )
+
+    # 6. If-then rule
+    if_then_rule = _generate_if_then_rule(day_type, signals)
+
+    # ritual_summary was loaded above (before generate_three_moves) so it's already available.
 
     # Build day card — G5: include mode-driven posture fields
     day_card: dict[str, Any] = {

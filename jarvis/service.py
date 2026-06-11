@@ -18192,7 +18192,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             result = await asyncio.to_thread(store.approve, agent_id, actor)
         except (KeyError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc))
-        return _json({"approved": True, "agent": result})
+        # L8.1: Register the approved agent stub in the live AgentRegistry so the
+        # scheduler can pick it up in the current session without a restart.
+        stub_registered = False
+        try:
+            stub = runtime.agent_registry.register_newborn(result)
+            stub_registered = True
+            logger.info("Foundry: registered newborn agent stub '%s' in live registry", stub.agent_id)
+        except Exception as exc:
+            logger.warning("Foundry: could not register newborn agent stub: %s", exc)
+        return _json({"approved": True, "agent": result, "stub_registered": stub_registered})
 
     @app.post("/api/foundry/agents/{agent_id}/reject")
     async def api_foundry_agent_reject(agent_id: str, payload: dict[str, Any] = {}) -> JSONResponse:

@@ -203,7 +203,11 @@ class MemoryStore:
         return None
 
     def correct_entry(self, entry_id: str, correction: str, actor: str) -> dict | None:
-        """Mark an entry as corrected, excluding it from reasoning queries."""
+        """Mark an entry as corrected, excluding it from reasoning queries.
+
+        Also cascades to any profile fact derived from this entry so the
+        fact is immediately excluded from converse() context injection.
+        """
         import time as _time
         records = self._entries()
         updated = None
@@ -218,6 +222,18 @@ class MemoryStore:
                 break
         if updated is not None:
             self._save_entries(records)
+            # Cascade: retire any profile fact that was promoted from this entry.
+            # Profile facts store entry_id as their source_entry_id field.
+            facts = self.list_profile_facts()
+            changed = False
+            for fact in facts:
+                if fact.get("source_entry_id") == entry_id and fact.get("status", "active") == "active":
+                    fact["status"] = "corrected"
+                    fact["correction_note"] = correction
+                    fact["updated_at"] = updated["corrected_at"]
+                    changed = True
+            if changed:
+                self._save_json(self.facts_path, facts)
         return updated
 
     def _proposals(self) -> list[dict]:
@@ -1039,10 +1055,16 @@ class MemorySupport:
         return list(reversed(entries))
 
     def profile_facts(self, viewer: UserProfile, subject_user_id: str = "") -> list[dict]:
+        from .models import MEMORY_EXCLUDED_FROM_REASONING
         facts: list[dict] = []
         subject_filter = str(subject_user_id).strip().lower()
         for item in self.store.list_profile_facts():
-            if str(item.get("status", "active")).strip().lower() != "active":
+            status = str(item.get("status", "active")).strip().lower()
+            if status != "active":
+                continue
+            # Belt-and-suspenders: also check approval_status field for entries
+            # that store it directly on the fact record.
+            if str(item.get("approval_status", "")).strip().lower() in MEMORY_EXCLUDED_FROM_REASONING:
                 continue
             candidate_entry = {
                 "memory_type": item.get("lane", "personal"),

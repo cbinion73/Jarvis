@@ -1,0 +1,276 @@
+{
+  "meta": {
+    "last_updated": "2026-06-10",
+    "codex_session": "T0 complete (5 commits: 0cc36a29..e57a45ef)",
+    "notes": "Adversarial QA monitor. Update when Codex checks items done. Verify before accepting claims."
+  },
+  "maturity": {
+    "L2": { "name": "Unified Command Product",      "current": 95, "target": 95, "status": "on_track" },
+    "L3": { "name": "Household Operating System",   "current": 80, "target": 95, "status": "at_risk" },
+    "L4": { "name": "Governed Intelligence",         "current": 90, "target": 95, "status": "on_track" },
+    "L5": { "name": "Ambient Intelligence",          "current": 50, "target": 95, "status": "at_risk" },
+    "L6": { "name": "Memory & Continuity",           "current": 32, "target": 95, "status": "behind" },
+    "L7": { "name": "Formation & Stewardship",       "current": 28, "target": 95, "status": "behind" },
+    "L8": { "name": "Bounded Autonomy",              "current": 42, "target": 95, "status": "behind" },
+    "L9": { "name": "Family Civilization Layer",     "current": 22, "target": 95, "status": "behind" }
+  },
+  "phases": [
+    {
+      "id": "P0", "name": "Truth, Baseline & Program Control",
+      "total": 7, "done": 7, "items": [
+        { "id": "T0.1", "done": true, "text": "Replace stale 'Level 9 complete' language with master plan" },
+        { "id": "T0.2", "done": true, "text": "Machine-readable level scorecard artifact", "note": "artifacts/qa/level9-truth-report.json — CAVEAT: 122 fake_data_findings flagged" },
+        { "id": "T0.3", "done": true, "text": "Verification command: local, GitHub, deployed, Docker, provider truth", "note": "scripts/verify_level9_truth.py — CAVEAT: deployed/Cloudflare channels unverified" },
+        { "id": "T0.4", "done": true, "text": "Docs-truth check that fails when state files conflict", "note": "scripts/verify_docs_truth.py" },
+        { "id": "T0.5", "done": true, "text": "No-fake-data audit command for connectors, caches, fixtures", "note": "Integrated into verify_level9_truth.py" },
+        { "id": "T0.6", "done": true, "text": "Proof ledger: tests run, e2e status, live provider status, revision", "note": "In level9-truth-report.json — CAVEAT: 1 provider failure unresolved" },
+        { "id": "T0.7", "done": true, "text": "Rule: autonomous runs update this file only after code/test/runtime proof", "note": "In session state" }
+      ]
+    },
+    {
+      "id": "P1", "name": "Level 3 Final Closure",
+      "total": 9, "done": 0, "items": [
+        { "id": "L3.1", "done": false, "text": "Verify every primary experience route loads on hosted stack" },
+        { "id": "L3.2", "done": false, "text": "Replace cached/static summaries with connector output or honest unavailable" },
+        { "id": "L3.3", "done": false, "text": "Provider status visible per module (Google, Dexcom, Plaid, Weather…)" },
+        { "id": "L3.4", "done": false, "text": "Calendar/email/news/social truth gaps closed" },
+        { "id": "L3.5", "done": false, "text": "Home Assistant connected or explicitly unavailable with exact blocker" },
+        { "id": "L3.6", "done": false, "text": "Daily actions round-trip through activity spine" },
+        { "id": "L3.7", "done": false, "text": "Route/launch e2e checks with screenshots + console assertions" },
+        { "id": "L3.8", "done": false, "text": "Realistic household day proven end-to-end" },
+        { "id": "L3.9", "done": false, "text": "JARVIS-LEVEL3-EXIT-REPORT.md updated after live proof" }
+      ]
+    },
+    {
+      "id": "P2", "name": "Level 4 Governance Final Closure",
+      "total": 8, "done": 0, "items": [
+        { "id": "L4.1", "done": false, "text": "Every mutation route audited for trust-zone enforcement" },
+        { "id": "L4.2", "done": false, "text": "Every action through canonical taxonomy (family, risk, authority, audit)" },
+        { "id": "L4.3", "done": false, "text": "Unknown/unauthenticated/suspended-zone cases fail closed everywhere" },
+        { "id": "L4.4", "done": false, "text": "Negative-path tests for all hard-boundary families" },
+        { "id": "L4.5", "done": false, "text": "Household-readable governance views (capabilities, blocks, approvals)" },
+        { "id": "L4.6", "done": false, "text": "Child/privacy flows: parent review, tutoring boundaries, audit" },
+        { "id": "L4.7", "done": false, "text": "Governance coverage report: every route/action with policy owner" },
+        { "id": "L4.8", "done": false, "text": "Governance survives restart, provider outage, stale token, partial write" }
+      ]
+    },
+    {
+      "id": "P3", "name": "Level 5 Ambient Intelligence",
+      "total": 10, "done": 0, "items": [
+        { "id": "L5.1", "done": false, "text": "Full-duplex voice loop: wake, listen, speak, interrupt, resume, timeout" },
+        { "id": "L5.2", "done": false, "text": "'Hey Jarvis' and 'Jarvis' wake phrases where surface allows" },
+        { "id": "L5.3", "done": false, "text": "Siri/App Intents: Siri launches, JARVIS owns conversation + context" },
+        { "id": "L5.4", "done": false, "text": "Browser/iPhone/hosted voice-shell parity" },
+        { "id": "L5.5", "done": false, "text": "CarPlay: driving-safe, constrained commands, route-aware, safety tests" },
+        { "id": "L5.6", "done": false, "text": "Real presence inputs: heartbeat, foreground/bg, focus, driving, room" },
+        { "id": "L5.7", "done": false, "text": "Noise-learning feedback → future routing changes proven" },
+        { "id": "L5.8", "done": false, "text": "Proactive orchestration across all signal sources (autonomous, not HTTP)" },
+        { "id": "L5.9", "done": false, "text": "Every proactive prompt: why-now, source, confidence, snooze, audit" },
+        { "id": "L5.10", "done": false, "text": "Ambient e2e proofs: quiet morning, urgent, driving, sabbath, crisis" }
+      ]
+    },
+    {
+      "id": "P4", "name": "Level 6 Memory & Continuity",
+      "total": 9, "done": 0, "items": [
+        { "id": "L6.1", "done": false, "text": "Situation retrieval: person, domain, task, loop, season, lesson…" },
+        { "id": "L6.2", "done": false, "text": "Retrieval explanations: why each memory was selected" },
+        { "id": "L6.3", "done": false, "text": "Provenance on every durable memory (source, owner, sensitivity, state)" },
+        { "id": "L6.4", "done": false, "text": "Corrected/retired/disputed memories EXCLUDED from converse() context" },
+        { "id": "L6.5", "done": false, "text": "Chronicle is narrative memory layer (patterns, rituals, milestones)" },
+        { "id": "L6.6", "done": false, "text": "Chronicle/JARVIS boundary enforced: faith-tagged routes to Chronicle" },
+        { "id": "L6.7", "done": false, "text": "Household memory review UI: inspect, correct, dispute, retire, export" },
+        { "id": "L6.8", "done": false, "text": "Obsidian/equivalent publishing for approved long-form notes" },
+        { "id": "L6.9", "done": false, "text": "Memory e2e proofs: restart, permission, correction, export, narrative" }
+      ]
+    },
+    {
+      "id": "P5", "name": "Level 7 Formation & Stewardship",
+      "total": 8, "done": 0, "items": [
+        { "id": "L7.1", "done": false, "text": "Health check-ins/Dexcom/sleep wired into morning brief + Three Moves" },
+        { "id": "L7.2", "done": false, "text": "Doctor packet from real accumulated health history (unavailable before N days)" },
+        { "id": "L7.3", "done": false, "text": "Faith/ritual loops → daily word, prayer capture, Chronicle, guidance" },
+        { "id": "L7.4", "done": false, "text": "Formation guidance changes by person/season/mode/health/stress" },
+        { "id": "L7.5", "done": false, "text": "Child-safe tutoring: parent review, Socratic limits, inspectable transcripts" },
+        { "id": "L7.6", "done": false, "text": "Parenting loops: rituals, encouragement, correction, child-sensitive privacy" },
+        { "id": "L7.7", "done": false, "text": "'Formation changed because…' citations with named input facts" },
+        { "id": "L7.8", "done": false, "text": "Formation e2e proofs: normal, recovery, school, sabbath, child, stale-prayer" }
+      ]
+    },
+    {
+      "id": "P6", "name": "Level 8 Bounded Autonomy",
+      "total": 8, "done": 0, "items": [
+        { "id": "L8.1", "done": false, "text": "Foundry generates real agent stubs: registry, mission, zone, tools, authority" },
+        { "id": "L8.2", "done": false, "text": "Newborn-agent full lifecycle with audit (propose→retire)" },
+        { "id": "L8.3", "done": false, "text": "Catalyst routing as first-class bounded domain (not generic fallback)" },
+        { "id": "L8.4", "done": false, "text": "Flagship automation: research→draft→review→approval→publish with rollback" },
+        { "id": "L8.5", "done": false, "text": "Sandbox snapshots before every execution + rollback packets" },
+        { "id": "L8.6", "done": false, "text": "Pause/cancel/resume/dead-letter/retry/timeout on every autonomous job" },
+        { "id": "L8.7", "done": false, "text": "Agent performance memory: success rate, violations, promotion evidence" },
+        { "id": "L8.8", "done": false, "text": "Autonomous work proven in ≥3 domains" }
+      ]
+    },
+    {
+      "id": "P7", "name": "Level 9 Civilization Layer",
+      "total": 11, "done": 0, "items": [
+        { "id": "L9.1", "done": false, "text": "Constitution encoded into runtime decisions, not only docs" },
+        { "id": "L9.2", "done": false, "text": "Recommendations cite principle, authority, uncertainty, dissent, override" },
+        { "id": "L9.3", "done": false, "text": "Household modes change real behavior (proven, not just stored)" },
+        { "id": "L9.4", "done": false, "text": "Value simulation for decisions across time/money/health/faith/family" },
+        { "id": "L9.5", "done": false, "text": "Legacy archive as household product: stories, permissions, export" },
+        { "id": "L9.6", "done": false, "text": "Monthly/seasonal/yearly reviews across all household domains" },
+        { "id": "L9.7", "done": false, "text": "Prior lessons provably change current guidance" },
+        { "id": "L9.8", "done": false, "text": "Household admin: modes, memory, devices, agents, emergency pause" },
+        { "id": "L9.9", "done": false, "text": "Personnel/device continuity: new member, lost device, offboarding" },
+        { "id": "L9.10", "done": false, "text": "Non-builder household views at appropriate responsibility levels" },
+        { "id": "L9.11", "done": false, "text": "E2E scenario suite: crisis, travel, health, child, legacy, automation, correction, pause, provider-outage" }
+      ]
+    },
+    {
+      "id": "P8", "name": "Providers & Hardware",
+      "total": 10, "done": 0, "items": [
+        { "id": "HW.1", "done": false, "text": "Home control authority chosen & wired [EXCLUDED until HA adopted]" },
+        { "id": "HW.2", "done": false, "text": "Weather provider live: no fake weather cards" },
+        { "id": "HW.3", "done": false, "text": "Google Gmail/Calendar + Microsoft Outlook: token refresh + degraded states" },
+        { "id": "HW.4", "done": false, "text": "Dexcom live sync with 'not worn recently' state" },
+        { "id": "HW.5", "done": false, "text": "Plaid finance connector: configured, linked, synced, governed" },
+        { "id": "HW.6", "done": false, "text": "KDP connector: credential safety, sync health, no unsafe publish" },
+        { "id": "HW.7", "done": false, "text": "Perception feeds [EXCLUDED until hardware exists]" },
+        { "id": "HW.8", "done": false, "text": "Workshop devices [EXCLUDED until network access exists]" },
+        { "id": "HW.9", "done": false, "text": "Local-first resilience [OPTIONAL — Hetzner satisfies current need]" },
+        { "id": "HW.10", "done": false, "text": "Live provider battery: configured/connected/stale/blocked/error per integration" }
+      ]
+    },
+    {
+      "id": "P9", "name": "Mobile, Web & UX Consolidation",
+      "total": 7, "done": 0, "items": [
+        { "id": "UX.1", "done": false, "text": "Web: remove fake/stale provider signals from every experience" },
+        { "id": "UX.2", "done": false, "text": "iPhone: Today/Focus/Family/Decisions/Navigate/Continuity reshape" },
+        { "id": "UX.3", "done": false, "text": "Household-safe views for non-builder users" },
+        { "id": "UX.4", "done": false, "text": "Settings paths for every connector and hardware dependency" },
+        { "id": "UX.5", "done": false, "text": "Global unavailable/partial/stale/error/loading patterns consistent" },
+        { "id": "UX.6", "done": false, "text": "Accessibility and responsive checks for all primary experiences" },
+        { "id": "UX.7", "done": false, "text": "Manual verification scripts: web, iPhone, voice, provider surfaces" }
+      ]
+    },
+    {
+      "id": "P10", "name": "Proof, Release & Maturity Advancement",
+      "total": 8, "done": 0, "items": [
+        { "id": "P.1", "done": false, "text": "Level 9 scenario suite in integrated flows (not isolated stores)" },
+        { "id": "P.2", "done": false, "text": "Production smoke tests: API health, routes, connector, auth, mutations" },
+        { "id": "P.3", "done": false, "text": "Restart-survival tests: modes, agents, memory, rituals, provider sync" },
+        { "id": "P.4", "done": false, "text": "Browser e2e screenshots + console/network-noise checks" },
+        { "id": "P.5", "done": false, "text": "Apple contract + Swift decode verification for every /api/apple/* change" },
+        { "id": "P.6", "done": false, "text": "Security/permission regression tests for every L4+ action" },
+        { "id": "P.7", "done": false, "text": "Proof ledger updated before any checkbox → DONE" },
+        { "id": "P.8", "done": false, "text": "Maturity model, roadmap, exit reports updated only after proof passes" }
+      ]
+    }
+  ],
+  "quality_concerns": [
+    {
+      "id": "QC-001", "severity": "critical", "status": "open",
+      "title": "Corrected memories not filtered in converse()",
+      "detail": "MemoryStore.correct_entry() marks approval_status='corrected'. MEMORY_EXCLUDED_FROM_REASONING exists. But _conversation_context_excerpt() in runtime.py calls profile_facts() without filtering excluded statuses. Corrected memories can still enter LLM context.",
+      "codex_check": "Show the line in runtime.py where profile_facts() or _conversation_context_excerpt() filters MEMORY_EXCLUDED_FROM_REASONING before injection.",
+      "maps_to": "L6.4"
+    },
+    {
+      "id": "QC-002", "severity": "critical", "status": "open",
+      "title": "health_loop not wired into daily card or Three Moves",
+      "detail": "HealthLoopStore exists with check-in history. daily_stewardship.generate_three_moves() does not call it. The daily card is generic — it does not reflect whether Chris is depleted, sick, or at peak. L7.1 is the fix.",
+      "codex_check": "Show the import of HealthLoopStore in daily_stewardship.py and the line where check-in history shapes move generation.",
+      "maps_to": "L7.1"
+    },
+    {
+      "id": "QC-003", "severity": "critical", "status": "open",
+      "title": "ritual_loop not wired into formation guidance",
+      "detail": "RitualSummaryStore exists. daily_stewardship.py does not import or call it. Rituals overdue, prayer stale, study incomplete — none of this reaches the daily card.",
+      "codex_check": "Show the import of RitualSummaryStore in daily_stewardship.py and where ritual status affects the day card.",
+      "maps_to": "L7.3"
+    },
+    {
+      "id": "QC-004", "severity": "critical", "status": "open",
+      "title": "ProactiveOrchestrator is HTTP-poll only, not autonomous",
+      "detail": "ProactiveOrchestrator._collect_* methods work. But scheduler._tick() does not call orchestrator.run(). Proactive prompts are only created when someone hits GET /api/proactive/pending. JARVIS is not actually proactive.",
+      "codex_check": "Show the line in scheduler._tick() that calls the proactive orchestrator. Show a test that creates a prompt without any HTTP call.",
+      "maps_to": "L5.8"
+    },
+    {
+      "id": "QC-005", "severity": "critical", "status": "open",
+      "title": "voice_ui.py is an HTML shell — no STT, TTS, or wake-word",
+      "detail": "voice_ui.py is ~18k lines of HTML/CSS/JS. render_voice_shell() returns a page. There is no speech-to-text, text-to-speech, wake-word detection, or interrupt handling anywhere in the module.",
+      "codex_check": "Show the STT implementation entry point (not a web API call to an external service — the actual receive-audio / transcribe path). Show a test that proves audio in → text out.",
+      "maps_to": "L5.1"
+    },
+    {
+      "id": "QC-006", "severity": "critical", "status": "open",
+      "title": "Foundry approve does not generate an agent",
+      "detail": "POST /api/foundry/proposals/{id}/approve updates proposal status. It does not create an agent stub, register it in the agent registry, attach it to a trust zone, or make it schedulable. Approved proposals are inert.",
+      "codex_check": "Show what happens after approve() is called: where is the agent stub created, where is it registered, where does the scheduler pick it up?",
+      "maps_to": "L8.1"
+    },
+    {
+      "id": "QC-007", "severity": "critical", "status": "open",
+      "title": "constitution_engine.cite() only wraps chat — never blocks an action",
+      "detail": "ConstitutionEngine().cite() is called in converse() (chat endpoint). It is not called in assess_action_boundary(), plan_request(), scheduler._tick(), or any notification delivery path. Constitutional concerns produce narrative labels for chat but never change a real decision.",
+      "codex_check": "Show one place outside converse() where a constitutional concern causes an action to be blocked or modified.",
+      "maps_to": "L9.1"
+    },
+    {
+      "id": "QC-008", "severity": "critical", "status": "open",
+      "title": "value_simulator not in any decision routing path",
+      "detail": "ValueSimulator exists and is tested. It is only called from /api/decision/analyze and /api/simulate/compare-options. It is not consulted in assess_action_boundary(), plan_request(), or any scheduler decision. Value alignment is decorative.",
+      "codex_check": "Show one production call path where ValueSimulator.compare() output changes which action is taken or recommended.",
+      "maps_to": "L9.4"
+    },
+    {
+      "id": "QC-009", "severity": "high", "status": "open",
+      "title": "AdaptationContextBuilder output is never consumed",
+      "detail": "AdaptationContextBuilder.build() is called in two service.py routes only. daily_stewardship.py, runtime.py, and scheduler.py do not import or call it. Per-person, per-mode, per-season formation cards are not real.",
+      "codex_check": "Show the import of AdaptationContextBuilder in daily_stewardship.py and where its health_focus/season_influence fields change the output.",
+      "maps_to": "L7.4"
+    },
+    {
+      "id": "QC-010", "severity": "high", "status": "open",
+      "title": "retrieve_by_situation() never called from converse()",
+      "detail": "converse() calls _conversation_context_excerpt() → _relevant_profile_facts() → profile_facts(). Keyword matching only. retrieve_by_situation() exists in memory.py but has zero callers in runtime.py. Situation-aware retrieval is API-only.",
+      "codex_check": "Show where retrieve_by_situation() is called from converse() or any runtime reasoning path (not a service.py API handler).",
+      "maps_to": "L6.1"
+    },
+    {
+      "id": "QC-011", "severity": "high", "status": "open",
+      "title": "Provider truth gaps — fake/cached data in live experiences",
+      "detail": "Weather, calendar, email, news, and social modules may render cached, static, or fallback data as real household activity. No systematic audit of which connectors are live vs. silently falling back exists.",
+      "codex_check": "For each module (Weather, Calendar, Email, News, Social): show the path that fires when the provider token is missing/expired. Does it show 'unavailable' or does it show fake/cached data?",
+      "maps_to": "L3.2"
+    },
+    {
+      "id": "QC-012", "severity": "high", "status": "open",
+      "title": "SQLite index not used by main decision loop",
+      "detail": "SQLiteIndex is wired to service.py API endpoints only. runtime.py, scheduler.py, and apple_api.py all read from JSON/JSONL. The hybrid index is cold — it doesn't accelerate or change any real decision.",
+      "codex_check": "Show one production call path where SQLiteIndex.query_*() is used instead of loading the full JSON file.",
+      "maps_to": "L3.6"
+    },
+    {
+      "id": "QC-013", "severity": "high", "status": "open",
+      "title": "CarPlay routing checks exist but not in delivery path",
+      "detail": "carplay_action_check() exists in apple_api.py. _choose_delivery_mode() does not consult CarPlay context. Driving-safe constraints are not enforced during real notification routing.",
+      "codex_check": "Show where _choose_delivery_mode() or the notification delivery path checks whether the user is driving before deciding to interrupt.",
+      "maps_to": "L5.5"
+    },
+    {
+      "id": "QC-014", "severity": "medium", "status": "open",
+      "title": "daily_stewardship not scheduled — API-triggered only",
+      "detail": "daily_stewardship.py has morning checkin and evening review endpoints. scheduler._tick() does not call them. Health day cards and formation prompts are only generated when the app polls the API.",
+      "codex_check": "Show the scheduler._tick() call that fires morning_checkin or equivalent at the appropriate time of day.",
+      "maps_to": "L7.1"
+    },
+    {
+      "id": "QC-015", "severity": "medium", "status": "open",
+      "title": "Archived historical notes conflict with master plan",
+      "detail": "JARVIS-SESSION-STATE.md archived section says GAP-4 'PARTIALLY RESOLVED', GAP-8 'PARTIALLY RESOLVED', GAP-9 'RESOLVED' etc. These conflict with the master plan items. A future autonomous session may act on stale archived status.",
+      "codex_check": "Ensure the archived section is clearly marked 'superseded — do not act on' and no autonomous session uses archived GAP statuses as current state.",
+      "maps_to": "T0.4"
+    }
+  ]
+}

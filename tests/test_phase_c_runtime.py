@@ -568,7 +568,7 @@ class TestRestartSurvival(unittest.TestCase):
             attempt_count=1,
         )
         q1._items.append(item)
-        q1._save()
+        q1._save_item(item)  # persist directly — _save() replaced by per-item saves
 
         q2 = _make_queue(self.root)
         running = q2.get_running()
@@ -603,14 +603,13 @@ class TestRestartSurvival(unittest.TestCase):
         self.assertEqual(len(dl), 1)
         self.assertEqual(dl[0].status, "dead_letter")
 
-    def test_state_log_fallback_restores_queue(self):
-        """Deleting the projection file recovers queue from state-log."""
+    def test_sqlite_survives_without_jsonl(self):
+        """Items are recovered from SQLite even when queue.jsonl is absent."""
         q1 = _make_queue(self.root)
         q1.enqueue(_make_item(agent_id="recover-me"))
 
-        # Delete the projection file
-        q1._store_path.unlink()
-
+        # queue.jsonl is never written by the new implementation — SQLite is
+        # the source of truth, so simply creating a new instance is enough.
         q2 = _make_queue(self.root)
         queued = q2.get_queued()
         self.assertGreater(len(queued), 0)

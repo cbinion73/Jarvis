@@ -5068,22 +5068,52 @@ class JarvisRuntime:
 
     def _relevant_profile_facts(self, actor: UserProfile, request: str, limit: int = 4) -> list[str]:
         facts = self.memory_support.profile_facts(actor, subject_user_id=actor.user_id)
+
+        # L6.1: Situational retrieval — builds a context dict from the request string
+        # and asks retrieve_by_situation() for semantically matched facts. Results are
+        # merged with keyword matches so situation-aware facts surface first.
+        situation_facts: list[str] = []
+        try:
+            req_lower = str(request or "").lower()
+            situation_context = {
+                "domain": next(
+                    (d for d in ("health", "faith", "family", "work", "finance", "travel", "home")
+                     if d in req_lower),
+                    "",
+                ),
+                "task": req_lower[:120],
+                "actor": actor.user_id,
+            }
+            if situation_context["domain"] or len(situation_context["task"]) > 10:
+                situation_results = self.memory_support.store.retrieve_by_situation(
+                    actor=actor.user_id,
+                    situation_context=situation_context,
+                )[:limit]
+                situation_facts = [str(r.get("summary", "")).strip() for r in situation_results if r.get("summary")]
+        except Exception:
+            pass  # never block conversation on retrieval failure
+
         tokens = {
             token
             for token in re.findall(r"[a-z0-9]{4,}", str(request or "").lower())
             if token not in {"that", "with", "have", "this", "from", "your", "what", "when", "into"}
         }
         scored: list[tuple[int, str]] = []
+        seen: set[str] = set(situation_facts)
         for item in facts:
             summary = str(item.get("summary", "")).strip()
-            if not summary:
+            if not summary or summary in seen:
                 continue
             haystack = self._conversation_signal_key(" ".join([summary, " ".join(item.get("tags", []))]))
             score = sum(1 for token in tokens if token in haystack)
             if score:
                 scored.append((score, summary))
         scored.sort(key=lambda item: (-item[0], item[1]))
-        return [summary for _, summary in scored[: max(0, limit)]]
+        keyword_facts = [summary for _, summary in scored]
+
+        # Situation results first, then keyword-only extras, up to limit
+        merged = situation_facts + [s for s in keyword_facts if s not in seen]
+        return merged[: max(0, limit)]
 
     def _conversation_context_excerpt(
         self,
@@ -20244,8 +20274,41 @@ class JarvisRuntime:
             }
 
         # Hard boundary deny (money, legal, identity, security, children, reputation, system — B7)
+        # L9.1: constitutional citation is generated so the denial is traceable to a principle.
         if policy.hard_boundary and policy.approval_mode == "deny":
-            return {
+            citation_id: str | None = None
+            principle_text: str = ""
+            try:
+                from .constitution_engine import ConstitutionEngine
+                _ce = ConstitutionEngine()
+                _family_principles = {
+                    "financial": ["III.1.mandate_first", "II.4.financial_boundary"],
+                    "legal": ["II.4.financial_boundary", "I.1.identity"],
+                    "identity": ["I.1.identity"],
+                    "security": ["I.1.identity", "III.3.legible_agency"],
+                    "children": ["I.1.identity", "III.3.legible_agency"],
+                    "publishing": ["III.3.legible_agency"],
+                    "system": ["III.3.legible_agency"],
+                }
+                principle_ids = _family_principles.get(policy.family, ["III.3.legible_agency"])
+                import uuid as _uuid
+                cit = _ce.cite(
+                    decision_id=str(_uuid.uuid4()),
+                    actor="system",
+                    recommendation_summary=(
+                        f"Deny '{action_type}' — hard boundary family '{policy.family}' "
+                        "requires explicit human initiation."
+                    ),
+                    principle_ids=principle_ids,
+                    authority_stage=current_stage_id,
+                    uncertainty_level="none",
+                )
+                citation_id = cit.decision_id
+                p = _ce.get_principle(principle_ids[0])
+                principle_text = p.get("text", "")
+            except Exception:
+                pass  # citation failure never blocks the deny
+            result = {
                 "decision": "deny",
                 "reason": (
                     f"Action '{action_type}' is in hard boundary family '{policy.family}'. "
@@ -20261,6 +20324,10 @@ class JarvisRuntime:
                 "hard_boundary": True,
                 "registered": True,
             }
+            if citation_id:
+                result["constitution_citation_id"] = citation_id
+                result["principle_basis"] = principle_text
+            return result
 
         # Stage if zone stage below required minimum (original sequence logic — B1)
         if action_type in {

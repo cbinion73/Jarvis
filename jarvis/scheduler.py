@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from .persistence import append_jsonl, atomic_write_jsonl
+import sqlite3 as _sqlite3
 
 logger = logging.getLogger("jarvis.scheduler")
 
@@ -97,35 +97,90 @@ class AgentWorkItem:
 # ---------------------------------------------------------------------------
 
 class AgentWorkQueue:
-    """Thread-safe FIFO work queue with priority ordering and JSONL persistence."""
+    """Thread-safe FIFO work queue with priority ordering and SQLite persistence.
+
+    Storage layout (all under store_path.parent/):
+      scheduler.db          — SQLite source of truth (WAL mode)
+        queue_items         — one row per item, UPSERT on every state change
+        queue_events        — one row per state-change event, pruned after 30 days
+
+    The JSONL files (queue.jsonl / queue_state_log.jsonl) are no longer written.
+    On first start-up the class auto-migrates any active items from an existing
+    queue.jsonl so the transition is seamless.
+    """
 
     def __init__(self, store_path: Path) -> None:
-        self._store_path = store_path
-        self._state_log_path = self._store_path.with_name(f"{self._store_path.stem}_state_log.jsonl")
-        self._store_path.parent.mkdir(parents=True, exist_ok=True)
+        self._store_path = store_path          # kept only for legacy/migration reference
+        self._db_path = store_path.parent / "scheduler.db"
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
+        self._conn = self._open_db()
+        self._auto_migrate()
         self._items: list[AgentWorkItem] = self._load()
+        self.cleanup_old_events()
 
     # ------------------------------------------------------------------
-    # Persistence helpers
+    # Database initialisation
     # ------------------------------------------------------------------
 
-    def _load(self) -> list[AgentWorkItem]:
-        items = self._load_projection_items()
-        if items:
-            return items
-        if self._store_path.exists():
-            logger.warning(
-                "Scheduler queue snapshot %s was blank or unreadable; replaying from %s",
-                self._store_path,
-                self._state_log_path,
+    def _open_db(self) -> _sqlite3.Connection:
+        conn = _sqlite3.connect(str(self._db_path), check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS queue_items (
+                item_id      TEXT PRIMARY KEY,
+                agent_id     TEXT NOT NULL,
+                status       TEXT NOT NULL,
+                queued_at    TEXT,
+                started_at   TEXT,
+                completed_at TEXT,
+                payload_json TEXT,
+                result_json  TEXT,
+                error_text   TEXT,
+                updated_at   TEXT,
+                item_json    TEXT NOT NULL
             )
-        return self._load_state_log_items()
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS queue_events (
+                event_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_id    TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                event_json TEXT
+            )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_qi_status     ON queue_items(status)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_qe_created_at ON queue_events(created_at)"
+        )
+        conn.commit()
+        return conn
 
-    def _load_projection_items(self) -> list[AgentWorkItem]:
+    # ------------------------------------------------------------------
+    # One-time migration from legacy JSONL
+    # ------------------------------------------------------------------
+
+    def _auto_migrate(self) -> None:
+        """Import active items from queue.jsonl into SQLite on first start-up.
+
+        Only runs when queue_items is empty AND the legacy file exists, so it
+        is effectively a one-time operation.  Historical state-log snapshots
+        are intentionally NOT imported (they are the source of the 111 GB
+        problem).
+        """
         if not self._store_path.exists():
-            return []
-        items: list[AgentWorkItem] = []
+            return
+        row = self._conn.execute("SELECT COUNT(*) FROM queue_items").fetchone()
+        if row[0] > 0:
+            return  # DB already has data — skip
+
+        active_statuses = {"queued", "running"}
+        known = {f.name for f in AgentWorkItem.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        imported = 0
         try:
             for line in self._store_path.read_text(encoding="utf-8").splitlines():
                 line = line.strip()
@@ -133,72 +188,137 @@ class AgentWorkQueue:
                     continue
                 try:
                     data = json.loads(line)
-                    # Strip unknown fields for forward-compatibility
-                    known = {f.name for f in AgentWorkItem.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+                    data = {k: v for k, v in data.items() if k in known}
+                    item = AgentWorkItem(**data)
+                    if item.status in active_statuses:
+                        self._save_item(item)
+                        imported += 1
+                except Exception:
+                    pass
+        except OSError:
+            pass
+
+        if imported:
+            logger.info(
+                "Scheduler: migrated %d active items from %s → SQLite",
+                imported, self._store_path,
+            )
+
+    # ------------------------------------------------------------------
+    # Persistence helpers
+    # ------------------------------------------------------------------
+
+    def _load(self) -> list[AgentWorkItem]:
+        """Load all queue items from SQLite and apply zombie recovery."""
+        items: list[AgentWorkItem] = []
+        known = {f.name for f in AgentWorkItem.__dataclass_fields__.values()}  # type: ignore[attr-defined]
+        try:
+            rows = self._conn.execute(
+                "SELECT item_json FROM queue_items ORDER BY queued_at ASC"
+            ).fetchall()
+            for (raw,) in rows:
+                try:
+                    data = json.loads(raw)
                     data = {k: v for k, v in data.items() if k in known}
                     items.append(AgentWorkItem(**data))
                 except Exception:
-                    pass  # skip corrupt lines
-        except OSError:
-            pass
-        return self._recover_zombies(items)
+                    pass
+        except Exception as exc:
+            logger.warning("Failed to load scheduler queue from SQLite: %s", exc)
 
-    @staticmethod
-    def _recover_zombies(items: list[AgentWorkItem]) -> list[AgentWorkItem]:
-        """On restart, items stuck in 'running' are zombie jobs — reset to 'queued'."""
+        # Zombie recovery: items stuck in "running" across a restart are reset
         for item in items:
             if item.status == "running":
                 item.status = "queued"
                 item.started_at = ""
                 logger.info(
                     "Zombie recovery: item %s (agent=%s) reset from running → queued",
-                    item.item_id,
-                    item.agent_id,
+                    item.item_id, item.agent_id,
                 )
+                self._save_item(item)
+                self._write_event(item.item_id, "item_recovered")
         return items
 
-    def _load_state_log_items(self) -> list[AgentWorkItem]:
-        if not self._state_log_path.exists():
-            return []
-        latest: list[AgentWorkItem] = []
+    def _save_item(self, item: AgentWorkItem) -> None:
+        """Upsert a single item into queue_items."""
+        data = asdict(item)
         try:
-            for line in self._state_log_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    payload = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                saved_items = payload.get("items")
-                if not isinstance(saved_items, list):
-                    continue
-                recovered: list[AgentWorkItem] = []
-                for raw in saved_items:
-                    if not isinstance(raw, dict):
-                        continue
-                    try:
-                        recovered.append(AgentWorkItem(**raw))
-                    except Exception:
-                        continue
-                latest = recovered
-        except OSError:
-            return []
-        return latest
-
-    def _save(self) -> None:
-        payload = [asdict(item) for item in self._items]
-        try:
-            atomic_write_jsonl(self._store_path, payload)
-            append_jsonl(
-                self._state_log_path,
-                {
-                    "saved_at": _now_iso(),
-                    "items": payload,
-                },
+            self._conn.execute(
+                """
+                INSERT INTO queue_items
+                    (item_id, agent_id, status, queued_at, started_at, completed_at,
+                     payload_json, result_json, error_text, updated_at, item_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(item_id) DO UPDATE SET
+                    status       = excluded.status,
+                    started_at   = excluded.started_at,
+                    completed_at = excluded.completed_at,
+                    result_json  = excluded.result_json,
+                    error_text   = excluded.error_text,
+                    updated_at   = excluded.updated_at,
+                    item_json    = excluded.item_json
+                """,
+                (
+                    item.item_id,
+                    item.agent_id,
+                    item.status,
+                    item.queued_at,
+                    item.started_at or None,
+                    item.completed_at or None,
+                    json.dumps(item.payload),
+                    json.dumps(item.result),
+                    item.error or None,
+                    _now_iso(),
+                    json.dumps(data),
+                ),
             )
-        except OSError as exc:
-            logger.warning("Failed to persist queue: %s", exc)
+            self._conn.commit()
+        except Exception as exc:
+            logger.warning("Failed to persist queue item %s: %s", item.item_id, exc)
+
+    def _write_event(self, item_id: str, event_type: str, event_data: dict | None = None) -> None:
+        """Append a single event row to queue_events."""
+        try:
+            self._conn.execute(
+                """
+                INSERT INTO queue_events (item_id, event_type, created_at, event_json)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    item_id,
+                    event_type,
+                    _now_iso(),
+                    json.dumps(event_data) if event_data else None,
+                ),
+            )
+            self._conn.commit()
+        except Exception as exc:
+            logger.warning(
+                "Failed to write queue event %s/%s: %s", item_id, event_type, exc
+            )
+
+    def cleanup_old_events(self) -> int:
+        """Delete queue_events older than 30 days. Returns number of rows deleted."""
+        try:
+            cursor = self._conn.execute(
+                "DELETE FROM queue_events WHERE created_at < datetime('now', '-30 days')"
+            )
+            self._conn.commit()
+            deleted = cursor.rowcount
+            if deleted:
+                logger.debug("Pruned %d old queue events", deleted)
+            return deleted
+        except Exception as exc:
+            logger.warning("Failed to clean up old queue events: %s", exc)
+            return 0
+
+    def vacuum(self) -> None:
+        """Reclaim disk space by running SQLite VACUUM."""
+        try:
+            self._conn.execute("VACUUM")
+            logger.debug("Scheduler DB vacuumed")
+        except Exception as exc:
+            logger.warning("Scheduler DB VACUUM failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Public API
@@ -229,7 +349,12 @@ class AgentWorkQueue:
                     )
                     return False
             self._items.append(item)
-            self._save()
+            self._save_item(item)
+            self._write_event(item.item_id, "item_queued", {
+                "agent_id": item.agent_id,
+                "priority": item.priority,
+                "trigger": item.trigger,
+            })
         logger.debug("Enqueued %s (agent=%s priority=%d)", item.item_id, item.agent_id, item.priority)
         return True
 
@@ -251,7 +376,8 @@ class AgentWorkQueue:
             item.status = "running"
             item.started_at = now_str
             item.attempt_count = item.attempt_count + 1
-            self._save()
+            self._save_item(item)
+            self._write_event(item.item_id, "item_started", {"attempt": item.attempt_count})
             return item
 
     def mark_running(self, item_id: str) -> None:
@@ -260,8 +386,9 @@ class AgentWorkQueue:
                 if item.item_id == item_id:
                     item.status = "running"
                     item.started_at = _now_iso()
+                    self._save_item(item)
+                    self._write_event(item_id, "item_started")
                     break
-            self._save()
 
     def mark_completed(self, item_id: str, result_text: str, result: dict) -> None:
         with self._lock:
@@ -271,8 +398,9 @@ class AgentWorkQueue:
                     item.completed_at = _now_iso()
                     item.result_text = result_text
                     item.result = result
+                    self._save_item(item)
+                    self._write_event(item_id, "item_completed")
                     break
-            self._save()
 
     def mark_failed(self, item_id: str, error: str) -> str:
         """
@@ -296,6 +424,12 @@ class AgentWorkQueue:
                         item.next_attempt_at = retry_at.isoformat()
                         item.started_at = ""
                         result_status = "retry"
+                        self._save_item(item)
+                        self._write_event(item_id, "item_retried", {
+                            "attempt": item.attempt_count,
+                            "delay_seconds": delay_seconds,
+                            "error": error[:200],
+                        })
                         logger.info(
                             "Retry scheduled: item=%s agent=%s attempt=%d/%d delay=%ds",
                             item.item_id, item.agent_id, item.attempt_count, item.max_attempts, delay_seconds,
@@ -303,12 +437,16 @@ class AgentWorkQueue:
                     else:
                         item.status = "dead_letter"
                         result_status = "dead_letter"
+                        self._save_item(item)
+                        self._write_event(item_id, "item_failed", {
+                            "attempt": item.attempt_count,
+                            "error": error[:200],
+                        })
                         logger.warning(
                             "Dead-letter: item=%s agent=%s exceeded max_attempts=%d",
                             item.item_id, item.agent_id, item.max_attempts,
                         )
                     break
-            self._save()
         return result_status
 
     def cancel(self, item_id: str) -> bool:
@@ -320,7 +458,8 @@ class AgentWorkQueue:
                         return False
                     item.status = "cancelled"
                     item.completed_at = _now_iso()
-                    self._save()
+                    self._save_item(item)
+                    self._write_event(item_id, "item_cancelled")
                     logger.info("Cancelled item %s (agent=%s)", item_id, item.agent_id)
                     return True
         return False
@@ -354,21 +493,35 @@ class AgentWorkQueue:
         """Remove terminal/dead-letter/cancelled items older than max_age_hours. Returns count purged."""
         cutoff = datetime.now(timezone.utc).timestamp() - max_age_hours * 3600
         terminal_statuses = {"completed", "failed", "dead_letter", "cancelled"}
+        purged_ids: list[str] = []
         with self._lock:
             before = len(self._items)
+
             def _keep(item: AgentWorkItem) -> bool:
                 if item.status not in terminal_statuses:
                     return True
                 ts_str = item.completed_at or item.queued_at
                 try:
                     ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00")).timestamp()
-                    return ts > cutoff
+                    if ts <= cutoff:
+                        purged_ids.append(item.item_id)
+                        return False
+                    return True
                 except (ValueError, AttributeError):
                     return True
+
             self._items = [i for i in self._items if _keep(i)]
             purged = before - len(self._items)
-            if purged:
-                self._save()
+            if purged_ids:
+                try:
+                    placeholders = ",".join("?" * len(purged_ids))
+                    self._conn.execute(
+                        f"DELETE FROM queue_items WHERE item_id IN ({placeholders})",
+                        purged_ids,
+                    )
+                    self._conn.commit()
+                except Exception as exc:
+                    logger.warning("Failed to purge queue items from DB: %s", exc)
         return purged
 
 
@@ -1870,7 +2023,34 @@ class AgentScheduler:
         # L1: Auto-trigger long-horizon reviews (monthly/seasonal/yearly) when due.
         self._check_long_horizon_reviews()
 
+        # L5.8: Run ProactiveOrchestrator every 5 ticks (~5 min) so proactive prompts
+        # are generated autonomously without requiring an HTTP poll.
+        self._run_proactive_orchestrator()
+
     _mode_advance_tick_count: int = 0
+    _proactive_tick_count: int = 0
+    _PROACTIVE_TICK_INTERVAL: int = 5  # fire every ~5 minutes (5 × 60 s ticks)
+
+    def _run_proactive_orchestrator(self) -> None:
+        """L5.8: Run ProactiveOrchestrator on a 5-tick interval so proactive prompts
+        are created autonomously — not only when someone polls /api/proactive/pending.
+        """
+        self._proactive_tick_count = getattr(self, "_proactive_tick_count", 0) + 1
+        if self._proactive_tick_count < self._PROACTIVE_TICK_INTERVAL:
+            return
+        self._proactive_tick_count = 0
+        try:
+            from .proactive import get_orchestrator
+            root = getattr(self._runtime, "data_root", None)
+            orch = get_orchestrator(root=root, runtime=self._runtime)
+            result = orch.run(actor="chris")
+            if result.get("created_count", 0):
+                logger.info(
+                    "ProactiveOrchestrator: created %d prompt(s) autonomously",
+                    result["created_count"],
+                )
+        except Exception:
+            logger.debug("_run_proactive_orchestrator failed (non-fatal)", exc_info=True)
 
     # ------------------------------------------------------------------
     # G1 helper — required-agent enforcement
@@ -2180,8 +2360,27 @@ class AgentScheduler:
             self._morning_fired_date = today
             logger.info("Firing morning trigger")
             self.fire_event(EVENT_MORNING, {"date": today, "trigger": "scheduled"})
+            # L7.1: Run daily_stewardship morning check-in autonomously so the day card,
+            # Three Moves, and formation guidance are generated without an HTTP hit.
+            self._run_morning_stewardship()
             # Run drift detection after the morning agent sweep
             self._run_drift_detection()
+
+    def _run_morning_stewardship(self) -> None:
+        """L7.1/QC-014: Trigger run_morning_checkin from the scheduler so it fires
+        unattended every morning, not only when the API is polled.
+        """
+        import asyncio as _asyncio
+        try:
+            from .daily_stewardship import run_morning_checkin
+            loop = _asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(run_morning_checkin())
+                logger.info("Scheduled morning check-in completed")
+            finally:
+                loop.close()
+        except Exception:
+            logger.debug("_run_morning_stewardship failed (non-fatal)", exc_info=True)
 
 
     def _run_drift_detection(self) -> None:

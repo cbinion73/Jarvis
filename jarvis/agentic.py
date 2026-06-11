@@ -348,6 +348,35 @@ class AgentRegistry:
     def by_id(self) -> dict[str, AgentDefinition]:
         return {agent.agent_id: agent for agent in self._agents}
 
+    def register_newborn(self, spec: dict) -> AgentDefinition:
+        """L8.1: Register an approved newborn agent from FoundryStore into the live registry.
+
+        Creates an AgentDefinition from the foundry spec and appends it to the registry
+        for the running session so the scheduler can pick it up immediately.
+        """
+        agent_id = str(spec.get("agent_id") or spec.get("name") or "").strip()
+        if not agent_id:
+            raise ValueError("newborn agent spec must have agent_id or name")
+        existing = self.by_id()
+        if agent_id in existing:
+            return existing[agent_id]
+        defn = AgentDefinition(
+            agent_id=agent_id,
+            label=str(spec.get("name") or agent_id),
+            purpose=str(spec.get("mission") or spec.get("role") or ""),
+            cadence_minutes=int(spec.get("cadence_minutes") or 20),
+            triggers=list(spec.get("triggers") or []),
+            dependencies=[],
+            memory_scope=list(spec.get("memory_scope") or ["session"]),
+            owns=list(spec.get("tool_scope") or []),
+            agent_class="newborn-agent",
+            promotion_status="approved",
+            trust_zone=str(spec.get("zone") or "system_agent"),
+            primary_domain=str(spec.get("role") or "general"),
+        )
+        self._agents.append(defn)
+        return defn
+
     def contract_snapshot(self) -> dict[str, Any]:
         try:
             bundle = load_contract_bundle(validate=True)
