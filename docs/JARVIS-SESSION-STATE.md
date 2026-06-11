@@ -4,7 +4,31 @@ This file is the persistent working state for the Level-9 advancement
 program. Every autonomous session reads it first and updates it before
 ending. It records honest, code-verified status — never doc claims.
 
-Last updated: 2026-06-10 (Presence & Operating Picture directive added; wiring gaps L5–L9 closed)
+Last updated: 2026-06-10 (SHIP THE FEELING directive added)
+
+---
+
+# SHIP THE FEELING — HARD OVERRIDE
+
+**This is the top directive. It overrides all other priorities.**
+
+Chris wants to feel the magic of his AI companion.
+
+Not someday. Now.
+
+Ship the feeling first. Make it better later.
+
+The single question before any work begins:
+
+> **Does this make Chris feel like JARVIS is alive, aware, and with him?**
+
+If yes: build it, ship it, show it.
+
+If no: defer it unless it's a hard blocker for the feeling.
+
+Infrastructure, maturity scoring, backend wiring, proof systems — all of it
+is secondary to the felt experience. A beautiful incomplete companion is worth
+more than a complete invisible one.
 
 ---
 
@@ -29,7 +53,9 @@ Every implementation decision should be evaluated against this objective.
 
 ## Priority Override
 
-Effective immediately:
+**SHIP THE FEELING** (above all else)
+
+Then:
 
 **Presence > Infrastructure**
 
