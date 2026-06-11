@@ -1,0 +1,29 @@
+{"ts": "2026-06-10T05:17:58Z", "event": "allowed_jarvis_write", "actor": "child", "content_type": "tutoring_session"}
+{"ts": "2026-06-10T05:17:58Z", "event": "blocked_jarvis_write", "actor": "chris", "content_type": "tutoring_session", "reason": "Content tags ['scripture', 'devotional'] indicate faith/formation content — route to Chronicle.", "routing": "chronicle"}
+{"ts": "2026-06-10T05:17:58Z", "event": "blocked_jarvis_write", "actor": "chris", "content_type": "memory_fact", "reason": "Content tags ['prayer'] indicate faith/formation content — route to Chronicle.", "routing": "chronicle"}
+{"ts": "2026-06-10T05:17:58Z", "event": "blocked_jarvis_write", "actor": "chris", "content_type": "memory_fact", "reason": "Domain 'scripture' is a Chronicle-owned domain.", "routing": "chronicle"}
+{"ts": "2026-06-10T05:17:58Z", "event": "blocked_jarvis_write", "actor": "chris", "content_type": "memory_fact", "reason": "Content tags ['devotional'] indicate faith/formation content — route to Chronicle.", "routing": "chronicle"}
+{"ts": "2026-06-10T05:17:58Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_fact"}
+{"ts": "2026-06-10T05:17:58Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_fact"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:00:41Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:37:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:37:08Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:37:17Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}
+{"ts": "2026-06-10T07:37:17Z", "event": "allowed_jarvis_write", "actor": "chris", "content_type": "memory_entry"}

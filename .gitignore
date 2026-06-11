@@ -51,6 +51,9 @@ data/trust/trust_zones.json
 # Settings generated or updated at runtime
 data/settings/adaptation_profiles.json
 data/settings/assistant_core.json
+# Unbounded append-only runtime logs — can grow to GB+
+data/settings/assistant_core_log.jsonl
+data/settings/assistant_core_state_log.jsonl
 data/settings/faith_daily_word.json
 data/settings/identity.json
 data/settings/layout_state.json
