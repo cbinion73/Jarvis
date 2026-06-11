@@ -33929,6 +33929,7 @@ async function refreshDailyBriefDesktop(actorOverride = '') {{
 function renderDailyBriefDesktop(data) {{
   _dailyBriefData = data;
   const modulePayload = data.module || {{}};
+  const morningBrief = modulePayload.morning_brief || {{}};
   const board = modulePayload.today_board || {{}};
   const openLoopPayload = modulePayload.open_loops || {{}};
   const openLoops = Array.isArray(openLoopPayload.items) ? openLoopPayload.items : [];
@@ -33997,7 +33998,7 @@ function renderDailyBriefDesktop(data) {{
   const blockedAgentName = Object.keys(agents).find(name => String(agents[name]?.state || '').toLowerCase() === 'blocked');
   const blockedTask = tasks.find(task => task.blocked_reason);
 
-  const firstLightOpening = firstLight.opening || dailyBriefSummaryFromBriefing(modulePayload);
+  const firstLightOpening = firstLight.opening || (morningBrief.what_matters?.slice(0, 2).join(' ') || '') || dailyBriefSummaryFromBriefing(modulePayload);
   const firstLightWatch = firstLight.watch_line || growthGuidance.summary || 'Choose one leverage-bearing move before the day fragments.';
   const firstLightCue = firstLight.formation_cue || (priorities[0]?.next_action ? `Next move: ${{priorities[0].next_action}}.` : 'Keep the morning simple and honest.');
   [
@@ -34043,19 +34044,29 @@ function renderDailyBriefDesktop(data) {{
     }},
   ];
   dailyBriefHtml('dailybrief-whatmatters-list', matterCards.map(item => `<div class="dailybrief-matter-card ${{item.tone}}"><div class="dailybrief-matter-label">${{escHtml(item.label)}}</div><strong>${{escHtml(item.title || '—')}}</strong><span>${{escHtml(item.copy || '')}}</span></div>`).join(''));
-  dailyBriefText('dailybrief-one-thing-copy', priorities[0]?.title || leadTask?.title || leadProject?.title || 'Choose the one movement that will make the day feel honest.');
+  dailyBriefText('dailybrief-one-thing-copy', morningBrief.recommendation || priorities[0]?.title || leadTask?.title || leadProject?.title || 'Choose the one movement that will make the day feel honest.');
 
-  const awayItems = recentActivity.length
-    ? recentActivity.slice(0, 5).map(item => ({{
-        title: item.title || 'Recent brief action',
-        copy: item.detail || item.subtitle || 'Operator continuity event.',
-        meta: item.timestamp ? dailyBriefFormatDayTime(item.timestamp) : 'Recent',
-      }}))
-    : notifications.slice(0, 5).map(item => ({{
-        title: item.title || item.summary || 'Assistant notification',
-        copy: item.detail || item.summary || 'New signal from the assistant layer.',
-        meta: item.urgency || item.channel || 'Live',
-      }}));
+  // "While You Were Away" — prefer morning brief pipeline signals, fall back to activity/notifications
+  const mbChanged = Array.isArray(morningBrief.what_changed) ? morningBrief.what_changed.filter(s => !String(s).startsWith('  ·')) : [];
+  const mbPrepared = Array.isArray(morningBrief.jarvis_prepared) ? morningBrief.jarvis_prepared.filter(s => !String(s).startsWith('  ·')) : [];
+  const mbAwayItems = [...mbChanged.slice(0, 3), ...mbPrepared.slice(0, 3)].map((line, i) => ({{
+    title: i < mbChanged.slice(0, 3).length ? 'What Changed' : 'JARVIS Prepared',
+    copy: String(line),
+    meta: morningBrief.truth_labels?.git_activity === 'live' ? 'Live' : 'Live data',
+  }}));
+  const awayItems = mbAwayItems.length
+    ? mbAwayItems
+    : recentActivity.length
+      ? recentActivity.slice(0, 5).map(item => ({{
+          title: item.title || 'Recent brief action',
+          copy: item.detail || item.subtitle || 'Operator continuity event.',
+          meta: item.timestamp ? dailyBriefFormatDayTime(item.timestamp) : 'Recent',
+        }}))
+      : notifications.slice(0, 5).map(item => ({{
+          title: item.title || item.summary || 'Assistant notification',
+          copy: item.detail || item.summary || 'New signal from the assistant layer.',
+          meta: item.urgency || item.channel || 'Live',
+        }}));
   dailyBriefHtml('dailybrief-away-list', awayItems.length ? awayItems.map(item => `<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>${{escHtml(item.title)}}</strong><span>${{escHtml(item.copy)}}</span></div><div class="dailybrief-row-meta">${{escHtml(item.meta)}}</div></div>`).join('') : '<div class="dailybrief-row"><div class="dailybrief-row-body"><strong>No overnight updates are live</strong><span>Recent continuity and assistant notifications will appear here when they exist.</span></div><div class="dailybrief-row-meta">Quiet</div></div>');
 
   const decisionItems = approvals.length
@@ -34136,7 +34147,7 @@ function renderDailyBriefDesktop(data) {{
   dailyBriefHtml('dailybrief-timeline', timelineItems.join('') || '<div class="dailybrief-timepoint"><strong>Open</strong><span>The day is still unscripted.</span></div>');
 
   const summaryLines = [
-    modulePayload.summary || '',
+    morningBrief.recommendation || modulePayload.summary || '',
     modulePayload.headline || '',
     data.liveBriefUnavailable ? `Live brief unavailable: ${{data.liveBriefUnavailable}}` : '',
     modulePayload.errors?.length ? `Partial sources: ${{modulePayload.errors.join(' · ')}}` : '',
