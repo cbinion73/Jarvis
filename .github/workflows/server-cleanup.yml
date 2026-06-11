@@ -1,0 +1,83 @@
+name: Server Disk Cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (show sizes only, delete nothing)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup jarvis-vps disk
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: root
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 20m
+          script: |
+            echo "=== DISK BEFORE ==="
+            df -h /
+
+            echo ""
+            echo "=== TOP DATA FILE CONSUMERS ==="
+            du -sh /home/jarvis/apps/jarvis/data/* 2>/dev/null | sort -rh | head -20
+
+            echo ""
+            echo "=== DOCKER DISK USAGE ==="
+            docker system df
+
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo ""
+              echo "=== DRY RUN — no files deleted ==="
+              echo "Large JSONL files (>100MB):"
+              find /home/jarvis/apps/jarvis/data -name "*.jsonl" -size +100M -exec du -sh {} \;
+              echo ""
+              echo "Large JSON lock/log files:"
+              find /home/jarvis/apps/jarvis/data -name "*.json.lock" -o -name "*_log.json" | xargs du -sh 2>/dev/null | sort -rh | head -20
+            else
+              echo ""
+              echo "=== STEP 1: Docker prune ==="
+              docker system prune -af --volumes 2>/dev/null || docker system prune -af
+              echo "Docker prune done."
+
+              echo ""
+              echo "=== STEP 2: Truncate oversized JSONL log files (>100MB) ==="
+              find /home/jarvis/apps/jarvis/data -name "*.jsonl" -size +100M | while read f; do
+                SIZE=$(du -sh "$f" | cut -f1)
+                echo "Truncating $f ($SIZE)"
+                > "$f"
+              done
+
+              echo ""
+              echo "=== STEP 3: Remove .lock files left by crashed processes ==="
+              find /home/jarvis/apps/jarvis/data -name "*.lock" | while read f; do
+                echo "Removing lock: $f"
+                rm -f "$f"
+              done
+
+              echo ""
+              echo "=== STEP 4: Git GC ==="
+              cd /home/jarvis/apps/jarvis
+              git gc --prune=now --aggressive 2>&1 | tail -5
+
+              echo ""
+              echo "=== STEP 5: Clear tmp/pack garbage ==="
+              find /home/jarvis/apps/jarvis/.git -name "tmp_pack_*" -delete 2>/dev/null && echo "tmp_pack files cleared" || echo "No tmp_pack files found"
+
+              echo ""
+              echo "=== DISK AFTER ==="
+              df -h /
+
+              echo ""
+              echo "=== STEP 6: Redeploy JARVIS with clean slate ==="
+              cd /home/jarvis/apps/jarvis/deploy
+              docker compose up -d --build jarvis
+              echo "✅ Cleanup + redeploy done at $(date)"
+            fi
