@@ -5161,7 +5161,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
         open_loops: dict[str, Any] = {}
         try:
-            open_loops = await asyncio.to_thread(runtime.unified_open_loops, actor_display, 18)
+            open_loops = await asyncio.wait_for(asyncio.to_thread(runtime.unified_open_loops, actor_display, 18), timeout=12.0)
             payload["open_loops"] = open_loops
             payload["counts"]["waiting_on_you"] = int(((open_loops.get("summary") or {}).get("waiting_on_you", 0)) or 0)
             payload["counts"]["needs_revisit"] = int(((open_loops.get("summary") or {}).get("needs_revisit", 0)) or 0)
@@ -5169,7 +5169,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["errors"].append(f"open_loops: {exc}")
 
         try:
-            today_board = await asyncio.to_thread(runtime.today_board, actor_display, open_loops=open_loops or None)
+            today_board = await asyncio.wait_for(asyncio.to_thread(runtime.today_board, actor_display, open_loops=open_loops or None), timeout=12.0)
             payload["today_board"] = today_board
             payload["counts"]["priority_count"] = len(list(today_board.get("priorities") or []))
             payload["counts"]["notification_count"] = len(list(today_board.get("assistant_notifications") or []))
@@ -5178,7 +5178,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             payload["errors"].append(f"today_board: {exc}")
 
         try:
-            briefing_text = await asyncio.to_thread(runtime.morning_brief, actor_display)
+            briefing_text = await asyncio.wait_for(asyncio.to_thread(runtime.morning_brief, actor_display), timeout=12.0)
             payload["briefing_text"] = briefing_text
         except Exception as exc:
             payload["errors"].append(f"briefing: {exc}")
@@ -5186,7 +5186,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         try:
             builder = get_briefing_builder()
             if builder is not None:
-                payload["live_briefing"] = await asyncio.to_thread(builder.build, actor_user_id)
+                payload["live_briefing"] = await asyncio.wait_for(asyncio.to_thread(builder.build, actor_user_id), timeout=12.0)
         except Exception as exc:
             payload["errors"].append(f"live_briefing: {exc}")
 
