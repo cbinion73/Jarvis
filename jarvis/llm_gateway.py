@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .persistence import append_jsonl, atomic_write_jsonl
+from .state_log_utils import read_jsonl_tail
 
 _log = logging.getLogger("jarvis.llm_gateway")
 
@@ -34,6 +35,7 @@ _log = logging.getLogger("jarvis.llm_gateway")
 _USAGE_LOG_PATH = Path(__file__).parent.parent / "data" / "logs" / "llm_usage.jsonl"
 _USAGE_STATE_LOG_PATH = _USAGE_LOG_PATH.with_name("llm_usage_state_log.jsonl")
 _usage_write_lock = threading.Lock()
+_USAGE_STATE_RECORD_LIMIT = max(50, int(os.getenv("JARVIS_USAGE_STATE_RECORD_LIMIT", "500")))
 
 # Approximate cost per 1M tokens (input, output) in USD — update as pricing changes.
 # Ollama / local = free.  Groq free tier = $0.  Paid tiers listed below.
@@ -67,8 +69,9 @@ def _record_usage(entry: dict) -> None:
     try:
         _USAGE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         with _usage_write_lock:
-            records = _load_usage_records_locked()
+            records = _load_usage_records_from_state_log_locked()
             records.append(entry)
+            records = records[-_USAGE_STATE_RECORD_LIMIT:]
             append_jsonl(
                 _USAGE_STATE_LOG_PATH,
                 {
@@ -76,7 +79,7 @@ def _record_usage(entry: dict) -> None:
                     "records": records,
                 },
             )
-            atomic_write_jsonl(_USAGE_LOG_PATH, records)
+            append_jsonl(_USAGE_LOG_PATH, entry)
     except Exception as exc:
         _log.debug("Usage tracking write failed: %s", exc)
 
@@ -85,14 +88,7 @@ def _load_usage_records_locked() -> list[dict]:
     if _USAGE_LOG_PATH.exists():
         try:
             records: list[dict] = []
-            for raw in _USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines():
-                raw = raw.strip()
-                if not raw:
-                    continue
-                try:
-                    rec = json.loads(raw)
-                except Exception:
-                    continue
+            for rec in read_jsonl_tail(_USAGE_LOG_PATH):
                 if isinstance(rec, dict):
                     records.append(rec)
             if records:
@@ -107,14 +103,7 @@ def _load_usage_records_from_state_log_locked() -> list[dict]:
         return []
     try:
         latest: list[dict] = []
-        for raw in _USAGE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
-            raw = raw.strip()
-            if not raw:
-                continue
-            try:
-                payload = json.loads(raw)
-            except Exception:
-                continue
+        for payload in read_jsonl_tail(_USAGE_STATE_LOG_PATH):
             records = payload.get("records")
             if isinstance(records, list):
                 latest = [dict(item) for item in records if isinstance(item, dict)]
@@ -155,24 +144,13 @@ def usage_summary(hours: int = 24) -> dict:
         "by_backend": {},
     }
 
-    if not _USAGE_LOG_PATH.exists():
+    try:
         with _usage_write_lock:
-            lines = [json.dumps(item, separators=(",", ":")) for item in _load_usage_records_locked()]
-    else:
-        try:
-            with _usage_write_lock:
-                lines = [json.dumps(item, separators=(",", ":")) for item in _load_usage_records_locked()]
-        except Exception:
-            return result
+            records = _load_usage_records_locked()
+    except Exception:
+        return result
 
-    for raw in lines:
-        raw = raw.strip()
-        if not raw:
-            continue
-        try:
-            rec = json.loads(raw)
-        except Exception:
-            continue
+    for rec in records:
         if rec.get("ts", 0) < cutoff_ts:
             continue
 
@@ -206,15 +184,23 @@ def usage_summary(hours: int = 24) -> dict:
 # Model configuration (all overridable via env vars)
 # ---------------------------------------------------------------------------
 
-_FAST_MODEL              = lambda: os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "phi3.5")
-_SUBSTANTIVE_MODEL       = lambda: os.getenv("JARVIS_OLLAMA_SUBSTANTIVE_MODEL", "qwen2.5:14b")
-_BACKGROUND_MODEL        = lambda: os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL",  "qwen2.5:7b")
-_REASONING_MODEL         = lambda: os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "qwen2.5:14b")
+def _model_mode() -> str:
+    return os.getenv("JARVIS_MODEL_MODE", "standard").strip().lower() or "standard"
+
+
+def _cloud_light_mode() -> bool:
+    return _model_mode() == "cloud_light"
+
+
 _OPENAI_MODEL            = lambda: os.getenv("JARVIS_OPENAI_MODEL",             "gpt-5.4-mini")
 _THINKING_MODEL          = lambda: os.getenv("JARVIS_THINKING_MODEL",           "gpt-5.4")
 _MAX_THINKING_MODEL      = lambda: os.getenv("JARVIS_MAX_THINKING_MODEL",       "gpt-5.5")
 _GROQ_MODEL              = lambda: os.getenv("JARVIS_GROQ_MODEL",               "llama-3.3-70b-versatile")
 _GROQ_REASONING_MODEL    = lambda: os.getenv("JARVIS_GROQ_REASONING_MODEL",     "openai/gpt-oss-120b")
+_FAST_MODEL              = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "phi3.5")
+_SUBSTANTIVE_MODEL       = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_SUBSTANTIVE_MODEL", "qwen2.5:14b")
+_BACKGROUND_MODEL        = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL",  "qwen2.5:7b")
+_REASONING_MODEL         = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "qwen2.5:14b")
 
 # ---------------------------------------------------------------------------
 # Task routing tables

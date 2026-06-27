@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from .persistence import append_jsonl, atomic_write_jsonl
+from .state_log_utils import read_jsonl_tail
 
 logger = logging.getLogger("jarvis.approvals")
 
@@ -596,12 +597,8 @@ class ApprovalQueue:
             self._items = self._load_queue_from_state_log()
             return
         try:
-            for line in self._queue_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
+            for data in read_jsonl_tail(self._queue_path):
                 try:
-                    data = json.loads(line)
                     # Ensure list fields are lists
                     data.setdefault("tags", [])
                     self._items.append(ApprovalRequest(**data))
@@ -618,10 +615,7 @@ class ApprovalQueue:
             return []
         try:
             latest: list[ApprovalRequest] = []
-            for line in self._queue_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self._queue_state_log_path):
                 records = payload.get("records")
                 if not isinstance(records, list):
                     continue
@@ -641,12 +635,8 @@ class ApprovalQueue:
             return self._load_history_from_state_log()
         records: list[ApprovalRequest] = []
         try:
-            for line in self._history_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
+            for data in read_jsonl_tail(self._history_path):
                 try:
-                    data = json.loads(line)
                     data.setdefault("tags", [])
                     records.append(ApprovalRequest(**data))
                 except Exception:
@@ -660,10 +650,7 @@ class ApprovalQueue:
             return []
         try:
             latest: list[ApprovalRequest] = []
-            for line in self._history_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self._history_state_log_path):
                 records = payload.get("records")
                 if not isinstance(records, list):
                     continue

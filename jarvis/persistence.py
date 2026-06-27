@@ -8,6 +8,8 @@ from pathlib import Path
 import tempfile
 from typing import Any, Iterator
 
+from .state_log_utils import trim_file_to_recent_bytes
+
 
 def _lock_path(path: Path) -> Path:
     suffix = f"{path.suffix}.lock" if path.suffix else ".lock"
@@ -68,9 +70,7 @@ def _rotate_if_needed(path: Path, encoding: str) -> None:
     try:
         if path.stat().st_size <= _JSONL_ROTATE_BYTES:
             return
-        lines = path.read_text(encoding=encoding).splitlines(keepends=True)
-        keep = lines[len(lines) // 2 :]
-        path.write_text("".join(keep), encoding=encoding)
+        trim_file_to_recent_bytes(path, _JSONL_ROTATE_BYTES // 2)
     except (OSError, ValueError):
         pass
 

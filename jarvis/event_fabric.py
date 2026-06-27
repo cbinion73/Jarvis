@@ -9,6 +9,7 @@ from typing import Any
 
 from .models import AttentionDisposition, InterruptionLevel, TriggerType, UserAttentionState
 from .persistence import append_jsonl, atomic_write_json
+from .state_log_utils import read_jsonl_tail
 
 
 def _now() -> datetime:
@@ -129,11 +130,7 @@ class DurableEventStore:
         if not self.log_path.exists():
             return []
         try:
-            records = [
-                json.loads(line)
-                for line in self.log_path.read_text(encoding="utf-8").splitlines()
-                if line.strip()
-            ]
+            records = read_jsonl_tail(self.log_path)
         except (OSError, json.JSONDecodeError):
             return []
         return [dict(item) for item in records if isinstance(item, dict)]
@@ -143,13 +140,7 @@ class DurableEventStore:
             return []
         latest: list[EventEnvelope] = []
         try:
-            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    payload = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+            for payload in read_jsonl_tail(self.state_log_path):
                 saved = payload.get("events")
                 if not isinstance(saved, list):
                     continue

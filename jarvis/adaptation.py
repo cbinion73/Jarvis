@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .persistence import append_jsonl, atomic_write_json
+from .state_log_utils import read_jsonl_tail
 
 
 ADAPTATION_PATH = Path.cwd() / "data" / "settings" / "adaptation_profiles.json"
@@ -46,10 +47,7 @@ class AdaptationStore:
             return self._load_from_log(default)
         latest: dict[str, Any] = default
         try:
-            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.state_log_path):
                 records = payload.get("records")
                 if isinstance(records, dict):
                     latest = dict(records)
@@ -70,10 +68,7 @@ class AdaptationStore:
             return default
         latest: dict[str, Any] = default
         try:
-            for line in self.log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.log_path):
                 records = payload.get("records")
                 if isinstance(records, dict):
                     latest = dict(records)

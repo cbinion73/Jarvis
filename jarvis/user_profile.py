@@ -7,6 +7,7 @@ import json, threading
 from datetime import datetime, timezone
 
 from .persistence import append_jsonl, atomic_write_json
+from .state_log_utils import read_jsonl_tail
 
 PROFILES_DIR = Path("data/settings/profiles")
 _lock = threading.Lock()
@@ -81,10 +82,7 @@ def _load_profile_from_state_log(user_id: str) -> dict:
         return _load_profile_from_log(user_id)
     try:
         latest: dict = {}
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            payload = json.loads(line)
+        for payload in read_jsonl_tail(path):
             records = payload.get("records")
             if isinstance(records, dict):
                 latest = dict(records)
@@ -101,10 +99,7 @@ def _load_profile_from_log(user_id: str) -> dict:
         return default
     try:
         latest: dict = {}
-        for line in path.read_text(encoding="utf-8").splitlines():
-            if not line.strip():
-                continue
-            payload = json.loads(line)
+        for payload in read_jsonl_tail(path):
             records = payload.get("records")
             if isinstance(records, dict):
                 latest = dict(records)

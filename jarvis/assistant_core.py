@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .persistence import append_jsonl, atomic_write_json
+from .state_log_utils import read_jsonl_tail
 
 
 ASSISTANT_CORE_PATH = Path.cwd() / "data" / "settings" / "assistant_core.json"
@@ -287,10 +288,7 @@ class AssistantCoreStore:
             return self._load_from_log(default)
         latest: dict[str, Any] = default
         try:
-            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.state_log_path):
                 records = payload.get("records")
                 if isinstance(records, dict):
                     latest = dict(records)
@@ -303,10 +301,7 @@ class AssistantCoreStore:
             return default
         latest: dict[str, Any] = default
         try:
-            for line in self.log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.log_path):
                 records = payload.get("records")
                 if isinstance(records, dict):
                     latest = dict(records)

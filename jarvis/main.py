@@ -14,6 +14,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for cold systems
         return None
 
 from .agent_registry_contract import contract_paths, load_contract_bundle
+from .config import AppConfig
 from .openclaw_bridge import build_openclaw_envelope, envelope_to_json
 from .speech import voice_stack_status
 from .fresh_start import FreshStartProtocol
@@ -762,7 +763,7 @@ def command_fresh_start(runtime: JarvisRuntime, *, execute: bool, no_backup: boo
     return 0
 
 
-def _ensure_ollama_running() -> None:
+def _ensure_ollama_running(config: AppConfig) -> None:
     """
     Check whether Ollama is reachable at the configured base URL.
     If not, attempt to start it via `ollama serve` as a detached background process.
@@ -776,6 +777,13 @@ def _ensure_ollama_running() -> None:
     import urllib.request
 
     _log = logging.getLogger("jarvis.ollama-bootstrap")
+
+    if not getattr(config, "ollama_enabled", True):
+        _log.info(
+            "Skipping Ollama auto-start because model mode '%s' has local models disabled.",
+            getattr(config, "model_mode", "standard"),
+        )
+        return
 
     ollama_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/v1").rstrip("/")
     health_url = f"{ollama_url}/api/tags"
@@ -854,7 +862,7 @@ def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
                 "Could not initialise approval layer: %s", exc
             )
     # Ensure Ollama is running (local inference backend)
-    _ensure_ollama_running()
+    _ensure_ollama_running(runtime.config)
     # Initialise the LLM Gateway before the scheduler (agents need it)
     if _LLM_GATEWAY_IMPORT_OK:
         try:

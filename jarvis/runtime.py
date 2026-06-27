@@ -56,6 +56,7 @@ from .perception import PerceptionStore, PerceptionSupport
 from .permissions import PermissionEngine
 from .runtime_kernel import AgentRuntimeKernel, AgentRuntimeKernelStore
 from .runtime_posture import build_runtime_posture_snapshot
+from .state_log_utils import read_jsonl_tail
 from .security import SecurityStore, SecuritySupport
 from .self_improvement import SelfImprovementStore
 from .supervision import SupervisionStore, SupervisionSupport
@@ -2341,9 +2342,9 @@ class JarvisRuntime:
         recent_events: list[dict[str, Any]] = []
         if events_path.exists():
             try:
-                lines = [line for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-                for line in lines[-8:]:
-                    recent_events.append(json.loads(line))
+                for payload in read_jsonl_tail(events_path, max_lines=8):
+                    if isinstance(payload, dict):
+                        recent_events.append(payload)
             except Exception:
                 recent_events = []
         return {

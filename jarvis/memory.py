@@ -14,6 +14,7 @@ from .data_hygiene import filter_records
 from .identity import IdentityRegistry
 from .models import MemoryEntry, MemoryProfileFact, MemoryProposal, UserProfile
 from .persistence import append_jsonl, atomic_write_json
+from .state_log_utils import read_jsonl_tail
 
 
 def _now_iso() -> str:
@@ -73,10 +74,7 @@ class MemoryStore:
             if not state_log_path.exists():
                 return self._load_json_from_log(path, default)
             latest: object = default
-            for line in state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(state_log_path):
                 if "payload" in payload:
                     latest = payload["payload"]
             return latest
@@ -89,10 +87,7 @@ class MemoryStore:
             if not log_path.exists():
                 return default
             latest: object = default
-            for line in log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(log_path):
                 if "payload" in payload:
                     latest = payload["payload"]
             return latest

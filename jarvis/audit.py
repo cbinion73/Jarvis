@@ -8,6 +8,7 @@ from pathlib import Path
 from .data_hygiene import filter_records
 from .models import ApprovalRequest, RequestPlan
 from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
+from .state_log_utils import read_jsonl_tail
 
 
 class AuditLog:
@@ -21,8 +22,7 @@ class AuditLog:
         if not self.actions_path.exists():
             return self._load_actions_from_state_log()
         try:
-            lines = self.actions_path.read_text(encoding="utf-8").splitlines()
-            records = [json.loads(line) for line in lines if line.strip()]
+            records = read_jsonl_tail(self.actions_path)
         except (OSError, json.JSONDecodeError):
             return self._load_actions_from_state_log()
         return filter_records([dict(item) for item in records if isinstance(item, dict)]) or self._load_actions_from_state_log()
@@ -32,10 +32,7 @@ class AuditLog:
             return []
         latest: list[dict] = []
         try:
-            for line in self.actions_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.actions_state_log_path):
                 records = payload.get("records")
                 if isinstance(records, list):
                     latest = filter_records([dict(item) for item in records if isinstance(item, dict)])
@@ -155,8 +152,7 @@ class ProgressSnapshotStore:
         if not self.history_path.exists():
             return self._load_history_from_state_log()
         try:
-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
-            records = [json.loads(line) for line in lines if line.strip()]
+            records = read_jsonl_tail(self.history_path)
         except (OSError, json.JSONDecodeError):
             return self._load_history_from_state_log()
         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
@@ -166,10 +162,7 @@ class ProgressSnapshotStore:
             return []
         latest: list[dict] = []
         try:
-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.history_state_log_path):
                 records = payload.get("records")
                 if isinstance(records, list):
                     latest = [dict(item) for item in records if isinstance(item, dict)]
@@ -290,8 +283,7 @@ class ProgressFocusStore:
         if not self.history_path.exists():
             return self._load_history_from_state_log()
         try:
-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
-            records = [json.loads(line) for line in lines if line.strip()]
+            records = read_jsonl_tail(self.history_path)
         except (OSError, json.JSONDecodeError):
             return self._load_history_from_state_log()
         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
@@ -301,10 +293,7 @@ class ProgressFocusStore:
             return []
         latest: list[dict] = []
         try:
-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.history_state_log_path):
                 records = payload.get("records")
                 if isinstance(records, list):
                     latest = [dict(item) for item in records if isinstance(item, dict)]
@@ -369,8 +358,7 @@ class SeamTrackerStore:
         if not self.history_path.exists():
             return self._load_history_from_state_log()
         try:
-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
-            records = [json.loads(line) for line in lines if line.strip()]
+            records = read_jsonl_tail(self.history_path)
         except (OSError, json.JSONDecodeError):
             return self._load_history_from_state_log()
         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
@@ -380,10 +368,7 @@ class SeamTrackerStore:
             return []
         latest: list[dict] = []
         try:
-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.history_state_log_path):
                 records = payload.get("records")
                 if isinstance(records, list):
                     latest = [dict(item) for item in records if isinstance(item, dict)]
@@ -519,10 +504,7 @@ class RecoveryActionStore:
             return []
         latest: list[dict] = []
         try:
-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.history_state_log_path):
                 records = payload.get("records")
                 if isinstance(records, list):
                     latest = [dict(item) for item in records if isinstance(item, dict)]
@@ -600,10 +582,7 @@ class ApprovalStore:
             return []
         try:
             latest: list[dict] = []
-            for line in self.pending_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.pending_log_path):
                 records = payload.get("records")
                 if isinstance(records, list):
                     latest = filter_records([dict(item) for item in records if isinstance(item, dict)])
@@ -657,8 +636,7 @@ class ActivityReviewStore:
         if not self.history_path.exists():
             return self._load_history_from_state_log()
         try:
-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
-            records = [json.loads(line) for line in lines if line.strip()]
+            records = read_jsonl_tail(self.history_path)
         except (OSError, json.JSONDecodeError):
             return self._load_history_from_state_log()
         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
@@ -668,10 +646,7 @@ class ActivityReviewStore:
             return []
         latest: list[dict] = []
         try:
-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                payload = json.loads(line)
+            for payload in read_jsonl_tail(self.history_state_log_path):
                 records = payload.get("records")
                 if isinstance(records, list):
                     latest = [dict(item) for item in records if isinstance(item, dict)]
