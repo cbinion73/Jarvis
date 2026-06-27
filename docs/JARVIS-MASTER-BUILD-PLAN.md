@@ -82,6 +82,8 @@ This means:
 - workforce comes after visible, bounded, inspectable work exists
 - autonomy comes after companion usefulness and truth are stable
 
+Epic numbering is a planning and governance convenience. It does not override the canonical build order above.
+
 ## 4. Epic Structure
 
 ### Epic 1. Governance, Review, and Separation of Duties
@@ -213,6 +215,32 @@ Story lanes:
 Success looks like:
 JARVIS can explore, gather, and return useful source-backed work without slipping into fake autonomy.
 
+### Epic 9. Autonomy
+
+Purpose:
+Support bounded self-directed action only after mind, memory, hands, workforce, and truth constraints are stable enough to trust.
+
+Desired end state:
+Chris should be able to give Jarvis direction at the goal level and have Jarvis plus subordinate agents work unattended in the background to search, build, produce, measure, and optimize on his behalf.
+
+Architect Office should treat this as real background project work, not symbolic autonomy or agent theater.
+
+Story lanes:
+
+- bounded autonomous follow-through
+- explicit task initiation boundaries
+- approval-aware action planning
+- pause, resume, and abort control
+- autonomy state visibility
+- non-theatrical background execution
+- goal-directed background project work
+- autonomous search, production, measurement, and optimization loops
+- agent-initiated next-step selection within approved goals
+- unattended execution with legible review surfaces
+
+Success looks like:
+JARVIS can carry out limited self-directed work in ways Chris can understand, inspect, interrupt, and trust.
+
 ## 5. Story Shape
 
 Every story assigned by Architect Office should include:
@@ -318,6 +346,13 @@ Every story and epic should be judged through four acceptance lenses.
 - Scope is bounded.
 - Uncertainty is stated honestly.
 - The behavior does not imply autonomous competence beyond the evidence.
+
+### Epic 9. Autonomy
+
+- Autonomous behavior is bounded, inspectable, and interruptible.
+- JARVIS does not imply self-direction beyond the approved action boundary.
+- Approval, pause, resume, and abort controls are explicit.
+- Background execution produces legible state instead of theater.
 
 ## 8. Definition of Done
 

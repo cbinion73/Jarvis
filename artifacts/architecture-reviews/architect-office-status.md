@@ -69,7 +69,7 @@ Current Epic 2 status:
 ### Epic 3. Memory Grounding
 
 Status:
-- active
+- completed
 
 Story:
 - give JARVIS bounded, truthful personal grounding without bluffing memory
@@ -101,11 +101,35 @@ Current Epic 3 entry status:
 - recommended eighth slice is memory-dispute acknowledgment hardening for user correction prompts
 - the eighth Epic 3 slice is procedurally approved in slice-only isolated review state
 - recommended ninth slice is memory-dispute follow-up clarification hardening for correction prompts
+- the ninth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended tenth slice is same-turn correction restatement hardening for explicit user-provided replacements
+- the tenth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended eleventh slice is correction-priority follow-through for same-turn corrected help requests
+- the eleventh Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended twelfth slice is short-turn correction continuity for corrected follow-up replies
+- the twelfth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended thirteenth slice is memory-overreach reduction for simple present-tense requests
+- the thirteenth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended fourteenth slice is personal-context usefulness tightening for clearly relevant prompts
+- the fourteenth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended fifteenth slice is correction-safe decision support for corrected personal frames
+- the fifteenth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended sixteenth slice is correction-safe drafting support for corrected personal frames
+- the sixteenth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended seventeenth slice is compact memory-summary discipline for personal-grounding replies
+- the seventeenth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended eighteenth slice is Epic 3 final consistency and regression polish
+- the eighteenth Epic 3 slice is procedurally approved in slice-only isolated review state
+- Epic 3 is ready for bounded closeout review
+- Epic 3 closeout package has been delivered from the isolated review target
+- Epic 3 is procedurally closed from the isolated review target
+- next recommended epic is Epic 4 Hands and Workbench
+- recommended first Epic 4 slice is checklist object creation for direct checklist asks
 
 ### Epic 4. Hands and Workbench
 
 Status:
-- not started
+- active
 
 Story:
 - let conversation produce real useful objects when hands are needed
@@ -176,6 +200,22 @@ Planned lanes:
 - evidence packet generation
 - source-backed synthesis
 - explicit uncertainty handling
+
+### Epic 9. Autonomy
+
+Status:
+- not started
+
+Story:
+- support bounded self-directed action only after the earlier trust and capability layers are stable
+
+Planned lanes:
+- bounded autonomous follow-through
+- explicit task initiation boundaries
+- approval-aware action planning
+- pause, resume, and abort control
+- autonomy state visibility
+- non-theatrical background execution
 
 ## Complete
 
@@ -332,6 +372,50 @@ Planned lanes:
 - [x] Procedurally approve the eighth Epic 3 slice in isolated review state
 - [x] Identify the next bounded Epic 3 planning step after eighth-slice approval
 - [x] Direct the next bounded Epic 3 planning step after eighth-slice approval
+- [x] Review the ninth Epic 3 isolated implementation report
+- [x] Procedurally approve the ninth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after ninth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after ninth-slice approval
+- [x] Review the tenth Epic 3 isolated implementation report
+- [x] Procedurally approve the tenth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after tenth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after tenth-slice approval
+- [x] Review the eleventh Epic 3 isolated implementation report
+- [x] Procedurally approve the eleventh Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after eleventh-slice approval
+- [x] Direct the next bounded Epic 3 planning step after eleventh-slice approval
+- [x] Review the twelfth Epic 3 isolated implementation report
+- [x] Procedurally approve the twelfth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after twelfth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after twelfth-slice approval
+- [x] Review the thirteenth Epic 3 isolated implementation report
+- [x] Procedurally approve the thirteenth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after thirteenth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after thirteenth-slice approval
+- [x] Review the fourteenth Epic 3 isolated implementation report
+- [x] Procedurally approve the fourteenth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after fourteenth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after fourteenth-slice approval
+- [x] Review the fifteenth Epic 3 isolated implementation report
+- [x] Procedurally approve the fifteenth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after fifteenth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after fifteenth-slice approval
+- [x] Review the sixteenth Epic 3 isolated implementation report
+- [x] Procedurally approve the sixteenth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after sixteenth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after sixteenth-slice approval
+- [x] Review the seventeenth Epic 3 isolated implementation report
+- [x] Procedurally approve the seventeenth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after seventeenth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after seventeenth-slice approval
+- [x] Review the eighteenth Epic 3 isolated implementation report
+- [x] Procedurally approve the eighteenth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after eighteenth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after eighteenth-slice approval
+- [x] Review the Epic 3 closeout package from the isolated review target
+- [x] Procedurally close Epic 3 from the isolated review target
+- [x] Identify the next bounded post-Epic-3 planning step
+- [x] Direct the first bounded Epic 4 implementation slice
 - [ ] Require clean isolated review state for the generic empathy / validation repair slice before formal approval
 - [x] Require clean isolated review state for the generic empathy / validation repair slice before formal approval
 
@@ -347,7 +431,19 @@ Architect Office is working the governance loop first so future JARVIS work can 
 
 Immediate active review lane:
 - Epic 3 slice 8 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
-- next active Build Office assignment is Epic 3 slice 9: `memory-dispute follow-up clarification hardening for correction prompts`
+- Epic 3 slice 9 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 10 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 11 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 12 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 13 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 14 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 15 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 16 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 17 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 slice 18 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 closeout package delivered from `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- Epic 3 procedurally closed from `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- next active Build Office assignment is Epic 4 slice 1: `checklist object creation for direct checklist asks`
 
 Process improvement:
 - the office protocols now default to isolated-first execution when the main repo is mixed

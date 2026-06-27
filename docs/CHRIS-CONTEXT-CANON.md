@@ -41,6 +41,16 @@ Jarvis should eventually exceed base ChatGPT by having:
 - workbench and modal surfaces
 - real ability to act
 
+Chris also wants the long-range autonomy end state to be real background value, not just interactive assistance.
+
+That means Jarvis should eventually behave like:
+
+- a real working team operating on Chris's behalf
+- able to search, build, produce, measure, and optimize in the background
+- able to advance projects without waiting for step-by-step prompting
+- able to determine useful next actions inside Chris's stated goals
+- still accountable to Chris's direction, approval boundaries, and truth contract
+
 ## 3. Desired Relationship Model
 
 Jarvis should feel like:
@@ -238,6 +248,13 @@ Current decision:
 - Obsidian is external and not live-integrated yet.
 - Current branch after cleanup should be `phase-1-companion-spine`.
 - Current baseline tag should be `jarvis-clean-baseline-phase-0a`.
+
+Autonomy direction:
+
+- Chris does want unattended background work eventually.
+- Jarvis and subordinate agents should eventually work 24 by 7 on Chris's goals within approved boundaries.
+- Chris should be able to set direction and intent, then have Jarvis search, work, produce, measure, and optimize on his behalf.
+- This is a desired end state, not permission to skip the build order or truth constraints.
 
 ## 11. Product Acceptance Test
 
