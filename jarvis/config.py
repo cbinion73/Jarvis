@@ -106,12 +106,12 @@ class AppConfig:
     def from_env(cls) -> "AppConfig":
         load_env_file(Path(".env"))
         load_env_file(Path.home() / ".openclaw" / ".env")
+        model_mode = os.getenv("JARVIS_MODEL_MODE", "standard").strip().lower() or "standard"
+        cloud_light_mode = model_mode == "cloud_light"
         household_path = Path(
             os.getenv(
                 "JARVIS_HOUSEHOLD_CONFIG",
                 "household/jarvis_household.example.json",
-        model_mode = os.getenv("JARVIS_MODEL_MODE", "standard").strip().lower() or "standard"
-        cloud_light_mode = model_mode == "cloud_light"
             )
         )
         return cls(
