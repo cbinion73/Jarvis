@@ -218,7 +218,7 @@ If not true, say the limitation plainly.
 Examples:
 
 - "I can reason through this, but web search is not wired into this path yet."
-- "I have the Obsidian vault path recorded, but live retrieval is not wired yet."
+- "I can check the local Obsidian vault and quote retrieved note snippets when something relevant matches."
 - "I can draft that, but I have not saved it."
 - "I do not have a finished agent output to report yet."
 
@@ -245,7 +245,8 @@ Current decision:
 - Architect Office governs the build.
 - Build Office implements.
 - Jarvis should not approve itself.
-- Obsidian is external and not live-integrated yet.
+- Obsidian is an external local source with read-only retrieval in the current runtime.
+- Jarvis must distinguish retrieved Obsidian note context from memory, inference, or unsupported certainty.
 - Current branch after cleanup should be `phase-1-companion-spine`.
 - Current baseline tag should be `jarvis-clean-baseline-phase-0a`.
 

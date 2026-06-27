@@ -23,7 +23,7 @@ Allowed:
 Forbidden:
 
 - conversation behavior changes
-- Obsidian live integration
+- new Obsidian integration work
 - Monday code merge
 - Health feature work
 - UI redesign
@@ -42,7 +42,7 @@ Allowed:
 
 Forbidden:
 
-- Obsidian live integration
+- new Obsidian expansion beyond current local read-only retrieval truth
 - Health feature work
 - agent expansion
 - UI redesign
@@ -61,7 +61,7 @@ Allowed:
 
 Forbidden:
 
-- Obsidian integration
+- new Obsidian expansion beyond current local read-only retrieval truth
 - new tools
 - agents
 - UI redesign
@@ -71,8 +71,9 @@ Forbidden:
 
 Allowed:
 
-- Obsidian vault indexing
-- retrieval
+- broader Obsidian memory grounding
+- derived vault indexing
+- retrieval hardening
 - compact context injection
 - source distinction
 

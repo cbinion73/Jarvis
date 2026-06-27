@@ -9,6 +9,11 @@ from architect_office.phase_rules import evaluate_phase_scope
 
 
 class ArchitectOfficePhaseRuleTests(unittest.TestCase):
+    def test_canon_registry_includes_chris_intent_canon(self) -> None:
+        registry = load_canon_registry(Path(__file__).resolve().parents[1])
+
+        self.assertIn("docs/CHRIS-INTENT-CANON.md", registry.canon_paths)
+
     def test_canon_registry_includes_chris_context_canon(self) -> None:
         registry = load_canon_registry(Path(__file__).resolve().parents[1])
 
