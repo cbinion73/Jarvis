@@ -1,0 +1,1717 @@
+diff --git a/.env.example b/.env.example
+index 856da1b..29f57b6 100644
+--- a/.env.example
++++ b/.env.example
+@@ -145,6 +145,9 @@ HA_TOKEN=YOUR_HOME_ASSISTANT_LONG_LIVED_TOKEN
+ # Scopes required: calendar.readonly, gmail.readonly (adjust as needed)
+ GOOGLE_CLIENT_ID=your-google-client-id-here
+ GOOGLE_CLIENT_SECRET=your-google-client-secret-here
++# Google Maps browser key. If omitted, JARVIS will also accept a shared Google key
++# from GOOGLE_API_KEY or a GOOGLE_CLIENT_SECRET value that is actually an AIza... API key.
++GOOGLE_MAPS_API_KEY=
+ JARVIS_GOOGLE_CLIENT_SECRET=/Users/chris/Desktop/CODE/JARVIS/config/google_client_secret.json
+ JARVIS_GOOGLE_TOKEN_PATH=/Users/chris/Desktop/CODE/JARVIS/data/google/google_token.json
+ 
+@@ -200,6 +203,20 @@ OPENVIKING_AGENT_ID=jarvis
+ JARVIS_OPENVIKING_MEMORY_URI_ROOT=viking://user/chris/memories/
+ 
+ 
++# =============================================================================
++# Obsidian (external source only - not yet integrated)
++# =============================================================================
++
++# External Obsidian vault path for future Phase 3 grounding work.
++# Phase 0A only documents this location. JARVIS should treat a missing path as
++# "external source unavailable" and must not create a fallback or fake vault.
++JARVIS_OBSIDIAN_VAULT=/Volumes/Monday/Obsidian
++
++# Planned derived index root for future retrieval artifacts.
++# This is not built in Phase 0A.
++JARVIS_OBSIDIAN_INDEX_ROOT=/Volumes/Monday/JARVIS/indexes/obsidian
++
++
+ # =============================================================================
+ # Misc
+ # =============================================================================
+diff --git a/jarvis/apple_api.py b/jarvis/apple_api.py
+index a257e2e..1175ca5 100644
+--- a/jarvis/apple_api.py
++++ b/jarvis/apple_api.py
+@@ -42,6 +42,7 @@ from urllib.parse import quote
+ 
+ from fastapi import FastAPI, HTTPException
+ 
++from .config import resolve_google_maps_api_key
+ from .audit import AuditLog, ProgressFocusStore, RecoveryActionStore
+ from .chronicle_reviews import ChronicleReviewStore
+ from .data_hygiene import filter_records
+@@ -2586,7 +2587,7 @@ def _err(message: str, status: int = 400) -> tuple[dict, int]:
+ 
+ def _nav_bridge() -> NavBridge:
+     return NavBridge(
+-        os.getenv("GOOGLE_MAPS_API_KEY", ""),
++        resolve_google_maps_api_key(),
+         os.getenv("NPS_API_KEY", ""),
+     )
+ 
+@@ -5852,6 +5853,7 @@ def _normalize_navigation_route_history_entry(item: Any) -> dict[str, Any] | Non
+         resume_count = max(0, int(item.get("resume_count", 0) or 0))
+     except Exception:
+         resume_count = 0
++    maps_url = str(item.get("maps_url") or "").strip() or _apple_maps_route_url(destination)
+     return {
+         "route_id": route_id,
+         "origin": origin,
+@@ -5864,9 +5866,17 @@ def _normalize_navigation_route_history_entry(item: Any) -> dict[str, Any] | Non
+         "last_resumed_at": last_resumed_at,
+         "preview_count": preview_count,
+         "resume_count": resume_count,
++        "maps_url": maps_url,
+     }
+ 
+ 
++def _apple_maps_route_url(destination: str) -> str:
++    destination = str(destination or "").strip()
++    if not destination:
++        return ""
++    return f"http://maps.apple.com/?daddr={quote(destination, safe='')}&dirflg=d"
++
++
+ def _load_navigation_state() -> dict[str, Any]:
+     payload = _safe_read_json(_NAVIGATION_STATE_PATH, _default_navigation_state())
+     if not isinstance(payload, dict):
+@@ -5985,6 +5995,7 @@ def _record_navigation_route_history(
+     existing_history = list(current.get("route_history") or [])
+     next_history: list[dict[str, Any]] = []
+     matched_entry: dict[str, Any] | None = None
++    maps_url = _apple_maps_route_url(destination)
+     for item in existing_history:
+         normalized = _normalize_navigation_route_history_entry(item)
+         if not normalized:
+@@ -5995,6 +6006,7 @@ def _record_navigation_route_history(
+             normalized["source_label"] = source_label
+             normalized["last_previewed_at"] = now
+             normalized["preview_count"] = int(normalized.get("preview_count", 1) or 1) + 1
++            normalized["maps_url"] = maps_url
+             matched_entry = normalized
+         next_history.append(normalized)
+     if matched_entry is None:
+@@ -6010,6 +6022,7 @@ def _record_navigation_route_history(
+             "last_resumed_at": "",
+             "preview_count": 1,
+             "resume_count": 0,
++            "maps_url": maps_url,
+         }
+         next_history.append(matched_entry)
+     next_recent = [destination] + [
+@@ -6053,6 +6066,7 @@ def _record_navigation_route_history(
+             "destination": destination,
+             "origin_mode": origin_mode,
+             "route_id": route_id,
++            "maps_url": maps_url,
+             "preview_count": int(normalized_saved.get("preview_count") or 1),
+         },
+     )
+diff --git a/jarvis/config.py b/jarvis/config.py
+index 32de0ad..0a90f46 100644
+--- a/jarvis/config.py
++++ b/jarvis/config.py
+@@ -29,6 +29,51 @@ def load_env_file(path: Path) -> None:
+         os.environ.setdefault(key.strip(), value.strip())
+ 
+ 
++def resolve_google_maps_api_key() -> str:
++    candidates = [
++        os.getenv("GOOGLE_MAPS_API_KEY", ""),
++        os.getenv("GOOGLE_API_KEY", ""),
++        os.getenv("GOOGLE_CLIENT_SECRET", ""),
++    ]
++    for candidate in candidates:
++        cleaned = _normalize_google_maps_api_key(candidate)
++        if cleaned:
++            return cleaned
++
++    client_secret_path = Path(
++        os.getenv(
++            "JARVIS_GOOGLE_CLIENT_SECRET",
++            "config/google_client_secret.json",
++        )
++    )
++    if client_secret_path.exists():
++        try:
++            payload = json.loads(client_secret_path.read_text(encoding="utf-8"))
++        except Exception:
++            payload = {}
++        if isinstance(payload, dict):
++            for key in ("api_key", "maps_api_key"):
++                cleaned = _normalize_google_maps_api_key(payload.get(key, ""))
++                if cleaned:
++                    return cleaned
++            for section in ("installed", "web"):
++                block = payload.get(section)
++                if not isinstance(block, dict):
++                    continue
++                for key in ("api_key", "maps_api_key"):
++                    cleaned = _normalize_google_maps_api_key(block.get(key, ""))
++                    if cleaned:
++                        return cleaned
++    return ""
++
++
++def _normalize_google_maps_api_key(value: object) -> str:
++    cleaned = str(value or "").strip()
++    if cleaned.startswith("AIza") and len(cleaned) >= 20:
++        return cleaned
++    return ""
++
++
+ @dataclass(slots=True)
+ class AppConfig:
+     openai_api_key: str
+@@ -53,6 +98,9 @@ class AppConfig:
+     livekit_url: str
+     livekit_api_key: str
+     livekit_api_secret: str
++    model_mode: str
++    ollama_enabled: bool
++    skip_model_warmup: bool
+     second_brain_provider: str
+     second_brain_model: str
+     second_brain_enabled: bool
+@@ -109,6 +157,8 @@ class AppConfig:
+                 "household/jarvis_household.example.json",
+             )
+         )
++        model_mode = os.getenv("JARVIS_MODEL_MODE", "standard").strip().lower() or "standard"
++        cloud_light_mode = model_mode == "cloud_light"
+         return cls(
+             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+             elevenlabs_api_key=os.getenv("ELEVENLABS_API_KEY", ""),
+@@ -140,9 +190,12 @@ class AppConfig:
+             livekit_url=os.getenv("LIVEKIT_URL", ""),
+             livekit_api_key=os.getenv("LIVEKIT_API_KEY", ""),
+             livekit_api_secret=os.getenv("LIVEKIT_API_SECRET", ""),
++            model_mode=model_mode,
++            ollama_enabled=_bool_env("JARVIS_ENABLE_OLLAMA", not cloud_light_mode),
++            skip_model_warmup=_bool_env("JARVIS_SKIP_MODEL_WARMUP", cloud_light_mode),
+             second_brain_provider=os.getenv("JARVIS_SECOND_BRAIN_PROVIDER", "ollama").strip().lower(),
+             second_brain_model=os.getenv("JARVIS_SECOND_BRAIN_MODEL", "qwen2.5:7b"),
+-            second_brain_enabled=_bool_env("JARVIS_SECOND_BRAIN_ENABLED", True),
++            second_brain_enabled=_bool_env("JARVIS_SECOND_BRAIN_ENABLED", not cloud_light_mode),
+             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
+             ollama_summarize_model=os.getenv("JARVIS_OLLAMA_SUMMARIZE_MODEL", "qwen2.5:7b"),
+             ollama_background_model=os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL", "qwen2.5:7b"),
+diff --git a/jarvis/dining.py b/jarvis/dining.py
+index cbdd709..be16c42 100644
+--- a/jarvis/dining.py
++++ b/jarvis/dining.py
+@@ -7,7 +7,6 @@ from __future__ import annotations
+ import json
+ import logging
+ import math
+-import os
+ import threading
+ import time
+ from datetime import datetime, timezone
+@@ -16,6 +15,7 @@ from typing import Any
+ 
+ import httpx
+ 
++from .config import resolve_google_maps_api_key
+ from .persistence import append_jsonl, atomic_write_json
+ 
+ logger = logging.getLogger(__name__)
+@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
+ # Config
+ # ---------------------------------------------------------------------------
+ 
+-GOOGLE_PLACES_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "")
+ PLACES_NEARBY_URL  = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+ PLACES_DETAIL_URL  = "https://maps.googleapis.com/maps/api/place/details/json"
+ PLACES_TEXT_URL    = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+@@ -43,6 +42,10 @@ CACHE_STATE_LOG_PATH = CACHE_PATH.with_name("dining_cache_state_log.jsonl")
+ FAVORITES_STATE_LOG_PATH = FAVORITES_PATH.with_name("dining_favorites_state_log.jsonl")
+ _cache_lock = threading.Lock()
+ 
++
++def _google_places_key() -> str:
++    return resolve_google_maps_api_key()
++
+ # Cuisine type → Google Places type mapping
+ CUISINE_MAP: dict[str, str] = {
+     "any":        "restaurant",
+@@ -167,14 +170,15 @@ def _places_nearby(
+     keyword: str = "",
+ ) -> list[dict]:
+     """Call Google Places Nearby Search and return raw results (up to 20)."""
+-    if not GOOGLE_PLACES_KEY:
++    maps_key = _google_places_key()
++    if not maps_key:
+         raise ValueError("GOOGLE_MAPS_API_KEY not set")
+ 
+     params: dict[str, Any] = {
+         "location": f"{lat},{lng}",
+         "radius": radius,
+         "type": place_type,
+-        "key": GOOGLE_PLACES_KEY,
++        "key": maps_key,
+     }
+     if open_now:
+         params["opennow"] = "true"
+@@ -191,12 +195,13 @@ def _places_nearby(
+ 
+ def _place_details(place_id: str) -> dict:
+     """Fetch rich details for a single place (phone, website, hours, price_level)."""
+-    if not GOOGLE_PLACES_KEY:
++    maps_key = _google_places_key()
++    if not maps_key:
+         return {}
+     fields = "name,formatted_phone_number,website,opening_hours,price_level,rating,user_ratings_total,formatted_address"
+     resp = httpx.get(
+         PLACES_DETAIL_URL,
+-        params={"place_id": place_id, "fields": fields, "key": GOOGLE_PLACES_KEY},
++        params={"place_id": place_id, "fields": fields, "key": maps_key},
+         timeout=8,
+     )
+     resp.raise_for_status()
+@@ -294,11 +299,12 @@ def get_place_details(place_id: str) -> dict:
+ 
+ def photo_url(photo_ref: str, max_width: int = 400) -> str:
+     """Build a Google Places photo URL."""
+-    if not photo_ref or not GOOGLE_PLACES_KEY:
++    maps_key = _google_places_key()
++    if not photo_ref or not maps_key:
+         return ""
+     return (
+         f"https://maps.googleapis.com/maps/api/place/photo"
+-        f"?maxwidth={max_width}&photo_reference={photo_ref}&key={GOOGLE_PLACES_KEY}"
++        f"?maxwidth={max_width}&photo_reference={photo_ref}&key={maps_key}"
+     )
+ 
+ 
+diff --git a/jarvis/drift_detection.py b/jarvis/drift_detection.py
+index dcc2d56..a29a942 100644
+--- a/jarvis/drift_detection.py
++++ b/jarvis/drift_detection.py
+@@ -15,11 +15,15 @@ from __future__ import annotations
+ import asyncio
+ import logging
+ import re
+-from datetime import datetime, timedelta
++from datetime import datetime, timedelta, timezone
+ from typing import Any
+ 
+ log = logging.getLogger(__name__)
+ 
++
++def _utc_now() -> datetime:
++    return datetime.now(timezone.utc)
++
+ # ---------------------------------------------------------------------------
+ # Chris's personal baselines — from known data May 2026
+ # ---------------------------------------------------------------------------
+@@ -130,8 +134,10 @@ def _signal_age_hours(signal_entry: dict) -> float | None:
+     if not date_str:
+         return None
+     try:
+-        dt = datetime.fromisoformat(date_str)
+-        return (datetime.utcnow() - dt).total_seconds() / 3600
++        dt = datetime.fromisoformat(str(date_str).replace("Z", "+00:00"))
++        if dt.tzinfo is None:
++            dt = dt.replace(tzinfo=timezone.utc)
++        return (_utc_now() - dt.astimezone(timezone.utc)).total_seconds() / 3600
+     except Exception:
+         return None
+ 
+@@ -146,16 +152,19 @@ async def get_current_signals() -> dict:
+     Returns dict of signal_name → {value, date, source}.
+     """
+     signals: dict[str, dict] = {}
+-    today = datetime.utcnow().isoformat()
++    today = _utc_now().isoformat()
+ 
+     # --- Wearable signals from daily_metrics ---
+     try:
+         try:
+             from .health_db import get_latest_metrics
+         except ImportError:
+-            from health_db import get_latest_metrics
++            try:
++                from health_db import get_latest_metrics
++            except ImportError:
++                get_latest_metrics = None
+ 
+-        rows = await get_latest_metrics(days=3)
++        rows = await get_latest_metrics(days=3) if callable(get_latest_metrics) else []
+         if rows:
+             latest = rows[0]
+             date_str = latest.get("date", today)
+@@ -175,9 +184,12 @@ async def get_current_signals() -> dict:
+         try:
+             from .health_db import get_bp_readings
+         except ImportError:
+-            from health_db import get_bp_readings
++            try:
++                from health_db import get_bp_readings
++            except ImportError:
++                get_bp_readings = None
+ 
+-        bp_rows = await get_bp_readings(limit=5)
++        bp_rows = await get_bp_readings(limit=5) if callable(get_bp_readings) else []
+         if bp_rows:
+             latest_bp = bp_rows[0]
+             systolic = latest_bp.get("systolic")
+@@ -438,7 +450,7 @@ def get_drift_alert_template(cluster_name: str, signals_present: list) -> dict:
+         "oracle_review_needed": cluster_name in {"Medication Effect", "Cardiovascular Load"},
+         "recommended_response": f"Review {cluster_name} cluster signals with relevant specialists",
+         "if_then_threshold": if_then,
+-        "generated_at": datetime.utcnow().isoformat(),
++        "generated_at": _utc_now().isoformat(),
+     }
+ 
+ 
+@@ -453,7 +465,7 @@ async def run_drift_scan() -> dict:
+     6. append_council_decision() to log
+     Returns drift report.
+     """
+-    scan_date = datetime.utcnow().isoformat()
++    scan_date = _utc_now().isoformat()
+ 
+     signals = await get_current_signals()
+     clusters = await scan_all_clusters(signals)
+diff --git a/jarvis/longevity_council.py b/jarvis/longevity_council.py
+index 4cf8728..8ee4871 100644
+--- a/jarvis/longevity_council.py
++++ b/jarvis/longevity_council.py
+@@ -34,12 +34,16 @@ import json
+ import logging
+ import re
+ from dataclasses import dataclass, field
+-from datetime import datetime
++from datetime import datetime, timezone
+ from pathlib import Path
+ from typing import Any
+ 
+ log = logging.getLogger(__name__)
+ 
++
++def _utc_now() -> datetime:
++    return datetime.now(timezone.utc)
++
+ _COUNCIL_CACHE_PATH = Path.home() / ".jarvis" / "health" / "council_cache.json"
+ _COUNCIL_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+ 
+@@ -139,7 +143,7 @@ def health_state_summary() -> str:
+ async def append_council_decision(entry: dict) -> None:
+     """Append a decision to the Council Decision Log (JSONL format)."""
+     _DECISION_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+-    entry.setdefault("date", datetime.utcnow().isoformat())
++    entry.setdefault("date", _utc_now().isoformat())
+     with open(_DECISION_LOG_PATH, "a") as f:
+         f.write(json.dumps(entry) + "\n")
+ 
+@@ -209,7 +213,7 @@ class CouncilMember:
+ 
+         result["_agent_id"]  = self.agent_id
+         result["_label"]     = self.label
+-        result["_generated"] = datetime.utcnow().isoformat()
++        result["_generated"] = _utc_now().isoformat()
+         return result
+ 
+ 
+@@ -1661,7 +1665,7 @@ async def run_council(
+     if not force_refresh and _COUNCIL_CACHE_PATH.exists():
+         try:
+             cached = json.loads(_COUNCIL_CACHE_PATH.read_text())
+-            age_hours = (datetime.utcnow().timestamp() - cached.get("_generated_at", 0)) / 3600
++            age_hours = (_utc_now().timestamp() - cached.get("_generated_at", 0)) / 3600
+             if age_hours < _CACHE_TTL_HOURS:
+                 log.info("Council cache hit (%.1fh old)", age_hours)
+                 return cached
+@@ -1687,8 +1691,8 @@ async def run_council(
+             "_oracle": oracle_result,
+             "_emergency": True,
+             "_oracle_pathway": oracle_pathway,
+-            "_generated_at": datetime.utcnow().timestamp(),
+-            "_generated_utc": datetime.utcnow().isoformat(),
++            "_generated_at": _utc_now().timestamp(),
++            "_generated_utc": _utc_now().isoformat(),
+         }
+         _COUNCIL_CACHE_PATH.write_text(json.dumps(report, indent=2))
+         return report
+@@ -1706,8 +1710,8 @@ async def run_council(
+     report: dict[str, Any] = {
+         "_oracle": oracle_result,
+         "_emergency": False,
+-        "_generated_at": datetime.utcnow().timestamp(),
+-        "_generated_utc": datetime.utcnow().isoformat(),
++        "_generated_at": _utc_now().timestamp(),
++        "_generated_utc": _utc_now().isoformat(),
+     }
+ 
+     for member, result in zip(target_members, results):
+diff --git a/jarvis/nav_bridge.py b/jarvis/nav_bridge.py
+index 43610b0..f6de0da 100644
+--- a/jarvis/nav_bridge.py
++++ b/jarvis/nav_bridge.py
+@@ -156,7 +156,7 @@ class NavBridge:
+         Returns a list of simplified POI dicts.
+         """
+         if not self.maps_key:
+-            logger.warning("GOOGLE_MAPS_API_KEY not set — skipping places search")
++            logger.debug("GOOGLE_MAPS_API_KEY not set; skipping places search")
+             return []
+ 
+         params = _CATEGORY_PARAMS.get(category, {})
+diff --git a/jarvis/quarterly_review.py b/jarvis/quarterly_review.py
+index 2bfb934..02ce9b8 100644
+--- a/jarvis/quarterly_review.py
++++ b/jarvis/quarterly_review.py
+@@ -17,7 +17,7 @@ import asyncio
+ import json
+ import logging
+ import re
+-from datetime import datetime, timedelta
++from datetime import datetime, timedelta, timezone
+ from pathlib import Path
+ from typing import Any
+ 
+@@ -25,6 +25,10 @@ from .persistence import append_jsonl, atomic_write_json
+ 
+ log = logging.getLogger(__name__)
+ 
++
++def _utc_now() -> datetime:
++    return datetime.now(timezone.utc)
++
+ _OBJECTIVES_PATH = Path.home() / ".jarvis" / "health" / "quarterly_objectives.json"
+ _OBJECTIVES_LOG_PATH = _OBJECTIVES_PATH.with_name("quarterly_objectives_log.jsonl")
+ _OBJECTIVES_STATE_LOG_PATH = _OBJECTIVES_PATH.with_name("quarterly_objectives_state_log.jsonl")
+@@ -207,7 +211,7 @@ async def run_quarterly_review(
+     Full quarterly review via LLM using the full council context.
+     Returns structured quarterly report matching binder schema (§13.11).
+     """
+-    review_end = datetime.utcnow()
++    review_end = _utc_now()
+     review_start = review_end - timedelta(days=review_period_days)
+ 
+     context = await build_quarterly_context()
+@@ -415,7 +419,7 @@ async def set_objectives(objectives: list[dict]) -> dict:
+         return {"ok": False, "errors": errors}
+ 
+     payload = {
+-        "saved_at": datetime.utcnow().isoformat(),
++        "saved_at": _utc_now().isoformat(),
+         "count": len(objectives),
+         "objectives": objectives,
+     }
+@@ -485,7 +489,7 @@ async def generate_doctor_packet() -> dict:
+     Builds from current health state, lab trends, and known risks.
+     No LLM required.
+     """
+-    packet_date = datetime.utcnow().isoformat()
++    packet_date = _utc_now().isoformat()
+ 
+     # Top trends from known clinical data
+     top_trends = [
+diff --git a/jarvis/render_pages.py b/jarvis/render_pages.py
+index 6992281..f972a6d 100644
+--- a/jarvis/render_pages.py
++++ b/jarvis/render_pages.py
+@@ -4983,6 +4983,29 @@ def render_mission_board_module_page(payload: dict) -> str:
+       const milestoneRows = asList(detail.milestones).map((item) => formatMilestone(item)).filter(Boolean);
+       const openLoopRows = asList(detail.open_loops).map((item) => String(item || "").trim()).filter(Boolean);
+       const linkedMemoryRows = asList(detail.linked_memories).map((item) => String(item || "").trim()).filter(Boolean);
++      const preparedOutputRows = asList(detail.background_prepared_outputs).map((item) => {{
++        const title = String(item.title || "Prepared output").trim();
++        const summary = String(item.summary || "").trim();
++        const classification = String(item.classification || item.status || "prepared").trim();
++        const detailText = String(item.detail || item.route || "").trim();
++        const headline = summary && summary.toLowerCase() !== title.toLowerCase()
++          ? `${{title}} - ${{summary}}`
++          : (summary || title);
++        return `<li><strong>${{esc(classification)}}</strong><span>${{esc(headline)}}</span><span>${{esc(detailText)}}</span></li>`;
++      }}).filter(Boolean);
++      const allowedBackgroundJobRows = asList(detail.allowed_background_jobs).map((item) => {{
++        const title = String(item.title || "Allowed background job").trim();
++        const classification = String(item.classification || "prepared").trim();
++        const detailText = String(item.detail || "").trim();
++        return `<li><strong>${{esc(title)}}</strong><span>${{esc(classification)}}</span><span>${{esc(detailText)}}</span></li>`;
++      }}).filter(Boolean);
++      const missionHistoryRows = asList(detail.mission_history).map((item) => {{
++        const label = String(item.label || item.kind || "Mission event").trim();
++        const summary = String(item.summary || item.title || "Mission event").trim();
++        const detailText = String(item.detail || item.timestamp || "").trim();
++        return `<li><strong>${{esc(label)}}</strong><span>${{esc(summary)}}</span><span>${{esc(detailText)}}</span></li>`;
++      }}).filter(Boolean);
++      const accountability = detail.accountability_update || {{}};
+       const missionReview = detail.mission_review || {{}};
+       detailEl.innerHTML = `
+         <div class="mission-card">
+@@ -5026,8 +5049,21 @@ def render_mission_board_module_page(payload: dict) -> str:
+             <div><label>Review Status</label><strong>${{esc(missionReview.status || "watch")}}</strong></div>
+             <div><label>Continuity Callback</label><strong>${{esc(detail.continuity_callback || "JARVIS has not yet tied this mission back to prior context.")}}</strong></div>
+           </div>
++          <div class="meta">
++            <div><label>Accountability Status</label><strong>${{esc(accountability.status || "watch")}}</strong></div>
++            <div><label>Next Check-In</label><strong>${{esc(accountability.next_check_in || "No next check-in has been staged yet.")}}</strong></div>
++            <div><label>Supportive Follow-Up</label><strong>${{esc(accountability.supportive_follow_up || "No supportive follow-up has been prepared yet.")}}</strong></div>
++            <div><label>Progress Counts As</label><strong>${{esc(accountability.progress_counts_as || "Progress rules have not been defined yet.")}}</strong></div>
++            <div><label>Stale Threshold</label><strong>${{esc(accountability.stale_after_days ? `${{accountability.stale_after_days}} day(s)` : "Not defined")}}</strong></div>
++            <div><label>Days Since Update</label><strong>${{esc(accountability.days_since_update ?? "not recorded")}}</strong></div>
++          </div>
++          <div class="meta">
++            ${{listBlock("Prepared By JARVIS", preparedOutputRows, "Prepared recommendations and staged outputs will appear here once JARVIS starts working between conversations.")}}
++            ${{listBlock("Allowed Background Jobs", allowedBackgroundJobRows, "No allowed background jobs are documented for this mission yet.")}}
++          </div>
+           <div class="meta">
+             ${{listBlock("Relevant Memory", linkedMemoryRows, "No durable continuity signal has been linked yet.")}}
++            ${{listBlock("Mission History", missionHistoryRows, "Mission history will appear once JARVIS records visible work on this mission.")}}
+           </div>
+           <div class="chips">
+             ${{truthChips}}
+@@ -11198,6 +11234,7 @@ def render_navigation_module_page(payload: dict) -> str:
+             <span>${{esc(item.last_resumed_at || item.last_previewed_at || item.saved_at || "")}}</span>
+             <div class="actions">
+               <button type="button" data-route-history-id="${{esc(item.route_id || "")}}" data-route-history-label="${{esc((item.origin || "Origin") + " -> " + (item.destination || "Destination"))}}">Resume Route</button>
++              ${{(item.maps_url || "").trim() ? `<a href="${{esc(item.maps_url)}}" target="_blank" rel="noreferrer">Open in Apple Maps</a>` : ""}}
+             </div>
+           </li>
+         `).join("")
+diff --git a/jarvis/runtime.py b/jarvis/runtime.py
+index c9d31c1..50ccbb1 100644
+--- a/jarvis/runtime.py
++++ b/jarvis/runtime.py
+@@ -58,6 +58,7 @@ from .runtime_kernel import AgentRuntimeKernel, AgentRuntimeKernelStore
+ from .runtime_posture import build_runtime_posture_snapshot
+ from .security import SecurityStore, SecuritySupport
+ from .self_improvement import SelfImprovementStore
++from .state_log_utils import read_jsonl_tail
+ from .supervision import SupervisionStore, SupervisionSupport
+ from .tutoring import TutoringStore, TutoringSupport
+ from .trust import TrustStore, TrustSupport
+@@ -2341,9 +2342,9 @@ class JarvisRuntime:
+         recent_events: list[dict[str, Any]] = []
+         if events_path.exists():
+             try:
+-                lines = [line for line in events_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+-                for line in lines[-8:]:
+-                    recent_events.append(json.loads(line))
++                for payload in read_jsonl_tail(events_path, max_lines=8):
++                    if isinstance(payload, dict):
++                        recent_events.append(payload)
+             except Exception:
+                 recent_events = []
+         return {
+@@ -15850,7 +15851,11 @@ class JarvisRuntime:
+             if mission_result is not None:
+                 result = mission_result
+             else:
+-                result = run_response_graph(self, plan, continuity_context=continuity_context)
++                mission_followup_result = self._try_handle_mission_followup(actor_name, room, request)
++                if mission_followup_result is not None:
++                    result = mission_followup_result
++                else:
++                    result = run_response_graph(self, plan, continuity_context=continuity_context)
+             self.audit_log.log_response(
+                 plan,
+                 provider=result.provider,
+@@ -15917,7 +15922,7 @@ class JarvisRuntime:
+         except Exception:
+             pass
+ 
+-        return {
++        response_payload = {
+             "provider": result.provider,
+             "model": result.model,
+             "output_text": final_output_text,
+@@ -15930,6 +15935,9 @@ class JarvisRuntime:
+             "catalyst_capture": catalyst_capture or {},
+             "constitutional_citation": constitutional_citation,
+         }
++        if result.provider == "mission-engine":
++            response_payload["surface_hint"] = self._mission_surface_hint(actor.display_name)
++        return response_payload
+ 
+     def respond(self, actor_name: str, room: str, request: str) -> OpenAIResult:
+         plan = self.plan_request(actor_name, room, request)
+@@ -15958,6 +15966,16 @@ class JarvisRuntime:
+                 output_text=mission_result.output_text,
+             )
+             return mission_result
++        mission_followup_result = self._try_handle_mission_followup(actor_name, room, request)
++        if mission_followup_result is not None:
++            self.audit_log.log_response(
++                plan,
++                provider=mission_followup_result.provider,
++                model=mission_followup_result.model,
++                active_nodes=["mission-engine"],
++                output_text=mission_followup_result.output_text,
++            )
++            return mission_followup_result
+         # ── Reminder intercept ────────────────────────────────────────────────
+         reminder_result = self._try_handle_reminder(request)
+         if reminder_result is not None:
+@@ -16010,6 +16028,13 @@ class JarvisRuntime:
+         r"\b(?:remind(?:er)?|set\s+(?:a\s+)?reminder|add\s+(?:a\s+)?task|schedule|calendar|email|message|draft|note\s+to\s+self)\b",
+         re.IGNORECASE,
+     )
++    _MISSION_COMPLETE_RE = re.compile(r"\b(?:done|finished|complete|completed|wrapped up|that's done|mark (?:it )?complete)\b", re.IGNORECASE)
++    _MISSION_BLOCKED_RE = re.compile(r"\b(?:blocked|stuck|can't|cannot|waiting on|hold up|hold-up|problem|roadblock)\b", re.IGNORECASE)
++    _MISSION_ACTIVE_RE = re.compile(r"\b(?:start this|move this to now|mark (?:it )?active|i'm starting|resume this|work on this now)\b", re.IGNORECASE)
++    _MISSION_NEXT_STEP_RE = re.compile(
++        r"\b(?:next step is|let'?s do|do this next|work on|focus on|start with)\s+(.+)",
++        re.IGNORECASE,
++    )
+ 
+     def _try_handle_mission_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+         cleaned = str(request or "").strip()
+@@ -16046,6 +16071,98 @@ class JarvisRuntime:
+             output_text=response,
+         )
+ 
++    def _try_handle_mission_followup(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
++        cleaned = " ".join(str(request or "").strip().split())
++        if not cleaned or self._MISSION_CREATE_RE.search(cleaned):
++            return None
++        actor = self.get_actor(actor_name)
++        mission_control = self.mission_control_snapshot(actor.display_name)
++        active_missions = [dict(item) for item in list((mission_control or {}).get("active_missions") or []) if isinstance(item, dict)]
++        if not active_missions:
++            return None
++        mission = active_missions[0]
++        mission_id = str(mission.get("mission_id", "")).strip()
++        if not mission_id:
++            return None
++
++        lowered = cleaned.lower()
++        route = str(((mission.get("conversation_route") or {}).get("route")) or mission.get("workspace_route") or f"/mission-board?mission_id={mission_id}").strip()
++        route_label = str(((mission.get("conversation_route") or {}).get("route_label")) or "Open Mission Board").strip()
++        title = str(mission.get("title", "Mission")).strip() or "Mission"
++
++        if self._MISSION_COMPLETE_RE.search(cleaned):
++            updated = self.update_mission_status(mission_id, "completed", note=f"Voice follow-up: {cleaned}")
++            return OpenAIResult(
++                provider="mission-engine",
++                model="mission-engine",
++                output_text=(
++                    f"{title} is marked complete.\n\n"
++                    f"I recorded the finish and preserved the mission trail.\n\n"
++                    f"{route_label}: {route}"
++                ),
++            )
++
++        if self._MISSION_BLOCKED_RE.search(cleaned):
++            updated = self.update_mission_status(mission_id, "blocked", note=f"Voice follow-up: {cleaned}")
++            next_attention = str(((updated.get("mission_review") or {}).get("next_attention")) or updated.get("next_step") or "Review the blocker.").strip()
++            return OpenAIResult(
++                provider="mission-engine",
++                model="mission-engine",
++                output_text=(
++                    f"{title} is marked blocked.\n\n"
++                    f"I captured the friction and staged the next attention point: {next_attention}\n\n"
++                    f"{route_label}: {route}"
++                ),
++            )
++
++        if self._MISSION_ACTIVE_RE.search(cleaned):
++            updated = self.update_mission_status(mission_id, "active", note=f"Voice follow-up: {cleaned}")
++            next_step = str(updated.get("next_step", "")).strip() or "Open the mission workspace."
++            return OpenAIResult(
++                provider="mission-engine",
++                model="mission-engine",
++                output_text=(
++                    f"{title} is active.\n\n"
++                    f"I put it back in motion and the next step is {next_step}.\n\n"
++                    f"{route_label}: {route}"
++                ),
++            )
++
++        next_step_match = self._MISSION_NEXT_STEP_RE.search(cleaned)
++        if next_step_match:
++            next_step = next_step_match.group(1).strip(" .")
++            if len(next_step.split()) >= 2:
++                updated = self.update_mission_details(
++                    mission_id,
++                    next_step=next_step,
++                    note=f"Voice follow-up: {cleaned}",
++                )
++                recommendation = str(updated.get("recommendation", "")).strip() or next_step
++                return OpenAIResult(
++                    provider="mission-engine",
++                    model="mission-engine",
++                    output_text=(
++                        f"I updated {title}.\n\n"
++                        f"The next step is now: {next_step}.\n\n"
++                        f"{recommendation}\n\n"
++                        f"{route_label}: {route}"
++                    ),
++                )
++        return None
++
++    def _mission_surface_hint(self, actor_name: str) -> dict[str, Any]:
++        mission_control = self.mission_control_snapshot(actor_name)
++        route = dict((mission_control or {}).get("recommended_route") or {})
++        packet = str(route.get("packet", "")).strip() or "mission-control"
++        return {
++            "packet": packet,
++            "route": str(route.get("route", "")).strip(),
++            "route_label": str(route.get("route_label", "")).strip() or "Open Mission Board",
++            "mission_id": str(route.get("mission_id", "")).strip(),
++            "detail": str(route.get("detail", "")).strip(),
++            "reason": str(route.get("reason", "")).strip(),
++        }
++
+     # ── Reminder helper ───────────────────────────────────────────────────────
+ 
+     _REMINDER_SET_RE = re.compile(
+@@ -16747,12 +16864,82 @@ class JarvisRuntime:
+         refreshed["work_state_summary"] = self.mission_support.mission_work_state(str(refreshed.get("mission_id", "")).strip()).get("summary", {})
+         refreshed["accountability_update"] = self._mission_accountability_update(refreshed)
+         refreshed["background_prepared_outputs"] = [dict(item) for item in list(refreshed.get("background_prepared_outputs") or []) if isinstance(item, dict)]
++        refreshed["allowed_background_jobs"] = self._mission_allowed_background_jobs(refreshed)
+         refreshed["conversation_route"] = self._mission_surface_target(refreshed)
+         refreshed["mission_review"] = self._mission_review_packet(refreshed)
++        refreshed["mission_history"] = self._mission_history_timeline(refreshed)
+         refreshed["continuity_callback"] = str(refreshed.get("continuity_callback", "")).strip()
+         refreshed["linked_memories"] = [str(item).strip() for item in list(refreshed.get("linked_memories") or []) if str(item).strip()]
+         return refreshed
+ 
++    def _mission_history_timeline(self, dossier: dict[str, Any], *, limit: int = 10) -> list[dict[str, Any]]:
++        mission_id = str(dossier.get("mission_id", "")).strip()
++        if not mission_id:
++            return []
++        history: list[dict[str, Any]] = []
++
++        def append_entry(
++            *,
++            timestamp: str,
++            kind: str,
++            label: str,
++            title: str,
++            summary: str,
++            detail: str = "",
++        ) -> None:
++            text = str(summary).strip() or str(title).strip()
++            if not text:
++                return
++            history.append(
++                {
++                    "timestamp": str(timestamp).strip(),
++                    "kind": str(kind).strip() or "mission-event",
++                    "label": str(label).strip() or "Mission event",
++                    "title": str(title).strip() or "Mission update",
++                    "summary": text,
++                    "detail": str(detail).strip(),
++                    "mission_id": mission_id,
++                }
++            )
++
++        for item in [dict(entry) for entry in list(dossier.get("outputs") or []) if isinstance(entry, dict)]:
++            output_kind = str(item.get("kind", "")).strip() or "mission-output"
++            status = str(item.get("status", "")).strip().lower()
++            label = "Prepared"
++            if status in {"completed", "done"}:
++                label = "Completed"
++            elif status in {"monitoring", "watching"}:
++                label = "Observation"
++            elif status in {"remembered"}:
++                label = "Continuity"
++            append_entry(
++                timestamp=str(item.get("timestamp", "")).strip(),
++                kind=output_kind,
++                label=label,
++                title=str(item.get("title", "Mission output")).strip(),
++                summary=str(item.get("summary", "")).strip(),
++                detail=str(item.get("payload_ref", "")).strip(),
++            )
++
++        for item in [dict(entry) for entry in list(dossier.get("evidence") or []) if isinstance(entry, dict)]:
++            evidence_kind = str(item.get("kind", "")).strip() or "mission-evidence"
++            label = "Observation"
++            if evidence_kind == "status-update":
++                label = "Status"
++            elif evidence_kind == "detail-update":
++                label = "Edited"
++            append_entry(
++                timestamp=str(item.get("timestamp", "")).strip(),
++                kind=evidence_kind,
++                label=label,
++                title=str(item.get("title", "Mission evidence")).strip(),
++                summary=str(item.get("summary", "")).strip(),
++                detail=str(item.get("detail", "")).strip(),
++            )
++
++        history.sort(key=lambda item: str(item.get("timestamp", "")), reverse=True)
++        return history[:limit]
++
+     def _mission_background_prepared_outputs(self, dossier: dict[str, Any]) -> list[dict[str, Any]]:
+         mission_id = str(dossier.get("mission_id", "")).strip()
+         if not mission_id:
+@@ -16770,6 +16957,7 @@ class JarvisRuntime:
+             {
+                 "output_id": f"{mission_id}-prepared-next-step",
+                 "kind": "background-prepared",
++                "classification": "staged",
+                 "title": "Next step staged",
+                 "summary": next_step,
+                 "detail": recommendation,
+@@ -16780,6 +16968,7 @@ class JarvisRuntime:
+             {
+                 "output_id": f"{mission_id}-progress-reading",
+                 "kind": "progress-reading",
++                "classification": "monitoring",
+                 "title": "Progress reading",
+                 "summary": progress_signal,
+                 "detail": support_message,
+@@ -16794,6 +16983,7 @@ class JarvisRuntime:
+                 {
+                     "output_id": f"{mission_id}-milestone-readiness",
+                     "kind": "milestone-readiness",
++                    "classification": "staged",
+                     "title": "Milestone readiness",
+                     "summary": first_milestone,
+                     "detail": str((milestones[0] or {}).get("detail", "")).strip() or "JARVIS framed the first milestone so progress can be reviewed visibly.",
+@@ -16808,6 +16998,7 @@ class JarvisRuntime:
+                 {
+                     "output_id": f"{mission_id}-action-readiness",
+                     "kind": "action-readiness",
++                    "classification": "staged",
+                     "title": "Action readiness",
+                     "summary": first_action,
+                     "detail": "JARVIS prepared the first concrete action so you do not need to start cold.",
+@@ -16821,6 +17012,7 @@ class JarvisRuntime:
+                 {
+                     "output_id": f"{mission_id}-open-loop-watch",
+                     "kind": "open-loop-watch",
++                    "classification": "monitoring",
+                     "title": "Open loop watch",
+                     "summary": open_loops[0],
+                     "detail": "JARVIS is tracking the most important unresolved constraint in this mission.",
+@@ -16836,6 +17028,7 @@ class JarvisRuntime:
+                 {
+                     "output_id": f"{mission_id}-continuity-memory",
+                     "kind": "continuity-memory",
++                    "classification": "remembered",
+                     "title": "Continuity callback",
+                     "summary": continuity_callback or linked_memories[0],
+                     "detail": linked_memories[1] if len(linked_memories) > 1 else "JARVIS connected this mission to what already matters.",
+@@ -16846,28 +17039,143 @@ class JarvisRuntime:
+             )
+         return outputs[:4]
+ 
++    def _mission_allowed_background_jobs(self, dossier: dict[str, Any]) -> list[dict[str, Any]]:
++        primary_domain = str(dossier.get("primary_domain", "")).strip().lower()
++        jobs: list[dict[str, Any]] = [
++            {
++                "job_id": "mission-milestone-proposals",
++                "title": "Mission milestone proposals",
++                "classification": "suggestion",
++                "detail": "JARVIS may shape milestone proposals so the mission becomes easier to review and advance.",
++            },
++            {
++                "job_id": "next-action-suggestions",
++                "title": "Next-action suggestions",
++                "classification": "staged",
++                "detail": "JARVIS may prepare the next best action so Chris does not have to start cold.",
++            },
++            {
++                "job_id": "stalled-mission-detection",
++                "title": "Stalled mission detection",
++                "classification": "monitoring",
++                "detail": "JARVIS may watch for drift, stalled progress, or blocked work and bring it forward supportively.",
++            },
++        ]
++        if primary_domain == "writing":
++            jobs.append(
++                {
++                    "job_id": "writing-opportunity-spotting",
++                    "title": "Writing opportunity spotting",
++                    "classification": "suggestion",
++                    "detail": "JARVIS may identify content, campaign, or audience-growth opportunities related to the mission.",
++                }
++            )
++        if primary_domain in {"scouting", "service"}:
++            jobs.append(
++                {
++                    "job_id": "scouting-readiness-preparation",
++                    "title": "Scouting readiness preparation",
++                    "classification": "staged",
++                    "detail": "JARVIS may prepare readiness checks, missing items, and planning prompts for upcoming scouting work.",
++                }
++            )
++        return jobs
++
++    def _mission_cadence_rules(self, dossier: dict[str, Any]) -> dict[str, Any]:
++        primary_domain = str(dossier.get("primary_domain", "")).strip().lower()
++        mapping: dict[str, dict[str, Any]] = {
++            "health": {
++                "cadence": "weekly",
++                "stale_after_days": 7,
++                "progress_counts_as": "Completing workouts, showing up consistently, or staging the next health action.",
++            },
++            "writing": {
++                "cadence": "weekly",
++                "stale_after_days": 7,
++                "progress_counts_as": "Drafting assets, shipping content, or staging the next promotion move.",
++            },
++            "jarvis-development": {
++                "cadence": "twice-weekly",
++                "stale_after_days": 4,
++                "progress_counts_as": "Shipping a visible slice, tightening a live flow, or clarifying the next implementation step.",
++            },
++            "scouting": {
++                "cadence": "event-countdown",
++                "stale_after_days": 5,
++                "progress_counts_as": "Closing readiness gaps, confirming logistics, or preparing the next camp or troop action.",
++            },
++        }
++        selected = dict(mapping.get(primary_domain, {
++            "cadence": str(dossier.get("accountability_cadence", "")).strip() or "weekly",
++            "stale_after_days": 7,
++            "progress_counts_as": "Keeping the next useful move visible and taking it.",
++        }))
++        selected["cadence"] = str(selected.get("cadence", "")).strip() or "weekly"
++        selected["stale_after_days"] = int(selected.get("stale_after_days", 7) or 7)
++        selected["progress_counts_as"] = str(selected.get("progress_counts_as", "")).strip() or "Keeping the next useful move visible and taking it."
++        return selected
++
++    def _mission_days_since_update(self, dossier: dict[str, Any]) -> int | None:
++        timestamp = str(dossier.get("updated_at") or dossier.get("created_at") or "").strip()
++        if not timestamp:
++            return None
++        try:
++            normalized = timestamp.replace("Z", "+00:00")
++            updated_at = datetime.fromisoformat(normalized)
++            if updated_at.tzinfo is None:
++                updated_at = updated_at.replace(tzinfo=timezone.utc)
++            now = datetime.now(timezone.utc)
++            delta = now - updated_at.astimezone(timezone.utc)
++            return max(0, int(delta.total_seconds() // 86400))
++        except Exception:
++            return None
++
+     def _mission_accountability_update(self, dossier: dict[str, Any]) -> dict[str, Any]:
+         next_step = str(dossier.get("next_step", "")).strip() or "Review the mission board."
+-        cadence = str(dossier.get("accountability_cadence", "")).strip() or "Regular review is still needed."
++        cadence_rules = self._mission_cadence_rules(dossier)
++        cadence = str(cadence_rules.get("cadence", "")).strip() or str(dossier.get("accountability_cadence", "")).strip() or "weekly"
++        stale_after_days = int(cadence_rules.get("stale_after_days", 7) or 7)
++        progress_counts_as = str(cadence_rules.get("progress_counts_as", "")).strip() or "Keeping the next useful move visible and taking it."
+         progress_signal = str(dossier.get("progress_signal", "")).strip() or "Mission is active."
+         support_message = str(dossier.get("support_message", "")).strip() or "JARVIS is keeping this in view."
+         summary = dict(dossier.get("work_state_summary") or {})
++        outputs = [dict(item) for item in list(dossier.get("background_prepared_outputs") or []) if isinstance(item, dict)]
+         blocked = int(summary.get("blocked_tasks", 0) or 0)
+         pending_reviews = int(summary.get("pending_reviews", 0) or 0)
++        days_since_update = self._mission_days_since_update(dossier)
+         status = "on-track"
+         headline = progress_signal
++        follow_up = support_message
++        next_check_in = f"Review again on the {cadence} cadence."
+         if blocked > 0:
+             status = "needs-attention"
+             headline = f"{blocked} blocked task(s) need attention before this mission can move cleanly."
++            follow_up = f"This is not failure. Clear the blocker, then return to: {next_step}"
++            next_check_in = "Bring this back as soon as the blocker changes."
+         elif pending_reviews > 0:
+             status = "awaiting-review"
+             headline = f"{pending_reviews} review item(s) are waiting, but the mission remains in motion."
++            follow_up = f"The kindest next move is to review what is already staged: {next_step}"
++        elif days_since_update is not None and days_since_update >= stale_after_days:
++            status = "stalled"
++            headline = f"This mission has not moved in {days_since_update} day(s). It needs a calm restart, not guilt."
++            follow_up = f"Let's restart with one small move: {next_step}"
++            next_check_in = "Check back in today after the next step is staged or completed."
++        elif outputs:
++            status = "reinforced"
++            prepared_title = str(outputs[0].get("title", "")).strip() or "Prepared work"
++            headline = f"Momentum is present. {prepared_title} is already staged."
++            follow_up = f"You're not starting from zero. Use the prepared move: {next_step}"
+         return {
+             "status": status,
+             "headline": headline,
+             "cadence": cadence,
+-            "next_check_in": next_step,
++            "next_check_in": next_check_in,
+             "support_message": support_message,
++            "supportive_follow_up": follow_up,
++            "stale_after_days": stale_after_days,
++            "days_since_update": days_since_update,
++            "progress_counts_as": progress_counts_as,
+         }
+ 
+     def _mission_surface_target(self, dossier: dict[str, Any]) -> dict[str, Any]:
+diff --git a/jarvis/service.py b/jarvis/service.py
+index 71ba59b..b98f71f 100644
+--- a/jarvis/service.py
++++ b/jarvis/service.py
+@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
+ from fastapi.staticfiles import StaticFiles
+ import uvicorn
+ 
++from .config import resolve_google_maps_api_key
+ from .runtime import JarvisRuntime
+ from .settings import LocationSettingsStore, VoiceSettingsStore
+ from .voice_audio import generate_tts_audio
+@@ -1420,6 +1421,61 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+                 break
+         return rows
+ 
++    def _brief_mission_change_lines(active_missions: list[dict[str, Any]], *, limit: int = 6) -> list[str]:
++        rows: list[str] = []
++        seen: set[str] = set()
++
++        def append(line: str) -> None:
++            text = str(line).strip()
++            if not text:
++                return
++            key = text.lower()
++            if key in seen:
++                return
++            seen.add(key)
++            rows.append(text)
++
++        for mission in active_missions[:3]:
++            title = str(mission.get("title", "")).strip() or "Mission"
++            status = str(mission.get("status", "")).strip().lower()
++            progress_signal = str(mission.get("progress_signal", "")).strip()
++            next_step = str(mission.get("next_step", "")).strip()
++            accountability = dict(mission.get("accountability_update") or {})
++            review = dict(mission.get("mission_review") or {})
++            outputs = [dict(item) for item in list(mission.get("background_prepared_outputs") or []) if isinstance(item, dict)]
++
++            if status in {"blocked", "needs-attention"}:
++                append(f"{title} needs attention now.")
++            elif status == "completed":
++                append(f"{title} was marked complete.")
++
++            accountability_headline = str(accountability.get("headline", "")).strip()
++            if accountability_headline:
++                append(f"{title}: {accountability_headline}")
++
++            review_headline = str(review.get("headline", "")).strip()
++            if review_headline and review_headline != accountability_headline:
++                append(f"{title}: {review_headline}")
++
++            for output in outputs[:2]:
++                output_title = str(output.get("title", "")).strip()
++                output_summary = str(output.get("summary", "")).strip()
++                if output_title and output_summary and output_summary.lower() != output_title.lower():
++                    append(f"{title}: {output_title} - {output_summary}")
++                elif output_summary:
++                    append(f"{title}: {output_summary}")
++
++            if not outputs and progress_signal:
++                fallback = f"{title}: {progress_signal}"
++                if next_step:
++                    fallback = f"{fallback} Next: {next_step}"
++                append(fallback)
++
++            if len(rows) >= limit:
++                break
++
++        return rows[:limit]
++
+     async def _build_navigation_module_payload() -> dict[str, Any]:
+         generated_at = ""
+         try:
+@@ -1516,7 +1572,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+         parks_historic_radius_miles: float,
+         persist: bool,
+     ) -> dict[str, Any]:
+-        from .apple_api import _record_navigation_route_history, _NAV_STOP_LABELS, _nav_bridge, _nav_nps_along_route, _nav_route_points, _nav_state_codes
++        from .apple_api import (
++            _record_navigation_route_history,
++            _NAV_STOP_LABELS,
++            _apple_maps_route_url,
++            _nav_bridge,
++            _nav_nps_along_route,
++            _nav_route_points,
++            _nav_state_codes,
++        )
+         from .nav_bridge import haversine, sample_route_points
+ 
+         route_warning = ""
+@@ -1620,6 +1684,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+         return {
+             "origin": origin,
+             "destination": destination,
++            "maps_url": _apple_maps_route_url(destination),
+             "summary": str(route_packet.get("summary") or ""),
+             "hazard_active": bool(route_packet.get("hazard_active")),
+             "route": route_packet.get("route") if isinstance(route_packet, dict) else {},
+@@ -3307,6 +3372,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+         workshop_jobs: list[dict[str, Any]] = []
+         workshop_materials: list[dict[str, Any]] = []
+         workshop_low_stock: list[dict[str, Any]] = []
++        printer_status_rows: list[dict[str, Any]] = []
++        workshop_inspections: list[dict[str, Any]] = []
++        cad_packages: list[dict[str, Any]] = []
++        print_preps: list[dict[str, Any]] = []
++        vendor_preps: list[dict[str, Any]] = []
+         copilot = _get_workshop_copilot()
+         if copilot is None:
+             availability_notes.append("Workshop copilot is not initialised, so maker and project-specific detail is unavailable.")
+@@ -3320,6 +3390,41 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+             except Exception as exc:
+                 availability_notes.append(f"Workshop project, job, or material sources were unavailable: {exc}")
+ 
++        printer_status_fn = getattr(runtime, "printer_status", None)
++        if callable(printer_status_fn):
++            try:
++                printer_status_rows = list(printer_status_fn() or [])
++            except Exception as exc:
++                availability_notes.append(f"Printer status was unavailable: {exc}")
++
++        workshop_inspections_fn = getattr(runtime, "list_workshop_inspections", None)
++        if callable(workshop_inspections_fn):
++            try:
++                workshop_inspections = list(workshop_inspections_fn(limit=8) or [])
++            except Exception as exc:
++                availability_notes.append(f"Workshop inspections were unavailable: {exc}")
++
++        cad_packages_fn = getattr(runtime, "list_cad_packages", None)
++        if callable(cad_packages_fn):
++            try:
++                cad_packages = list(cad_packages_fn(limit=8) or [])
++            except Exception as exc:
++                availability_notes.append(f"CAD packages were unavailable: {exc}")
++
++        print_preps_fn = getattr(runtime, "list_print_preps", None)
++        if callable(print_preps_fn):
++            try:
++                print_preps = list(print_preps_fn(limit=8) or [])
++            except Exception as exc:
++                availability_notes.append(f"Print preps were unavailable: {exc}")
++
++        vendor_preps_fn = getattr(runtime, "list_vendor_preps", None)
++        if callable(vendor_preps_fn):
++            try:
++                vendor_preps = list(vendor_preps_fn(limit=8) or [])
++            except Exception as exc:
++                availability_notes.append(f"Vendor prep packages were unavailable: {exc}")
++
+         work_items: list[dict[str, Any]] = []
+         proposed_work: list[dict[str, Any]] = []
+         try:
+@@ -3644,6 +3749,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+                 "projects": len(workshop_projects),
+                 "jobs": len(workshop_jobs),
+                 "low_stock": len(workshop_low_stock),
++                "printers": len(printer_status_rows),
++                "inspections": len(workshop_inspections),
++                "vendor_preps": len(vendor_preps),
+             },
+             "command_center": {
+                 "cards": [
+@@ -3693,6 +3801,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+                 "materials": workshop_materials[:12],
+                 "low_stock": workshop_low_stock[:12],
+             },
++            "printer_status": printer_status_rows[:8],
++            "workshop_inspections": workshop_inspections[:8],
++            "cad_packages": cad_packages[:8],
++            "print_preps": print_preps[:8],
++            "vendor_preps": vendor_preps[:8],
++            "safety_checks": list(((workshop_status or {}).get("safety") or {}).get("checks") or [])[:8],
++            "inventory_summary": workshop_materials[:8],
+             "proof_paths": {
+                 "module_route": "/workshop",
+                 "module_api": "/api/workshop/module",
+@@ -3711,6 +3826,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+                 "workshop_jobs_api": "/api/workshop/jobs",
+                 "workshop_materials_api": "/api/workshop/materials",
+                 "workshop_status_api": "/api/workshop/status",
++                "printer_status_api": "/api/printer-status",
++                "workshop_inspections_api": "/api/workshop-inspections",
++                "cad_packages_api": "/api/cad-packages",
++                "print_preps_api": "/api/print-preps",
++                "vendor_preps_api": "/api/vendor-preps",
++                "vendor_prep_status_api_suffix": "/api/vendor-preps/{prep_id}",
+                 "activity_api": "/api/activity/operator-action",
+             },
+         }
+@@ -5189,8 +5310,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+                 mission_control = await asyncio.wait_for(asyncio.to_thread(mission_control_snapshot, actor_display), timeout=12.0)
+                 active_missions = [dict(item) for item in list((mission_control or {}).get("active_missions") or []) if isinstance(item, dict)]
+                 if active_missions:
++                    changed = list(payload["morning_brief"].get("what_changed") or [])
+                     matters = list(payload["morning_brief"].get("what_matters") or [])
+                     prepared = list(payload["morning_brief"].get("jarvis_prepared") or [])
++                    for line in reversed(_brief_mission_change_lines(active_missions, limit=4)):
++                        if line not in changed:
++                            changed.insert(0, line)
+                     for mission in active_missions[:2]:
+                         title = str(mission.get("title", "")).strip() or "Mission"
+                         why = str(((mission.get("brief_summary") or {}).get("why_it_matters") or mission.get("why_this_matters") or mission.get("brief") or "")).strip()
+@@ -5235,11 +5360,13 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+                             if remembered_line not in forgotten:
+                                 forgotten.insert(0, remembered_line)
+                             payload["morning_brief"]["may_have_forgotten"] = forgotten[:6]
++                    payload["morning_brief"]["what_changed"] = changed[:6]
+                     payload["morning_brief"]["what_matters"] = matters[:6]
+                     payload["morning_brief"]["jarvis_prepared"] = prepared[:8]
+                     payload["conversation_routes"] = list((mission_control or {}).get("conversation_routes") or [])[:4]
+                     payload["recommended_route"] = dict((mission_control or {}).get("recommended_route") or {})
+                     lead = active_missions[0]
++                    payload["lead_mission_history"] = [dict(item) for item in list(lead.get("mission_history") or []) if isinstance(item, dict)][:6]
+                     payload["summary"] = str(
+                         ((lead.get("brief_summary") or {}).get("why_it_matters"))
+                         or lead.get("progress_signal")
+@@ -21717,9 +21844,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+ 
+     @app.get("/api/nav/maps-key")
+     async def api_nav_maps_key() -> JSONResponse:
+-        """Return Google Maps API key availability (key itself is never exposed)."""
+-        maps_key = str(os.environ.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
+-        return _json({"ok": True, "available": bool(maps_key), "key_configured": bool(maps_key)})
++        """Return Google Maps browser key payload for client-side map boot."""
++        maps_key = resolve_google_maps_api_key()
++        return _json({
++            "ok": True,
++            "available": bool(maps_key),
++            "key_configured": bool(maps_key),
++            "key": maps_key,
++        })
+ 
+     @app.get("/api/maps/geocode")
+     async def api_maps_geocode(q: str = "") -> JSONResponse:
+@@ -21727,7 +21859,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+         query = str(q or "").strip()
+         if not query:
+             return _json({"ok": False, "lat": None, "lon": None, "error": "Address is required."})
+-        maps_key = str(os.environ.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
++        maps_key = resolve_google_maps_api_key()
+         if maps_key:
+             try:
+                 import httpx
+@@ -21823,7 +21955,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
+     @app.get("/api/google/maps-usage")
+     async def api_google_maps_usage() -> JSONResponse:
+         """Google Maps API usage summary."""
+-        maps_key = str(os.environ.get("GOOGLE_MAPS_API_KEY", "") or "").strip()
++        maps_key = resolve_google_maps_api_key()
+         return _json({
+             "ok": True,
+             "available": bool(maps_key),
+diff --git a/jarvis/voice_ui.py b/jarvis/voice_ui.py
+index 47c6a89..e3e2898 100644
+--- a/jarvis/voice_ui.py
++++ b/jarvis/voice_ui.py
+@@ -8002,6 +8002,13 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+       }}
+     }}
+ 
++    function recoverVoiceLoop(detail = "Standing by.") {{
++      setVoiceState("idle", detail);
++      if (state.alwaysOnMicEnabled) {{
++        queueAlwaysOnListening(420);
++      }}
++    }}
++
+     function refreshMicButton() {{
+       if (state.recognizing) {{
+         const label = state.recognitionMode === "wake-guard"
+@@ -8498,6 +8505,32 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+     const PACKET_SCENE_MAP = Object.fromEntries(
+       Object.entries(SCENE_PACKET_MAP).map(([sceneId, packetId]) => [packetId, sceneId])
+     );
++    const SUPPORTED_PACKET_IDS = new Set([
++      "agents",
++      "approvals",
++      "brains",
++      "briefing",
++      "catalyst",
++      "chronicle",
++      "connected-devices",
++      "dashboard",
++      "family",
++      "finance-review",
++      "home",
++      "lifecycle-inspector",
++      "mission-control",
++      "model-forge",
++      "review",
++      "security",
++      "settings",
++      "storm",
++      "tasks",
++      "today",
++      "triage",
++      "vision",
++      "wealth",
++      "workshop",
++    ]);
+ 
+     function packetIdForScene(sceneId = "") {{
+       return SCENE_PACKET_MAP[String(sceneId || "").trim().toLowerCase()] || "";
+@@ -8507,6 +8540,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+       return PACKET_SCENE_MAP[String(packetId || "").trim().toLowerCase()] || "";
+     }}
+ 
++    function packetSupported(packetId = "") {{
++      return SUPPORTED_PACKET_IDS.has(String(packetId || "").trim().toLowerCase());
++    }}
++
++    function routeCanOpenDirectly(route = "") {{
++      return /^\\/(?:health-center|publish|progress-center|chronicle-center|workshop(?:-center)?)(?:[/?#]|$)/i.test(String(route || "").trim());
++    }}
++
+     function sceneMeta(sceneId = "") {{
+       return {{
+         day: {{
+@@ -9702,6 +9743,32 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+       openPacket(target.packet);
+     }}
+ 
++    function openSurfaceHintTarget(target) {{
++      if (!target || typeof target !== "object") {{
++        return false;
++      }}
++      const packet = String(target.packet || "").trim().toLowerCase();
++      const scene = String(target.scene || "").trim().toLowerCase();
++      const route = String(target.route || "").trim();
++      if (scene) {{
++        openScene(scene);
++        return true;
++      }}
++      if (packet && (packetSupported(packet) || sceneIdForPacket(packet))) {{
++        openPacketTarget({{ ...target, packet }});
++        return true;
++      }}
++      if (route && routeCanOpenDirectly(route)) {{
++        window.location.href = route;
++        return true;
++      }}
++      if (packet) {{
++        openPacket(packet);
++        return true;
++      }}
++      return false;
++    }}
++
+     function togglePacketStrip(forceExpanded = null) {{
+       state.packetStripExpanded = forceExpanded === null ? !state.packetStripExpanded : !!forceExpanded;
+       fillPacketStrip();
+@@ -16791,8 +16858,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+         }}
+         document.getElementById("last-jarvis-text").textContent = `Voice recognition error: ${{code}}`;
+         syncTranscriptRail();
+-        setVoiceState("idle", "Voice recognition failed.");
+-        queueAlwaysOnListening(900);
++        recoverVoiceLoop("Voice recognition failed.");
+       }};
+ 
+       recognizer.onend = () => {{
+@@ -16903,12 +16969,15 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+       const ambientSubtitle = document.getElementById("ambient-subtitle");
+       if (ambientSubtitle) ambientSubtitle.textContent = output;
+       refreshShellState({{ minIntervalMs: 10000 }}).catch((error) => console.warn("Shell state refresh failed", error));
+-      const suggestedPacket = packetFromRequest(request);
+-      if (suggestedPacket) {{
+-        if (suggestedPacket === "catalyst") {{
+-          state.catalystPage = catalystPageFromRequest(request);
++      const surfaceHint = data.surface_hint && typeof data.surface_hint === "object" ? data.surface_hint : null;
++      if (!openSurfaceHintTarget(surfaceHint)) {{
++        const suggestedPacket = packetFromRequest(request);
++        if (suggestedPacket) {{
++          if (suggestedPacket === "catalyst") {{
++            state.catalystPage = catalystPageFromRequest(request);
++          }}
++          openPacket(suggestedPacket);
+         }}
+-        openPacket(suggestedPacket);
+       }}
+       state.pendingAttachments = [];
+       renderAttachmentTray();
+@@ -16938,7 +17007,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+         }}
+         document.getElementById("last-jarvis-text").textContent = error.message;
+         syncTranscriptRail();
+-        setVoiceState("idle", fromSpeech ? "Voice command failed." : "Command failed. Standing by.");
++        recoverVoiceLoop(fromSpeech ? "Voice command failed." : "Command failed. Standing by.");
+         throw error;
+       }} finally {{
+         setComposerBusy(false);
+@@ -17022,7 +17091,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
+       startVoiceCommand({{ automatic: false }}).catch((error) => {{
+         document.getElementById("last-jarvis-text").textContent = error.message;
+         syncTranscriptRail();
+-        setVoiceState("idle", "Voice command failed.");
++        recoverVoiceLoop("Voice command failed.");
+       }});
+     }});
+ 
+diff --git a/tests/test_command_center_service_surface.py b/tests/test_command_center_service_surface.py
+index db03560..15d8e4a 100644
+--- a/tests/test_command_center_service_surface.py
++++ b/tests/test_command_center_service_surface.py
+@@ -302,6 +302,26 @@ class _StubRuntime:
+             "status": "active",
+             "continuity_callback": "We discussed this before: Health was previously stated as one of the highest priorities.",
+             "linked_memories": ["Health was previously stated as one of the highest priorities."],
++            "background_prepared_outputs": [
++                {
++                    "title": "Next step staged",
++                    "summary": "Travel-resistant workout plan drafted.",
++                    "detail": "JARVIS prepared the first concrete action so you do not need to start cold.",
++                    "classification": "staged",
++                }
++            ],
++            "allowed_background_jobs": [
++                {
++                    "title": "Mission milestone proposals",
++                    "classification": "suggestion",
++                    "detail": "JARVIS may shape milestone proposals so the mission becomes easier to review and advance.",
++                },
++                {
++                    "title": "Next-action suggestions",
++                    "classification": "staged",
++                    "detail": "JARVIS may prepare the next best action so Chris does not have to start cold.",
++                },
++            ],
+             "selected_agents": ["ambient-router", "storm"],
+             "task_agent_labels": ["Mission Planner"],
+             "work_state_summary": {
+@@ -325,6 +345,7 @@ class _StubRuntime:
+                 {
+                     "mission_id": "mission-1",
+                     "title": "Health Reset",
++                    "status": "active",
+                     "brief": "Rebuild steady health momentum.",
+                     "brief_summary": {"why_it_matters": "Health has received less attention than the other major missions."},
+                     "why_this_matters": "Health has received less attention than the other major missions.",
+@@ -335,12 +356,33 @@ class _StubRuntime:
+                     ],
+                     "continuity_callback": "We discussed this before: Health was previously stated as one of the highest priorities.",
+                     "background_prepared_outputs": [
+-                        {"summary": "Travel-resistant workout plan drafted."},
++                        {"title": "Next step staged", "summary": "Travel-resistant workout plan drafted."},
++                    ],
++                    "mission_history": [
++                        {
++                            "label": "Prepared",
++                            "summary": "Travel-resistant workout plan drafted.",
++                            "detail": "/mission-board?mission_id=mission-1",
++                            "timestamp": "2026-06-11T11:58:00Z",
++                        },
++                        {
++                            "label": "Observation",
++                            "summary": "Health Reset mission brief created.",
++                            "detail": "Primary domain: health.",
++                            "timestamp": "2026-06-11T11:50:00Z",
++                        },
+                     ],
+                     "accountability_update": {
+                         "headline": "Mission is active and ready for the next review.",
++                        "status": "reinforced",
++                        "next_check_in": "Review again on the weekly cadence.",
++                        "supportive_follow_up": "You're not starting from zero. Use the prepared move: Stage a travel-resistant workout plan.",
++                        "progress_counts_as": "Completing workouts, showing up consistently, or staging the next health action.",
++                        "stale_after_days": 7,
++                        "days_since_update": 1,
+                     },
+                     "mission_review": {
++                        "headline": "Health Reset is on track and ready for the next move.",
+                         "carry_message": "You do not need to carry the whole health mission mentally today.",
+                     },
+                 }
+@@ -723,6 +765,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         self.assertIn("Refresh Daily Brief", briefing_html)
+         self.assertIn("Generate Live Brief", briefing_html)
+         self.assertIn("Recent Brief Continuity", briefing_html)
++        self.assertIn("Health Reset: Next step staged - Travel-resistant workout plan drafted.", briefing_html)
+         self.assertIn("Things You May Have Forgotten", briefing_html)
+         self.assertIn("Health was previously stated as one of the highest priorities.", briefing_html)
+         self.assertIn("status", briefing_snapshot)
+@@ -731,6 +774,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         self.assertIn("open_loops", briefing_snapshot)
+         self.assertIn("recent_activity", briefing_snapshot)
+         self.assertIn("recent_activity_count", briefing_snapshot["counts"])
++        self.assertIn("Health Reset: Next step staged - Travel-resistant workout plan drafted.", briefing_snapshot["morning_brief"]["what_changed"])
++        self.assertEqual(briefing_snapshot["lead_mission_history"][0]["label"], "Prepared")
+         self.assertIn("proof_paths", briefing_snapshot)
+         self.assertEqual(briefing_snapshot["proof_paths"]["module_route"], "/briefing-center")
+         self.assertEqual(briefing_snapshot["proof_paths"]["module_api"], "/api/briefing/module")
+@@ -824,7 +869,16 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         self.assertIn("Inspect Mission", mission_board_html)
+         self.assertIn("Recent Mission Continuity", mission_board_html)
+         self.assertIn("Continuity Callback", mission_board_html)
++        self.assertIn("Accountability Status", mission_board_html)
++        self.assertIn("Supportive Follow-Up", mission_board_html)
++        self.assertIn("Progress Counts As", mission_board_html)
+         self.assertIn("Relevant Memory", mission_board_html)
++        self.assertIn("Prepared By JARVIS", mission_board_html)
++        self.assertIn("Allowed Background Jobs", mission_board_html)
++        self.assertIn("Travel-resistant workout plan drafted.", mission_board_html)
++        self.assertIn("Mission milestone proposals", mission_board_html)
++        self.assertIn("Next Check-In", mission_board_html)
++        self.assertIn("Mission History", mission_board_html)
+         self.assertIn("Mission Workspaces", mission_board_html)
+         self.assertIn("Handoff Console", mission_board_html)
+         self.assertIn("Create Handoff", mission_board_html)
+@@ -1523,6 +1577,10 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         module_before = self._json_body(asyncio.run(self._route("/api/navigation/module", "GET")()))
+         self.assertEqual(len(module_before["route_history"]), 1)
+         route_id = module_before["route_history"][0]["route_id"]
++        self.assertEqual(
++            module_before["route_history"][0]["maps_url"],
++            "http://maps.apple.com/?daddr=Office&dirflg=d",
++        )
+ 
+         resume_response = self._json_body(
+             asyncio.run(
+@@ -1533,13 +1591,19 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         )
+         self.assertEqual(resume_response["status"], "resumed")
+         self.assertEqual(resume_response["route"]["destination"], "Office")
++        self.assertEqual(resume_response["route"]["maps_url"], "http://maps.apple.com/?daddr=Office&dirflg=d")
+         self.assertEqual(resume_response["focus"]["module"], "Navigation")
++        self.assertEqual(
++            resume_response["route_preview"]["maps_url"],
++            "http://maps.apple.com/?daddr=Office&dirflg=d",
++        )
+ 
+         module_after = self._json_body(asyncio.run(self._route("/api/navigation/module", "GET")()))
+         history_entry = next(item for item in module_after["route_history"] if item.get("route_id") == route_id)
+         from jarvis.audit import AuditLog
+ 
+         self.assertEqual(history_entry["resume_count"], 1)
++        self.assertEqual(history_entry["maps_url"], "http://maps.apple.com/?daddr=Office&dirflg=d")
+         recent_activity = AuditLog(Path("data/logs")).list_recent(limit=8, entry_type="operator-action")
+         self.assertTrue(any(item.get("action") == "Resume Navigation Route" for item in recent_activity))
+ 
+@@ -2561,6 +2625,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         self.assertTrue(maps_payload["ok"])
+         self.assertIn("available", maps_payload)
+         self.assertIn("key_configured", maps_payload)
++        self.assertEqual(maps_payload["key"], "")
+         self.assertTrue(usage_payload["ok"])
+         self.assertIn("available", usage_payload)
+         self.assertIn("usage", usage_payload)
+@@ -2586,6 +2651,31 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         self.assertEqual(summary_payload["recent"], [])
+         self.assertIn("unavailable", summary_payload["error"].lower())
+ 
++    def test_navigation_maps_key_route_returns_browser_key_when_configured(self) -> None:
++        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "AIzaSyBrowserKey1234567890"}, clear=False):
++            maps_payload = self._json_body(asyncio.run(self._route("/api/nav/maps-key", "GET")()))
++
++        self.assertTrue(maps_payload["ok"])
++        self.assertTrue(maps_payload["available"])
++        self.assertTrue(maps_payload["key_configured"])
++        self.assertEqual(maps_payload["key"], "AIzaSyBrowserKey1234567890")
++
++    def test_navigation_maps_key_route_falls_back_to_shared_google_key(self) -> None:
++        with patch.dict(
++            os.environ,
++            {
++                "GOOGLE_MAPS_API_KEY": "",
++                "GOOGLE_CLIENT_SECRET": "AIzaSySharedGoogleKey1234567890",
++            },
++            clear=False,
++        ):
++            maps_payload = self._json_body(asyncio.run(self._route("/api/nav/maps-key", "GET")()))
++
++        self.assertTrue(maps_payload["ok"])
++        self.assertTrue(maps_payload["available"])
++        self.assertTrue(maps_payload["key_configured"])
++        self.assertEqual(maps_payload["key"], "AIzaSySharedGoogleKey1234567890")
++
+     def test_catalyst_routes_expose_module_and_live_ops_surfaces(self) -> None:
+         module_payload = self._json_body(asyncio.run(self._route("/api/catalyst/module", "GET")()))
+ 
+@@ -2688,15 +2778,31 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
+         self.assertIn("intelligence", module_payload)
+         self.assertIn("resumption", module_payload)
+         self.assertIn("capacity", module_payload)
++        self.assertIn("printer_status", module_payload)
++        self.assertIn("workshop_inspections", module_payload)
++        self.assertIn("cad_packages", module_payload)
++        self.assertIn("print_preps", module_payload)
++        self.assertIn("vendor_preps", module_payload)
++        self.assertIn("safety_checks", module_payload)
++        self.assertIn("inventory_summary", module_payload)
+         self.assertIn("templates", module_payload)
+         self.assertIn("quick_actions", module_payload)
+         self.assertIn("proof_paths", module_payload)
+         self.assertEqual(module_payload["proof_paths"]["module_api"], "/api/workshop/module")
+         self.assertEqual(module_payload["proof_paths"]["workshop_projects_api"], "/api/workshop/projects")
+         self.assertEqual(module_payload["proof_paths"]["workshop_jobs_api"], "/api/workshop/jobs")
++        self.assertEqual(module_payload["proof_paths"]["printer_status_api"], "/api/printer-status")
++        self.assertEqual(module_payload["proof_paths"]["workshop_inspections_api"], "/api/workshop-inspections")
++        self.assertEqual(module_payload["proof_paths"]["cad_packages_api"], "/api/cad-packages")
++        self.assertEqual(module_payload["proof_paths"]["print_preps_api"], "/api/print-preps")
++        self.assertEqual(module_payload["proof_paths"]["vendor_preps_api"], "/api/vendor-preps")
++        self.assertEqual(module_payload["proof_paths"]["vendor_prep_status_api_suffix"], "/api/vendor-preps/{prep_id}")
+         self.assertEqual(module_payload["proof_paths"]["activity_api"], "/api/activity/operator-action")
+         self.assertIsInstance(module_payload["board"]["lanes"], list)
+         self.assertGreaterEqual(len(module_payload["board"]["lanes"]), 1)
++        self.assertIsInstance(module_payload["printer_status"], list)
++        self.assertIsInstance(module_payload["workshop_inspections"], list)
++        self.assertIsInstance(module_payload["vendor_preps"], list)
+         self.assertIsInstance(module_payload["templates"], list)
+         self.assertIsInstance(module_payload["quick_actions"], list)
+ 
+diff --git a/tests/test_event_log_wiring_phase3.py b/tests/test_event_log_wiring_phase3.py
+index 10b9bb2..7d3c9a2 100644
+--- a/tests/test_event_log_wiring_phase3.py
++++ b/tests/test_event_log_wiring_phase3.py
+@@ -249,6 +249,7 @@ class TestNavigationRouteEvent(unittest.TestCase):
+         meta = evt.get("metadata", {})
+         self.assertEqual(meta.get("origin"), "Home")
+         self.assertEqual(meta.get("destination"), "School")
++        self.assertEqual(meta.get("maps_url"), "http://maps.apple.com/?daddr=School&dirflg=d")
+ 
+     def test_route_event_domain_is_navigation(self):
+         apple_api._record_navigation_route_history(
+@@ -260,6 +261,22 @@ class TestNavigationRouteEvent(unittest.TestCase):
+         evt = next(e for e in events if e.get("kind") == "route_previewed")
+         self.assertEqual(evt["domain"], "navigation")
+ 
++    def test_route_history_normalizes_legacy_entry_with_maps_url(self):
++        saved = apple_api._save_navigation_state(
++            {
++                "route_history": [
++                    {
++                        "origin": "Office",
++                        "destination": "Home Base",
++                        "origin_mode": "driving",
++                    }
++                ]
++            }
++        )
++        history = list(saved.get("route_history") or [])
++        self.assertEqual(len(history), 1)
++        self.assertEqual(history[0].get("maps_url"), "http://maps.apple.com/?daddr=Home%20Base&dirflg=d")
++
+ 
+ if __name__ == "__main__":
+     unittest.main()
+diff --git a/tests/test_voice_ui_conversation_posture.py b/tests/test_voice_ui_conversation_posture.py
+index e85a97d..f36a98e 100644
+--- a/tests/test_voice_ui_conversation_posture.py
++++ b/tests/test_voice_ui_conversation_posture.py
+@@ -35,6 +35,21 @@ class VoiceUiConversationPostureTests(unittest.TestCase):
+         self.assertIn('const socket = new WebSocket(`${{protocol}}://${{window.location.host}}${{SHELL_EVENT_STREAM_PATH}}`);', text)
+         self.assertIn("if (shellEventStreamEnabled()) {{\n      connectEventStream();\n    }}", text)
+ 
++    def test_surface_hints_can_fall_back_to_real_workspace_routes(self) -> None:
++        text = (ROOT / "jarvis" / "voice_ui.py").read_text(encoding="utf-8")
++        self.assertIn("function openSurfaceHintTarget(target) {{", text)
++        self.assertIn("function routeCanOpenDirectly(route = \"\") {{", text)
++        self.assertIn("window.location.href = route;", text)
++        self.assertIn("if (!openSurfaceHintTarget(surfaceHint)) {{", text)
++
++    def test_voice_failures_recover_the_mic_guard(self) -> None:
++        text = (ROOT / "jarvis" / "voice_ui.py").read_text(encoding="utf-8")
++        self.assertIn("function recoverVoiceLoop(detail = \"Standing by.\") {{", text)
++        self.assertIn("queueAlwaysOnListening(420);", text)
++        self.assertIn('recoverVoiceLoop("Voice recognition failed.");', text)
++        self.assertIn('recoverVoiceLoop(fromSpeech ? "Voice command failed." : "Command failed. Standing by.");', text)
++        self.assertIn('recoverVoiceLoop("Voice command failed.");', text)
++
+ 
+ if __name__ == "__main__":
+     unittest.main()

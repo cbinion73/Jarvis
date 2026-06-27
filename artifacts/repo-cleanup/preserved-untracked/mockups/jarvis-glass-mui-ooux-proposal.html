@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS Glass MUI OOUX Proposal</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --surface: rgba(255, 255, 255, 0.78);
+      --surface-strong: rgba(255, 255, 255, 0.92);
+      --surface-soft: rgba(246, 249, 252, 0.86);
+      --border: rgba(18, 44, 73, 0.12);
+      --border-strong: rgba(18, 44, 73, 0.2);
+      --text: #10243a;
+      --muted: #55708e;
+      --accent: #0f6cbd;
+      --accent-soft: rgba(15, 108, 189, 0.1);
+      --success: #127c5d;
+      --warning: #a45d00;
+      --danger: #b42318;
+      --shadow: 0 20px 60px rgba(22, 40, 64, 0.08);
+      --radius: 22px;
+      --radius-sm: 14px;
+      --grid-gap: 18px;
+      --font: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(15, 108, 189, 0.14), transparent 26%),
+        radial-gradient(circle at top right, rgba(20, 184, 166, 0.14), transparent 22%),
+        linear-gradient(180deg, #eef4fb 0%, #f8fbfe 40%, #edf3f9 100%);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    .sidebar,
+    .surface {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .sidebar {
+      border-radius: 28px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .brand {
+      padding: 10px 12px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .brand-title {
+      margin-top: 8px;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-copy {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .object-group-title {
+      padding: 0 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 14px;
+      border-radius: 16px;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .nav-item.active {
+      background: linear-gradient(180deg, rgba(15, 108, 189, 0.12), rgba(15, 108, 189, 0.05));
+      border-color: rgba(15, 108, 189, 0.16);
+    }
+
+    .nav-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      font-size: 16px;
+    }
+
+    .nav-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .nav-label {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .nav-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .sidebar-card {
+      margin-top: auto;
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(245,248,252,0.96));
+      border: 1px solid var(--border);
+    }
+
+    .sidebar-card h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+    }
+
+    .sidebar-card p {
+      margin: 0 0 14px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .sidebar-card ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 22px;
+      border-radius: 24px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 34px;
+      letter-spacing: -0.04em;
+    }
+
+    .title-block p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--surface-strong);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .chip strong { color: var(--text); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap: var(--grid-gap);
+    }
+
+    .left-column,
+    .right-column {
+      display: grid;
+      gap: var(--grid-gap);
+    }
+
+    .card {
+      border-radius: 24px;
+      padding: 20px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .card-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .card-title {
+      margin: 6px 0 0;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .card-copy {
+      margin: 8px 0 0;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--muted);
+      max-width: 720px;
+    }
+
+    .badge {
+      padding: 9px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: var(--surface-strong);
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat {
+      border-radius: 18px;
+      padding: 16px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .stat-value {
+      margin-top: 10px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .stat-sub {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.95fr;
+      gap: 14px;
+    }
+
+    .object-list,
+    .decision-list,
+    .relationship-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .object-row,
+    .decision-row,
+    .relationship-row {
+      padding: 16px;
+      border-radius: 18px;
+      background: var(--surface-soft);
+      border: 1px solid var(--border);
+    }
+
+    .row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .row-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .row-meta,
+    .row-copy {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      padding: 9px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: var(--surface-strong);
+      color: var(--text);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn.success {
+      color: var(--success);
+      border-color: rgba(18, 124, 93, 0.18);
+      background: rgba(18, 124, 93, 0.08);
+    }
+
+    .btn.warn {
+      color: var(--warning);
+      border-color: rgba(164, 93, 0, 0.18);
+      background: rgba(164, 93, 0, 0.08);
+    }
+
+    .table-wrap {
+      overflow: hidden;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: rgba(16, 36, 58, 0.04);
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .status.green {
+      background: rgba(18, 124, 93, 0.08);
+      color: var(--success);
+    }
+
+    .status.amber {
+      background: rgba(164, 93, 0, 0.08);
+      color: var(--warning);
+    }
+
+    .status.red {
+      background: rgba(180, 35, 24, 0.08);
+      color: var(--danger);
+    }
+
+    .relationship-map {
+      display: grid;
+      gap: 12px;
+    }
+
+    .relationship-row strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+
+    .footer-note {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(16, 36, 58, 0.04);
+      border: 1px dashed var(--border-strong);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 1200px) {
+      .shell { grid-template-columns: 1fr; }
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 900px) {
+      .hero-stats,
+      .section-grid { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: flex-start; }
+      .chip-row { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-kicker">Glass Theme Reframed</div>
+        <div class="brand-title">JARVIS OS</div>
+        <div class="brand-copy">MUI X structure and OOUX object modeling replace ambient spectacle with a clearer operating system for decisions, workflows, and agents.</div>
+      </div>
+
+      <div class="object-group-title">Core Objects</div>
+      <div class="nav-list">
+        <div class="nav-item active">
+          <div class="nav-icon">◎</div>
+          <div class="nav-copy">
+            <div class="nav-label">Command Center</div>
+            <div class="nav-sub">System summary and action entry</div>
+          </div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚖</div>
+          <div class="nav-copy">
+            <div class="nav-label">Decision Queue</div>
+            <div class="nav-sub">Approvals, risk, authority gates</div>
+          </div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚗</div>
+          <div class="nav-copy">
+            <div class="nav-label">Catalyst Workflows</div>
+            <div class="nav-sub">Execution plans and interventions</div>
+          </div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">◌</div>
+          <div class="nav-copy">
+            <div class="nav-label">Agents</div>
+            <div class="nav-sub">Roster, assignments, blocked states</div>
+          </div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⌂</div>
+          <div class="nav-copy">
+            <div class="nav-label">Domains</div>
+            <div class="nav-sub">Home, Family, Chronicle, Workshop</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-card">
+        <h3>Why this is different</h3>
+        <p>The current Glass UI is memorable, but it buries the model of the product. This version exposes what JARVIS actually manages.</p>
+        <ul>
+          <li>Objects first, not scenes first</li>
+          <li>One decision queue instead of scattered urgency</li>
+          <li>MUI-style density, chips, cards, and data tables</li>
+          <li>Glass retained as a material layer, not the main story</li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="surface topbar">
+        <div class="title-block">
+          <h1>Command Center</h1>
+          <p>Household associate for strategy, operating review, and bounded execution.</p>
+        </div>
+        <div class="chip-row">
+          <div class="chip"><strong>Mode:</strong> Family Morning</div>
+          <div class="chip"><strong>Mission:</strong> Strategy and manuscript tightening</div>
+          <div class="chip"><strong>Agents:</strong> 3 active</div>
+          <div class="chip"><strong>Needs:</strong> 2 authority gates</div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <div class="left-column">
+          <section class="surface card">
+            <div class="card-header">
+              <div>
+                <div class="card-kicker">Object 1</div>
+                <div class="card-title">You are managing states, not vibes.</div>
+                <div class="card-copy">The hero area no longer centers a decorative orb. It centers live operating objects: approvals, workflows, agents, and household commitments. That makes the system scannable, testable, and easier to extend with MUI X tables and panels.</div>
+              </div>
+              <div class="badge">MUI X + OOUX</div>
+            </div>
+            <div class="hero-stats">
+              <div class="stat">
+                <div class="stat-label">Approvals</div>
+                <div class="stat-value">6</div>
+                <div class="stat-sub">2 urgent, 4 ready for review</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Active Agents</div>
+                <div class="stat-value">3</div>
+                <div class="stat-sub">1 blocked, 1 waiting on decision</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Catalyst Flows</div>
+                <div class="stat-value">4</div>
+                <div class="stat-sub">2 running, 1 draft, 1 intervention</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Household Pulse</div>
+                <div class="stat-value">Stable</div>
+                <div class="stat-sub">Weather, lighting, calendar aligned</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="surface card">
+            <div class="card-header">
+              <div>
+                <div class="card-kicker">Object Inventory</div>
+                <div class="card-title">Primary objects and their calls to action</div>
+                <div class="card-copy">This is the OOUX layer the current Glass theme is missing. Every major area becomes a recognizable object with clear relationships and verbs.</div>
+              </div>
+              <div class="badge">ORCA Framing</div>
+            </div>
+            <div class="section-grid">
+              <div class="object-list">
+                <div class="object-row">
+                  <div class="row-top">
+                    <div class="row-title">Decision</div>
+                    <div class="status amber">Authority gate</div>
+                  </div>
+                  <div class="row-copy">A decision has owner, urgency, rationale, downstream impact, and recommended action.</div>
+                  <div class="row-actions">
+                    <div class="btn primary">Approve</div>
+                    <div class="btn">Inspect evidence</div>
+                    <div class="btn warn">Escalate</div>
+                  </div>
+                </div>
+                <div class="object-row">
+                  <div class="row-top">
+                    <div class="row-title">Workflow</div>
+                    <div class="status green">In motion</div>
+                  </div>
+                  <div class="row-copy">A workflow has stage, blockers, next move, related agents, and artifacts.</div>
+                  <div class="row-actions">
+                    <div class="btn primary">Open workflow</div>
+                    <div class="btn">Reroute</div>
+                    <div class="btn">Pause</div>
+                  </div>
+                </div>
+                <div class="object-row">
+                  <div class="row-top">
+                    <div class="row-title">Agent</div>
+                    <div class="status green">Operating</div>
+                  </div>
+                  <div class="row-copy">An agent has mission, current task, confidence, attention state, and supervision history.</div>
+                  <div class="row-actions">
+                    <div class="btn primary">Assign</div>
+                    <div class="btn">Inspect trace</div>
+                    <div class="btn">Hand off</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="relationship-map">
+                <div class="relationship-row">
+                  <strong>Decision → Workflow</strong>
+                  Approving a decision should visibly unlock a workflow stage rather than disappearing into a toast.
+                </div>
+                <div class="relationship-row">
+                  <strong>Workflow → Agent</strong>
+                  Every active workflow should show which agent owns it, who is blocked, and what intervention is needed.
+                </div>
+                <div class="relationship-row">
+                  <strong>Domain → Decision</strong>
+                  Home, Family, Chronicle, Workshop, and Catalyst should be filter contexts on the same decision model.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="surface card">
+            <div class="card-header">
+              <div>
+                <div class="card-kicker">MUI X Table Surface</div>
+                <div class="card-title">Decision queue as a grid, not floating pills</div>
+                <div class="card-copy">The current Glass interface distributes urgency across side rails and overlays. A Data Grid style queue makes priority, object, owner, and next action legible.</div>
+              </div>
+              <div class="badge">DataGrid candidate</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Priority</th>
+                    <th>Object</th>
+                    <th>Domain</th>
+                    <th>Owner</th>
+                    <th>Next action</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>High</td>
+                    <td>Vendor packet review</td>
+                    <td>Catalyst</td>
+                    <td>Chris</td>
+                    <td>Approve pricing path</td>
+                    <td><span class="status red">Urgent</span></td>
+                  </tr>
+                  <tr>
+                    <td>High</td>
+                    <td>Freezer airflow intervention</td>
+                    <td>Home</td>
+                    <td>JARVIS</td>
+                    <td>Inspect sealed loads</td>
+                    <td><span class="status amber">Needs review</span></td>
+                  </tr>
+                  <tr>
+                    <td>Medium</td>
+                    <td>Morning brief packet</td>
+                    <td>Briefing</td>
+                    <td>Catalyst</td>
+                    <td>Open full brief</td>
+                    <td><span class="status green">Ready</span></td>
+                  </tr>
+                  <tr>
+                    <td>Medium</td>
+                    <td>Manuscript tightening sprint</td>
+                    <td>Chronicle</td>
+                    <td>Writer agent</td>
+                    <td>Review passage edits</td>
+                    <td><span class="status green">In progress</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="right-column">
+          <section class="surface card">
+            <div class="card-header">
+              <div>
+                <div class="card-kicker">Decision Focus</div>
+                <div class="card-title">One place for what needs your authority</div>
+                <div class="card-copy">This replaces the scattered "Approvals", "Packets", and status bubbles with a single authority spine.</div>
+              </div>
+              <div class="badge">Thermo Fisher style density</div>
+            </div>
+            <div class="decision-list">
+              <div class="decision-row">
+                <div class="row-top">
+                  <div class="row-title">Vendor API price mismatch</div>
+                  <div class="status red">Escalated</div>
+                </div>
+                <div class="row-meta">Catalyst workflow · 11 minutes ago · Confidence dropped below threshold</div>
+                <div class="row-actions">
+                  <div class="btn primary">Review packet</div>
+                  <div class="btn success">Approve fix</div>
+                  <div class="btn warn">Hold chain</div>
+                </div>
+              </div>
+              <div class="decision-row">
+                <div class="row-top">
+                  <div class="row-title">Morning household intervention</div>
+                  <div class="status amber">Attention needed</div>
+                </div>
+                <div class="row-meta">Home domain · kitchen/freezer context · route to checklist</div>
+                <div class="row-actions">
+                  <div class="btn primary">Open checklist</div>
+                  <div class="btn">Dismiss</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="surface card">
+            <div class="card-header">
+              <div>
+                <div class="card-kicker">Relationship View</div>
+                <div class="card-title">Catalyst, agents, and domains on the same model</div>
+                <div class="card-copy">Instead of separate themed destinations, these become views over shared objects.</div>
+              </div>
+            </div>
+            <div class="relationship-list">
+              <div class="relationship-row">
+                <strong>Catalyst</strong>
+                Routes workflows, surfaces risk, and composes execution packets from the same object graph.
+              </div>
+              <div class="relationship-row">
+                <strong>Agents</strong>
+                Show ownership, confidence, and intervention needs against workflows and decisions.
+              </div>
+              <div class="relationship-row">
+                <strong>Domains</strong>
+                Home, Family, Chronicle, Workshop become filters and dashboards, not disconnected silos.
+              </div>
+            </div>
+          </section>
+
+          <section class="surface card">
+            <div class="card-header">
+              <div>
+                <div class="card-kicker">Visual Direction</div>
+                <div class="card-title">Keep Glass, soften spectacle</div>
+              </div>
+            </div>
+            <div class="footer-note">
+              Retain translucency, depth, and calm polish from Glass, but shift the emphasis to readable cards, stronger hierarchy, stable tables, and explicit actions. The visual tone moves from cinematic sci-fi dashboard toward trustworthy operational console.
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

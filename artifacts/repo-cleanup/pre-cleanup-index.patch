@@ -1,0 +1,1028 @@
+diff --git a/.gitignore b/.gitignore
+index 67bb46a..2d0ac18 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -36,6 +36,7 @@ data/system/worktrees/
+ 
+ # Runtime logs (*.jsonl files live here)
+ data/logs/
++data/archive/
+ 
+ # Operational queues and live workstream state
+ data/workstreams/
+diff --git a/artifacts/jarvis-phase-0a-runtime-health-stabilization.md b/artifacts/jarvis-phase-0a-runtime-health-stabilization.md
+new file mode 100644
+index 0000000..92905eb
+--- /dev/null
++++ b/artifacts/jarvis-phase-0a-runtime-health-stabilization.md
+@@ -0,0 +1,306 @@
++# Jarvis Phase 0A Runtime Health Stabilization + Cloud-Light Model Mode
++
++## Snapshot
++
++- Captured at: `2026-06-27T03:15:55Z`
++- Repo path: `/Users/chris/Desktop/CODE/JARVIS`
++- Branch: `main`
++- HEAD: `994d281e0ff7a9a04919f1255d09d2f0c1b8e401`
++- Baseline commit label: `994d281 Ignore generated runtime state artifacts`
++
++## Scope Guardrails
++
++- Implemented Phase 0A only.
++- Did not refactor product behavior.
++- Did not change conversation posture or conversation logic.
++- Did not merge Monday code.
++- Did not alter local data formats.
++- Preserved oversized logs in place.
++
++## Start-State Git Reality
++
++### Dirty modified files present before and during this pass
++
++```text
++.env.example
++jarvis/apple_api.py
++jarvis/config.py
++jarvis/dining.py
++jarvis/drift_detection.py
++jarvis/longevity_council.py
++jarvis/nav_bridge.py
++jarvis/quarterly_review.py
++jarvis/render_pages.py
++jarvis/runtime.py
++jarvis/service.py
++jarvis/voice_ui.py
++tests/test_command_center_service_surface.py
++tests/test_event_log_wiring_phase3.py
++tests/test_voice_ui_conversation_posture.py
++```
++
++### Untracked files present before and during this pass
++
++```text
++_bmad-output/brainstorming/
++artifacts/jarvis-consolidation-phase-0-snapshot.md
++artifacts/jarvis-understanding-audit-2026-06-26.md
++artifacts/mockups/.qlpreview/
++artifacts/mockups/jarvis-chamber-mission-preview.html
++artifacts/mockups/jarvis-glass-mui-ooux-proposal.html
++artifacts/mockups/jarvis-glass-mui-ooux-review.md
++artifacts/mockups/jarvis-life-officer-mcu-notes.md
++artifacts/mockups/jarvis-life-officer-mcu-proposal.html
++docs/JARVIS-ARRIVAL-AND-CONVERSATION-WORKSPACE-DOCTRINE.md
++docs/JARVIS-GLASS-THEME-UX-SPECIFICATION.md
++docs/JARVIS-OBJECT-POSTURE-REPRESENTATION-DOCTRINE.md
++docs/JARVIS-REJOIN-OPERATION-IMPLEMENTATION-PLAN.md
++docs/JARVIS-REJOIN-OPERATION-MILESTONE.md
++jarvis/state_log_utils.py
++tests/test_runtime_mission_followup.py
++```
++
++## Observed Runtime Health Problem
++
++- Existing Jarvis listener observed on `8787`: PID `53808` earlier in this pass, about `2.5 GB` RSS before stop.
++- After that heavy Jarvis process exited, `memory_pressure` free percentage moved from `35%` to `85%`.
++- Existing Ollama process remained small and was not the primary memory culprit.
++- Existing live listener later reappeared on `8787`: PID `78733`, about `842 MB` RSS at observation time.
++
++## Oversized / Sensitive State Files Preserved In Place
++
++```text
++data/settings/assistant_core_log.jsonl         13G
++data/settings/assistant_core_state_log.jsonl   13G
++data/logs/llm_usage_state_log.jsonl            47M
++data/agents/event_bus_state_log.jsonl          33M
++```
++
++- No oversized logs were deleted.
++- No archive move was performed in this pass.
++
++## What Changed In Phase 0A
++
++### New stabilization utility
++
++- Added `jarvis/state_log_utils.py`
++- Provides bounded tail readers for JSONL/text logs.
++- Provides byte-tail trimming used for safe rotation without full-file reads.
++
++### Whole-file startup/state readers replaced with bounded tail reads
++
++- `jarvis/assistant_core.py`
++- `jarvis/memory.py`
++- `jarvis/adaptation.py`
++- `jarvis/user_profile.py`
++- `jarvis/event_fabric.py`
++- `jarvis/approvals.py`
++- `jarvis/audit.py`
++- `jarvis/runtime.py` guardian-event snapshot path
++
++### Persistence safety
++
++- `jarvis/persistence.py` rotation no longer reads an entire oversized JSONL file into memory before trimming.
++
++### LLM usage log stabilization
++
++- `jarvis/llm_gateway.py`
++- Usage writes now append to `llm_usage.jsonl` instead of rebuilding the entire file on every write.
++- Usage state snapshots are kept bounded with `JARVIS_USAGE_STATE_RECORD_LIMIT`.
++- Usage reads now use bounded tail reads.
++
++### Cloud-light model mode
++
++- `jarvis/config.py`
++- `jarvis/main.py`
++- `jarvis/llm_gateway.py`
++- Added env-driven mode support:
++  - `JARVIS_MODEL_MODE=cloud_light`
++  - `JARVIS_ENABLE_OLLAMA`
++  - `JARVIS_SKIP_MODEL_WARMUP`
++  - `JARVIS_STATE_LOG_TAIL_BYTES`
++  - `JARVIS_STATE_LOG_TAIL_LINES`
++  - `JARVIS_USAGE_STATE_RECORD_LIMIT`
++- In `cloud_light` mode:
++  - second-brain is disabled by default
++  - Ollama auto-start is skipped
++  - gateway default fast/reasoning/escalation selectors point to cloud model defaults instead of local Ollama defaults
++
++## Commands Run
++
++### Git / state inspection
++
++```bash
++git branch --show-current
++git rev-parse HEAD
++git log -1 --oneline
++git status --short
++```
++
++### Runtime diagnosis
++
++```bash
++ps -p <pid> -o pid=,rss=,etime=,command=
++memory_pressure
++ls -lh data/logs/llm_usage_state_log.jsonl data/settings/assistant_core_log.jsonl data/settings/assistant_core_state_log.jsonl data/agents/event_bus_state_log.jsonl
++```
++
++### Safe validation
++
++```bash
++python3 -m compileall jarvis
++python3 scripts/verify.py
++python3 -m pytest -q tests/test_voice_ui_conversation_posture.py
++python3 -m pytest -q tests/test_command_center_service_surface.py
++python3 -m pytest -q tests/test_event_log_wiring_phase3.py
++```
++
++### Cloud-light runtime validation
++
++```bash
++JARVIS_MODEL_MODE=cloud_light \
++JARVIS_ENABLE_OLLAMA=false \
++JARVIS_SKIP_MODEL_WARMUP=true \
++JARVIS_SERVE_MODE=light \
++python3 -m jarvis serve --host 127.0.0.1 --port 8788
++curl -sf http://127.0.0.1:8788/health
++curl -sf http://127.0.0.1:8788/api/gateway/status
++```
++
++## Validation Results
++
++### Compile
++
++- `python3 -m compileall jarvis`
++- Result: passed
++
++### Targeted tests
++
++- `python3 -m pytest -q tests/test_voice_ui_conversation_posture.py`
++- Result: `5 passed`
++
++- `python3 -m pytest -q tests/test_command_center_service_surface.py`
++- Result: `10 passed`
++
++- `python3 -m pytest -q tests/test_event_log_wiring_phase3.py`
++- Result: `59 passed`
++
++### Existing live `8787` verification
++
++- `python3 scripts/verify.py`
++- Result: partial pass against the already-running Jarvis listener on `http://localhost:8787`
++- Observed:
++  - `/health` passed
++  - `/api/gateway/status` passed
++  - `/api/gateway/test` returned `HTTP 502`
++  - briefing payload returned warning-level empties
++  - approvals and voice status passed
++
++### Cloud-light runtime validation on isolated port
++
++- Boot command: `JARVIS_MODEL_MODE=cloud_light JARVIS_ENABLE_OLLAMA=false JARVIS_SKIP_MODEL_WARMUP=true JARVIS_SERVE_MODE=light python3 -m jarvis serve --host 127.0.0.1 --port 8788`
++- `/health` result: passed
++- `/api/gateway/status` result: passed
++- Observed:
++  - runtime PID `64524`
++  - runtime RSS about `160848 KB`
++  - `brain_graph.second_brain_enabled=false`
++  - gateway models reported `fast=gpt-5.4-mini`, `reasoning=gpt-5.4-mini`, `escalation=gpt-5.4-mini`
++  - `ollama_available=true` remained visible because Ollama was already running on the machine, but Jarvis `cloud_light` did not require auto-start to come up
++
++## Runtime Versions Observed
++
++- Python: `3.14.4`
++- Git: `2.53.0`
++- Ollama: `0.30.11`
++
++## Critical State Directories
++
++- `data/settings/`
++- `data/logs/`
++- `data/agents/`
++- `data/system/`
++- `data/state/`
++- `data/settings/profiles/`
++- `~/.jarvis/approvals/`
++
++## Known External / Optional Services
++
++- Ollama
++- OpenAI
++- Groq
++- OpenViking
++- Home Assistant
++- Google Workspace connectors
++- Microsoft Graph connectors
++- Catalyst / Postgres-backed components
++- MCP / FastMCP-backed components
++
++## External Jarvis Data-Root Readiness
++
++- external Jarvis root checked: yes
++- path: `/Volumes/Monday/JARVIS`
++- exists: yes
++- readable: yes
++- approximate size at check time: `0B`
++- status: external data root is available as a future derived-data location
++
++## Known Risk Areas
++
++- `jarvis/runtime.py` and `jarvis/service.py` were already dirty before this pass; future work must isolate Phase 0A changes from unrelated local edits.
++- `assistant_core` state logs remain very large on disk even though startup hydration is now bounded.
++- Existing `8787` runtime drifted from disk at one observation point; the live process should not be treated as canonical code truth.
++- `scripts/verify.py` still shows gateway roundtrip failure on the existing live `8787` instance.
++- Optional dependencies are still missing in this environment:
++  - `psycopg2`
++  - `openai`
++  - `fastmcp`
++- `cloud_light` now routes defaults to cloud models, but cloud success still depends on external credentials/providers being present.
++
++## Obsidian Readiness
++
++- vault exists: yes
++- vault readable: yes
++- approximate size: `392K`
++- markdown file count: `68`
++- config variable added/documented: yes
++- documented vault variable: `JARVIS_OBSIDIAN_VAULT=/Volumes/Monday/Obsidian`
++- index path planned: `/Volumes/Monday/JARVIS/indexes/obsidian`
++- vault modified: no
++- index built: no
++- live conversation wired: no
++- status: external source available, integration pending
++
++### Phase 0A Obsidian boundary
++
++- Jarvis does not currently have a completed Obsidian integration in this checkout.
++- Phase 0A did not parse the vault.
++- Phase 0A did not build a vector index.
++- Phase 0A did not copy or modify the vault.
++- Phase 0A only verified the external vault path and documented future configuration.
++- No completed runtime path was found that wires Obsidian into live conversation.
++- `.env.example` now documents that a missing Obsidian path must be treated as unavailable and must not trigger fake-vault creation.
++
++## Phase 3: Obsidian / Memory Grounding
++
++Future work should:
++
++- read `JARVIS_OBSIDIAN_VAULT`
++- build a derived index under `/Volumes/Monday/JARVIS/indexes/obsidian`
++- retrieve small relevant note snippets per user message
++- inject compact context into the conversation mind
++- distinguish retrieved Obsidian context from Jarvis memory and inference
++- never claim Obsidian knowledge unless retrieval returned actual notes
++
++## Next Recommended Phase
++
++- Phase 1 should start from this Phase 0A checkpoint only after unrelated dirty work is parked outside the baseline commit.
++- Phase 1 should focus on consolidation around the stabilized runtime body, not new product behavior.
++
++## Consolidation Truth
++
++> Jarvis is the runtime body. The future product must be rebuilt around one primary companion interaction spine: a smart, loyal friend with tools.
++
++## Commit State
++
++- No commit was created in this pass.
+diff --git a/jarvis/adaptation.py b/jarvis/adaptation.py
+index eb962c7..569ddfb 100644
+--- a/jarvis/adaptation.py
++++ b/jarvis/adaptation.py
+@@ -6,6 +6,7 @@ from pathlib import Path
+ from typing import Any
+ 
+ from .persistence import append_jsonl, atomic_write_json
++from .state_log_utils import read_jsonl_tail
+ 
+ 
+ ADAPTATION_PATH = Path.cwd() / "data" / "settings" / "adaptation_profiles.json"
+@@ -46,10 +47,7 @@ class AdaptationStore:
+             return self._load_from_log(default)
+         latest: dict[str, Any] = default
+         try:
+-            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, dict):
+                     latest = dict(records)
+@@ -70,10 +68,7 @@ class AdaptationStore:
+             return default
+         latest: dict[str, Any] = default
+         try:
+-            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.log_path):
+                 records = payload.get("records")
+                 if isinstance(records, dict):
+                     latest = dict(records)
+diff --git a/jarvis/approvals.py b/jarvis/approvals.py
+index a41d0b1..d0e1a59 100644
+--- a/jarvis/approvals.py
++++ b/jarvis/approvals.py
+@@ -29,6 +29,7 @@ from pathlib import Path
+ from typing import Any
+ 
+ from .persistence import append_jsonl, atomic_write_jsonl
++from .state_log_utils import read_jsonl_tail
+ 
+ logger = logging.getLogger("jarvis.approvals")
+ 
+@@ -596,12 +597,8 @@ class ApprovalQueue:
+             self._items = self._load_queue_from_state_log()
+             return
+         try:
+-            for line in self._queue_path.read_text(encoding="utf-8").splitlines():
+-                line = line.strip()
+-                if not line:
+-                    continue
++            for data in read_jsonl_tail(self._queue_path):
+                 try:
+-                    data = json.loads(line)
+                     # Ensure list fields are lists
+                     data.setdefault("tags", [])
+                     self._items.append(ApprovalRequest(**data))
+@@ -618,10 +615,7 @@ class ApprovalQueue:
+             return []
+         try:
+             latest: list[ApprovalRequest] = []
+-            for line in self._queue_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self._queue_state_log_path):
+                 records = payload.get("records")
+                 if not isinstance(records, list):
+                     continue
+@@ -641,12 +635,8 @@ class ApprovalQueue:
+             return self._load_history_from_state_log()
+         records: list[ApprovalRequest] = []
+         try:
+-            for line in self._history_path.read_text(encoding="utf-8").splitlines():
+-                line = line.strip()
+-                if not line:
+-                    continue
++            for data in read_jsonl_tail(self._history_path):
+                 try:
+-                    data = json.loads(line)
+                     data.setdefault("tags", [])
+                     records.append(ApprovalRequest(**data))
+                 except Exception:
+@@ -660,10 +650,7 @@ class ApprovalQueue:
+             return []
+         try:
+             latest: list[ApprovalRequest] = []
+-            for line in self._history_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self._history_state_log_path):
+                 records = payload.get("records")
+                 if not isinstance(records, list):
+                     continue
+diff --git a/jarvis/assistant_core.py b/jarvis/assistant_core.py
+index d627b8e..06818dd 100644
+--- a/jarvis/assistant_core.py
++++ b/jarvis/assistant_core.py
+@@ -8,6 +8,7 @@ from pathlib import Path
+ from typing import Any
+ 
+ from .persistence import append_jsonl, atomic_write_json
++from .state_log_utils import read_jsonl_tail
+ 
+ 
+ ASSISTANT_CORE_PATH = Path.cwd() / "data" / "settings" / "assistant_core.json"
+@@ -287,10 +288,7 @@ class AssistantCoreStore:
+             return self._load_from_log(default)
+         latest: dict[str, Any] = default
+         try:
+-            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, dict):
+                     latest = dict(records)
+@@ -303,10 +301,7 @@ class AssistantCoreStore:
+             return default
+         latest: dict[str, Any] = default
+         try:
+-            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.log_path):
+                 records = payload.get("records")
+                 if isinstance(records, dict):
+                     latest = dict(records)
+diff --git a/jarvis/audit.py b/jarvis/audit.py
+index 979f5b7..d1005f7 100644
+--- a/jarvis/audit.py
++++ b/jarvis/audit.py
+@@ -8,6 +8,7 @@ from pathlib import Path
+ from .data_hygiene import filter_records
+ from .models import ApprovalRequest, RequestPlan
+ from .persistence import append_jsonl, atomic_write_json, atomic_write_jsonl
++from .state_log_utils import read_jsonl_tail
+ 
+ 
+ class AuditLog:
+@@ -21,8 +22,7 @@ class AuditLog:
+         if not self.actions_path.exists():
+             return self._load_actions_from_state_log()
+         try:
+-            lines = self.actions_path.read_text(encoding="utf-8").splitlines()
+-            records = [json.loads(line) for line in lines if line.strip()]
++            records = read_jsonl_tail(self.actions_path)
+         except (OSError, json.JSONDecodeError):
+             return self._load_actions_from_state_log()
+         return filter_records([dict(item) for item in records if isinstance(item, dict)]) or self._load_actions_from_state_log()
+@@ -32,10 +32,7 @@ class AuditLog:
+             return []
+         latest: list[dict] = []
+         try:
+-            for line in self.actions_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.actions_state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, list):
+                     latest = filter_records([dict(item) for item in records if isinstance(item, dict)])
+@@ -155,8 +152,7 @@ class ProgressSnapshotStore:
+         if not self.history_path.exists():
+             return self._load_history_from_state_log()
+         try:
+-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
+-            records = [json.loads(line) for line in lines if line.strip()]
++            records = read_jsonl_tail(self.history_path)
+         except (OSError, json.JSONDecodeError):
+             return self._load_history_from_state_log()
+         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
+@@ -166,10 +162,7 @@ class ProgressSnapshotStore:
+             return []
+         latest: list[dict] = []
+         try:
+-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.history_state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, list):
+                     latest = [dict(item) for item in records if isinstance(item, dict)]
+@@ -290,8 +283,7 @@ class ProgressFocusStore:
+         if not self.history_path.exists():
+             return self._load_history_from_state_log()
+         try:
+-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
+-            records = [json.loads(line) for line in lines if line.strip()]
++            records = read_jsonl_tail(self.history_path)
+         except (OSError, json.JSONDecodeError):
+             return self._load_history_from_state_log()
+         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
+@@ -301,10 +293,7 @@ class ProgressFocusStore:
+             return []
+         latest: list[dict] = []
+         try:
+-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.history_state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, list):
+                     latest = [dict(item) for item in records if isinstance(item, dict)]
+@@ -369,8 +358,7 @@ class SeamTrackerStore:
+         if not self.history_path.exists():
+             return self._load_history_from_state_log()
+         try:
+-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
+-            records = [json.loads(line) for line in lines if line.strip()]
++            records = read_jsonl_tail(self.history_path)
+         except (OSError, json.JSONDecodeError):
+             return self._load_history_from_state_log()
+         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
+@@ -380,10 +368,7 @@ class SeamTrackerStore:
+             return []
+         latest: list[dict] = []
+         try:
+-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.history_state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, list):
+                     latest = [dict(item) for item in records if isinstance(item, dict)]
+@@ -519,10 +504,7 @@ class RecoveryActionStore:
+             return []
+         latest: list[dict] = []
+         try:
+-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.history_state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, list):
+                     latest = [dict(item) for item in records if isinstance(item, dict)]
+@@ -600,10 +582,7 @@ class ApprovalStore:
+             return []
+         try:
+             latest: list[dict] = []
+-            for line in self.pending_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.pending_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, list):
+                     latest = filter_records([dict(item) for item in records if isinstance(item, dict)])
+@@ -657,8 +636,7 @@ class ActivityReviewStore:
+         if not self.history_path.exists():
+             return self._load_history_from_state_log()
+         try:
+-            lines = self.history_path.read_text(encoding="utf-8").splitlines()
+-            records = [json.loads(line) for line in lines if line.strip()]
++            records = read_jsonl_tail(self.history_path)
+         except (OSError, json.JSONDecodeError):
+             return self._load_history_from_state_log()
+         return [dict(item) for item in records if isinstance(item, dict)] or self._load_history_from_state_log()
+@@ -668,10 +646,7 @@ class ActivityReviewStore:
+             return []
+         latest: list[dict] = []
+         try:
+-            for line in self.history_state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(self.history_state_log_path):
+                 records = payload.get("records")
+                 if isinstance(records, list):
+                     latest = [dict(item) for item in records if isinstance(item, dict)]
+diff --git a/jarvis/event_fabric.py b/jarvis/event_fabric.py
+index d4709f8..c733b84 100644
+--- a/jarvis/event_fabric.py
++++ b/jarvis/event_fabric.py
+@@ -9,6 +9,7 @@ from typing import Any
+ 
+ from .models import AttentionDisposition, InterruptionLevel, TriggerType, UserAttentionState
+ from .persistence import append_jsonl, atomic_write_json
++from .state_log_utils import read_jsonl_tail
+ 
+ 
+ def _now() -> datetime:
+@@ -129,11 +130,7 @@ class DurableEventStore:
+         if not self.log_path.exists():
+             return []
+         try:
+-            records = [
+-                json.loads(line)
+-                for line in self.log_path.read_text(encoding="utf-8").splitlines()
+-                if line.strip()
+-            ]
++            records = read_jsonl_tail(self.log_path)
+         except (OSError, json.JSONDecodeError):
+             return []
+         return [dict(item) for item in records if isinstance(item, dict)]
+@@ -143,13 +140,7 @@ class DurableEventStore:
+             return []
+         latest: list[EventEnvelope] = []
+         try:
+-            for line in self.state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                try:
+-                    payload = json.loads(line)
+-                except json.JSONDecodeError:
+-                    continue
++            for payload in read_jsonl_tail(self.state_log_path):
+                 saved = payload.get("events")
+                 if not isinstance(saved, list):
+                     continue
+diff --git a/jarvis/llm_gateway.py b/jarvis/llm_gateway.py
+index 84ddb9d..e657141 100644
+--- a/jarvis/llm_gateway.py
++++ b/jarvis/llm_gateway.py
+@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
+ from pathlib import Path
+ 
+ from .persistence import append_jsonl, atomic_write_jsonl
++from .state_log_utils import read_jsonl_tail
+ 
+ _log = logging.getLogger("jarvis.llm_gateway")
+ 
+@@ -34,6 +35,7 @@ _log = logging.getLogger("jarvis.llm_gateway")
+ _USAGE_LOG_PATH = Path(__file__).parent.parent / "data" / "logs" / "llm_usage.jsonl"
+ _USAGE_STATE_LOG_PATH = _USAGE_LOG_PATH.with_name("llm_usage_state_log.jsonl")
+ _usage_write_lock = threading.Lock()
++_USAGE_STATE_RECORD_LIMIT = max(50, int(os.getenv("JARVIS_USAGE_STATE_RECORD_LIMIT", "500")))
+ 
+ # Approximate cost per 1M tokens (input, output) in USD — update as pricing changes.
+ # Ollama / local = free.  Groq free tier = $0.  Paid tiers listed below.
+@@ -67,8 +69,9 @@ def _record_usage(entry: dict) -> None:
+     try:
+         _USAGE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+         with _usage_write_lock:
+-            records = _load_usage_records_locked()
++            records = _load_usage_records_from_state_log_locked()
+             records.append(entry)
++            records = records[-_USAGE_STATE_RECORD_LIMIT:]
+             append_jsonl(
+                 _USAGE_STATE_LOG_PATH,
+                 {
+@@ -76,7 +79,7 @@ def _record_usage(entry: dict) -> None:
+                     "records": records,
+                 },
+             )
+-            atomic_write_jsonl(_USAGE_LOG_PATH, records)
++            append_jsonl(_USAGE_LOG_PATH, entry)
+     except Exception as exc:
+         _log.debug("Usage tracking write failed: %s", exc)
+ 
+@@ -85,14 +88,7 @@ def _load_usage_records_locked() -> list[dict]:
+     if _USAGE_LOG_PATH.exists():
+         try:
+             records: list[dict] = []
+-            for raw in _USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+-                raw = raw.strip()
+-                if not raw:
+-                    continue
+-                try:
+-                    rec = json.loads(raw)
+-                except Exception:
+-                    continue
++            for rec in read_jsonl_tail(_USAGE_LOG_PATH):
+                 if isinstance(rec, dict):
+                     records.append(rec)
+             if records:
+@@ -107,14 +103,7 @@ def _load_usage_records_from_state_log_locked() -> list[dict]:
+         return []
+     try:
+         latest: list[dict] = []
+-        for raw in _USAGE_STATE_LOG_PATH.read_text(encoding="utf-8").splitlines():
+-            raw = raw.strip()
+-            if not raw:
+-                continue
+-            try:
+-                payload = json.loads(raw)
+-            except Exception:
+-                continue
++        for payload in read_jsonl_tail(_USAGE_STATE_LOG_PATH):
+             records = payload.get("records")
+             if isinstance(records, list):
+                 latest = [dict(item) for item in records if isinstance(item, dict)]
+@@ -155,24 +144,13 @@ def usage_summary(hours: int = 24) -> dict:
+         "by_backend": {},
+     }
+ 
+-    if not _USAGE_LOG_PATH.exists():
++    try:
+         with _usage_write_lock:
+-            lines = [json.dumps(item, separators=(",", ":")) for item in _load_usage_records_locked()]
+-    else:
+-        try:
+-            with _usage_write_lock:
+-                lines = [json.dumps(item, separators=(",", ":")) for item in _load_usage_records_locked()]
+-        except Exception:
+-            return result
++            records = _load_usage_records_locked()
++    except Exception:
++        return result
+ 
+-    for raw in lines:
+-        raw = raw.strip()
+-        if not raw:
+-            continue
+-        try:
+-            rec = json.loads(raw)
+-        except Exception:
+-            continue
++    for rec in records:
+         if rec.get("ts", 0) < cutoff_ts:
+             continue
+ 
+@@ -206,15 +184,23 @@ def usage_summary(hours: int = 24) -> dict:
+ # Model configuration (all overridable via env vars)
+ # ---------------------------------------------------------------------------
+ 
+-_FAST_MODEL              = lambda: os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "phi3.5")
+-_SUBSTANTIVE_MODEL       = lambda: os.getenv("JARVIS_OLLAMA_SUBSTANTIVE_MODEL", "qwen2.5:14b")
+-_BACKGROUND_MODEL        = lambda: os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL",  "qwen2.5:7b")
+-_REASONING_MODEL         = lambda: os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "qwen2.5:14b")
++def _model_mode() -> str:
++    return os.getenv("JARVIS_MODEL_MODE", "standard").strip().lower() or "standard"
++
++
++def _cloud_light_mode() -> bool:
++    return _model_mode() == "cloud_light"
++
++
+ _OPENAI_MODEL            = lambda: os.getenv("JARVIS_OPENAI_MODEL",             "gpt-5.4-mini")
+ _THINKING_MODEL          = lambda: os.getenv("JARVIS_THINKING_MODEL",           "gpt-5.4")
+ _MAX_THINKING_MODEL      = lambda: os.getenv("JARVIS_MAX_THINKING_MODEL",       "gpt-5.5")
+ _GROQ_MODEL              = lambda: os.getenv("JARVIS_GROQ_MODEL",               "llama-3.3-70b-versatile")
+ _GROQ_REASONING_MODEL    = lambda: os.getenv("JARVIS_GROQ_REASONING_MODEL",     "openai/gpt-oss-120b")
++_FAST_MODEL              = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "phi3.5")
++_SUBSTANTIVE_MODEL       = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_SUBSTANTIVE_MODEL", "qwen2.5:14b")
++_BACKGROUND_MODEL        = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL",  "qwen2.5:7b")
++_REASONING_MODEL         = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "qwen2.5:14b")
+ 
+ # ---------------------------------------------------------------------------
+ # Task routing tables
+diff --git a/jarvis/main.py b/jarvis/main.py
+index 6289f96..3debe13 100644
+--- a/jarvis/main.py
++++ b/jarvis/main.py
+@@ -14,6 +14,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for cold systems
+         return None
+ 
+ from .agent_registry_contract import contract_paths, load_contract_bundle
++from .config import AppConfig
+ from .openclaw_bridge import build_openclaw_envelope, envelope_to_json
+ from .speech import voice_stack_status
+ from .fresh_start import FreshStartProtocol
+@@ -762,7 +763,7 @@ def command_fresh_start(runtime: JarvisRuntime, *, execute: bool, no_backup: boo
+     return 0
+ 
+ 
+-def _ensure_ollama_running() -> None:
++def _ensure_ollama_running(config: AppConfig) -> None:
+     """
+     Check whether Ollama is reachable at the configured base URL.
+     If not, attempt to start it via `ollama serve` as a detached background process.
+@@ -777,6 +778,13 @@ def _ensure_ollama_running() -> None:
+ 
+     _log = logging.getLogger("jarvis.ollama-bootstrap")
+ 
++    if not getattr(config, "ollama_enabled", True):
++        _log.info(
++            "Skipping Ollama auto-start because model mode '%s' has local models disabled.",
++            getattr(config, "model_mode", "standard"),
++        )
++        return
++
+     ollama_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/v1").rstrip("/")
+     health_url = f"{ollama_url}/api/tags"
+ 
+@@ -854,7 +862,7 @@ def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
+                 "Could not initialise approval layer: %s", exc
+             )
+     # Ensure Ollama is running (local inference backend)
+-    _ensure_ollama_running()
++    _ensure_ollama_running(runtime.config)
+     # Initialise the LLM Gateway before the scheduler (agents need it)
+     if _LLM_GATEWAY_IMPORT_OK:
+         try:
+diff --git a/jarvis/memory.py b/jarvis/memory.py
+index 48e7bba..03b3312 100644
+--- a/jarvis/memory.py
++++ b/jarvis/memory.py
+@@ -14,6 +14,7 @@ from .data_hygiene import filter_records
+ from .identity import IdentityRegistry
+ from .models import MemoryEntry, MemoryProfileFact, MemoryProposal, UserProfile
+ from .persistence import append_jsonl, atomic_write_json
++from .state_log_utils import read_jsonl_tail
+ 
+ 
+ def _now_iso() -> str:
+@@ -73,10 +74,7 @@ class MemoryStore:
+             if not state_log_path.exists():
+                 return self._load_json_from_log(path, default)
+             latest: object = default
+-            for line in state_log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(state_log_path):
+                 if "payload" in payload:
+                     latest = payload["payload"]
+             return latest
+@@ -89,10 +87,7 @@ class MemoryStore:
+             if not log_path.exists():
+                 return default
+             latest: object = default
+-            for line in log_path.read_text(encoding="utf-8").splitlines():
+-                if not line.strip():
+-                    continue
+-                payload = json.loads(line)
++            for payload in read_jsonl_tail(log_path):
+                 if "payload" in payload:
+                     latest = payload["payload"]
+             return latest
+diff --git a/jarvis/persistence.py b/jarvis/persistence.py
+index 4b1779e..bfc5934 100644
+--- a/jarvis/persistence.py
++++ b/jarvis/persistence.py
+@@ -8,6 +8,8 @@ from pathlib import Path
+ import tempfile
+ from typing import Any, Iterator
+ 
++from .state_log_utils import trim_file_to_recent_bytes
++
+ 
+ def _lock_path(path: Path) -> Path:
+     suffix = f"{path.suffix}.lock" if path.suffix else ".lock"
+@@ -68,9 +70,7 @@ def _rotate_if_needed(path: Path, encoding: str) -> None:
+     try:
+         if path.stat().st_size <= _JSONL_ROTATE_BYTES:
+             return
+-        lines = path.read_text(encoding=encoding).splitlines(keepends=True)
+-        keep = lines[len(lines) // 2 :]
+-        path.write_text("".join(keep), encoding=encoding)
++        trim_file_to_recent_bytes(path, _JSONL_ROTATE_BYTES // 2)
+     except (OSError, ValueError):
+         pass
+ 
+diff --git a/jarvis/state_log_utils.py b/jarvis/state_log_utils.py
+new file mode 100644
+index 0000000..b34171e
+--- /dev/null
++++ b/jarvis/state_log_utils.py
+@@ -0,0 +1,106 @@
++from __future__ import annotations
++
++import json
++import os
++from pathlib import Path
++from typing import Any
++
++
++_DEFAULT_TAIL_BYTES = 4 * 1024 * 1024
++_DEFAULT_TAIL_LINES = 2000
++
++
++def _env_int(name: str, default: int, *, minimum: int = 1) -> int:
++    raw = str(os.getenv(name, "")).strip()
++    if not raw:
++        return default
++    try:
++        value = int(raw)
++    except ValueError:
++        return default
++    return max(minimum, value)
++
++
++def state_log_tail_bytes() -> int:
++    return _env_int("JARVIS_STATE_LOG_TAIL_BYTES", _DEFAULT_TAIL_BYTES)
++
++
++def state_log_tail_lines() -> int:
++    return _env_int("JARVIS_STATE_LOG_TAIL_LINES", _DEFAULT_TAIL_LINES)
++
++
++def read_text_tail_lines(
++    path: Path,
++    *,
++    max_bytes: int | None = None,
++    max_lines: int | None = None,
++    encoding: str = "utf-8",
++) -> list[str]:
++    if not path.exists():
++        return []
++    tail_bytes = max(1, max_bytes or state_log_tail_bytes())
++    tail_lines = max(1, max_lines or state_log_tail_lines())
++    try:
++        with path.open("rb") as handle:
++            handle.seek(0, os.SEEK_END)
++            size = handle.tell()
++            if size <= 0:
++                return []
++            read_size = min(size, tail_bytes)
++            if read_size < size:
++                handle.seek(-read_size, os.SEEK_END)
++            else:
++                handle.seek(0)
++            raw = handle.read(read_size)
++    except OSError:
++        return []
++    text = raw.decode(encoding, errors="ignore")
++    if read_size < size:
++        newline = text.find("\n")
++        if newline >= 0:
++            text = text[newline + 1 :]
++    lines = [line for line in text.splitlines() if line.strip()]
++    if len(lines) > tail_lines:
++        lines = lines[-tail_lines:]
++    return lines
++
++
++def read_jsonl_tail(
++    path: Path,
++    *,
++    max_bytes: int | None = None,
++    max_lines: int | None = None,
++    encoding: str = "utf-8",
++) -> list[Any]:
++    items: list[Any] = []
++    for line in read_text_tail_lines(
++        path,
++        max_bytes=max_bytes,
++        max_lines=max_lines,
++        encoding=encoding,
++    ):
++        try:
++            items.append(json.loads(line))
++        except json.JSONDecodeError:
++            continue
++    return items
++
++
++def trim_file_to_recent_bytes(path: Path, keep_bytes: int) -> None:
++    if keep_bytes <= 0:
++        return
++    try:
++        size = path.stat().st_size
++    except OSError:
++        return
++    if size <= keep_bytes:
++        return
++    with path.open("rb+") as handle:
++        handle.seek(-keep_bytes, os.SEEK_END)
++        raw = handle.read(keep_bytes)
++        newline = raw.find(b"\n")
++        if newline >= 0 and newline + 1 < len(raw):
++            raw = raw[newline + 1 :]
++        handle.seek(0)
++        handle.write(raw)
++        handle.truncate()
+diff --git a/jarvis/user_profile.py b/jarvis/user_profile.py
+index ead13bb..5279c59 100644
+--- a/jarvis/user_profile.py
++++ b/jarvis/user_profile.py
+@@ -7,6 +7,7 @@ import json, threading
+ from datetime import datetime, timezone
+ 
+ from .persistence import append_jsonl, atomic_write_json
++from .state_log_utils import read_jsonl_tail
+ 
+ PROFILES_DIR = Path("data/settings/profiles")
+ _lock = threading.Lock()
+@@ -81,10 +82,7 @@ def _load_profile_from_state_log(user_id: str) -> dict:
+         return _load_profile_from_log(user_id)
+     try:
+         latest: dict = {}
+-        for line in path.read_text(encoding="utf-8").splitlines():
+-            if not line.strip():
+-                continue
+-            payload = json.loads(line)
++        for payload in read_jsonl_tail(path):
+             records = payload.get("records")
+             if isinstance(records, dict):
+                 latest = dict(records)
+@@ -101,10 +99,7 @@ def _load_profile_from_log(user_id: str) -> dict:
+         return default
+     try:
+         latest: dict = {}
+-        for line in path.read_text(encoding="utf-8").splitlines():
+-            if not line.strip():
+-                continue
+-            payload = json.loads(line)
++        for payload in read_jsonl_tail(path):
+             records = payload.get("records")
+             if isinstance(records, dict):
+                 latest = dict(records)

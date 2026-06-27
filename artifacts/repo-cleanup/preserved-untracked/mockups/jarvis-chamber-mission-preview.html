@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS Chamber Preview</title>
+  <style>
+    :root {
+      --bg: #04070d;
+      --panel: rgba(8, 12, 20, 0.78);
+      --panel-2: rgba(11, 18, 28, 0.88);
+      --line: rgba(116, 215, 255, 0.18);
+      --line-strong: rgba(116, 215, 255, 0.34);
+      --cyan: #7fe3ff;
+      --ice: #e9f7ff;
+      --muted: #8da4b7;
+      --gold: #f6c76a;
+      --red: #ff7c91;
+      --green: #7cf0c4;
+      --shadow: 0 30px 90px rgba(0,0,0,0.45);
+      --font: "Inter", "Segoe UI", sans-serif;
+      --mono: "SF Mono", "IBM Plex Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ice);
+      background:
+        radial-gradient(circle at 50% 38%, rgba(41, 180, 255, 0.18), transparent 18%),
+        radial-gradient(circle at 50% 70%, rgba(41, 180, 255, 0.09), transparent 30%),
+        linear-gradient(180deg, #07101a 0%, #03060a 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(127,227,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(127,227,255,0.03) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: radial-gradient(circle at center, black, transparent 82%);
+    }
+    .shell {
+      padding: 28px;
+      display: grid;
+      gap: 20px;
+    }
+    .topbar, .frame, .dock {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(10,16,26,0.72), rgba(5,9,16,0.88));
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+    .topbar {
+      border-radius: 26px;
+      padding: 18px 22px;
+      display: grid;
+      grid-template-columns: 220px 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+    .wordmark {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+    }
+    .strip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      background: rgba(255,255,255,0.03);
+    }
+    .pill strong { color: var(--ice); }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(124,240,196,0.6);
+    }
+    .frame {
+      border-radius: 38px;
+      min-height: 860px;
+      position: relative;
+      overflow: hidden;
+      padding: 34px;
+    }
+    .frame::before {
+      content: "";
+      position: absolute;
+      inset: 8% 18%;
+      border-radius: 50%;
+      border: 1px solid rgba(127,227,255,0.18);
+      box-shadow: 0 0 120px rgba(41,180,255,0.12), inset 0 0 120px rgba(41,180,255,0.04);
+    }
+    .frame::after {
+      content: "";
+      position: absolute;
+      inset: 19% 31%;
+      border-radius: 50%;
+      border: 1px dashed rgba(127,227,255,0.24);
+      animation: spin 26s linear infinite;
+      opacity: 0.75;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .center-core {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      width: 430px;
+      height: 430px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 1px solid rgba(127,227,255,0.16);
+      background:
+        radial-gradient(circle at center, rgba(127,227,255,0.24), rgba(127,227,255,0.06) 35%, rgba(0,0,0,0.12) 70%, transparent 100%);
+      display: grid;
+      place-items: center;
+      box-shadow: inset 0 0 80px rgba(127,227,255,0.08), 0 0 80px rgba(127,227,255,0.08);
+    }
+    .center-copy {
+      width: 72%;
+      text-align: center;
+    }
+    .eyebrow {
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+    .core-title {
+      font-size: 64px;
+      line-height: 0.94;
+      letter-spacing: -0.06em;
+      margin-top: 10px;
+      font-weight: 800;
+    }
+    .core-body {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+    .core-actions {
+      margin-top: 22px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 12px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,0.04);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .btn.primary {
+      background: linear-gradient(180deg, rgba(127,227,255,0.26), rgba(127,227,255,0.1));
+      box-shadow: 0 0 28px rgba(127,227,255,0.1);
+    }
+    .rail {
+      position: absolute;
+      width: 360px;
+      display: grid;
+      gap: 14px;
+    }
+    .rail.left { left: 34px; top: 118px; }
+    .rail.right { right: 34px; top: 118px; }
+    .rail.bottom-left { left: 34px; bottom: 132px; width: 400px; }
+    .rail.bottom-right { right: 34px; bottom: 132px; width: 400px; }
+    .card {
+      padding: 18px;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(8,13,21,0.88), rgba(6,10,17,0.96));
+      backdrop-filter: blur(16px);
+    }
+    .card-title {
+      margin-top: 8px;
+      font-size: 26px;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      font-weight: 800;
+    }
+    .card-body {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .stack { display: grid; gap: 10px; margin-top: 14px; }
+    .mini {
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(127,227,255,0.08);
+      background: rgba(255,255,255,0.025);
+    }
+    .mini strong { display: block; font-size: 15px; }
+    .mini span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .tone-gold { color: var(--gold); }
+    .tone-red { color: var(--red); }
+    .tone-green { color: var(--green); }
+    .timeline {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 12px;
+    }
+    .time {
+      font-family: var(--mono);
+      color: var(--cyan);
+      font-size: 12px;
+      padding-top: 2px;
+    }
+    .event {
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(127,227,255,0.08);
+    }
+    .event strong { font-size: 14px; }
+    .event p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .dock {
+      border-radius: 28px;
+      padding: 16px 18px;
+      display: grid;
+      grid-template-columns: 1fr 140px;
+      gap: 16px;
+      align-items: center;
+    }
+    .prompt {
+      min-height: 66px;
+      border-radius: 18px;
+      border: 1px solid rgba(127,227,255,0.12);
+      background: rgba(255,255,255,0.03);
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+    .send {
+      height: 66px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line-strong);
+      background: linear-gradient(180deg, rgba(127,227,255,0.26), rgba(127,227,255,0.1));
+      font-size: 17px;
+      font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="wordmark">JARVIS</div>
+      <div class="strip">
+        <div class="pill"><strong>Presence:</strong> Continuous</div>
+        <div class="pill"><strong>Mode:</strong> Chamber</div>
+        <div class="pill"><strong>Mission:</strong> Tighten strategy</div>
+        <div class="pill"><strong>Risk:</strong> 2 surfaced</div>
+      </div>
+      <div class="status"><span class="dot"></span> Acting where bounded.</div>
+    </div>
+
+    <div class="frame">
+      <div class="rail left">
+        <div class="card">
+          <div class="eyebrow">What Matters</div>
+          <div class="card-title">JARVIS has already narrowed the field.</div>
+          <div class="card-body">This is not a dashboard of everything. It is the chamber of what deserves your attention now.</div>
+          <div class="stack">
+            <div class="mini">
+              <strong>Morning brief is synthesized</strong>
+              <span>Schedule, weather, manuscript pressure, and household context have already been merged.</span>
+            </div>
+            <div class="mini">
+              <strong>One home risk is worth action</strong>
+              <span>Freezer airflow issue downgraded from anxiety to bounded checklist.</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Mission Feed</div>
+          <div class="card-title">Objective became mission.</div>
+          <div class="card-body">The interface answers the vision doc directly: “I heard your objective and built a mission around it.”</div>
+        </div>
+      </div>
+
+      <div class="rail right">
+        <div class="card">
+          <div class="eyebrow">Authority Spine</div>
+          <div class="card-title">Two decisions require you.</div>
+          <div class="stack">
+            <div class="mini">
+              <strong class="tone-gold">Approve Catalyst vendor logic</strong>
+              <span>Confidence slipped. JARVIS held the packet instead of bluffing autonomy.</span>
+            </div>
+            <div class="mini">
+              <strong class="tone-red">Choose tonight or now for home intervention</strong>
+              <span>Not urgent, but worth removing before it becomes ambient drag.</span>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Household Pulse</div>
+          <div class="card-title">Stable with one useful interruption.</div>
+          <div class="card-body">The system should feel like relief, not stress theater.</div>
+        </div>
+      </div>
+
+      <div class="center-core">
+        <div class="center-copy">
+          <div class="eyebrow">Chamber Direction</div>
+          <div class="core-title">Calm authority. Relentless clarity.</div>
+          <div class="core-body">A cinematic command room built around one mission, one recommendation layer, and one continuity engine. Less product UI. More JARVIS.</div>
+          <div class="core-actions">
+            <div class="btn primary">Speak objective</div>
+            <div class="btn">Review mission</div>
+            <div class="btn">See what changed</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail bottom-left">
+        <div class="card">
+          <div class="eyebrow">Continuous Presence</div>
+          <div class="card-title">What JARVIS did while you were away.</div>
+          <div class="timeline">
+            <div class="row">
+              <div class="time">08:11</div>
+              <div class="event">
+                <strong>Briefing packet assembled</strong>
+                <p>Chris does not need to hunt. The right workspace is prepared.</p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="time">08:23</div>
+              <div class="event">
+                <strong>Vendor packet held</strong>
+                <p>Low-confidence path intercepted before authority expansion.</p>
+              </div>
+            </div>
+            <div class="row">
+              <div class="time">08:36</div>
+              <div class="event">
+                <strong>Home issue reframed</strong>
+                <p>Noise translated into one practical decision and one checklist.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail bottom-right">
+        <div class="card">
+          <div class="eyebrow">Visual Thesis</div>
+          <div class="card-title">Not MUI demo. Not HUD cosplay.</div>
+          <div class="card-body">Use MUI X discipline and OOUX structure underneath, but let the visible experience feel architectural, atmospheric, and unmistakably JARVIS.</div>
+          <div class="stack">
+            <div class="mini">
+              <strong class="tone-green">Object model underneath</strong>
+              <span>Mission, Decision, Risk, Domain, Commitment, Intervention.</span>
+            </div>
+            <div class="mini">
+              <strong>MUI X where detail opens</strong>
+              <span>Data grids, drill-downs, and evidence panels appear on demand, not by default.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dock">
+      <div class="prompt">Jarvis, help me handle today without dropping the manuscript or the house.</div>
+      <div class="send">Engage</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,7 +4,12 @@
 __pycache__/
 *.pyc
 .DS_Store
+.qlpreview/
 *.log
+*.sqlite
+*.db
+*.db-wal
+*.db-shm
 
 # ── Credentials & secrets ────────────────────────────────────────────────────
 config/google_client_secret.json
@@ -36,6 +41,10 @@ data/system/worktrees/
 
 # Runtime logs (*.jsonl files live here)
 data/logs/
+data/archive/
+data/settings/*_log.jsonl
+data/settings/*_state_log.jsonl
+data/agents/*_state_log.jsonl
 
 # Operational queues and live workstream state
 data/workstreams/
@@ -88,3 +97,6 @@ vendor/trellis-mac/
 vendor/**/*.so
 vendor/**/*.dylib
 vendor/**/__pycache__/
+
+# Generated previews
+artifacts/mockups/.qlpreview/

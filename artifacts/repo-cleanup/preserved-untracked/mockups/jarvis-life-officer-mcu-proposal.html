@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS Life Officer MCU Proposal</title>
+  <style>
+    :root {
+      --bg-0: #06111d;
+      --bg-1: #0b1726;
+      --bg-2: #102234;
+      --glass: rgba(7, 16, 28, 0.7);
+      --glass-soft: rgba(13, 24, 39, 0.56);
+      --panel: rgba(10, 20, 33, 0.8);
+      --line: rgba(132, 203, 255, 0.14);
+      --line-strong: rgba(132, 203, 255, 0.26);
+      --cyan: #8cd3ff;
+      --blue: #4db6ff;
+      --teal: #6bf7db;
+      --gold: #f5c66f;
+      --red: #ff7f93;
+      --text: #ecf6ff;
+      --muted: #8ea7bd;
+      --dim: #6d8398;
+      --shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+      --radius: 26px;
+      --radius-sm: 16px;
+      --font: "Inter", "Segoe UI", Arial, sans-serif;
+      --mono: "SF Mono", "IBM Plex Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: var(--font);
+      background:
+        radial-gradient(circle at 20% 18%, rgba(77, 182, 255, 0.17), transparent 22%),
+        radial-gradient(circle at 86% 14%, rgba(107, 247, 219, 0.12), transparent 18%),
+        radial-gradient(circle at 50% 100%, rgba(77, 182, 255, 0.08), transparent 26%),
+        linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 42%, #07121f 100%);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(140, 211, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(140, 211, 255, 0.03) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(circle at center, black, transparent 85%);
+    }
+
+    .shell {
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .topbar,
+    .hero,
+    .surface {
+      background: linear-gradient(180deg, rgba(14, 26, 43, 0.78), rgba(6, 15, 27, 0.84));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .topbar {
+      border-radius: 24px;
+      padding: 18px 22px;
+      display: grid;
+      grid-template-columns: 260px 1fr auto;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .wordmark {
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      font-size: 24px;
+    }
+
+    .status-strip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .status-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .status-pill strong { color: var(--text); }
+
+    .presence {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--teal);
+      box-shadow: 0 0 0 8px rgba(107, 247, 219, 0.1), 0 0 18px rgba(107, 247, 219, 0.4);
+    }
+
+    .hero {
+      border-radius: 34px;
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 1.25fr 0.95fr;
+      gap: 22px;
+      min-height: 360px;
+    }
+
+    .hero-left {
+      display: grid;
+      align-content: space-between;
+      gap: 18px;
+    }
+
+    .eyebrow {
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .hero h1 {
+      margin: 8px 0 0;
+      font-size: 56px;
+      line-height: 0.96;
+      letter-spacing: -0.06em;
+      max-width: 760px;
+    }
+
+    .hero-copy {
+      margin-top: 18px;
+      max-width: 760px;
+      font-size: 18px;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .primary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn {
+      padding: 13px 18px;
+      border-radius: 14px;
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .btn.primary {
+      background: linear-gradient(180deg, rgba(77, 182, 255, 0.24), rgba(77, 182, 255, 0.12));
+      color: #eaf7ff;
+      border-color: rgba(77, 182, 255, 0.38);
+      box-shadow: 0 0 24px rgba(77, 182, 255, 0.15);
+    }
+
+    .hero-right {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .mission-card,
+    .insight-card {
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(12, 24, 38, 0.92), rgba(9, 18, 31, 0.86));
+      border: 1px solid var(--line);
+      padding: 18px;
+    }
+
+    .section-kicker {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .mission-title {
+      margin-top: 8px;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .mission-copy {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .mission-steps {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mission-step {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(140, 211, 255, 0.08);
+      background: rgba(255,255,255,0.02);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .mission-step strong {
+      font-size: 14px;
+    }
+
+    .mission-step span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .glow {
+      color: var(--cyan);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.95fr 0.95fr;
+      gap: 18px;
+    }
+
+    .surface {
+      border-radius: 28px;
+      padding: 20px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .panel-title {
+      margin-top: 6px;
+      font-size: 24px;
+      letter-spacing: -0.03em;
+    }
+
+    .panel-copy {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .quiet-badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+      color: var(--cyan);
+      background: rgba(140, 211, 255, 0.06);
+      white-space: nowrap;
+    }
+
+    .feed {
+      display: grid;
+      gap: 12px;
+    }
+
+    .feed-item,
+    .queue-item,
+    .agent-item {
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      border: 1px solid rgba(140, 211, 255, 0.08);
+    }
+
+    .feed-item-title,
+    .queue-item-title,
+    .agent-item-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .feed-meta,
+    .queue-meta,
+    .agent-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .feed-actions,
+    .queue-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .micro {
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .micro.primary {
+      background: rgba(77, 182, 255, 0.16);
+      border-color: rgba(77, 182, 255, 0.3);
+    }
+
+    .micro.warn {
+      color: var(--gold);
+      border-color: rgba(245, 198, 111, 0.2);
+      background: rgba(245, 198, 111, 0.08);
+    }
+
+    .micro.danger {
+      color: var(--red);
+      border-color: rgba(255, 127, 147, 0.18);
+      background: rgba(255, 127, 147, 0.08);
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-row {
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .timeline-time {
+      font-family: var(--mono);
+      color: var(--cyan);
+      font-size: 12px;
+      padding-top: 4px;
+    }
+
+    .timeline-card {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(140, 211, 255, 0.08);
+      background: rgba(255,255,255,0.025);
+    }
+
+    .timeline-card strong {
+      font-size: 14px;
+    }
+
+    .timeline-card p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1220px) {
+      .hero,
+      .content-grid,
+      .topbar { grid-template-columns: 1fr; }
+      .presence { justify-content: flex-start; }
+      .status-strip { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="topbar">
+      <div class="wordmark">JARVIS</div>
+      <div class="status-strip">
+        <div class="status-pill"><strong>Presence:</strong> Continuous</div>
+        <div class="status-pill"><strong>Mode:</strong> Life Operating Officer</div>
+        <div class="status-pill"><strong>Mission posture:</strong> In motion</div>
+        <div class="status-pill"><strong>Household trust:</strong> Governed</div>
+      </div>
+      <div class="presence"><span class="pulse"></span> Standing by, acting where bounded.</div>
+    </section>
+
+    <section class="hero">
+      <div class="hero-left">
+        <div>
+          <div class="eyebrow">New Direction</div>
+          <h1>Calm command presence, not a dashboard.</h1>
+          <div class="hero-copy">
+            This redesign treats JARVIS as an always-on Life Operating Officer. The interface centers conversation, mission stewardship, and trustable background work. The MCU inspiration is not the flashy HUD itself, but the feeling that JARVIS already understands the objective and quietly brings the right system into view.
+          </div>
+          <div class="primary-actions">
+            <div class="btn primary">Speak an objective</div>
+            <div class="btn">Review what changed</div>
+            <div class="btn">Open current mission</div>
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="section-kicker">Design Principle</div>
+          <div class="mission-copy">
+            The screen should feel like the moment after you say, “Jarvis, help me handle today,” and the system responds with structure, priorities, and bounded next moves. Not a menu. Not a cockpit. A strategic partner surface.
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="mission-card">
+          <div class="section-kicker">Active Mission</div>
+          <div class="mission-title">Tighten strategy, protect focus, move one household risk out of the way.</div>
+          <div class="mission-copy">
+            JARVIS translated the morning objective into one mission with coordinated sub-work across Chronicle, Catalyst, and Home.
+          </div>
+          <div class="mission-steps">
+            <div class="mission-step">
+              <strong>Morning brief synthesized</strong>
+              <span class="glow">Ready now</span>
+            </div>
+            <div class="mission-step">
+              <strong>Manuscript edits prepared</strong>
+              <span>Writer agent waiting on review</span>
+            </div>
+            <div class="mission-step">
+              <strong>Freezer airflow issue isolated</strong>
+              <span>Needs one household decision</span>
+            </div>
+          </div>
+        </div>
+        <div class="mission-card">
+          <div class="section-kicker">What JARVIS Did While Away</div>
+          <div class="mission-copy">
+            Checked household systems, held a low-confidence vendor packet, prepared the brief, and staged a safe recommendation instead of pushing noise into the foreground.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <div class="surface">
+        <div class="panel-head">
+          <div>
+            <div class="section-kicker">Mission Feed</div>
+            <div class="panel-title">What matters now</div>
+            <div class="panel-copy">A guided feed replaces generic dashboard tiles. Each item is tied to a mission, a reason, and a next step.</div>
+          </div>
+          <div class="quiet-badge">Conversation-first</div>
+        </div>
+        <div class="feed">
+          <div class="feed-item">
+            <div class="feed-item-title">Your full morning brief is ready.</div>
+            <div class="feed-meta">JARVIS condensed family schedule, weather, manuscript pressure, and workshop constraints into one briefing packet.</div>
+            <div class="feed-actions">
+              <div class="micro primary">Open brief</div>
+              <div class="micro">Read aloud</div>
+            </div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-item-title">One home intervention is worth doing before dinner.</div>
+            <div class="feed-meta">The freezer issue looks operational, not catastrophic. JARVIS prepared a bounded checklist instead of escalating prematurely.</div>
+            <div class="feed-actions">
+              <div class="micro primary">Open checklist</div>
+              <div class="micro">Defer to tonight</div>
+            </div>
+          </div>
+          <div class="feed-item">
+            <div class="feed-item-title">Catalyst paused a vendor packet on purpose.</div>
+            <div class="feed-meta">Confidence slipped below threshold on pricing consistency. JARVIS chose review over autonomy.</div>
+            <div class="feed-actions">
+              <div class="micro primary">Inspect packet</div>
+              <div class="micro warn">Keep on hold</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="surface">
+        <div class="panel-head">
+          <div>
+            <div class="section-kicker">Authority Spine</div>
+            <div class="panel-title">Decisions, not notifications</div>
+            <div class="panel-copy">MCU JARVIS feels useful because it surfaces the exact decision or tactic needed in context. This queue does the same.</div>
+          </div>
+          <div class="quiet-badge">Governance-first</div>
+        </div>
+        <div class="feed">
+          <div class="queue-item">
+            <div class="queue-item-title">Approve revised vendor logic</div>
+            <div class="queue-meta">Catalyst workflow · board pack pricing · downstream effect on publishing plan</div>
+            <div class="feed-actions">
+              <div class="micro primary">Review evidence</div>
+              <div class="micro">Approve</div>
+              <div class="micro danger">Reject</div>
+            </div>
+          </div>
+          <div class="queue-item">
+            <div class="queue-item-title">Choose when to handle freezer intervention</div>
+            <div class="queue-meta">Home domain · low drama, high usefulness · household-safe action</div>
+            <div class="feed-actions">
+              <div class="micro primary">Do now</div>
+              <div class="micro">Schedule tonight</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="surface">
+        <div class="panel-head">
+          <div>
+            <div class="section-kicker">Continuous Presence</div>
+            <div class="panel-title">What the system is doing</div>
+            <div class="panel-copy">The vibe should be “at your service, sir,” but modernized into inspectable continuity.</div>
+          </div>
+          <div class="quiet-badge">Always-on</div>
+        </div>
+        <div class="timeline">
+          <div class="timeline-row">
+            <div class="timeline-time">08:11</div>
+            <div class="timeline-card">
+              <strong>Briefing packet assembled</strong>
+              <p>JARVIS merged calendar, weather, household state, and manuscript momentum into one guidance surface.</p>
+            </div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-time">08:23</div>
+            <div class="timeline-card">
+              <strong>Vendor packet held</strong>
+              <p>Low-confidence data path intercepted before authority escalation.</p>
+            </div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-time">08:36</div>
+            <div class="timeline-card">
+              <strong>Home risk reframed</strong>
+              <p>JARVIS downgraded noise into a bounded action checklist with one decision.</p>
+            </div>
+          </div>
+          <div class="timeline-row">
+            <div class="timeline-time">Now</div>
+            <div class="timeline-card">
+              <strong>Waiting on your first objective</strong>
+              <p>Conversation remains the operating system. The UI is only here to make stewardship visible.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
