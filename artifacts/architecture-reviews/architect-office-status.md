@@ -99,7 +99,8 @@ Current Epic 3 entry status:
 - recommended seventh slice is temporal caution wording for potentially stale local memory
 - the seventh Epic 3 slice is procedurally approved in slice-only isolated review state
 - recommended eighth slice is memory-dispute acknowledgment hardening for user correction prompts
-- eighth slice has been directed and is awaiting Build Office isolated review delivery
+- the eighth Epic 3 slice is procedurally approved in slice-only isolated review state
+- recommended ninth slice is memory-dispute follow-up clarification hardening for correction prompts
 
 ### Epic 4. Hands and Workbench
 
@@ -327,6 +328,10 @@ Planned lanes:
 - [x] Identify the eighth bounded Epic 3 implementation slice
 - [x] Direct the eighth bounded Epic 3 implementation slice
 - [x] Request the Build Office isolated review package for the eighth Epic 3 slice
+- [x] Review the eighth Epic 3 isolated implementation report
+- [x] Procedurally approve the eighth Epic 3 slice in isolated review state
+- [x] Identify the next bounded Epic 3 planning step after eighth-slice approval
+- [x] Direct the next bounded Epic 3 planning step after eighth-slice approval
 - [ ] Require clean isolated review state for the generic empathy / validation repair slice before formal approval
 - [x] Require clean isolated review state for the generic empathy / validation repair slice before formal approval
 
@@ -341,7 +346,8 @@ Planned lanes:
 Architect Office is working the governance loop first so future JARVIS work can be directed, tested, and approved cleanly instead of managed ad hoc.
 
 Immediate active review lane:
-- awaiting the isolated review package for Epic 3 slice 8: `memory-dispute acknowledgment hardening for user correction prompts`
+- Epic 3 slice 8 approved in isolated review state at `/Users/chris/Desktop/CODE/JARVIS-review-epic3-memory-grounding-clean`
+- next active Build Office assignment is Epic 3 slice 9: `memory-dispute follow-up clarification hardening for correction prompts`
 
 Process improvement:
 - the office protocols now default to isolated-first execution when the main repo is mixed
