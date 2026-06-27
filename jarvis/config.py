@@ -98,6 +98,10 @@ class AppConfig:
     openviking_user: str
     openviking_agent_id: str
     openviking_memory_uri_root: str
+    obsidian_vault_path: Path
+    obsidian_index_path: Path
+    obsidian_conversation_enabled: bool
+    read_only_smoke_mode: bool
     autonomous_workstreams_enabled: bool
     autonomous_workstream_lanes: tuple[str, ...]
     default_trust_owner_principal: str
@@ -278,6 +282,20 @@ class AppConfig:
                 "JARVIS_OPENVIKING_MEMORY_URI_ROOT",
                 "viking://user/chris/memories/",
             ).strip(),
+            obsidian_vault_path=Path(
+                os.getenv(
+                    "JARVIS_OBSIDIAN_VAULT",
+                    "/Volumes/Monday/Obsidian",
+                )
+            ),
+            obsidian_index_path=Path(
+                os.getenv(
+                    "JARVIS_OBSIDIAN_INDEX_PATH",
+                    "/Volumes/Monday/JARVIS/indexes/obsidian/index.json",
+                )
+            ),
+            obsidian_conversation_enabled=_bool_env("JARVIS_ENABLE_OBSIDIAN_CONVERSATION", False),
+            read_only_smoke_mode=_bool_env("JARVIS_READ_ONLY_SMOKE_MODE", False),
             autonomous_workstreams_enabled=_bool_env("JARVIS_AUTONOMOUS_WORKSTREAMS_ENABLED", True),
             autonomous_workstream_lanes=_csv_env("JARVIS_AUTONOMOUS_WORKSTREAM_LANES", ("passive-income", "market-intelligence")),
             default_trust_owner_principal=os.getenv("JARVIS_DEFAULT_TRUST_OWNER_PRINCIPAL", "").strip().lower(),

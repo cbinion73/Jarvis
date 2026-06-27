@@ -8,6 +8,26 @@ from jarvis.assistant_core import AssistantCoreStore
 
 
 class AssistantCoreStoreTests(unittest.TestCase):
+    def test_read_only_store_keeps_service_runtime_state_in_memory_without_writing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "assistant_core.json"
+            store = AssistantCoreStore(path=path, read_only=True)
+
+            saved = store.save_service_runtime(
+                "runtime",
+                {
+                    "pid": 1234,
+                    "cwd": "/tmp/jarvis-smoke",
+                },
+            )
+
+            state = store.load()
+            self.assertEqual(saved["pid"], 1234)
+            self.assertEqual(state["service_runtime"]["runtime"]["pid"], 1234)
+            self.assertFalse(path.exists())
+            self.assertFalse(store.log_path.exists())
+            self.assertFalse(store.state_log_path.exists())
+
     def test_replays_assistant_core_state_from_state_log_when_snapshot_is_blank(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "assistant_core.json"

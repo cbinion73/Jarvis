@@ -53,7 +53,39 @@ class ArchitectOfficeCliTests(unittest.TestCase):
             self.assertTrue(output.exists())
             text = output.read_text(encoding="utf-8")
             self.assertIn("# Architecture Office Review", text)
+            self.assertIn("## Decision", text)
+            self.assertIn("## Scope Checked", text)
+            self.assertIn("## Canon Sources Checked", text)
+            self.assertIn("## Final Judgment", text)
             self.assertIn("Needs Rework", text)
+
+    def test_python_dash_m_architect_office_cli_review_writes_output(self) -> None:
+        report_path = ROOT / "artifacts" / "build-reports" / "sample-build-office-report.md"
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "review.md"
+            result = subprocess.run(
+                [
+                    "python3",
+                    "-m",
+                    "architect_office.cli",
+                    "review",
+                    "--phase",
+                    "phase-1-companion-spine",
+                    "--report",
+                    str(report_path),
+                    "--output",
+                    str(output),
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(result.returncode, 0)
+            self.assertTrue(output.exists())
+            text = output.read_text(encoding="utf-8")
+            self.assertIn("# Architecture Office Review", text)
 
 
 if __name__ == "__main__":

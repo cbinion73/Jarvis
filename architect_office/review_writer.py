@@ -82,23 +82,35 @@ def _render_review(
     status_summary = ", ".join(git.status_lines) if git.status_lines else "clean"
     allowed_summary = _render_list(scope.allowed_hits) or "none observed"
     forbidden_summary = _render_list(scope.forbidden_hits) or "none observed"
-    combined_warnings = scope.warning_hits + canon.warnings
-    warning_summary = _render_list(combined_warnings) or "none"
-    truth_warning_summary = _render_list(canon.truth_warnings) or "none"
     missing_sections = _render_list(report.missing_sections) or "none"
     tests_line = "reported" if "## D. Tests / Validation" in report.present_sections else "missing"
     runtime_line = "reported" if "## E. Runtime Evidence" in report.present_sections else "missing"
     missing_evidence = "possible evidence gaps noted" if _missing_evidence(report.text) else "none detected procedurally"
+    findings = _findings(git=git, report=report, scope=scope, canon=canon)
+    risks = _risks(git=git, report=report, scope=scope, canon=canon)
+    follow_up = _required_follow_up(
+        decision=decision,
+        next_action=next_action,
+        git=git,
+        report=report,
+        scope=scope,
+        canon=canon,
+    )
+    truth_warning_summary = _render_list(canon.truth_warnings) or "none"
 
     lines = [
         "# Architecture Office Review",
         "",
-        "## A. Decision",
-        decision,
+        "## Decision",
+        f"- decision: {decision}",
+        f"- phase: `{phase}`",
+        f"- next action: {next_action}",
         "",
         "Procedural approval only. Product judgment still belongs to Architecture Office.",
         "",
-        "## B. Process Check",
+        "## Scope Checked",
+        f"- allowed work observed: {allowed_summary}",
+        f"- forbidden work observed: {forbidden_summary}",
         f"- branch: `{git.branch}`",
         f"- expected phase branch: `{phase}`",
         f"- latest commit: `{git.latest_commit}`",
@@ -106,41 +118,114 @@ def _render_review(
         f"- report completeness: {'complete' if report.complete else 'incomplete'}",
         f"- missing report sections: {missing_sections}",
         "",
-        "## C. Phase Scope",
-        f"- allowed work observed: {allowed_summary}",
-        f"- forbidden work observed: {forbidden_summary}",
-        f"- warnings: {warning_summary}",
-        "",
         "## Canon Sources Checked",
     ]
     lines.extend(_render_bullets(canon.sources_checked, fallback="none"))
     lines.extend(["", "## Chris Canon Sources Checked"])
     lines.extend(_render_bullets(canon.chris_sources_checked, fallback="none"))
-    if canon.non_canon_references:
-        lines.extend(["", "## Non-Canon References Detected"])
-        lines.extend(_render_bullets(canon.non_canon_references, fallback="none"))
+    lines.extend(["", "## Non-Canon References Detected"])
+    lines.extend(_render_bullets(canon.non_canon_references, fallback="none"))
     lines.extend(
         [
             "",
-            "## D. Evidence Review",
+            "## Evidence Reviewed",
             f"- tests reported: {tests_line}",
             f"- runtime evidence reported: {runtime_line}",
             f"- missing evidence: {missing_evidence}",
+            f"- report path: `{report.path}`",
             "",
-            "## E. Truth Contract",
-            f"- fake capability risks: {truth_warning_summary}",
-            "- evidence required: pair claims with command output, test output, or file evidence in the report",
+            "## Findings",
+        ]
+    )
+    lines.extend(_render_bullets(findings, fallback="none"))
+    lines.extend(
+        [
             "",
-            "## F. Risks",
-            f"- repo risks: {'uncommitted changes present' if git.has_uncommitted_changes else 'none detected procedurally'}",
-            f"- product risks: {'forbidden scope needs architecture attention' if scope.forbidden_hits else 'none detected procedurally'}",
-            f"- phase risks: {'report is incomplete' if not report.complete else 'no immediate phase-gate gaps detected'}",
+            "## Risks",
+            f"- truth risks: {truth_warning_summary}",
+        ]
+    )
+    lines.extend(_render_bullets(risks, fallback="none"))
+    lines.extend(["", "## Required Follow-up"])
+    lines.extend(_render_bullets(follow_up, fallback=next_action))
+    lines.extend(
+        [
             "",
-            "## G. Next Action",
-            next_action,
+            "## Final Judgment",
+            f"- judgment: {decision}",
+            f"- procedural status: {next_action}",
+            "- Architect Office review is procedural governance output only. It does not approve product direction.",
         ]
     )
     return "\n".join(lines)
+
+
+def _findings(
+    *,
+    git: GitInspection,
+    report: ReportCheckResult,
+    scope: PhaseEvaluation,
+    canon: CanonAssessment,
+) -> list[str]:
+    findings: list[str] = []
+    if not git.branch_matches_phase:
+        findings.append("Branch does not match the requested phase.")
+    if not report.complete:
+        findings.append("Build Office report is incomplete.")
+    findings.extend(canon.warnings)
+    if scope.warning_hits:
+        findings.extend(f"Phase warning term observed: {item}" for item in scope.warning_hits)
+    if not canon.non_canon_references:
+        findings.append("No non-canon binding references were detected.")
+    return _dedupe(findings)
+
+
+def _risks(
+    *,
+    git: GitInspection,
+    report: ReportCheckResult,
+    scope: PhaseEvaluation,
+    canon: CanonAssessment,
+) -> list[str]:
+    risks: list[str] = []
+    if git.has_uncommitted_changes:
+        risks.append("Uncommitted changes are present in the repo.")
+    if scope.forbidden_hits:
+        risks.append("Forbidden scope appears in the reviewed material.")
+    if canon.stale_override_references:
+        risks.append("Deprecated or stale docs appear to be treated as active authority.")
+    if canon.unsupported_capability_claims:
+        risks.append("Capability claims appear without supporting proof in the report text.")
+    if not report.complete:
+        risks.append("Missing report sections weaken procedural review confidence.")
+    return _dedupe(risks)
+
+
+def _required_follow_up(
+    *,
+    decision: str,
+    next_action: str,
+    git: GitInspection,
+    report: ReportCheckResult,
+    scope: PhaseEvaluation,
+    canon: CanonAssessment,
+) -> list[str]:
+    follow_up: list[str] = []
+    if not git.is_clean:
+        follow_up.append("Clean or explicitly account for current git status before approval review.")
+    if not report.complete:
+        follow_up.append("Complete all required Build Office report sections.")
+    if canon.non_canon_references:
+        follow_up.append("Replace non-canon binding references with active canon sources.")
+    if canon.stale_override_references:
+        follow_up.append("Remove stale or deprecated docs as authority when active phase gates apply.")
+    if canon.unsupported_capability_claims:
+        follow_up.append("Pair capability claims with command, test, or runtime proof.")
+    if scope.forbidden_hits:
+        follow_up.append("Narrow the implementation back to the approved phase scope before re-review.")
+    if not follow_up:
+        follow_up.append(next_action)
+    return _dedupe(follow_up)
 
 
 def _render_list(values: list[str]) -> str:

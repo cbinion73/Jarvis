@@ -16903,12 +16903,11 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       const ambientSubtitle = document.getElementById("ambient-subtitle");
       if (ambientSubtitle) ambientSubtitle.textContent = output;
       refreshShellState({{ minIntervalMs: 10000 }}).catch((error) => console.warn("Shell state refresh failed", error));
-      const suggestedPacket = packetFromRequest(request);
-      if (suggestedPacket) {{
-        if (suggestedPacket === "catalyst") {{
-          state.catalystPage = catalystPageFromRequest(request);
+      if (data.requested_packet) {{
+        if (data.requested_packet === "catalyst" && data.requested_catalyst_page) {{
+          state.catalystPage = data.requested_catalyst_page;
         }}
-        openPacket(suggestedPacket);
+        openPacket(data.requested_packet);
       }}
       state.pendingAttachments = [];
       renderAttachmentTray();

@@ -15,9 +15,11 @@ def _now_iso() -> str:
 
 
 class ConversationStore:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, read_only: bool = False) -> None:
         self.root = root
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.read_only = read_only
+        if not self.read_only:
+            self.root.mkdir(parents=True, exist_ok=True)
         self.index_path = self.root / "index.json"
         self._index_cache: list[dict] | None = None
         self._thread_cache: dict[str, dict] = {}
@@ -43,6 +45,8 @@ class ConversationStore:
         return payload
 
     def _save_json(self, path: Path, payload: object) -> None:
+        if self.read_only:
+            return
         atomic_write_json(path, payload)
         append_jsonl(
             self._log_path(path),
@@ -127,12 +131,14 @@ class ConversationStore:
 
     def _thread_record(self, conversation_id: str) -> dict | None:
         normalized = conversation_id.strip()
-        path = self._thread_path(normalized)
-        if not normalized or not path.exists():
+        if not normalized:
             return None
         cached = self._thread_cache.get(normalized)
         if cached is not None:
             return deepcopy(cached)
+        path = self._thread_path(normalized)
+        if not path.exists():
+            return None
         payload = self._load_json(path, {})
         if not isinstance(payload, dict):
             return None

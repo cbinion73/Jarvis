@@ -31,6 +31,7 @@ from .chronicle import ChronicleStore, ChronicleSupport
 from .config import AppConfig
 from .conversation import ConversationStore
 from .content_ops import ContentOpsStore, ContentOpsSupport
+from .companion_spine import run_companion_turn
 from .doctrine import SharedDoctrineStore
 from .executive import ExecutiveSupport
 from .family_calendar import FamilyCalendarSupport
@@ -50,6 +51,7 @@ from .promotion import PromotionEngine
 from .models import HouseholdSnapshot
 from .models import WeatherAdvisory
 from .openai_tasks import JarvisOpenAIClient, OpenAIResult
+from .obsidian_context import ObsidianVaultSupport
 from .orchestrator import JarvisOrchestrator
 from .openviking_context import OpenVikingSupport
 from .perception import PerceptionStore, PerceptionSupport
@@ -176,6 +178,7 @@ class JarvisRuntime:
     perception_support: PerceptionSupport
     memory_support: MemorySupport
     openviking_support: OpenVikingSupport
+    obsidian_support: ObsidianVaultSupport
     catalyst_support: CatalystSupport
     workstream_support: AutonomousWorkstreamSupport
     content_ops: ContentOpsSupport
@@ -253,6 +256,10 @@ class JarvisRuntime:
         perception_support = PerceptionSupport(config, PerceptionStore(data_root / "perception"))
         memory_support = MemorySupport(config, MemoryStore(data_root / "memory"), identity_registry=identity_registry)
         openviking_support = OpenVikingSupport(config)
+        obsidian_support = ObsidianVaultSupport(
+            config.obsidian_vault_path,
+            config.obsidian_index_path,
+        )
         catalyst_support = CatalystSupport(config, openai_client, CatalystStore(data_root / "catalyst"))
         workstream_support = AutonomousWorkstreamSupport(AutonomousWorkstreamStore(data_root / "workstreams"))
         interface_router = InterfaceRouterSupport(InterfaceRouterStore(data_root / "router"))
@@ -270,7 +277,7 @@ class JarvisRuntime:
         )
         agent_registry = AgentRegistry()
         approval_store = ApprovalStore(data_root / "approvals")
-        audit_log = AuditLog(data_root / "logs")
+        audit_log = AuditLog(data_root / "logs", read_only=config.read_only_smoke_mode)
         doctrine_store = SharedDoctrineStore()
         supervision_support = SupervisionSupport(
             SupervisionStore(data_root / "supervision"),
@@ -318,6 +325,7 @@ class JarvisRuntime:
             perception_support=perception_support,
             memory_support=memory_support,
             openviking_support=openviking_support,
+            obsidian_support=obsidian_support,
             catalyst_support=catalyst_support,
             workstream_support=workstream_support,
             content_ops=content_ops,
@@ -336,10 +344,10 @@ class JarvisRuntime:
             memory_curator=MemoryCurator(),
             first_light_store=FirstLightStore(),
             adaptation_store=AdaptationStore(),
-            assistant_core_store=AssistantCoreStore(),
+            assistant_core_store=AssistantCoreStore(read_only=config.read_only_smoke_mode),
             doctrine_store=doctrine_store,
             supervision_support=supervision_support,
-            conversation_store=ConversationStore(data_root / "conversations"),
+            conversation_store=ConversationStore(data_root / "conversations", read_only=config.read_only_smoke_mode),
             service_role=os.getenv("JARVIS_SERVICE_ROLE", "interactive").strip().lower() or "interactive",
             mission_support=mission_support,
             self_improvement_store=SelfImprovementStore(data_root / "system"),
@@ -2317,6 +2325,8 @@ class JarvisRuntime:
         }
 
     def _record_service_runtime_startup(self) -> None:
+        if self.config.read_only_smoke_mode:
+            return
         if self.service_role not in {"runtime", "assistant-autonomy"}:
             return
         self.assistant_core_store.save_service_runtime(
@@ -4951,6 +4961,16 @@ class JarvisRuntime:
                 "ok": bool(openviking.get("ok")),
                 "state": "connected" if openviking.get("ok") else ("configured" if openviking.get("enabled") else "disabled"),
                 "detail": str(openviking.get("detail", "")),
+            }
+        )
+
+        obsidian = self.obsidian_status()
+        items.append(
+            {
+                "name": "obsidian",
+                "ok": bool(obsidian.get("enabled")),
+                "state": "connected" if obsidian.get("enabled") else "disconnected",
+                "detail": str(obsidian.get("detail", "")),
             }
         )
 
@@ -15833,6 +15853,8 @@ class JarvisRuntime:
             thread=user_thread,
         )
         plan = self.plan_request(actor_name, room, request)
+        requested_packet = self._explicit_packet_request(request)
+        requested_catalyst_page = self._explicit_catalyst_page_request(request, requested_packet)
         if not plan.allowed:
             result = OpenAIResult(
                 provider="policy",
@@ -15847,11 +15869,20 @@ class JarvisRuntime:
                 output_text=result.output_text,
             )
         else:
-            mission_result = self._try_handle_mission_creation(actor_name, room, request)
-            if mission_result is not None:
-                result = mission_result
+            intercepted = self._try_handle_conversation_intercepts(actor_name, room, request)
+            if intercepted is not None:
+                result = intercepted
+                if result.provider == "mission-engine" and not requested_packet:
+                    requested_packet = "mission-control"
             else:
-                result = run_response_graph(self, plan, continuity_context=continuity_context)
+                result = run_companion_turn(
+                    self,
+                    actor,
+                    room,
+                    request,
+                    plan=plan,
+                    continuity_context=continuity_context,
+                )
             self.audit_log.log_response(
                 plan,
                 provider=result.provider,
@@ -15930,7 +15961,110 @@ class JarvisRuntime:
             "learned_memory": learned_memory,
             "catalyst_capture": catalyst_capture or {},
             "constitutional_citation": constitutional_citation,
+            "requested_packet": requested_packet,
+            "requested_catalyst_page": requested_catalyst_page,
         }
+
+    def _try_handle_conversation_intercepts(
+        self,
+        actor_name: str,
+        room: str,
+        request: str,
+    ) -> OpenAIResult | None:
+        if self._should_allow_conversation_mission_intercept(request):
+            mission_result = self._try_handle_mission_creation(actor_name, room, request)
+            if mission_result is not None:
+                return mission_result
+        reminder_result = self._try_handle_reminder(request)
+        if reminder_result is not None:
+            return reminder_result
+        task_result = self._try_handle_task_creation(request)
+        if task_result is not None:
+            return task_result
+        return self._try_handle_calendar_event(request)
+
+    def _should_allow_conversation_mission_intercept(self, request: str) -> bool:
+        lowered = str(request or "").strip().lower()
+        if not lowered:
+            return False
+        explicit_patterns = (
+            "create a mission",
+            "start a mission",
+            "track this",
+            "turn this into a mission",
+            "add this to mission control",
+            "build a plan for",
+            "create a plan for",
+            "plan for ",
+            "make this a goal",
+            "make it a goal",
+            "turn this into a goal",
+            "open mission control",
+        )
+        return any(pattern in lowered for pattern in explicit_patterns)
+
+    def _explicit_packet_request(self, request: str) -> str:
+        lowered = str(request or "").strip().lower()
+        if not lowered:
+            return ""
+        openers = (
+            "open ",
+            "show ",
+            "take me to ",
+            "go to ",
+            "bring up ",
+            "pull up ",
+        )
+        if not any(lowered.startswith(prefix) for prefix in openers):
+            return ""
+        packet_map = (
+            ("mission-control", ("mission control", "missions", "mission board")),
+            ("dashboard", ("dashboard", "full report")),
+            ("wealth", ("wealth", "fisk")),
+            ("finance-review", ("finance review", "family finance", "budget")),
+            ("today", ("today board", "today")),
+            ("briefing", ("briefing", "brief")),
+            ("storm", ("weather", "storm")),
+            ("home", ("home", "garage", "freezer")),
+            ("family", ("family", "dinner", "grocery")),
+            ("security", ("security", "door", "arrival")),
+            ("vision", ("vision", "camera")),
+            ("chronicle", ("chronicle", "scripture", "prayer")),
+            ("model-forge", ("model forge", "forge viewer", "forge")),
+            ("workshop", ("workshop", "printer", "prototype")),
+            ("catalyst", ("catalyst", "email", "meetings", "projects")),
+            ("tasks", ("tasks", "open loops", "task list")),
+            ("approvals", ("approvals", "approval queue")),
+            ("settings", ("settings", "accounts")),
+            ("brains", ("brains", "brain mesh")),
+            ("agents", ("agents",)),
+        )
+        for packet_id, phrases in packet_map:
+            if any(phrase in lowered for phrase in phrases):
+                return packet_id
+        return ""
+
+    def _explicit_catalyst_page_request(self, request: str, packet: str) -> str:
+        if packet != "catalyst":
+            return ""
+        lowered = str(request or "").strip().lower()
+        if "calendar" in lowered:
+            return "calendar"
+        if "meeting" in lowered:
+            return "meetings"
+        if "project" in lowered:
+            return "projects"
+        if "task" in lowered:
+            return "tasks"
+        if any(term in lowered for term in ("email", "inbox", "mail")):
+            return "email"
+        if "contact" in lowered:
+            return "contacts"
+        if "report" in lowered:
+            return "reports"
+        if any(term in lowered for term in ("setting", "account")):
+            return "settings"
+        return "home"
 
     def respond(self, actor_name: str, room: str, request: str) -> OpenAIResult:
         plan = self.plan_request(actor_name, room, request)
@@ -19663,6 +19797,9 @@ class JarvisRuntime:
 
     def openviking_status(self) -> dict:
         return self.openviking_support.status()
+
+    def obsidian_status(self) -> dict:
+        return self.obsidian_support.status()
 
     def sync_memory_to_openviking(self) -> dict:
         return self.openviking_support.sync_memory_entries(

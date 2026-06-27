@@ -50,16 +50,17 @@ class ArchitectOfficeReportCheckerTests(unittest.TestCase):
             canon=canon,
         )
 
-        self.assertIn("## A. Decision", review.markdown)
-        self.assertIn("## B. Process Check", review.markdown)
-        self.assertIn("## C. Phase Scope", review.markdown)
+        self.assertIn("## Decision", review.markdown)
+        self.assertIn("## Scope Checked", review.markdown)
         self.assertIn("## Canon Sources Checked", review.markdown)
         self.assertIn("## Chris Canon Sources Checked", review.markdown)
         self.assertIn("docs/CHRIS-CONTEXT-CANON.md", review.markdown)
-        self.assertIn("## D. Evidence Review", review.markdown)
-        self.assertIn("## E. Truth Contract", review.markdown)
-        self.assertIn("## F. Risks", review.markdown)
-        self.assertIn("## G. Next Action", review.markdown)
+        self.assertIn("## Non-Canon References Detected", review.markdown)
+        self.assertIn("## Evidence Reviewed", review.markdown)
+        self.assertIn("## Findings", review.markdown)
+        self.assertIn("## Risks", review.markdown)
+        self.assertIn("## Required Follow-up", review.markdown)
+        self.assertIn("## Final Judgment", review.markdown)
 
     def test_missing_chris_context_creates_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -108,6 +109,41 @@ class ArchitectOfficeReportCheckerTests(unittest.TestCase):
             )
 
         self.assertIn("docs/archive/old-roadmap.md", canon.non_canon_references)
+
+    def test_stale_override_reference_is_flagged(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            docs = root / "docs" / "archive"
+            docs.mkdir(parents=True)
+            (root / "docs" / "CHRIS-CONTEXT-CANON.md").write_text("# Chris Context Canon\n", encoding="utf-8")
+            (root / "docs" / "CANON-REGISTRY.md").write_text(
+                "\n".join(
+                    [
+                        "# Canon Registry",
+                        "- `docs/CHRIS-CONTEXT-CANON.md` [canon] context",
+                        "- `docs/archive/stale.md` [deprecated] stale roadmap",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            registry = load_canon_registry(root)
+            canon = assess_canon_usage(
+                registry,
+                "The authoritative stale.md source overrides the phase gates.",
+            )
+
+        self.assertIn("docs/archive/stale.md", canon.stale_override_references)
+        self.assertIn("Stale docs appear to override active phase gates.", canon.warnings)
+
+    def test_unsupported_capability_claim_without_proof_is_flagged(self) -> None:
+        registry = load_canon_registry(Path(__file__).resolve().parents[1])
+        canon = assess_canon_usage(
+            registry,
+            "I searched, I found, and I opened the required runtime surfaces.",
+        )
+        self.assertTrue(canon.unsupported_capability_claims)
+        self.assertIn("Build Office makes capability claims without proof.", canon.warnings)
 
 
 if __name__ == "__main__":

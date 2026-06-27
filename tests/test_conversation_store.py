@@ -8,6 +8,25 @@ from jarvis.conversation import ConversationStore
 
 
 class ConversationStoreTests(unittest.TestCase):
+    def test_read_only_store_keeps_conversation_in_memory_without_writing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            store = ConversationStore(root, read_only=True)
+            created = store.create("Chris", "office")
+            conversation_id = created["conversation_id"]
+
+            updated = store.append_turn(
+                conversation_id,
+                role="user",
+                text="Hey Jarvis",
+                actor="Chris",
+                room="office",
+            )
+
+            self.assertIsNotNone(updated)
+            self.assertEqual(store.list_recent()[0]["conversation_id"], conversation_id)
+            self.assertFalse(any(root.iterdir()))
+
     def test_replays_index_from_state_log_when_snapshot_is_blank(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

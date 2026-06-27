@@ -943,6 +943,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         openviking_enabled = bool(getattr(runtime.openviking_support, "enabled", False))
         openviking_base_url = str(getattr(runtime.openviking_support, "base_url", "")).strip() if openviking_enabled else ""
         second_brain_enabled = bool(getattr(runtime.config, "second_brain_enabled", False))
+        obsidian = runtime.obsidian_status()
         return {
             "ok": True,
             "python": "3.12",
@@ -967,6 +968,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             "brain_graph": {
                 "probe": "skipped",
                 "second_brain_enabled": second_brain_enabled,
+            },
+            "obsidian": {
+                "enabled": bool(obsidian.get("enabled")),
+                "vault_path": str(obsidian.get("vault_path", "")),
+                "index_path": str(obsidian.get("index_path", "")),
+                "markdown_file_count": int(obsidian.get("markdown_file_count", 0) or 0),
+                "index_exists": bool(obsidian.get("index_exists")),
+                "probe": "local",
             },
         }
 
@@ -8776,6 +8785,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/api/openviking/status")
     async def api_openviking_status() -> JSONResponse:
         return _json(runtime.openviking_status())
+
+    @app.get("/api/obsidian/status")
+    async def api_obsidian_status() -> JSONResponse:
+        return _json(runtime.obsidian_status())
 
     @app.get("/api/summary")
     async def api_summary() -> JSONResponse:

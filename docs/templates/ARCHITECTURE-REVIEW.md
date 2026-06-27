@@ -1,41 +1,23 @@
 # Architecture Office Review
 
-## A. Decision
+## Decision
 
-Approve / Reject / Partial Approve / Needs Rework
+## Scope Checked
 
-Procedural approval only. Product judgment still belongs to Architecture Office.
+## Execution Target Checked
 
-## B. Process Check
+## Canon Sources Checked
 
-- branch:
-- commit:
-- git status:
-- report completeness:
+## Chris Canon Sources Checked
 
-## C. Phase Scope
+## Non-Canon References Detected
 
-- allowed work observed:
-- forbidden work observed:
-- warnings:
+## Evidence Reviewed
 
-## D. Evidence Review
+## Findings
 
-- tests reported:
-- runtime evidence reported:
-- missing evidence:
+## Risks
 
-## E. Truth Contract
+## Required Follow-up
 
-- fake capability risks:
-- evidence required:
-
-## F. Risks
-
-- repo risks:
-- product risks:
-- phase risks:
-
-## G. Next Action
-
-Proceed / revise / stop / new prompt required
+## Final Judgment

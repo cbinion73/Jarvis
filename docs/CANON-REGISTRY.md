@@ -4,12 +4,15 @@ Architect Office should not treat every repo document as equal. This registry de
 
 ## Canon
 
-- `docs/CHRIS-INTENT-CANON.md` [canon] NEEDS AUTHORITATIVE CANON DOC
+- `docs/CHRIS-INTENT-CANON.md` [canon] highest-priority product intent source for Architect Office review
 - `docs/CHRIS-CONTEXT-CANON.md` [canon] Chris context, taste, life domains, and acceptance posture
 - `docs/PHASE-GATES.md` [canon] active phase constraints and required evidence
 - `docs/ARCHITECTURE-OFFICE-PROTOCOL.md` [canon] Architecture Office governance protocol
 - `docs/BUILD-OFFICE-PROTOCOL.md` [canon] Build Office obligations and truth posture
+- `docs/QA-TEAM-PROTOCOL.md` [canon] QA verification role, evidence bar, and separation from implementation
+- `docs/JARVIS-MASTER-BUILD-PLAN.md` [canon] Architect Office epics, acceptance criteria, and Definition of Done
 - `docs/JARVIS-V1-EXECUTION-PLAN.md` [canon] current phase plan until replaced by a more specific approved phase plan
+- `docs/JARVIS-PRESERVATION-MAP.md` [canon] protect, preserve, demote, and consolidate based on what is already real
 - `docs/JARVIS-INTERACTION-BIBLE-v1.md` [canon] friend-with-tools voice standard and anti-drift interaction guidance
 - `docs/JARVIS-RESCOPE-ENTRYPOINT.md` [canon] active read order and archive boundary
 

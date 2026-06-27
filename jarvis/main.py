@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -245,6 +246,11 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser = subparsers.add_parser("serve", help="Run the JARVIS local dashboard")
     serve_parser.add_argument("--host", default="0.0.0.0")
     serve_parser.add_argument("--port", type=int, default=8787)
+    serve_parser.add_argument(
+        "--read-only-smoke",
+        action="store_true",
+        help="Launch the expected local runtime path in explicit no-persist smoke mode for safe live validation.",
+    )
 
     briefing = subparsers.add_parser("briefing", help="Generate a morning briefing")
     briefing.add_argument("--actor", default="Chris")
@@ -831,8 +837,12 @@ def _ensure_ollama_running(config: AppConfig) -> None:
     _log.warning("Ollama did not become ready within 12 s — gateway will fall back to OpenAI")
 
 
-def command_serve(runtime: JarvisRuntime, host: str, port: int) -> int:
+def command_serve(runtime: JarvisRuntime, host: str, port: int, *, read_only_smoke: bool = False) -> int:
     from .service import serve
+
+    if read_only_smoke:
+        serve(runtime, host, port)
+        return 0
 
     # Initialise Being Known memory layer before the HTTP server
     if _KNOWN_FACTS_IMPORT_OK:
@@ -2119,6 +2129,9 @@ def main() -> int:
     if args.command == "agent-registry-contract":
         return command_agent_registry_contract()
 
+    if args.command == "serve" and getattr(args, "read_only_smoke", False):
+        os.environ["JARVIS_READ_ONLY_SMOKE_MODE"] = "1"
+
     from .runtime import JarvisRuntime
 
     runtime = JarvisRuntime.from_env()
@@ -2128,7 +2141,7 @@ def main() -> int:
     if args.command == "fresh-start":
         return command_fresh_start(runtime, execute=args.execute, no_backup=args.no_backup)
     if args.command == "serve":
-        return command_serve(runtime, args.host, args.port)
+        return command_serve(runtime, args.host, args.port, read_only_smoke=args.read_only_smoke)
     if args.command == "status":
         return command_status(runtime)
     if args.command == "runtime-posture":

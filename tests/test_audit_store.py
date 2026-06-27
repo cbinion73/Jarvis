@@ -8,6 +8,24 @@ from jarvis.audit import AuditLog, ProgressFocusStore, SeamTrackerStore
 
 
 class AuditLogStoreTests(unittest.TestCase):
+    def test_read_only_audit_log_keeps_actions_in_memory_without_writing_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "logs"
+            log = AuditLog(root, read_only=True)
+
+            log.log_event(
+                "event",
+                {
+                    "actor": "chris",
+                    "detail": "Read-only smoke response recorded in memory",
+                },
+            )
+
+            recent = log.list_recent()
+            self.assertEqual(len(recent), 1)
+            self.assertEqual(recent[0]["detail"], "Read-only smoke response recorded in memory")
+            self.assertFalse(root.exists())
+
     def test_replays_actions_from_state_log_when_snapshot_is_blank(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             log = AuditLog(Path(tmp) / "logs")

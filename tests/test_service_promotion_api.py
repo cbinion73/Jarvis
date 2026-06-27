@@ -489,7 +489,7 @@ class MainApprovalInitializationTests(unittest.TestCase):
             self._patch(main_module, name, value)
 
         self._patch(main_module, "_init_approvals", fake_init_approvals)
-        self._patch(main_module, "_ensure_ollama_running", lambda: None)
+        self._patch(main_module, "_ensure_ollama_running", lambda *args, **kwargs: None)
         self._patch(service_module, "serve", fake_serve)
 
         runtime = SimpleNamespace(
@@ -504,10 +504,67 @@ class MainApprovalInitializationTests(unittest.TestCase):
         self.assertEqual(calls, [("supervision-support", "sandbox-router")])
         self.assertEqual(served, [(runtime, "127.0.0.1", 8787)])
 
+    def test_command_serve_read_only_smoke_skips_startup_initializers(self) -> None:
+        called: list[str] = []
+        served: list[tuple[object, str, int]] = []
+
+        def _mark(name: str):
+            def inner(*args, **kwargs):
+                called.append(name)
+                return None
+            return inner
+
+        def fake_serve(runtime, host, port):
+            served.append((runtime, host, port))
+
+        flag_overrides = {
+            "_KNOWN_FACTS_IMPORT_OK": True,
+            "_CONNECTORS_IMPORT_OK": True,
+            "_APPROVALS_IMPORT_OK": True,
+            "_LLM_GATEWAY_IMPORT_OK": True,
+            "_SCHEDULER_IMPORT_OK": True,
+            "_CHRONICLE_BRIDGE_IMPORT_OK": True,
+            "_WORK_INTELLIGENCE_IMPORT_OK": True,
+            "_VOICE_PIPELINE_IMPORT_OK": False,
+            "_FAMILY_PROFILES_IMPORT_OK": False,
+            "_PUBLISHING_IMPORT_OK": False,
+            "_GHOSTWRITR_BRIDGE_IMPORT_OK": False,
+            "_SOCIAL_ENGINE_IMPORT_OK": False,
+            "_WORKSHOP_COPILOT_IMPORT_OK": False,
+            "_FINANCIAL_INTELLIGENCE_IMPORT_OK": False,
+            "_GROWTH_INTELLIGENCE_IMPORT_OK": False,
+            "_HOME_INTELLIGENCE_IMPORT_OK": False,
+        }
+        for name, value in flag_overrides.items():
+            self._patch(main_module, name, value)
+
+        self._patch(main_module, "_init_memory", _mark("memory"))
+        self._patch(main_module, "_init_connectors", _mark("connectors"))
+        self._patch(main_module, "_init_approvals", _mark("approvals"))
+        self._patch(main_module, "_ensure_ollama_running", _mark("ollama"))
+        self._patch(main_module, "_init_gateway", _mark("gateway"))
+        self._patch(main_module, "_init_scheduler", _mark("scheduler"))
+        self._patch(main_module, "_init_chronicle_bridge", _mark("chronicle"))
+        self._patch(main_module, "_init_catalyst_db", _mark("catalyst-db"))
+        self._patch(main_module, "_init_work_intelligence", _mark("work-intelligence"))
+        self._patch(service_module, "serve", fake_serve)
+
+        runtime = SimpleNamespace(
+            config=SimpleNamespace(read_only_smoke_mode=True),
+            supervision_support="supervision-support",
+            execute_sandbox_job="sandbox-router",
+        )
+
+        result = main_module.command_serve(runtime, "127.0.0.1", 8787, read_only_smoke=True)
+
+        self.assertEqual(result, 0)
+        self.assertEqual(called, [])
+        self.assertEqual(served, [(runtime, "127.0.0.1", 8787)])
+
     def test_python_module_help_invokes_cli_entrypoint(self) -> None:
         result = subprocess.run(
             [sys.executable, "-m", "jarvis.main", "--help"],
-            cwd="/Users/chris/Desktop/JARVIS",
+            cwd="/Users/chris/Desktop/CODE/JARVIS",
             capture_output=True,
             text=True,
         )

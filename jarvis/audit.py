@@ -12,13 +12,25 @@ from .state_log_utils import read_jsonl_tail
 
 
 class AuditLog:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, read_only: bool = False) -> None:
         self.root = root
-        self.root.mkdir(parents=True, exist_ok=True)
+        self.read_only = read_only
+        if not self.read_only:
+            self.root.mkdir(parents=True, exist_ok=True)
         self.actions_path = self.root / "actions.jsonl"
         self.actions_state_log_path = self.root / "actions_state_log.jsonl"
+        self._session_actions: list[dict] = []
 
     def _load_actions(self) -> list[dict]:
+        if self.read_only:
+            records = self._load_actions_from_state_log() if not self.actions_path.exists() else []
+            if self.actions_path.exists():
+                try:
+                    records = read_jsonl_tail(self.actions_path)
+                except (OSError, json.JSONDecodeError):
+                    records = self._load_actions_from_state_log()
+            normalized = filter_records([dict(item) for item in records if isinstance(item, dict)])
+            return [*normalized, *[dict(item) for item in self._session_actions]]
         if not self.actions_path.exists():
             return self._load_actions_from_state_log()
         try:
@@ -41,6 +53,9 @@ class AuditLog:
         return latest
 
     def _append_action(self, entry: dict) -> None:
+        if self.read_only:
+            self._session_actions.append(dict(entry))
+            return
         records = self._load_actions()
         records.append(dict(entry))
         atomic_write_jsonl(self.actions_path, records)

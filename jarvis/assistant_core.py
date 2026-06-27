@@ -251,8 +251,10 @@ def _normalize_notification_status(value: str) -> str:
 @dataclass(slots=True)
 class AssistantCoreStore:
     path: Path = ASSISTANT_CORE_PATH
+    read_only: bool = False
     log_path: Path = field(init=False)
     state_log_path: Path = field(init=False)
+    _session_state: dict[str, Any] | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self.log_path = self.path.with_name(f"{self.path.stem}_log.jsonl")
@@ -273,6 +275,8 @@ class AssistantCoreStore:
             "service_runtime_history": [],
             "cadence_history": [],
         }
+        if self.read_only and self._session_state is not None:
+            return self._coerce(json.loads(json.dumps(self._session_state)))
         if not self.path.exists():
             return self._load_from_state_log(default)
         try:
@@ -325,6 +329,9 @@ class AssistantCoreStore:
         return payload
 
     def save(self, payload: dict[str, Any]) -> None:
+        if self.read_only:
+            self._session_state = self._coerce(json.loads(json.dumps(payload)))
+            return
         self.path.parent.mkdir(parents=True, exist_ok=True)
         saved_at = _now_utc().isoformat()
         atomic_write_json(self.path, payload)

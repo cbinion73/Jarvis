@@ -26,7 +26,12 @@ class JarvisOpenAIClient:
         self.config = config
         self.second_brain = OllamaBrainClient(config)
 
-    def respond(self, plan: RequestPlan, supplemental_context: str = "") -> OpenAIResult:
+    def respond(
+        self,
+        plan: RequestPlan,
+        supplemental_context: str = "",
+        system_prompt_override: str = "",
+    ) -> OpenAIResult:
         # ── Free browser-based web search — inject results before LLM call ──
         # Replaces paid OpenAI web_search tool for most queries.
         if self._should_enable_web_search(plan) and not supplemental_context:
@@ -44,7 +49,11 @@ class JarvisOpenAIClient:
         if self._should_use_second_brain_for_plan(plan):
             try:
                 result = self.second_brain.chat(
-                    system_prompt=self._system_prompt_with_context(plan, supplemental_context),
+                    system_prompt=self._system_prompt_with_context(
+                        plan,
+                        supplemental_context,
+                        system_prompt_override=system_prompt_override,
+                    ),
                     user_prompt=plan.request,
                     model=plan.model,
                 )
@@ -61,7 +70,11 @@ class JarvisOpenAIClient:
             from openai import OpenAI
         except ModuleNotFoundError:
             try:
-                return self._respond_via_http(plan, supplemental_context)
+                return self._respond_via_http(
+                    plan,
+                    supplemental_context,
+                    system_prompt_override=system_prompt_override,
+                )
             except Exception as exc:
                 return OpenAIResult(provider="fallback", model="fallback", output_text=self._manual_response_fallback(plan, exc))
         except Exception as exc:
@@ -69,7 +82,13 @@ class JarvisOpenAIClient:
 
         try:
             client = OpenAI(api_key=self.config.openai_api_key)
-            response = client.responses.create(**self._build_response_payload(plan, supplemental_context))
+            response = client.responses.create(
+                **self._build_response_payload(
+                    plan,
+                    supplemental_context,
+                    system_prompt_override=system_prompt_override,
+                )
+            )
             return self._sdk_result_to_output(plan.model, response)
         except Exception as exc:
             return OpenAIResult(provider="fallback", model="fallback", output_text=self._manual_response_fallback(plan, exc))
@@ -193,8 +212,14 @@ class JarvisOpenAIClient:
         except Exception as exc:
             return self._manual_image_fallback(exc)
 
-    def _system_prompt_with_context(self, plan: RequestPlan, supplemental_context: str = "") -> str:
-        base = build_system_prompt(plan)
+    def _system_prompt_with_context(
+        self,
+        plan: RequestPlan,
+        supplemental_context: str = "",
+        *,
+        system_prompt_override: str = "",
+    ) -> str:
+        base = system_prompt_override.strip() or build_system_prompt(plan)
         if not supplemental_context.strip():
             return base
         return (
@@ -205,11 +230,21 @@ class JarvisOpenAIClient:
             f"{supplemental_context.strip()}"
         )
 
-    def _build_input(self, plan: RequestPlan, supplemental_context: str = "") -> list[dict]:
+    def _build_input(
+        self,
+        plan: RequestPlan,
+        supplemental_context: str = "",
+        *,
+        system_prompt_override: str = "",
+    ) -> list[dict]:
         return [
             {
                 "role": "system",
-                "content": self._system_prompt_with_context(plan, supplemental_context),
+                "content": self._system_prompt_with_context(
+                    plan,
+                    supplemental_context,
+                    system_prompt_override=system_prompt_override,
+                ),
             },
             {
                 "role": "user",
@@ -217,8 +252,20 @@ class JarvisOpenAIClient:
             },
         ]
 
-    def _respond_via_http(self, plan: RequestPlan, supplemental_context: str = "") -> OpenAIResult:
-        payload = json.dumps(self._build_response_payload(plan, supplemental_context)).encode("utf-8")
+    def _respond_via_http(
+        self,
+        plan: RequestPlan,
+        supplemental_context: str = "",
+        *,
+        system_prompt_override: str = "",
+    ) -> OpenAIResult:
+        payload = json.dumps(
+            self._build_response_payload(
+                plan,
+                supplemental_context,
+                system_prompt_override=system_prompt_override,
+            )
+        ).encode("utf-8")
         req = request.Request(
             "https://api.openai.com/v1/responses",
             data=payload,
@@ -254,14 +301,24 @@ class JarvisOpenAIClient:
         )
         return json.loads(result.stdout)
 
-    def _build_response_payload(self, plan: RequestPlan, supplemental_context: str = "") -> dict:
+    def _build_response_payload(
+        self,
+        plan: RequestPlan,
+        supplemental_context: str = "",
+        *,
+        system_prompt_override: str = "",
+    ) -> dict:
         model = plan.model
         if self._should_enable_web_search(plan) and plan.preferred_provider == "openai" and model == self.config.openai_router_model:
             model = self.config.openai_text_model
         payload = {
             "model": model,
             "max_output_tokens": 500,
-            "input": self._build_input(plan, supplemental_context),
+            "input": self._build_input(
+                plan,
+                supplemental_context,
+                system_prompt_override=system_prompt_override,
+            ),
         }
         tool_payload = self._web_search_payload(plan)
         if tool_payload:

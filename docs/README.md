@@ -12,14 +12,19 @@ Everything else was archived so the product can be viewed fresh.
 
 ## Active Canon
 
+- [CHRIS-INTENT-CANON.md](/Users/chris/Desktop/JARVIS/docs/CHRIS-INTENT-CANON.md)
+- [CHRIS-CONTEXT-CANON.md](/Users/chris/Desktop/JARVIS/docs/CHRIS-CONTEXT-CANON.md)
 - [JARVIS-RESCOPE-ENTRYPOINT.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-RESCOPE-ENTRYPOINT.md)
 - [JARVIS-LIFE-OPERATING-OFFICER.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-LIFE-OPERATING-OFFICER.md)
 - [JARVIS-SESSION-STATE.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-SESSION-STATE.md)
 - [jarvis-canonical-operating-model.md](/Users/chris/Desktop/JARVIS/docs/jarvis-canonical-operating-model.md)
 - [JARVIS-CIVILIZATION-SCALE-MASTER-ROADMAP.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-CIVILIZATION-SCALE-MASTER-ROADMAP.md)
 - [JARVIS-INTERACTION-BIBLE-v1.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-INTERACTION-BIBLE-v1.md)
+- [JARVIS-MASTER-BUILD-PLAN.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-MASTER-BUILD-PLAN.md)
 - [JARVIS-CANONICAL-MOMENTS.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-CANONICAL-MOMENTS.md)
 - [JARVIS-V1-EXECUTION-PLAN.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-V1-EXECUTION-PLAN.md)
+- [JARVIS-PRESERVATION-MAP.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-PRESERVATION-MAP.md)
+- [QA-TEAM-PROTOCOL.md](/Users/chris/Desktop/JARVIS/docs/QA-TEAM-PROTOCOL.md)
 - [JARVIS-V1-BUILD-BACKLOG.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-V1-BUILD-BACKLOG.md)
 - [JARVIS-V1-MISSION-CONTRACT.md](/Users/chris/Desktop/JARVIS/docs/JARVIS-V1-MISSION-CONTRACT.md)
 

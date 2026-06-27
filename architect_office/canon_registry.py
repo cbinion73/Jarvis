@@ -46,6 +46,8 @@ class CanonAssessment:
     warnings: list[str]
     truth_warnings: list[str]
     non_canon_references: list[str]
+    stale_override_references: list[str]
+    unsupported_capability_claims: bool
 
 
 def load_canon_registry(repo_root: str | Path) -> CanonRegistry:
@@ -71,8 +73,7 @@ def load_canon_registry(repo_root: str | Path) -> CanonRegistry:
         path = stripped.split("`", 2)[1]
         rest = stripped.split("`", 2)[2].strip()
         level = _parse_level(rest)
-        note = rest
-        entries.append(CanonEntry(level=level, path=path, note=note))
+        entries.append(CanonEntry(level=level, path=path, note=rest))
 
     canon_paths = [entry.path for entry in entries if entry.level == "canon"]
     reference_paths = [entry.path for entry in entries if entry.level == "reference"]
@@ -80,6 +81,7 @@ def load_canon_registry(repo_root: str | Path) -> CanonRegistry:
     missing_required_paths = [path for path in CHRIS_CANON_PATHS if not (root / path).exists()]
     warnings: list[str] = []
     if missing_required_paths:
+        warnings.append("Chris canon is missing.")
         warnings.append("Cannot fully evaluate product fit because Chris canon is missing.")
     return CanonRegistry(
         registry_path=registry_path,
@@ -98,16 +100,24 @@ def assess_canon_usage(registry: CanonRegistry, report_text: str) -> CanonAssess
     chris_sources_checked = list(CHRIS_CANON_PATHS)
     warnings = list(registry.warnings)
     non_canon_references = _detect_non_canon_binding_references(registry, report_text)
+    stale_override_references = _detect_stale_override_references(registry, report_text)
     truth_warnings = _detect_product_drift_warnings(report_text)
+    unsupported_capability_claims = _has_unsupported_capability_claims(report_text, truth_warnings)
     warnings.extend(truth_warnings)
     if non_canon_references:
-        warnings.append("Build Office report references non-canon documents as if they are binding.")
+        warnings.append("Non-canon docs are referenced as binding.")
+    if stale_override_references:
+        warnings.append("Stale docs appear to override active phase gates.")
+    if unsupported_capability_claims:
+        warnings.append("Build Office makes capability claims without proof.")
     return CanonAssessment(
         sources_checked=sources_checked,
         chris_sources_checked=chris_sources_checked,
         warnings=_dedupe(warnings),
         truth_warnings=_dedupe(truth_warnings),
         non_canon_references=non_canon_references,
+        stale_override_references=stale_override_references,
+        unsupported_capability_claims=unsupported_capability_claims,
     )
 
 
@@ -118,8 +128,7 @@ def _ordered_sources_checked(registry: CanonRegistry) -> list[str]:
         "docs/ARCHITECTURE-OFFICE-PROTOCOL.md",
         "docs/BUILD-OFFICE-PROTOCOL.md",
     ]
-    sources = [path for path in preferred if path == "docs/CANON-REGISTRY.md" or path in registry.canon_paths]
-    return sources
+    return [path for path in preferred if path == "docs/CANON-REGISTRY.md" or path in registry.canon_paths]
 
 
 def _detect_non_canon_binding_references(registry: CanonRegistry, report_text: str) -> list[str]:
@@ -128,6 +137,17 @@ def _detect_non_canon_binding_references(registry: CanonRegistry, report_text: s
     for path in registry.reference_paths + registry.deprecated_paths:
         name = Path(path).name.lower()
         if name in lowered and any(hint in lowered for hint in BINDING_HINTS):
+            hits.append(path)
+    return _dedupe(hits)
+
+
+def _detect_stale_override_references(registry: CanonRegistry, report_text: str) -> list[str]:
+    lowered = report_text.lower()
+    hits: list[str] = []
+    override_hints = BINDING_HINTS + ("override", "phase gate", "phase gates")
+    for path in registry.deprecated_paths:
+        name = Path(path).name.lower()
+        if name in lowered and any(hint in lowered for hint in override_hints):
             hits.append(path)
     return _dedupe(hits)
 
@@ -149,6 +169,22 @@ def _detect_product_drift_warnings(report_text: str) -> list[str]:
         if any(term in lowered for term in terms):
             warnings.append(warning)
     return warnings
+
+
+def _has_unsupported_capability_claims(report_text: str, truth_warnings: list[str]) -> bool:
+    lowered = report_text.lower()
+    if "fake capability language requires evidence." not in truth_warnings:
+        return False
+    proof_markers = (
+        "command:",
+        "result:",
+        "evidence paired: yes",
+        "tests reported:",
+        "runtime evidence reported:",
+        "exact commands",
+        "output:",
+    )
+    return not any(marker in lowered for marker in proof_markers)
 
 
 def _parse_level(rest: str) -> str:
