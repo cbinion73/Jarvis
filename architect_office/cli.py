@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from .canon_registry import assess_canon_usage, load_canon_registry
 from .git_inspector import inspect_git_state
 from .phase_rules import evaluate_phase_scope
 from .report_checker import check_report
@@ -31,7 +32,9 @@ def command_review(args: argparse.Namespace) -> int:
     git = inspect_git_state(args.repo_root, expected_branch=args.phase)
     report = check_report(args.report)
     scope = evaluate_phase_scope(args.phase, [report.text, "\n".join(git.status_lines)])
-    review = build_review(phase=args.phase, git=git, report=report, scope=scope)
+    registry = load_canon_registry(args.repo_root)
+    canon = assess_canon_usage(registry, report.text)
+    review = build_review(phase=args.phase, git=git, report=report, scope=scope, canon=canon)
     print(review.markdown)
     if args.output:
         output_path = Path(args.output)
