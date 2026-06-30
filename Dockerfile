@@ -17,9 +17,11 @@ RUN pip install playwright && playwright install chromium --with-deps
 # Create server-safe requirements (exclude audio/desktop packages)
 COPY requirements.txt requirements_full.txt
 RUN grep -v -E "pyaudio|sounddevice|pyttsx3|cadquery" requirements_full.txt > requirements.txt
+COPY requirements_crewai.txt requirements_crewai.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements_crewai.txt
 
 # Copy source
 COPY . .

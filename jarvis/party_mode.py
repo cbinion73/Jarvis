@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .crewai_bridge import CrewAIPartyModeBridge, crewai_runtime_available
 from .persistence import append_jsonl, atomic_write_jsonl
 
 logger = logging.getLogger("jarvis.party_mode")
@@ -67,8 +68,9 @@ class PartyModeController:
     Agents dream new ideas, then build fully-formed dossiers.
     """
 
-    def __init__(self, runtime: Any = None) -> None:
+    def __init__(self, runtime: Any = None, *, crewai_bridge: CrewAIPartyModeBridge | None = None) -> None:
         self.runtime = runtime
+        self._crewai_bridge = crewai_bridge
         self._session: PartySession | None = None
         self._stop_flag = False
         self._lock = threading.Lock()
@@ -76,6 +78,96 @@ class PartyModeController:
         self._sessions_state_log_path = self._sessions_path.with_name("party_sessions_state_log.jsonl")
         self._sessions_path.parent.mkdir(parents=True, exist_ok=True)
         self._manual_trigger = False
+
+    def _get_crewai_bridge(self) -> CrewAIPartyModeBridge | None:
+        if self._crewai_bridge is not None:
+            return self._crewai_bridge
+        if not crewai_runtime_available():
+            return None
+        try:
+            self._crewai_bridge = CrewAIPartyModeBridge()
+        except Exception:
+            return None
+        return self._crewai_bridge
+
+    def _generate_dream_ideas(self, gateway: Any, needed: int, log_fn: Any) -> list[dict[str, str]]:
+        bridge = self._get_crewai_bridge()
+        if bridge is not None:
+            try:
+                ideas = bridge.dream_passive_income_ideas(needed)
+                if ideas:
+                    log_fn(f"CrewAI dreamed {len(ideas)} passive-income ideas")
+                    return ideas
+                log_fn("CrewAI returned no dream ideas — falling back to gateway")
+            except Exception as exc:
+                log_fn(f"CrewAI dream phase failed: {exc}")
+
+        if gateway is None:
+            return []
+
+        dream_prompt = (
+            "You are Mantis, JARVIS's Catalyst agent for Chris Binion. "
+            "Chris wants autonomous agents to dream up, research, propose, "
+            "and (once approved) implement passive income streams. "
+            f"Dream up exactly {needed} fresh, realistic passive income ideas "
+            "that Chris could realistically pursue as a software developer / entrepreneur. "
+            "Focus on digital products, content, licensing, or small automated services. "
+            "Return a JSON array of objects: "
+            '[{"title": "...", "idea": "1-3 sentence explanation of the opportunity, '
+            'why it fits Chris, rough effort/return estimate"}]'
+        )
+        try:
+            raw_ideas = gateway.simple_complete(dream_prompt, max_tokens=600, task_type="converse")
+        except Exception as exc:
+            log_fn(f"Dream generation failed: {exc}")
+            return []
+        raw_ideas = raw_ideas.strip()
+        if raw_ideas.startswith("```"):
+            lines_raw = raw_ideas.split("\n")
+            raw_ideas = "\n".join(
+                lines_raw[1:-1] if lines_raw[-1].strip() == "```" else lines_raw[1:]
+            )
+        start_i = raw_ideas.find("[")
+        end_i = raw_ideas.rfind("]") + 1
+        if start_i < 0 or end_i <= start_i:
+            return []
+        try:
+            idea_list = json.loads(raw_ideas[start_i:end_i])
+        except json.JSONDecodeError:
+            return []
+        results: list[dict[str, str]] = []
+        for idea_obj in idea_list[:needed]:
+            if not isinstance(idea_obj, dict):
+                continue
+            idea_title = str(idea_obj.get("title", "")).strip()
+            idea_text = str(idea_obj.get("idea", "")).strip()
+            if idea_title and idea_text:
+                results.append({"title": idea_title, "idea": idea_text})
+        return results
+
+    def _prime_work_item_with_crewai_brief(self, store: Any, work_item: Any, log_fn: Any) -> Any:
+        bridge = self._get_crewai_bridge()
+        if bridge is None:
+            return work_item
+        if str(getattr(work_item, "research", "")).strip():
+            return work_item
+        try:
+            brief = bridge.build_research_brief(
+                title=str(getattr(work_item, "title", "")).strip(),
+                idea=str(getattr(work_item, "idea", "")).strip(),
+                domain=str(getattr(work_item, "domain", "general")).strip() or "general",
+            )
+        except Exception as exc:
+            log_fn(f"CrewAI research brief failed for '{work_item.title}': {exc}")
+            return work_item
+        research_notes = str(brief.get("research_notes", "")).strip()
+        if not research_notes:
+            return work_item
+        updated = store.advance_to_research(work_item.work_id, research_notes=research_notes)
+        if updated is not None:
+            work_item = updated
+            log_fn(f"CrewAI primed research brief: {work_item.title}")
+        return work_item
 
     def _load_saved_sessions(self) -> list[dict[str, Any]]:
         if self._sessions_path.exists():
@@ -251,55 +343,30 @@ class PartyModeController:
             # Dream phase: generate new ideas if fewer than 3 today
             # ------------------------------------------------------------------
             try:
-                import json as _json_dream
                 from .agent_work import get_work_store, STATUS_DREAMED
                 pi_store = get_work_store("catalyst-personal")
                 todays_dreams = pi_store.get_todays_dreams()
                 pi_today = [d for d in todays_dreams if d.domain == "passive-income"]
                 _log(f"Dream phase: {len(pi_today)} passive-income items created today")
 
-                if len(pi_today) < DREAM_BATCH_SIZE and gateway is not None:
+                if len(pi_today) < DREAM_BATCH_SIZE:
                     needed = DREAM_BATCH_SIZE - len(pi_today)
-                    dream_prompt = (
-                        "You are Mantis, JARVIS's Catalyst agent for Chris Binion. "
-                        "Chris wants autonomous agents to dream up, research, propose, "
-                        "and (once approved) implement passive income streams. "
-                        f"Dream up exactly {needed} fresh, realistic passive income ideas "
-                        "that Chris could realistically pursue as a software developer / entrepreneur. "
-                        "Focus on digital products, content, licensing, or small automated services. "
-                        "Return a JSON array of objects: "
-                        '[{"title": "...", "idea": "1-3 sentence explanation of the opportunity, '
-                        'why it fits Chris, rough effort/return estimate"}]'
-                    )
-                    try:
-                        raw_ideas = gateway.simple_complete(dream_prompt, max_tokens=600, task_type="converse")
-                        raw_ideas = raw_ideas.strip()
-                        if raw_ideas.startswith("```"):
-                            lines_raw = raw_ideas.split("\n")
-                            raw_ideas = "\n".join(
-                                lines_raw[1:-1] if lines_raw[-1].strip() == "```" else lines_raw[1:]
-                            )
-                        start_i = raw_ideas.find("[")
-                        end_i = raw_ideas.rfind("]") + 1
-                        if start_i >= 0 and end_i > start_i:
-                            idea_list = _json_dream.loads(raw_ideas[start_i:end_i])
-                            for idea_obj in idea_list[:needed]:
-                                idea_title = idea_obj.get("title", "Unnamed idea").strip()
-                                idea_text = idea_obj.get("idea", "").strip()
-                                if not idea_title:
-                                    continue
-                                wi = pi_store.dream_idea(
-                                    title=idea_title,
-                                    idea=idea_text,
-                                    domain="passive-income",
-                                )
-                                with self._lock:
-                                    session.items_dreamed += 1
-                                _log(f"Dreamed: {idea_title}")
-                    except Exception as dream_exc:
-                        _log(f"Dream generation failed: {dream_exc}")
+                    idea_list = self._generate_dream_ideas(gateway, needed, _log)
+                    for idea_obj in idea_list:
+                        idea_title = str(idea_obj.get("title", "")).strip()
+                        idea_text = str(idea_obj.get("idea", "")).strip()
+                        if not idea_title:
+                            continue
+                        pi_store.dream_idea(
+                            title=idea_title,
+                            idea=idea_text,
+                            domain="passive-income",
+                        )
+                        with self._lock:
+                            session.items_dreamed += 1
+                        _log(f"Dreamed: {idea_title}")
                 else:
-                    _log("Sufficient ideas exist or no gateway — skipping dream phase")
+                    _log("Sufficient ideas exist — skipping dream phase")
             except Exception as dream_phase_exc:
                 _log(f"Dream phase error: {dream_phase_exc}")
 
@@ -348,6 +415,7 @@ class PartyModeController:
 
                     _log(f"Building dossier: {work_item.title}")
                     try:
+                        work_item = self._prime_work_item_with_crewai_brief(store, work_item, _log)
                         dossier = builder.build(work_item, session_id=session.session_id)
                         dossier_store.save(dossier)
 

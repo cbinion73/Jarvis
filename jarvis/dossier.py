@@ -540,6 +540,12 @@ class DossierBuilder:
         dossier.web_sources = web_sources
         research_corpus = "\n\n".join(corpus_snippets) if corpus_snippets else ""
         corpus_preview = research_corpus[:2000] if research_corpus else "(no web data — use general knowledge)"
+        work_item_context_parts = [
+            f"Idea: {str(getattr(work_item, 'idea', '')).strip()}",
+            f"Research notes: {str(getattr(work_item, 'research', '')).strip()}",
+            f"Proposal: {str(getattr(work_item, 'proposal', '')).strip()}",
+        ]
+        work_item_context = "\n".join(part for part in work_item_context_parts if not part.endswith(": "))
         _log(f"Corpus: {len(corpus_snippets)} snippets, {len(web_sources)} sources")
 
         # ------------------------------------------------------------------
@@ -560,6 +566,8 @@ class DossierBuilder:
             return ""
 
         ctx = corpus_preview[:1200] if corpus_preview else "(use your general knowledge)"
+        if work_item_context:
+            ctx = f"{ctx}\n\nStored work-item context:\n{work_item_context[:800]}"
 
         # ------------------------------------------------------------------
         # 3. Generate + QA each section with retry loop
@@ -637,7 +645,7 @@ class DossierBuilder:
             "Technical Requirements",
             f"Write technical requirements to build '{title}' as a solo developer. "
             f"Cover: stack (languages/frameworks), key APIs, hosting, estimated MVP hours. "
-            f"120 words max. Context: {(getattr(work_item,'idea',''))[:300]}",
+            f"120 words max. Context: {work_item_context[:400]}",
         )
 
         _log("Generating + verifying: revenue model…")
@@ -646,7 +654,7 @@ class DossierBuilder:
             f"Write a revenue model for '{title}'. "
             f"Give: pricing (e.g. $X/mo per customer), realistic customer counts at "
             f"3mo/6mo/12mo, and projected MRR at month 12. Show math. 120 words. "
-            f"Context: {(getattr(work_item,'idea',''))[:200]}",
+            f"Context: {work_item_context[:300]}",
         )
 
         _log("Generating + verifying: risk assessment…")
