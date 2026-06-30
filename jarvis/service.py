@@ -24,8 +24,10 @@ import uvicorn
 
 from .runtime import JarvisRuntime
 from .settings import LocationSettingsStore, VoiceSettingsStore
+from .speech import record_voice_runtime_status
 from .voice_audio import generate_tts_audio
 from .voice_ui import render_voice_shell
+from .chat_only_page import render_chat_only_shell
 from . import dining as dining_module
 
 try:
@@ -76,8 +78,13 @@ from .render_pages import (
     render_approval_module_page,
     render_activity_module_page,
     render_agent_ops_module_page,
+    render_artifact_outcome_page,
+    render_artifact_outcome_summary_page,
+    render_delegation_report_page,
     render_agent_hierarchy_page,
     render_agent_workspace_page,
+    render_autonomy_state_page,
+    render_autonomy_state_queue_page,
     render_catalyst_workspace_page,
     render_chronicle_module_page,
     render_daily_brief_module_page,
@@ -89,6 +96,8 @@ from .render_pages import (
     render_progress_module_page,
     render_publish_module_page,
     render_recovery_module_page,
+    render_research_task_page,
+    render_research_task_queue_page,
     render_settings_module_page,
     render_supervision_module_page,
 )
@@ -332,6 +341,22 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         app.mount("/assets", StaticFiles(directory=str(assets_root)), name="assets")
     uploads_root = Path.cwd() / "data" / "chat_uploads"
     uploads_root.mkdir(parents=True, exist_ok=True)
+
+    def _voice_fallback_headers(audio: Any) -> dict[str, str]:
+        failures = list(getattr(audio, "provider_failures", ()) or [])
+        attempted = list(getattr(audio, "attempted_providers", ()) or [])
+        requested = str(getattr(audio, "requested_provider", "") or "").strip().lower()
+        effective = str(getattr(audio, "provider", "") or "").strip().lower()
+        headers: dict[str, str] = {}
+        if requested and effective and requested != "auto" and effective != requested:
+            headers["X-Jarvis-Voice-Fallback-From"] = requested
+        if attempted:
+            headers["X-Jarvis-Voice-Attempted-Providers"] = ",".join(attempted)
+        if failures:
+            headers["X-Jarvis-Voice-Fallback-Count"] = str(len(failures))
+            first_failure = str(failures[0]).replace("\r", " ").replace("\n", " ").strip()
+            headers["X-Jarvis-Voice-Fallback-Reason"] = first_failure[:240]
+        return headers
 
     def _safe_chat_filename(name: str) -> str:
         cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", str(name or "").strip()).strip("-._")
@@ -1013,6 +1038,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             return _render_glass_shell(runtime, initial_packet=packet)
         return render_voice_shell(runtime, initial_packet=packet)
 
+    @app.get("/chat", response_class=HTMLResponse)
+    async def chat_shortcut() -> HTMLResponse:
+        return HTMLResponse(render_chat_only_shell(runtime))
+
     @app.get("/storm-dashboard")
     async def storm_dashboard() -> Response:
         storm_path = Path.cwd() / "artifacts" / "mockups" / "storm-weather-widget.html"
@@ -1168,6 +1197,91 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     @app.get("/mission-board", response_class=HTMLResponse)
     async def mission_board_center() -> HTMLResponse:
         return HTMLResponse(render_mission_board_module_page(await _build_mission_board_module_payload()))
+
+    @app.get("/mission-board/delegation-report/{mission_id}/{report_id}", response_class=HTMLResponse)
+    async def mission_board_delegation_report(mission_id: str, report_id: str, return_to: str = Query("")) -> HTMLResponse:
+        report = await asyncio.to_thread(runtime.mission_delegation_report, mission_id, report_id)
+        mission = await asyncio.to_thread(runtime.mission_snapshot, mission_id)
+        safe_return_to = return_to.strip() if return_to.strip().startswith("/") else ""
+        payload = {
+            "available": bool(report),
+            "status": "Useful" if report else "Unavailable",
+            "summary": (
+                "Completed delegated work is available as a readable review object."
+                if report
+                else "This delegation report is unavailable in the current runtime path."
+            ),
+            "mission_id": mission_id,
+            "mission_title": str((mission or {}).get("title", "")).strip() or "Mission",
+            "return_to": safe_return_to,
+            "report": dict(report or {}),
+        }
+        if report is None:
+            return HTMLResponse(render_delegation_report_page(payload), status_code=404)
+        return HTMLResponse(render_delegation_report_page(payload))
+
+    @app.get("/mission-board/artifact-outcome/{target_kind}/{target_id}", response_class=HTMLResponse)
+    async def mission_board_artifact_outcome_review(
+        target_kind: str,
+        target_id: str,
+        mission_id: str = Query(""),
+        return_to: str = Query(""),
+    ) -> HTMLResponse:
+        safe_return_to = return_to.strip() if return_to.strip().startswith("/") else ""
+        try:
+            snapshot = await asyncio.to_thread(
+                runtime.artifact_outcome_snapshot,
+                target_kind=target_kind,
+                target_id=target_id,
+                mission_id=str(mission_id or "").strip(),
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        payload = dict(snapshot)
+        payload["return_to"] = safe_return_to
+        return HTMLResponse(render_artifact_outcome_page(payload))
+
+    @app.get("/mission-board/artifact-outcomes", response_class=HTMLResponse)
+    async def mission_board_artifact_outcome_summary(mission_id: str = Query("")) -> HTMLResponse:
+        payload = await asyncio.to_thread(
+            runtime.artifact_outcome_summary,
+            mission_id=str(mission_id or "").strip(),
+        )
+        return HTMLResponse(render_artifact_outcome_summary_page(payload))
+
+    @app.get("/mission-board/research-tasks", response_class=HTMLResponse)
+    async def mission_board_research_tasks() -> HTMLResponse:
+        payload = await asyncio.to_thread(runtime.research_task_queue_snapshot)
+        return HTMLResponse(render_research_task_queue_page(payload))
+
+    @app.get("/mission-board/research-tasks/{task_id}", response_class=HTMLResponse)
+    async def mission_board_research_task_review(task_id: str, return_to: str = Query("")) -> HTMLResponse:
+        safe_return_to = return_to.strip() if return_to.strip().startswith("/") else ""
+        try:
+            payload = await asyncio.to_thread(runtime.research_task_snapshot, task_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        page_payload = dict(payload)
+        page_payload["return_to"] = safe_return_to
+        return HTMLResponse(render_research_task_page(page_payload))
+
+    @app.get("/mission-board/autonomy-states", response_class=HTMLResponse)
+    async def mission_board_autonomy_states() -> HTMLResponse:
+        payload = await asyncio.to_thread(runtime.autonomy_state_queue_snapshot)
+        return HTMLResponse(render_autonomy_state_queue_page(payload))
+
+    @app.get("/mission-board/autonomy-states/{autonomy_id}", response_class=HTMLResponse)
+    async def mission_board_autonomy_state_review(autonomy_id: str, return_to: str = Query("")) -> HTMLResponse:
+        safe_return_to = return_to.strip() if return_to.strip().startswith("/") else ""
+        try:
+            payload = await asyncio.to_thread(runtime.autonomy_state_snapshot, autonomy_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        page_payload = dict(payload)
+        page_payload["return_to"] = safe_return_to
+        return HTMLResponse(render_autonomy_state_page(page_payload))
 
     @app.get("/activity-center", response_class=HTMLResponse)
     async def activity_center() -> HTMLResponse:
@@ -2018,6 +2132,238 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def api_mission_outputs(mission_id: str) -> JSONResponse:
         return _json(await asyncio.to_thread(runtime.mission_outputs, mission_id))
 
+    @app.get("/api/missions/{mission_id}/delegation-reports")
+    async def api_mission_delegation_reports(mission_id: str) -> JSONResponse:
+        return _json(await asyncio.to_thread(runtime.mission_delegation_reports, mission_id))
+
+    @app.get("/api/missions/{mission_id}/delegation-reports/{report_id}")
+    async def api_mission_delegation_report(mission_id: str, report_id: str) -> JSONResponse:
+        report = await asyncio.to_thread(runtime.mission_delegation_report, mission_id, report_id)
+        if report is None:
+            raise HTTPException(status_code=404, detail=f"Unknown delegation report: {report_id}")
+        return _json(report)
+
+    @app.post("/api/artifact-outcomes")
+    async def api_record_artifact_outcome(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.record_artifact_outcome,
+                str(payload.get("actor", "Chris")).strip() or "Chris",
+                target_kind=str(payload.get("target_kind", "")).strip(),
+                target_id=str(payload.get("target_id", "")).strip(),
+                outcome=str(payload.get("outcome", "")).strip(),
+                mission_id=str(payload.get("mission_id", "")).strip(),
+                note=str(payload.get("note", "")).strip(),
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.get("/api/artifact-outcomes/{target_kind}/{target_id}")
+    async def api_artifact_outcome_snapshot(target_kind: str, target_id: str, mission_id: str = Query("")) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.artifact_outcome_snapshot,
+                target_kind=target_kind,
+                target_id=target_id,
+                mission_id=str(mission_id or "").strip(),
+            )
+        except (KeyError, ValueError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result)
+
+    @app.get("/api/artifact-outcomes-summary")
+    async def api_artifact_outcome_summary(mission_id: str = Query("")) -> JSONResponse:
+        result = await asyncio.to_thread(
+            runtime.artifact_outcome_summary,
+            mission_id=str(mission_id or "").strip(),
+        )
+        return _json(result)
+
+    @app.post("/api/research-tasks")
+    async def api_create_research_task(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.create_research_task,
+                str(payload.get("actor", "Chris")).strip() or "Chris",
+                title=str(payload.get("title", "")).strip(),
+                question=str(payload.get("question", "")).strip(),
+                desired_scope=str(payload.get("desired_scope", "")).strip(),
+                status=str(payload.get("status", "queued")).strip(),
+                constraints=[str(item).strip() for item in list(payload.get("constraints") or []) if str(item).strip()],
+                source_expectations=[str(item).strip() for item in list(payload.get("source_expectations") or []) if str(item).strip()],
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.get("/api/research-tasks")
+    async def api_research_task_queue() -> JSONResponse:
+        return _json(await asyncio.to_thread(runtime.research_task_queue_snapshot))
+
+    @app.get("/api/research-tasks/{task_id}")
+    async def api_research_task(task_id: str) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(runtime.research_task_snapshot, task_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/research-tasks/{task_id}")
+    async def api_update_research_task(task_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.update_research_task,
+                task_id,
+                title=str(payload.get("title", "")).strip(),
+                question=str(payload.get("question", "")).strip(),
+                desired_scope=str(payload.get("desired_scope", "")).strip(),
+                status=str(payload.get("status", "")).strip(),
+                constraints=[str(item).strip() for item in list(payload.get("constraints") or []) if str(item).strip()],
+                source_expectations=[str(item).strip() for item in list(payload.get("source_expectations") or []) if str(item).strip()],
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result)
+
+    @app.post("/api/research-tasks/{task_id}/evidence")
+    async def api_add_research_task_evidence(task_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.add_research_task_evidence,
+                task_id,
+                source_label=str(payload.get("source_label", "")).strip(),
+                source_locator=str(payload.get("source_locator", "")).strip(),
+                evidence_note=str(payload.get("evidence_note", "")).strip(),
+                capture_status=str(payload.get("capture_status", "")).strip(),
+                confidence_label=str(payload.get("confidence_label", "")).strip(),
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.post("/api/research-tasks/{task_id}/synthesis")
+    async def api_generate_research_task_synthesis(task_id: str) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(runtime.generate_research_task_synthesis, task_id)
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.post("/api/autonomy-states")
+    async def api_create_autonomy_state(payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.create_autonomy_state,
+                str(payload.get("actor", "Chris")).strip() or "Chris",
+                title=str(payload.get("title", "")).strip(),
+                objective=str(payload.get("objective", "")).strip(),
+                status=str(payload.get("status", "queued")).strip(),
+                current_focus=str(payload.get("current_focus", "")).strip(),
+                next_step=str(payload.get("next_step", "")).strip(),
+                requested_scope=str(payload.get("requested_scope", "")).strip(),
+                initiation_reason=str(payload.get("initiation_reason", "")).strip(),
+                approval_state=str(payload.get("approval_state", "required")).strip(),
+                approval_required=bool(payload.get("approval_required", True)),
+                allowed_action_boundary=str(payload.get("allowed_action_boundary", "")).strip(),
+                blocked_reason=str(payload.get("blocked_reason", "")).strip(),
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.get("/api/autonomy-states")
+    async def api_autonomy_state_queue() -> JSONResponse:
+        return _json(await asyncio.to_thread(runtime.autonomy_state_queue_snapshot))
+
+    @app.get("/api/autonomy-states/{autonomy_id}")
+    async def api_autonomy_state(autonomy_id: str) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(runtime.autonomy_state_snapshot, autonomy_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return _json(result)
+
+    @app.post("/api/autonomy-states/{autonomy_id}/plan")
+    async def api_autonomy_state_plan(autonomy_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.add_autonomy_action_plan,
+                autonomy_id,
+                planning_note=str(payload.get("planning_note", "")).strip(),
+                proposed_actions=[
+                    dict(item)
+                    for item in list(payload.get("proposed_actions") or [])
+                    if isinstance(item, dict)
+                ],
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.post("/api/autonomy-states/{autonomy_id}/control")
+    async def api_autonomy_state_control(autonomy_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.apply_autonomy_control_action,
+                str(payload.get("actor", "Chris")).strip() or "Chris",
+                autonomy_id,
+                action=str(payload.get("action", "")).strip(),
+                control_reason=str(payload.get("control_reason", "")).strip(),
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.post("/api/autonomy-states/{autonomy_id}/readiness")
+    async def api_autonomy_state_readiness(autonomy_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.apply_autonomy_readiness_state,
+                str(payload.get("actor", "Chris")).strip() or "Chris",
+                autonomy_id,
+                readiness_state=str(payload.get("readiness_state", "")).strip(),
+                readiness_reason=str(payload.get("readiness_reason", "")).strip(),
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
+    @app.post("/api/autonomy-states/{autonomy_id}/follow-through")
+    async def api_autonomy_state_follow_through(autonomy_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            result = await asyncio.to_thread(
+                runtime.trigger_autonomy_local_follow_through,
+                str(payload.get("actor", "Chris")).strip() or "Chris",
+                autonomy_id,
+                trigger_note=str(payload.get("trigger_note", "")).strip(),
+            )
+        except (KeyError, ValueError, RuntimeError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(result, status_code=201)
+
     @app.get("/api/missions/{mission_id}/agents")
     async def api_mission_agents(mission_id: str) -> JSONResponse:
         return _json(await asyncio.to_thread(runtime.mission_agents, mission_id))
@@ -2086,6 +2432,27 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             status_code = 404 if isinstance(exc, KeyError) else 400
             raise HTTPException(status_code=status_code, detail=detail) from exc
         return _json(updated)
+
+    @app.post("/api/missions/{mission_id}/delegations/{delegation_id}/report")
+    async def api_record_delegation_output(mission_id: str, delegation_id: str, payload: dict[str, Any]) -> JSONResponse:
+        try:
+            updated = await asyncio.to_thread(
+                runtime.record_delegation_output,
+                mission_id,
+                delegation_id,
+                producing_agent=str(payload.get("producing_agent", "")).strip(),
+                title=str(payload.get("title", "")).strip(),
+                summary=str(payload.get("summary", "")).strip(),
+                detail=str(payload.get("detail", "")).strip(),
+                key_output=str(payload.get("key_output", "")).strip(),
+                next_step=str(payload.get("next_step", "")).strip(),
+                evidence_note=str(payload.get("evidence_note", "")).strip(),
+            )
+        except (KeyError, ValueError) as exc:
+            detail = str(exc)
+            status_code = 404 if isinstance(exc, KeyError) else 400
+            raise HTTPException(status_code=status_code, detail=detail) from exc
+        return _json(updated, status_code=201)
 
     @app.post("/api/missions/{mission_id}/escalations")
     async def api_record_agent_escalation(mission_id: str, payload: dict[str, Any]) -> JSONResponse:
@@ -5161,9 +5528,17 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "greeting": f"Good morning, {actor_display}.",
                 "what_changed": ["Morning Brief pipeline encountered an error — check server logs."],
                 "what_matters": [],
+                "what_is_waiting": [],
+                "while_you_were_away": [],
                 "may_have_forgotten": [],
                 "jarvis_prepared": [],
                 "recommendation": "Check server logs for morning brief pipeline errors.",
+                "recommendation_action": {
+                    "action_kind": "narrative_only",
+                    "title": "No action surface staged",
+                    "detail": "Morning Brief generation failed, so JARVIS did not stage a next-action surface for this pass.",
+                    "truth_note": "Check the runtime error first rather than trusting a missing handoff.",
+                },
                 "truth_labels": {},
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             }
@@ -6241,8 +6616,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "mission_create_api": "/api/missions",
                 "mission_edit_api_suffix": "/edit",
                 "mission_status_api_prefix": "/api/missions/",
+                "mission_outputs_api_suffix": "/outputs",
                 "mission_handoff_api_suffix": "/handoffs",
                 "mission_handoff_ack_suffix": "/handoffs/{handoff_id}/acknowledge",
+                "mission_delegation_reports_api_suffix": "/delegation-reports",
+                "mission_delegation_report_submit_suffix": "/delegations/{delegation_id}/report",
                 "mission_control_api": "/api/mission-control",
             },
             "errors": [],
@@ -6317,7 +6695,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                             {"label": "Open Command Center", "href": "/command-center"},
                             {"label": "Mission Edit API", "href": f"/api/missions/{mission_id}/edit"},
                             {"label": "Mission Work-State API", "href": f"/api/missions/{mission_id}/work-state"},
+                            {"label": "Mission Outputs API", "href": f"/api/missions/{mission_id}/outputs"},
                             {"label": "Mission Handoffs API", "href": f"/api/missions/{mission_id}/handoffs"},
+                            {"label": "Delegation Reports API", "href": f"/api/missions/{mission_id}/delegation-reports"},
                         ]
                     details[mission_id] = detail
                 except Exception as exc:
@@ -10226,7 +10606,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except KeyError:
             raise HTTPException(status_code=403, detail=f"Unknown viewer: {viewer!r}")
         decision = str(payload.get("decision", "approved"))
-        return _json(runtime.resolve_memory_proposal(proposal_id, decision))
+        return _json(runtime.resolve_learning_proposal(proposal_id, decision))
 
     @app.post("/api/learning/facts/{fact_id}")
     async def api_learning_fact_status(fact_id: str, payload: dict[str, Any]) -> JSONResponse:
@@ -10493,18 +10873,25 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         text = str(payload.get("text", "")).strip()
         if not text:
             raise HTTPException(status_code=400, detail="Text is required")
+        current_voice_settings = voice_settings.load().to_dict()
         try:
             audio = generate_tts_audio(
                 runtime.config,
                 text,
-                voice_settings=voice_settings.load().to_dict(),
+                voice_settings=current_voice_settings,
             )
+            record_voice_runtime_status(audio)
         except RuntimeError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         return Response(
             content=audio.data,
             media_type=audio.content_type,
-            headers={"X-Jarvis-Tts-Provider": audio.provider},
+            headers={
+                "X-Jarvis-Tts-Provider": audio.provider,
+                "X-Jarvis-Tts-Requested-Provider": str(current_voice_settings.get("tts_provider") or runtime.config.tts_provider or "auto"),
+                "X-Jarvis-Tts-Effective-Provider": audio.provider,
+                **_voice_fallback_headers(audio),
+            },
         )
 
     # ------------------------------------------------------------------
@@ -10522,24 +10909,34 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if not text:
             raise HTTPException(status_code=400, detail="text is required")
 
+        current_voice_settings = voice_settings.load().to_dict()
+        requested_provider = str(current_voice_settings.get("tts_provider") or runtime.config.tts_provider or "auto").strip().lower() or "auto"
         pipeline = get_pipeline()
         friday = get_friday()
 
-        if pipeline is None or friday is None:
+        if pipeline is None or friday is None or requested_provider != "auto":
             # Fall back to the existing /api/tts handler
             try:
                 audio = await asyncio.to_thread(
                     generate_tts_audio,
                     runtime.config,
                     text,
-                    voice_settings.load().to_dict(),
+                    current_voice_settings,
                 )
+                await asyncio.to_thread(record_voice_runtime_status, audio)
             except RuntimeError as exc:
                 raise HTTPException(status_code=502, detail=str(exc)) from exc
             return Response(
                 content=audio.data,
                 media_type=audio.content_type,
-                headers={"X-Jarvis-Tts-Provider": audio.provider},
+                headers={
+                    "X-Jarvis-Tts-Provider": audio.provider,
+                    "X-Jarvis-Voice-Provider": audio.provider,
+                    "X-Jarvis-Voice-Requested-Provider": requested_provider,
+                    "X-Jarvis-Voice-Effective-Provider": audio.provider,
+                    "X-Jarvis-Voice-Selection-Mode": "explicit" if requested_provider != "auto" else "direct-fallback",
+                    **_voice_fallback_headers(audio),
+                },
             )
 
         voice_text = friday.prepare_for_voice(text)
@@ -10556,7 +10953,12 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         return Response(
             content=audio_bytes,
             media_type=media_type,
-            headers={"X-Jarvis-Voice-Provider": active},
+            headers={
+                "X-Jarvis-Voice-Provider": active,
+                "X-Jarvis-Voice-Requested-Provider": requested_provider,
+                "X-Jarvis-Voice-Effective-Provider": active,
+                "X-Jarvis-Voice-Selection-Mode": "auto-pipeline",
+            },
         )
 
     @app.get("/api/voice/status")
@@ -11286,16 +11688,21 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     # ── Home Intelligence API ─────────────────────────────────────────────────
     # IMPORTANT: must be registered BEFORE the /api/{legacy_path:path} catch-all.
 
+    def _home_read_unavailable_response(error: str, **payload: Any) -> JSONResponse:
+        body: dict[str, Any] = {"available": False, "error": error}
+        body.update(payload)
+        return _json(body)
+
     @app.get("/api/home/dashboard")
     async def api_home_dashboard() -> JSONResponse:
         """Full home intelligence dashboard — projects, tasks, email, calendar."""
         db = _get_home_db()
         if db is None:
-            return _json({"available": False, "error": "Home DB not initialised"})
+            return _home_read_unavailable_response("Home DB not initialised")
         try:
             result = await asyncio.to_thread(db.get_dashboard_data)
         except Exception as exc:
-            return _json({"available": False, "error": f"Home dashboard unavailable: {exc}"})
+            return _home_read_unavailable_response(f"Home dashboard unavailable: {exc}")
         result["available"] = True
         return _json(result)
 
@@ -11308,12 +11715,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        projects = await asyncio.to_thread(
-            db.list_projects,
-            status or None,
-            track or None,
-        )
+            return _home_read_unavailable_response("Home projects unavailable: Home DB not initialised", projects=[], total=0)
+        try:
+            projects = await asyncio.to_thread(
+                db.list_projects,
+                status or None,
+                track or None,
+            )
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home projects unavailable: {exc}", projects=[], total=0)
         return _json({"projects": projects, "total": len(projects)})
 
     @app.post("/api/home/projects")
@@ -11353,28 +11763,37 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        tasks = await asyncio.to_thread(
-            db.list_tasks,
-            project_id or None,
-            status or None,
-        )
+            return _home_read_unavailable_response("Home tasks unavailable: Home DB not initialised", tasks=[], total=0)
+        try:
+            tasks = await asyncio.to_thread(
+                db.list_tasks,
+                project_id or None,
+                status or None,
+            )
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home tasks unavailable: {exc}", tasks=[], total=0)
         return _json({"tasks": tasks, "total": len(tasks)})
 
     @app.get("/api/home/tasks/overdue")
     async def api_home_tasks_overdue() -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        tasks = await asyncio.to_thread(db.get_overdue_tasks)
+            return _home_read_unavailable_response("Home overdue tasks unavailable: Home DB not initialised", tasks=[], total=0)
+        try:
+            tasks = await asyncio.to_thread(db.get_overdue_tasks)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home overdue tasks unavailable: {exc}", tasks=[], total=0)
         return _json({"tasks": tasks, "total": len(tasks)})
 
     @app.get("/api/home/tasks/today")
     async def api_home_tasks_today() -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        tasks = await asyncio.to_thread(db.get_tasks_due_today)
+            return _home_read_unavailable_response("Home tasks due today unavailable: Home DB not initialised", tasks=[], total=0)
+        try:
+            tasks = await asyncio.to_thread(db.get_tasks_due_today)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home tasks due today unavailable: {exc}", tasks=[], total=0)
         return _json({"tasks": tasks, "total": len(tasks)})
 
     @app.post("/api/home/tasks")
@@ -11413,22 +11832,28 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        emails = await asyncio.to_thread(
-            db.list_emails,
-            source or None,
-            unread_only,
-            limit,
-        )
-        stats = await asyncio.to_thread(db.get_email_stats)
+            return _home_read_unavailable_response("Home email unavailable: Home DB not initialised", emails=[], total=0, stats={})
+        try:
+            emails = await asyncio.to_thread(
+                db.list_emails,
+                source or None,
+                unread_only,
+                limit,
+            )
+            stats = await asyncio.to_thread(db.get_email_stats)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home email unavailable: {exc}", emails=[], total=0, stats={})
         return _json({"emails": emails, "total": len(emails), "stats": stats})
 
     @app.get("/api/home/email/stats")
     async def api_home_email_stats() -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        stats = await asyncio.to_thread(db.get_email_stats)
+            return _home_read_unavailable_response("Home email stats unavailable: Home DB not initialised", stats={})
+        try:
+            stats = await asyncio.to_thread(db.get_email_stats)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home email stats unavailable: {exc}", stats={})
         return _json(stats)
 
     @app.post("/api/home/email/{email_id}/read")
@@ -11447,18 +11872,27 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if inbox is None:
             db = _get_home_db()
             if db is None:
-                raise HTTPException(status_code=503, detail="Home intelligence not initialised")
-            events = await asyncio.to_thread(db.get_todays_events)
+                return _home_read_unavailable_response("Home calendar today unavailable: Home intelligence not initialised", events=[], total=0)
+            try:
+                events = await asyncio.to_thread(db.get_todays_events)
+            except Exception as exc:
+                return _home_read_unavailable_response(f"Home calendar today unavailable: {exc}", events=[], total=0)
             return _json({"events": events, "total": len(events)})
-        agenda = await asyncio.to_thread(inbox.get_todays_agenda)
+        try:
+            agenda = await asyncio.to_thread(inbox.get_todays_agenda)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home calendar today unavailable: {exc}", events=[], total=0)
         return _json(agenda)
 
     @app.get("/api/home/calendar/upcoming")
     async def api_home_calendar_upcoming(days: int = Query(default=7)) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        events = await asyncio.to_thread(db.get_upcoming_events, days)
+            return _home_read_unavailable_response("Home upcoming calendar unavailable: Home DB not initialised", events=[], total=0)
+        try:
+            events = await asyncio.to_thread(db.get_upcoming_events, days)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home upcoming calendar unavailable: {exc}", events=[], total=0)
         return _json({"events": events, "total": len(events)})
 
     @app.get("/api/home/calendar")
@@ -11469,13 +11903,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
+            return _home_read_unavailable_response("Home calendar unavailable: Home DB not initialised", events=[], total=0)
         from datetime import datetime, timezone, timedelta
         if not start:
             start = datetime.now(timezone.utc).isoformat()
         if not end:
             end = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
-        events = await asyncio.to_thread(db.list_calendar_events, start, end, source or None)
+        try:
+            events = await asyncio.to_thread(db.list_calendar_events, start, end, source or None)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home calendar unavailable: {exc}", events=[], total=0)
         return _json({"events": events, "total": len(events)})
 
     # ------------------------------------------------------------------
@@ -13071,6 +13508,10 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             },
         ]
 
+        runtime_note = "Calendar is live and connected."
+        if availability_notes and today_count == 0 and not upcoming_events and not source_rows:
+            runtime_note = availability_notes[0]
+
         payload: dict[str, Any] = {
             "generated_at": generated_at,
             "available": True,
@@ -13081,7 +13522,7 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             ),
             "what_became_real": "Calendar now hydrates from one live module payload that combines today's agenda, upcoming schedule, Apple prep and routing state, sync health, and continuity instead of browser-side stitching.",
             "remains_partial": "Direct find-time negotiation, full rescheduling, and richer multi-view calendar mutations still depend on backend contracts that are not exposed yet in this runtime.",
-            "runtime_note": "Calendar is live and connected.",
+            "runtime_note": runtime_note,
             "availability_notes": availability_notes[:10],
             "counts": {
                 "today_events": today_count,
@@ -19137,11 +19578,11 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         """Full home intelligence dashboard — projects, tasks, email, calendar."""
         db = _get_home_db()
         if db is None:
-            return _json({"available": False, "error": "Home DB not initialised"})
+            return _home_read_unavailable_response("Home DB not initialised")
         try:
             result = await asyncio.to_thread(db.get_dashboard_data)
         except Exception as exc:
-            return _json({"available": False, "error": f"Home dashboard unavailable: {exc}"})
+            return _home_read_unavailable_response(f"Home dashboard unavailable: {exc}")
         result["available"] = True
         return _json(result)
 
@@ -19154,12 +19595,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        projects = await asyncio.to_thread(
-            db.list_projects,
-            status or None,
-            track or None,
-        )
+            return _home_read_unavailable_response("Home projects unavailable: Home DB not initialised", projects=[], total=0)
+        try:
+            projects = await asyncio.to_thread(
+                db.list_projects,
+                status or None,
+                track or None,
+            )
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home projects unavailable: {exc}", projects=[], total=0)
         return _json({"projects": projects, "total": len(projects)})
 
     @app.post("/api/home/projects")
@@ -19199,28 +19643,37 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        tasks = await asyncio.to_thread(
-            db.list_tasks,
-            project_id or None,
-            status or None,
-        )
+            return _home_read_unavailable_response("Home tasks unavailable: Home DB not initialised", tasks=[], total=0)
+        try:
+            tasks = await asyncio.to_thread(
+                db.list_tasks,
+                project_id or None,
+                status or None,
+            )
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home tasks unavailable: {exc}", tasks=[], total=0)
         return _json({"tasks": tasks, "total": len(tasks)})
 
     @app.get("/api/home/tasks/overdue")
     async def api_home_tasks_overdue() -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        tasks = await asyncio.to_thread(db.get_overdue_tasks)
+            return _home_read_unavailable_response("Home overdue tasks unavailable: Home DB not initialised", tasks=[], total=0)
+        try:
+            tasks = await asyncio.to_thread(db.get_overdue_tasks)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home overdue tasks unavailable: {exc}", tasks=[], total=0)
         return _json({"tasks": tasks, "total": len(tasks)})
 
     @app.get("/api/home/tasks/today")
     async def api_home_tasks_today() -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        tasks = await asyncio.to_thread(db.get_tasks_due_today)
+            return _home_read_unavailable_response("Home tasks due today unavailable: Home DB not initialised", tasks=[], total=0)
+        try:
+            tasks = await asyncio.to_thread(db.get_tasks_due_today)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home tasks due today unavailable: {exc}", tasks=[], total=0)
         return _json({"tasks": tasks, "total": len(tasks)})
 
     @app.post("/api/home/tasks")
@@ -19259,22 +19712,28 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        emails = await asyncio.to_thread(
-            db.list_emails,
-            source or None,
-            unread_only,
-            limit,
-        )
-        stats = await asyncio.to_thread(db.get_email_stats)
+            return _home_read_unavailable_response("Home email unavailable: Home DB not initialised", emails=[], total=0, stats={})
+        try:
+            emails = await asyncio.to_thread(
+                db.list_emails,
+                source or None,
+                unread_only,
+                limit,
+            )
+            stats = await asyncio.to_thread(db.get_email_stats)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home email unavailable: {exc}", emails=[], total=0, stats={})
         return _json({"emails": emails, "total": len(emails), "stats": stats})
 
     @app.get("/api/home/email/stats")
     async def api_home_email_stats() -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        stats = await asyncio.to_thread(db.get_email_stats)
+            return _home_read_unavailable_response("Home email stats unavailable: Home DB not initialised", stats={})
+        try:
+            stats = await asyncio.to_thread(db.get_email_stats)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home email stats unavailable: {exc}", stats={})
         return _json(stats)
 
     @app.post("/api/home/email/{email_id}/read")
@@ -19293,18 +19752,27 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if inbox is None:
             db = _get_home_db()
             if db is None:
-                raise HTTPException(status_code=503, detail="Home intelligence not initialised")
-            events = await asyncio.to_thread(db.get_todays_events)
+                return _home_read_unavailable_response("Home calendar today unavailable: Home intelligence not initialised", events=[], total=0)
+            try:
+                events = await asyncio.to_thread(db.get_todays_events)
+            except Exception as exc:
+                return _home_read_unavailable_response(f"Home calendar today unavailable: {exc}", events=[], total=0)
             return _json({"events": events, "total": len(events)})
-        agenda = await asyncio.to_thread(inbox.get_todays_agenda)
+        try:
+            agenda = await asyncio.to_thread(inbox.get_todays_agenda)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home calendar today unavailable: {exc}", events=[], total=0)
         return _json(agenda)
 
     @app.get("/api/home/calendar/upcoming")
     async def api_home_calendar_upcoming(days: int = Query(default=7)) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
-        events = await asyncio.to_thread(db.get_upcoming_events, days)
+            return _home_read_unavailable_response("Home upcoming calendar unavailable: Home DB not initialised", events=[], total=0)
+        try:
+            events = await asyncio.to_thread(db.get_upcoming_events, days)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home upcoming calendar unavailable: {exc}", events=[], total=0)
         return _json({"events": events, "total": len(events)})
 
     @app.get("/api/home/calendar")
@@ -19315,13 +19783,16 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     ) -> JSONResponse:
         db = _get_home_db()
         if db is None:
-            raise HTTPException(status_code=503, detail="Home DB not initialised")
+            return _home_read_unavailable_response("Home calendar unavailable: Home DB not initialised", events=[], total=0)
         from datetime import datetime, timezone, timedelta
         if not start:
             start = datetime.now(timezone.utc).isoformat()
         if not end:
             end = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
-        events = await asyncio.to_thread(db.list_calendar_events, start, end, source or None)
+        try:
+            events = await asyncio.to_thread(db.list_calendar_events, start, end, source or None)
+        except Exception as exc:
+            return _home_read_unavailable_response(f"Home calendar unavailable: {exc}", events=[], total=0)
         return _json({"events": events, "total": len(events)})
 
     # ── Sync ──────────────────────────────────────────────────────────────────
@@ -21823,13 +22294,31 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except ImportError:
             return _json({"ok": False, "available": False, "error": "Navigation bridge unavailable"})
         try:
-            route_entry = {
-                "origin": origin,
-                "destination": destination,
-                "mode": str(body.get("mode", "driving")),
-            }
-            _record_navigation_route_history(route_entry)
-            return _json({"ok": True, "route": route_entry, "available": True})
+            radius_raw = body.get("parks_historic_radius_miles")
+            radius = None
+            if radius_raw not in (None, ""):
+                try:
+                    radius = int(float(radius_raw))
+                except (TypeError, ValueError):
+                    radius = None
+            saved_state, saved_route = _record_navigation_route_history(
+                origin=origin,
+                destination=destination,
+                origin_mode=str(body.get("origin_mode") or "manual").strip() or "manual",
+                saved_location_id=str(body.get("saved_location_id") or "").strip(),
+                parks_historic_radius_miles=radius,
+                source_label="Navigation desktop route request",
+            )
+            return _json(
+                {
+                    "ok": True,
+                    "available": False,
+                    "persisted": True,
+                    "message": "Detailed live routing is unavailable in this runtime. The route was saved to shared navigation state only.",
+                    "route": saved_route,
+                    "navigation_state": saved_state,
+                }
+            )
         except Exception as exc:
             return _json({"ok": False, "available": False, "error": str(exc)})
 

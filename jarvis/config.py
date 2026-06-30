@@ -33,11 +33,14 @@ def load_env_file(path: Path) -> None:
 class AppConfig:
     openai_api_key: str
     elevenlabs_api_key: str
+    fish_api_key: str
     openai_model: str
     openai_text_model: str
     openai_router_model: str
     openai_realtime_model: str
     elevenlabs_voice: str
+    fish_model: str
+    fish_reference_id: str
     tts_provider: str
     tts_fallbacks: tuple[str, ...]
     stt_provider: str
@@ -100,6 +103,9 @@ class AppConfig:
     openviking_memory_uri_root: str
     obsidian_vault_path: Path
     obsidian_index_path: Path
+    obsidian_retriever_backend: str
+    obsidian_chunk_size: int
+    obsidian_chunk_overlap: int
     obsidian_conversation_enabled: bool
     read_only_smoke_mode: bool
     autonomous_workstreams_enabled: bool
@@ -121,6 +127,7 @@ class AppConfig:
         return cls(
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             elevenlabs_api_key=os.getenv("ELEVENLABS_API_KEY", ""),
+            fish_api_key=os.getenv("FISH_API_KEY", ""),
             openai_model=os.getenv("OPENAI_MODEL", "gpt-5.4-mini"),
             openai_text_model=os.getenv("OPENAI_TEXT_MODEL", "gpt-5.4-mini"),
             openai_router_model=os.getenv("OPENAI_ROUTER_MODEL", "gpt-5.4-nano"),
@@ -128,10 +135,12 @@ class AppConfig:
                 "OPENAI_REALTIME_MODEL", "gpt-realtime-1.5"
             ),
             elevenlabs_voice=os.getenv("ELEVENLABS_VOICE", "Adam"),
-            tts_provider=os.getenv("JARVIS_TTS_PROVIDER", "auto").strip().lower(),
+            fish_model=os.getenv("FISH_MODEL", "s2.1-pro"),
+            fish_reference_id=os.getenv("FISH_REFERENCE_ID", "").strip(),
+            tts_provider=os.getenv("JARVIS_TTS_PROVIDER", "fish").strip().lower(),
             tts_fallbacks=_csv_env(
                 "JARVIS_TTS_FALLBACKS",
-                ("piper", "localai", "elevenlabs", "system"),
+                ("piper", "localai", "elevenlabs", "fish", "system"),
             ),
             stt_provider=os.getenv("JARVIS_STT_PROVIDER", "openai").strip().lower(),
             stt_fallbacks=_csv_env(
@@ -294,6 +303,12 @@ class AppConfig:
                     "/Volumes/Monday/JARVIS/indexes/obsidian/index.json",
                 )
             ),
+            obsidian_retriever_backend=os.getenv(
+                "JARVIS_OBSIDIAN_RETRIEVER",
+                "llamaindex",
+            ).strip().lower() or "llamaindex",
+            obsidian_chunk_size=_int_env("JARVIS_OBSIDIAN_CHUNK_SIZE", 768, minimum=128),
+            obsidian_chunk_overlap=_int_env("JARVIS_OBSIDIAN_CHUNK_OVERLAP", 80, minimum=0),
             obsidian_conversation_enabled=_bool_env("JARVIS_ENABLE_OBSIDIAN_CONVERSATION", False),
             read_only_smoke_mode=_bool_env("JARVIS_READ_ONLY_SMOKE_MODE", False),
             autonomous_workstreams_enabled=_bool_env("JARVIS_AUTONOMOUS_WORKSTREAMS_ENABLED", True),
@@ -412,3 +427,17 @@ def _bool_env(name: str, default: bool) -> bool:
     if raw_value is None:
         return default
     return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _int_env(name: str, default: int, *, minimum: int | None = None) -> int:
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
+        value = default
+    else:
+        try:
+            value = int(raw_value.strip())
+        except ValueError:
+            value = default
+    if minimum is not None and value < minimum:
+        return minimum
+    return value

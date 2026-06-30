@@ -5056,7 +5056,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
               </div>
               <div class="attachment-list" id="attachment-list"></div>
             </div>
-            <textarea id="command-input" class="zone-speak-input" rows="1" placeholder="Say anything."></textarea>
+            <textarea id="command-input" class="zone-speak-input" rows="1" placeholder="Say anything. Use /correct to redirect Jarvis, /teach to make it stick, or /learn to turn it into a reusable skill."></textarea>
             <div class="context-action-dock" id="context-action-dock" aria-label="Context actions"></div>
             <div class="zone-speak-actions">
               <input id="chat-file-input" type="file" multiple hidden />
@@ -8987,16 +8987,57 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       }}
     }}
 
+    function formatVoiceStateLabel(value, fallback = "not checked yet") {{
+      if (!value) {{
+        return fallback;
+      }}
+      return String(value).replace(/_/g, " ");
+    }}
+
+    function compactVoiceDiagnostic(value, fallback = "--") {{
+      const text = String(value || "").trim();
+      if (!text) {{
+        return fallback;
+      }}
+      return text.length > 140 ? `${{text.slice(0, 137)}}...` : text;
+    }}
+
+    function selectedVoiceConfiguredReadiness(stackStatus = {{}}) {{
+      if (stackStatus.selected_tts_provider_ready === true) {{
+        return "ready";
+      }}
+      return formatVoiceStateLabel(stackStatus.selected_tts_provider_state, "not ready");
+    }}
+
+    function selectedVoiceLiveReadiness(stackStatus = {{}}) {{
+      if (stackStatus.selected_tts_provider_live_ready === true) {{
+        return "live";
+      }}
+      return formatVoiceStateLabel(stackStatus.selected_tts_provider_live_state, "not checked yet");
+    }}
+
+    function selectedVoiceLiveBlocker(stackStatus = {{}}) {{
+      if (stackStatus.selected_tts_provider_live_ready === false) {{
+        return compactVoiceDiagnostic(stackStatus.selected_tts_provider_live_reason, "live blocker recorded");
+      }}
+      return "none recorded";
+    }}
+
+    function selectedVoiceLiveFallback(stackStatus = {{}}) {{
+      return stackStatus.last_live_effective_tts_provider || "none recorded";
+    }}
+
     function sceneSettingsMarkup(data = {{}}) {{
       const settings = state.voiceSettings || {{}};
       const stackStatus = state.voiceOptions?.stack_status || settings.stack_status || {{}};
       const googleWorkspace = data.google_workspace || {{}};
       const runtimeSummary = `
-        <div class="metric"><strong>Voice source</strong> ${{escapeHtml(settings.selected_provider_label || "--")}}</div>
+        <div class="metric"><strong>Configured source</strong> ${{escapeHtml(settings.selected_provider_label || "--")}}</div>
+        <div class="metric"><strong>Configured readiness</strong> ${{escapeHtml(selectedVoiceConfiguredReadiness(stackStatus))}}</div>
+        <div class="metric"><strong>Last live readiness</strong> ${{escapeHtml(selectedVoiceLiveReadiness(stackStatus))}}</div>
+        <div class="metric"><strong>Last live blocker</strong> ${{escapeHtml(selectedVoiceLiveBlocker(stackStatus))}}</div>
+        <div class="metric"><strong>Last live fallback</strong> ${{escapeHtml(selectedVoiceLiveFallback(stackStatus))}}</div>
         <div class="metric"><strong>TTS order</strong> ${{escapeHtml((stackStatus.tts_order || []).join(" → ") || "--")}}</div>
-        <div class="metric"><strong>Piper</strong> ${{stackStatus.piper_ready ? "ready" : "not ready"}}</div>
-        <div class="metric"><strong>LocalAI</strong> ${{stackStatus.localai_healthy ? "healthy" : "standby"}}</div>
-        <div class="metric"><strong>ElevenLabs</strong> ${{stackStatus.elevenlabs_ready ? "ready" : "missing key"}}</div>
       `;
       const workspaceSummary = `
         <div class="metric"><strong>Google client</strong> ${{googleWorkspace.client_secret?.present ? "saved" : "missing"}}</div>
@@ -13215,13 +13256,30 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         }});
         state.voiceSettings = data.settings;
         state.voiceOptions = data.options;
-        state.settingsMessage = `Saved. Current source: ${{data.settings.selected_provider_label}}.`;
+        state.settingsMessage = `Saved. Configured voice source: ${{data.settings.selected_provider_label}}.`;
         openPacket("settings");
         document.getElementById("last-jarvis-text").textContent = "Voice settings updated.";
         syncTranscriptRail();
         if (preview) {{
+          const target = document.getElementById("voice-settings-status");
+          if (target) {{
+            target.textContent = "Configured voice source saved. Running preview through the current voice route…";
+          }}
           const previewText = document.getElementById("settings-preview-text")?.value?.trim() || "Good evening, sir. Voice calibration complete.";
-          await speakText(previewText);
+          await speakText(previewText, {{
+            onResult: (result) => {{
+              const liveTarget = document.getElementById("voice-settings-status");
+              if (liveTarget) {{
+                liveTarget.textContent = result?.message || "Preview route completed.";
+              }}
+            }},
+            onError: (detail) => {{
+              const liveTarget = document.getElementById("voice-settings-status");
+              if (liveTarget) {{
+                liveTarget.textContent = `Preview failed: ${{detail}}`;
+              }}
+            }},
+          }});
         }}
       }}
 
@@ -14582,42 +14640,46 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
               packetBlock("Voice Output", `
                 <div class="settings-grid">
                   <label>
-                    Preferred voice source
+                    TTS Provider
                     <select id="settings-tts-provider">
                       ${{renderSelectOptions(options.providers || [], settings.tts_provider || "auto")}}
                     </select>
                   </label>
                   <label>
-                    ElevenLabs voice
+                    ElevenLabs Voice
                     <select id="settings-elevenlabs-voice">
                       ${{renderSelectOptions(options.elevenlabs || [], settings.elevenlabs_voice || "", "No ElevenLabs voices found")}}
                     </select>
                   </label>
                   <label>
-                    Piper voice
+                    Piper Voice Model
                     <select id="settings-piper-model">
                       ${{renderSelectOptions(options.piper || [], settings.piper_model_path || "", "No Piper voices found")}}
                     </select>
                   </label>
                   <label>
-                    Piper speaker
+                    Piper Speaker
                     <input id="settings-piper-speaker" value="${{escapeHtml(settings.piper_speaker || "")}}" placeholder="Default speaker">
                   </label>
                   <label>
-                    Preview phrase
+                    Preview Phrase
                     <input id="settings-preview-text" value="Good evening, sir. Voice calibration complete.">
                   </label>
                   <div class="inline-actions">
-                    <button id="save-voice-settings" type="button">Save</button>
+                    <button id="save-voice-settings" type="button">Save Voice Settings</button>
                     <button id="preview-voice-settings" class="ghost-toggle" type="button">Save + Preview</button>
                   </div>
-                  <div class="settings-note" id="voice-settings-status">${{escapeHtml(state.settingsMessage || "Pick a source, save it, and preview the result here.")}}</div>
+                  <div class="settings-note" id="voice-settings-status">${{escapeHtml(state.settingsMessage || "Save voice settings here, then preview through the current voice route.")}}</div>
                 </div>`)
             }}
             ${{
               packetBlock("Current Selection", `
                 <div class="stack">
-                  <div class="metric"><strong>Source</strong> ${{escapeHtml(settings.selected_provider_label || "--")}}</div>
+                  <div class="metric"><strong>Configured source</strong> ${{escapeHtml(settings.selected_provider_label || "--")}}</div>
+                  <div class="metric"><strong>Configured readiness</strong> ${{escapeHtml(selectedVoiceConfiguredReadiness(stackStatus))}}</div>
+                  <div class="metric"><strong>Last live readiness</strong> ${{escapeHtml(selectedVoiceLiveReadiness(stackStatus))}}</div>
+                  <div class="metric"><strong>Last live blocker</strong> ${{escapeHtml(selectedVoiceLiveBlocker(stackStatus))}}</div>
+                  <div class="metric"><strong>Last live fallback</strong> ${{escapeHtml(selectedVoiceLiveFallback(stackStatus))}}</div>
                   <div class="metric"><strong>ElevenLabs</strong> ${{escapeHtml(settings.selected_elevenlabs_label || "--")}}</div>
                   <div class="metric"><strong>Piper</strong> ${{escapeHtml(settings.selected_piper_label || "--")}}</div>
                   <div class="metric"><strong>Order</strong> ${{escapeHtml((stackStatus.tts_order || []).join(" → ") || "--")}}</div>
@@ -16581,7 +16643,82 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       return false;
     }}
 
-    async function speakText(text) {{
+    function voiceHeaderValue(headers, names) {{
+      for (const name of names) {{
+        const value = headers?.get?.(name);
+        if (value) {{
+          return value;
+        }}
+      }}
+      return "";
+    }}
+
+    function compactPreviewReason(value, fallback = "") {{
+      const text = String(value || "").trim();
+      if (!text) {{
+        return fallback;
+      }}
+      return text.length > 160 ? `${{text.slice(0, 157)}}...` : text;
+    }}
+
+    function summarizeVoicePreviewResult(response) {{
+      const headers = response?.headers;
+      const requested = voiceHeaderValue(headers, [
+        "X-Jarvis-Voice-Requested-Provider",
+        "X-Jarvis-Tts-Requested-Provider",
+      ]) || "auto";
+      const effective = voiceHeaderValue(headers, [
+        "X-Jarvis-Voice-Effective-Provider",
+        "X-Jarvis-Tts-Effective-Provider",
+        "X-Jarvis-Voice-Provider",
+        "X-Jarvis-Tts-Provider",
+      ]) || "unknown";
+      const fallbackFrom = voiceHeaderValue(headers, ["X-Jarvis-Voice-Fallback-From"]);
+      const blocker = compactPreviewReason(
+        voiceHeaderValue(headers, [
+          "X-Jarvis-Voice-Fallback-Reason",
+          "X-Jarvis-Tts-Fallback-Reason",
+        ]),
+        "",
+      );
+      if (fallbackFrom || (requested && effective && requested !== effective && requested !== "auto")) {{
+        return {{
+          requested,
+          effective,
+          blocker,
+          message: blocker
+            ? `Preview requested ${{requested}}, but playback used ${{effective}}. Live blocker: ${{blocker}}`
+            : `Preview requested ${{requested}}, but playback used ${{effective}}.`,
+        }};
+      }}
+      return {{
+        requested,
+        effective,
+        blocker,
+        message: `Preview requested ${{requested}} and played with ${{effective}}.`,
+      }};
+    }}
+
+    async function voiceErrorDetail(response) {{
+      const fallback = `Voice output unavailable (${{response?.status || "unknown"}})`;
+      if (!response) {{
+        return fallback;
+      }}
+      try {{
+        const clone = response.clone();
+        const contentType = String(clone.headers?.get?.("Content-Type") || "").toLowerCase();
+        if (contentType.includes("application/json")) {{
+          const payload = await clone.json();
+          return String(payload?.detail || payload?.error || fallback);
+        }}
+        const text = String(await clone.text()).trim();
+        return text || fallback;
+      }} catch (_error) {{
+        return fallback;
+      }}
+    }}
+
+    async function speakText(text, options = {{}}) {{
       if (!text) {{
         setVoiceState("idle", 'Standing by for "Hey Jarvis", "Jarvis", or a double clap.');
         return;
@@ -16617,7 +16754,14 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           }})
         );
         if (!response.ok) {{
-          throw new Error(`Voice output unavailable (${{response.status}})`);
+          const detail = await voiceErrorDetail(response);
+          if (typeof options.onError === "function") {{
+            options.onError(detail);
+          }}
+          throw new Error(detail);
+        }}
+        if (typeof options.onResult === "function") {{
+          options.onResult(summarizeVoicePreviewResult(response));
         }}
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);

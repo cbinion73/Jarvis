@@ -22,17 +22,34 @@ from concurrent.futures import ThreadPoolExecutor
 
 from .accounts import AccountRegistry, PersonalAccount
 from .adaptation import AdaptationStore
+from .action_briefs import ActionBriefStore, build_direct_action_brief_response
+from .artifact_outcomes import ALLOWED_ARTIFACT_OUTCOMES, ArtifactOutcomeStore
+from .autonomy_state import (
+    ALLOWED_AUTONOMY_APPROVAL_STATES,
+    ALLOWED_AUTONOMY_CONTROL_ACTIONS,
+    ALLOWED_AUTONOMY_CONTROL_POSTURES,
+    ALLOWED_AUTONOMY_FOLLOW_THROUGH_STATUSES,
+    ALLOWED_AUTONOMY_PLAN_ACTION_STATUSES,
+    ALLOWED_AUTONOMY_READINESS_STATES,
+    ALLOWED_AUTONOMY_STATE_STATUSES,
+    AutonomyStateStore,
+)
 from .assistant_core import AssistantCoreStore
 from .agentic import AgentRegistry, BackgroundStateStore, BackgroundTaskScheduler, LifeAgentStudioStore, MemoryCurator
 from .audit import ApprovalStore, AuditLog
 from .briefing import build_morning_brief
 from .catalyst import CatalystStore, CatalystSupport
 from .chronicle import ChronicleStore, ChronicleSupport
+from .checklists import ChecklistStore, build_direct_checklist_response
 from .config import AppConfig
 from .conversation import ConversationStore
 from .content_ops import ContentOpsStore, ContentOpsSupport
 from .companion_spine import run_companion_turn
+from .constraint_maps import ConstraintMapStore, build_direct_constraint_map_response
+from .decision_matrices import DecisionMatrixStore, build_direct_decision_matrix_response
+from .decision_memos import DecisionMemoStore, build_direct_decision_memo_response
 from .doctrine import SharedDoctrineStore
+from .drafts import DraftStore, build_direct_draft_response
 from .executive import ExecutiveSupport
 from .family_calendar import FamilyCalendarSupport
 from .family import FamilyStore, FamilySupport
@@ -42,30 +59,46 @@ from .google_workspace import GoogleWorkspaceSupport
 from .growth import GrowthAdapterSnapshot, GrowthDomainSnapshot, GrowthLaneSnapshot, growth_schema_snapshot
 from .home import HomeStore, HomeSupport
 from .identity import IdentityRegistry
+from .evidence_bundles import EvidenceBundleStore, build_direct_evidence_bundle_response
 from .interfaces import InterfaceRouterStore, InterfaceRouterSupport
+from .itineraries import ItineraryStore, build_direct_itinerary_response
 from .memory import MemoryStore, MemorySupport
 from .missions import MissionStore, MissionSupport
 from .microsoft_graph import MicrosoftGraphSupport
 from .models import ApprovalRequest, AuthorityStage, AutonomyMode, AutonomyPolicy, EmailDraftStagingRequest, EmailDraftStagingResponse, HouseholdProfile, PrivacyLevel, PromotionRecord, RequestPlan, ResourceArena, RiskLevel, RoutingTier, StagedActionQueueItem, TrustZone, UserProfile, WorkLifecycleRecord, WorkLifecycleStage
 from .promotion import PromotionEngine
+from .recap_packets import RecapPacketStore, build_direct_recap_packet_response
+from .recommendations import RecommendationStore, build_direct_recommendation_response
+from .langchain_retrieval import retrieve_research_material
+from .research_packets import ResearchPacketStore, build_direct_research_packet_response
+from .research_tasks import ALLOWED_RESEARCH_TASK_STATUSES, ResearchTaskStore
 from .models import HouseholdSnapshot
 from .models import WeatherAdvisory
 from .openai_tasks import JarvisOpenAIClient, OpenAIResult
 from .obsidian_context import ObsidianVaultSupport
+from .option_cards import OptionCardStore, build_direct_option_card_response
 from .orchestrator import JarvisOrchestrator
 from .openviking_context import OpenVikingSupport
+from .persistence import atomic_write_json
 from .perception import PerceptionStore, PerceptionSupport
 from .permissions import PermissionEngine
+from .plans import PlanStore, build_direct_plan_response
+from .pros_cons import ProsConsStore, build_direct_pros_cons_response
+from .question_sets import QuestionSetStore, build_direct_question_set_response
 from .runtime_kernel import AgentRuntimeKernel, AgentRuntimeKernelStore
 from .runtime_posture import build_runtime_posture_snapshot
 from .state_log_utils import read_jsonl_tail
+from .source_sets import SourceSetStore, build_direct_source_set_response
+from .structured_notes import StructuredNoteStore, build_direct_structured_note_response
 from .security import SecurityStore, SecuritySupport
 from .self_improvement import SelfImprovementStore
 from .supervision import SupervisionStore, SupervisionSupport
+from .task_lists import TaskListStore, build_direct_task_list_response
 from .tutoring import TutoringStore, TutoringSupport
 from .trust import TrustStore, TrustSupport
 from .wealth import WealthLeverageStore, WealthLeverageSupport
 from .workstreams import AutonomousWorkstreamStore, AutonomousWorkstreamSupport
+from .workflow_runs import WorkflowRunStore
 from .workshop import WorkshopStore, WorkshopSupport
 
 
@@ -158,6 +191,186 @@ _STORM_WIND_TERMS = (
     "squall",
 )
 
+_CREATED_OBJECT_RESULT_FIELDS = (
+    "created_checklist",
+    "created_plan",
+    "created_draft",
+    "created_research_packet",
+    "created_recommendation",
+    "created_decision_matrix",
+    "created_itinerary",
+    "created_task_list",
+    "created_evidence_bundle",
+    "created_recap_packet",
+    "created_source_set",
+    "created_structured_note",
+    "created_action_brief",
+    "created_decision_memo",
+    "created_option_card",
+    "created_pros_cons",
+    "created_constraint_map",
+    "created_question_set",
+)
+
+_LOCAL_OBJECT_BACKING_FILES = {
+    "checklist": ("checklists.json", "checklists_log.jsonl"),
+    "plan": ("plans.json", "plans_log.jsonl"),
+    "draft": ("drafts.json", "drafts_log.jsonl"),
+    "research_packet": ("research_packets.json", "research_packets_log.jsonl"),
+    "recommendation": ("recommendations.json", "recommendations_log.jsonl"),
+    "decision_matrix": ("decision_matrices.json", "decision_matrices_log.jsonl"),
+    "itinerary": ("itineraries.json", "itineraries_log.jsonl"),
+    "task_list": ("task_lists.json", "task_lists_log.jsonl"),
+    "evidence_bundle": ("evidence_bundles.json", "evidence_bundles_log.jsonl"),
+    "recap_packet": ("recap_packets.json", "recap_packets_log.jsonl"),
+    "source_set": ("source_sets.json", "source_sets_log.jsonl"),
+    "structured_note": ("structured_notes.json", "structured_notes_log.jsonl"),
+    "action_brief": ("action_briefs.json", "action_briefs_log.jsonl"),
+    "decision_memo": ("decision_memos.json", "decision_memos_log.jsonl"),
+    "option_card": ("option_cards.json", "option_cards_log.jsonl"),
+    "pros_cons": ("pros_cons.json", "pros_cons_log.jsonl"),
+    "constraint_map": ("constraint_maps.json", "constraint_maps_log.jsonl"),
+    "question_set": ("question_sets.json", "question_sets_log.jsonl"),
+}
+
+_OUTCOME_CAPTURE_OBJECT_LOOKUPS = {
+    "checklist": ("checklist_store", "get_checklist"),
+    "plan": ("plan_store", "get_plan"),
+    "draft": ("draft_store", "get_draft"),
+    "research_packet": ("research_packet_store", "get_packet"),
+    "recommendation": ("recommendation_store", "get_recommendation"),
+    "decision_matrix": ("decision_matrix_store", "get_matrix"),
+    "itinerary": ("itinerary_store", "get_itinerary"),
+    "task_list": ("task_list_store", "get_task_list"),
+    "evidence_bundle": ("evidence_bundle_store", "get_bundle"),
+    "recap_packet": ("recap_packet_store", "get_packet"),
+    "source_set": ("source_set_store", "get_source_set"),
+    "structured_note": ("structured_note_store", "get_note"),
+    "action_brief": ("action_brief_store", "get_brief"),
+    "decision_memo": ("decision_memo_store", "get_memo"),
+    "option_card": ("option_card_store", "get_option_card"),
+    "pros_cons": ("pros_cons_store", "get_sheet"),
+    "constraint_map": ("constraint_map_store", "get_map"),
+    "question_set": ("question_set_store", "get_question_set"),
+}
+
+
+def _annotate_created_object_payload(payload: object) -> dict[str, object]:
+    if not isinstance(payload, dict) or not payload:
+        return {}
+    annotated = dict(payload)
+    object_kind = str(annotated.get("object_kind", "") or "").strip()
+    if not object_kind:
+        return annotated
+    backing_files = list(_LOCAL_OBJECT_BACKING_FILES.get(object_kind, ()))
+    external_save_used = bool(annotated.get("external_note_system_used")) or bool(annotated.get("obsidian_write_used"))
+    annotated["creation_proof"] = {
+        "created_in_this_turn": True,
+        "persisted_locally": True,
+        "returned_payload_only": False,
+        "standalone_file_written": False,
+        "storage_mode": "persisted_local_object_record",
+        "backing_store_files": backing_files,
+        "external_save_used": external_save_used,
+    }
+    return annotated
+
+
+def _build_action_truth_summary(
+    *,
+    result: OpenAIResult | None,
+    requested_packet: str = "",
+    requested_catalyst_page: str = "",
+) -> dict[str, object]:
+    created_objects: list[dict[str, object]] = []
+    execution_trace: list[dict[str, object]] = []
+    standalone_file_written = False
+    external_save_used = False
+    persisted_local_objects = False
+
+    for item in list(getattr(result, "execution_trace", []) or []):
+        if not isinstance(item, dict):
+            continue
+        trace_type = str(item.get("type", "") or "").strip()
+        status = str(item.get("status", "") or "").strip()
+        if not trace_type or not status:
+            continue
+        compact = {"type": trace_type, "status": status}
+        for key in ("source", "target", "detail", "result_count", "storage_mode"):
+            value = item.get(key)
+            if value in ("", None, []):
+                continue
+            compact[key] = value
+        execution_trace.append(compact)
+
+    for field_name in _CREATED_OBJECT_RESULT_FIELDS:
+        payload = getattr(result, field_name, {}) if result is not None else {}
+        if not isinstance(payload, dict) or not payload:
+            continue
+        proof = payload.get("creation_proof", {})
+        if not isinstance(proof, dict):
+            proof = {}
+        kind = str(payload.get("object_kind", "") or "").strip()
+        if not kind:
+            continue
+        persisted = bool(proof.get("persisted_locally"))
+        file_written = bool(proof.get("standalone_file_written"))
+        external_used = bool(proof.get("external_save_used"))
+        execution_trace.append(
+            {
+                "type": "create",
+                "status": "completed",
+                "target": kind,
+                "storage_mode": str(proof.get("storage_mode", "") or "").strip(),
+            }
+        )
+        created_objects.append(
+            {
+                "object_kind": kind,
+                "persisted_locally": persisted,
+                "standalone_file_written": file_written,
+                "storage_mode": str(proof.get("storage_mode", "") or "").strip(),
+            }
+        )
+        persisted_local_objects = persisted_local_objects or persisted
+        standalone_file_written = standalone_file_written or file_written
+        external_save_used = external_save_used or external_used
+
+    surface_open_requested = bool(str(requested_packet or "").strip())
+    catalyst_page_requested = bool(str(requested_catalyst_page or "").strip())
+    if surface_open_requested:
+        execution_trace.append(
+            {
+                "type": "open",
+                "status": "requested_not_completed",
+                "target": str(requested_packet or "").strip(),
+                "detail": "UI route was requested, but this runtime path does not prove the surface opened.",
+            }
+        )
+    if catalyst_page_requested:
+        execution_trace.append(
+            {
+                "type": "open",
+                "status": "requested_not_completed",
+                "target": f"catalyst:{str(requested_catalyst_page or '').strip()}",
+                "detail": "Catalyst page was requested, but this runtime path does not prove the surface opened.",
+            }
+        )
+
+    return {
+        "execution_trace": execution_trace,
+        "created_objects": created_objects,
+        "persisted_local_objects_created": persisted_local_objects,
+        "standalone_file_written": standalone_file_written,
+        "external_save_used": external_save_used,
+        "surface_open_requested": surface_open_requested,
+        "surface_open_target": str(requested_packet or "").strip(),
+        "surface_open_completed_in_runtime": False,
+        "catalyst_page_requested": catalyst_page_requested,
+        "catalyst_page_target": str(requested_catalyst_page or "").strip(),
+        "reasoning_only": not execution_trace and not created_objects and not surface_open_requested and not catalyst_page_requested,
+    }
+
 
 @dataclass(slots=True)
 class JarvisRuntime:
@@ -203,6 +416,28 @@ class JarvisRuntime:
     trust_support: TrustSupport
     mission_support: MissionSupport
     self_improvement_store: SelfImprovementStore
+    artifact_outcome_store: ArtifactOutcomeStore
+    autonomy_state_store: AutonomyStateStore
+    checklist_store: ChecklistStore
+    plan_store: PlanStore
+    draft_store: DraftStore
+    research_packet_store: ResearchPacketStore
+    research_task_store: ResearchTaskStore
+    recommendation_store: RecommendationStore
+    decision_matrix_store: DecisionMatrixStore
+    itinerary_store: ItineraryStore
+    task_list_store: TaskListStore
+    evidence_bundle_store: EvidenceBundleStore
+    recap_packet_store: RecapPacketStore
+    source_set_store: SourceSetStore
+    structured_note_store: StructuredNoteStore
+    action_brief_store: ActionBriefStore
+    decision_memo_store: DecisionMemoStore
+    option_card_store: OptionCardStore
+    pros_cons_store: ProsConsStore
+    constraint_map_store: ConstraintMapStore
+    question_set_store: QuestionSetStore
+    workflow_run_store: WorkflowRunStore
     service_role: str = "interactive"
     process_started_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     process_id: int = field(default_factory=os.getpid)
@@ -238,6 +473,262 @@ class JarvisRuntime:
         repr=False,
     )
 
+    @staticmethod
+    def _with_creation_truth_proof(result: OpenAIResult | None) -> OpenAIResult | None:
+        if result is None:
+            return None
+        annotated_fields: dict[str, dict[str, object]] = {}
+        primary_kind = ""
+        for field_name in _CREATED_OBJECT_RESULT_FIELDS:
+            annotated = _annotate_created_object_payload(getattr(result, field_name, {}))
+            annotated_fields[field_name] = annotated
+            if annotated and not primary_kind:
+                primary_kind = str(annotated.get("object_kind", "") or "").strip()
+        output_text = str(result.output_text or "").strip()
+        if primary_kind and "saved locally as a real" not in output_text.lower():
+            readable_kind = primary_kind.replace("_", " ")
+            output_text = (
+                f"{output_text.rstrip()} "
+                f"It is saved locally as a real {readable_kind} object in Jarvis data, not just drafted in memory."
+            ).strip()
+        return OpenAIResult(
+            provider=result.provider,
+            model=result.model,
+            output_text=output_text,
+            execution_trace=list(getattr(result, "execution_trace", []) or []),
+            **annotated_fields,
+        )
+
+    def _workflow_plan_summary(self, plan: RequestPlan | None) -> dict[str, object]:
+        if plan is None:
+            return {}
+        return {
+            "request_id": str(plan.request_id or "").strip(),
+            "actor": str(plan.actor or "").strip(),
+            "room": str(plan.room or "").strip(),
+            "module": str(plan.module or "").strip(),
+            "workstream": str(plan.workstream or "").strip(),
+            "preferred_provider": str(plan.preferred_provider or "").strip(),
+            "context_lane": str(plan.context_lane or "").strip(),
+            "model": str(plan.model or "").strip(),
+            "allowed": bool(plan.allowed),
+            "needs_approval": bool(plan.needs_approval),
+            "rationale": str(plan.rationale or "").strip(),
+        }
+
+    def _created_objects_from_result(self, result: OpenAIResult | None) -> list[dict[str, object]]:
+        created_objects: list[dict[str, object]] = []
+        if result is None:
+            return created_objects
+        for field_name in _CREATED_OBJECT_RESULT_FIELDS:
+            payload = getattr(result, field_name, {})
+            if not isinstance(payload, dict) or not payload:
+                continue
+            kind = str(payload.get("object_kind", "") or "").strip()
+            if not kind:
+                continue
+            proof = payload.get("creation_proof", {})
+            if not isinstance(proof, dict):
+                proof = {}
+            created_objects.append(
+                {
+                    "field_name": field_name,
+                    "object_kind": kind,
+                    "object_id": str(
+                        payload.get(f"{kind}_id")
+                        or payload.get("object_id")
+                        or payload.get("item_id")
+                        or ""
+                    ).strip(),
+                    "title": str(payload.get("title", "") or "").strip(),
+                    "storage_mode": str(proof.get("storage_mode", "") or "").strip(),
+                    "persisted_locally": bool(proof.get("persisted_locally")),
+                    "backing_store_files": list(proof.get("backing_store_files") or []),
+                }
+            )
+        return created_objects
+
+    def _workflow_run_already_recorded(self, result: OpenAIResult | None) -> bool:
+        if result is None:
+            return False
+        for item in list(getattr(result, "execution_trace", []) or []):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("type", "")).strip() == "workflow_run" and str(item.get("status", "")).strip() == "recorded":
+                return True
+        return False
+
+    def _workflow_active_nodes_for_result(self, plan: RequestPlan, result: OpenAIResult) -> list[str]:
+        provider = str(result.provider or "").strip()
+        if provider.endswith("-engine"):
+            return [provider]
+        return self._active_nodes_for(plan, provider)
+
+    def record_workflow_run(
+        self,
+        *,
+        workflow_kind: str,
+        actor: str,
+        room: str,
+        request: str,
+        status: str,
+        provider: str = "",
+        model: str = "",
+        graph_name: str = "",
+        runtime_surface: str = "",
+        active_nodes: list[str] | None = None,
+        nodes_planned: list[str] | None = None,
+        step_events: list[dict[str, object]] | None = None,
+        execution_trace: list[dict[str, object]] | None = None,
+        created_objects: list[dict[str, object]] | None = None,
+        plan: RequestPlan | None = None,
+        result_summary: dict[str, object] | None = None,
+        output_text: str = "",
+        metadata: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        try:
+            return self.workflow_run_store.record_run(
+                workflow_kind=workflow_kind,
+                actor=actor,
+                room=room,
+                request=request,
+                status=status,
+                provider=provider,
+                model=model,
+                graph_name=graph_name,
+                runtime_surface=runtime_surface,
+                active_nodes=list(active_nodes or []),
+                nodes_planned=list(nodes_planned or []),
+                step_events=list(step_events or []),
+                execution_trace=list(execution_trace or []),
+                created_objects=list(created_objects or []),
+                plan_summary=self._workflow_plan_summary(plan),
+                result_summary=dict(result_summary or {}),
+                output_text=output_text,
+                metadata=dict(metadata or {}),
+            )
+        except Exception:
+            return {}
+
+    def _record_interactive_result_run(
+        self,
+        *,
+        plan: RequestPlan,
+        actor_name: str,
+        room: str,
+        request: str,
+        result: OpenAIResult,
+        runtime_surface: str,
+        metadata: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        if self._workflow_run_already_recorded(result):
+            return {}
+        created_objects = self._created_objects_from_result(result)
+        workflow_kind = "artifact_creation" if created_objects else "conversation_turn"
+        step_events = [
+            {
+                "node": str(result.provider or "conversation").strip() or "conversation",
+                "status": "completed",
+                "detail": "Interactive runtime resolved the turn into a concrete result.",
+                "created_object_count": len(created_objects),
+            }
+        ]
+        record = self.record_workflow_run(
+            workflow_kind=workflow_kind,
+            actor=actor_name,
+            room=room,
+            request=request,
+            status="completed",
+            provider=result.provider,
+            model=result.model,
+            runtime_surface=runtime_surface,
+            active_nodes=self._workflow_active_nodes_for_result(plan, result),
+            nodes_planned=[str(result.provider or "conversation").strip() or "conversation"],
+            step_events=step_events,
+            execution_trace=list(getattr(result, "execution_trace", []) or []),
+            created_objects=created_objects,
+            plan=plan,
+            result_summary={
+                "created_object_count": len(created_objects),
+                "execution_trace_count": len(list(getattr(result, "execution_trace", []) or [])),
+                "output_text_present": bool(str(result.output_text or "").strip()),
+            },
+            output_text=str(result.output_text or "").strip(),
+            metadata=metadata or {},
+        )
+        if record and isinstance(result.execution_trace, list):
+            result.execution_trace.append(
+                {
+                    "type": "workflow_run",
+                    "status": "recorded",
+                    "workflow_kind": workflow_kind,
+                    "run_id": str(record.get("run_id", "") or "").strip(),
+                }
+            )
+        return record
+
+    def _record_artifact_creation_result(
+        self,
+        actor_name: str,
+        room: str,
+        request: str,
+        result: OpenAIResult,
+    ) -> OpenAIResult:
+        if self._workflow_run_already_recorded(result):
+            return result
+        plan = self.plan_request(actor_name, room, request)
+        created_objects = self._created_objects_from_result(result)
+        output_text = str(result.output_text or "").strip()
+        status = "completed"
+        if not created_objects and "can't create a real" in output_text.lower():
+            status = "degraded"
+        record = self.record_workflow_run(
+            workflow_kind="artifact_creation",
+            actor=actor_name,
+            room=room,
+            request=request,
+            status=status,
+            provider=result.provider,
+            model=result.model,
+            runtime_surface="artifact-engine",
+            active_nodes=[str(result.provider or "artifact-engine").strip() or "artifact-engine"],
+            nodes_planned=[str(result.provider or "artifact-engine").strip() or "artifact-engine"],
+            step_events=[
+                {
+                    "node": str(result.provider or "artifact-engine").strip() or "artifact-engine",
+                    "status": status,
+                    "detail": "Artifact creation engine handled the request.",
+                    "created_object_count": len(created_objects),
+                }
+            ],
+            execution_trace=list(getattr(result, "execution_trace", []) or []),
+            created_objects=created_objects,
+            plan=plan,
+            result_summary={
+                "created_object_count": len(created_objects),
+                "output_text_present": bool(output_text),
+                "degraded_reason": "read_only_mode" if status == "degraded" else "",
+            },
+            output_text=output_text,
+            metadata={"artifact_creation": True},
+        )
+        if record and isinstance(result.execution_trace, list):
+            result.execution_trace.append(
+                {
+                    "type": "workflow_run",
+                    "status": "recorded",
+                    "workflow_kind": "artifact_creation",
+                    "run_id": str(record.get("run_id", "") or "").strip(),
+                }
+            )
+        return result
+
+    def workflow_run_snapshot(self, run_id: str) -> dict[str, object]:
+        return self.workflow_run_store.get_run(run_id) or {}
+
+    def workflow_run_summary(self, *, limit: int = 12) -> dict[str, object]:
+        return self.workflow_run_store.summary(limit=limit)
+
     @classmethod
     def from_env(cls) -> "JarvisRuntime":
         config = AppConfig.from_env()
@@ -259,6 +750,9 @@ class JarvisRuntime:
         obsidian_support = ObsidianVaultSupport(
             config.obsidian_vault_path,
             config.obsidian_index_path,
+            retriever_backend=config.obsidian_retriever_backend,
+            chunk_size=config.obsidian_chunk_size,
+            chunk_overlap=config.obsidian_chunk_overlap,
         )
         catalyst_support = CatalystSupport(config, openai_client, CatalystStore(data_root / "catalyst"))
         workstream_support = AutonomousWorkstreamSupport(AutonomousWorkstreamStore(data_root / "workstreams"))
@@ -275,6 +769,28 @@ class JarvisRuntime:
             TrustStore(data_root / "trust"),
             default_owner_principal=_default_trust_owner_principal(config, household),
         )
+        artifact_outcome_store = ArtifactOutcomeStore(data_root / "outcomes", read_only=config.read_only_smoke_mode)
+        autonomy_state_store = AutonomyStateStore(data_root / "autonomy_states", read_only=config.read_only_smoke_mode)
+        checklist_store = ChecklistStore(data_root / "checklists", read_only=config.read_only_smoke_mode)
+        plan_store = PlanStore(data_root / "plans", read_only=config.read_only_smoke_mode)
+        draft_store = DraftStore(data_root / "drafts", read_only=config.read_only_smoke_mode)
+        research_packet_store = ResearchPacketStore(data_root / "research_packets", read_only=config.read_only_smoke_mode)
+        research_task_store = ResearchTaskStore(data_root / "research_tasks", read_only=config.read_only_smoke_mode)
+        recommendation_store = RecommendationStore(data_root / "recommendations", read_only=config.read_only_smoke_mode)
+        decision_matrix_store = DecisionMatrixStore(data_root / "decision_matrices", read_only=config.read_only_smoke_mode)
+        itinerary_store = ItineraryStore(data_root / "itineraries", read_only=config.read_only_smoke_mode)
+        task_list_store = TaskListStore(data_root / "task_lists", read_only=config.read_only_smoke_mode)
+        evidence_bundle_store = EvidenceBundleStore(data_root / "evidence_bundles", read_only=config.read_only_smoke_mode)
+        recap_packet_store = RecapPacketStore(data_root / "recap_packets", read_only=config.read_only_smoke_mode)
+        source_set_store = SourceSetStore(data_root / "source_sets", read_only=config.read_only_smoke_mode)
+        structured_note_store = StructuredNoteStore(data_root / "structured_notes", read_only=config.read_only_smoke_mode)
+        action_brief_store = ActionBriefStore(data_root / "action_briefs", read_only=config.read_only_smoke_mode)
+        decision_memo_store = DecisionMemoStore(data_root / "decision_memos", read_only=config.read_only_smoke_mode)
+        option_card_store = OptionCardStore(data_root / "option_cards", read_only=config.read_only_smoke_mode)
+        pros_cons_store = ProsConsStore(data_root / "pros_cons", read_only=config.read_only_smoke_mode)
+        constraint_map_store = ConstraintMapStore(data_root / "constraint_maps", read_only=config.read_only_smoke_mode)
+        question_set_store = QuestionSetStore(data_root / "question_sets", read_only=config.read_only_smoke_mode)
+        workflow_run_store = WorkflowRunStore(data_root / "workflow_runs", read_only=config.read_only_smoke_mode)
         agent_registry = AgentRegistry()
         approval_store = ApprovalStore(data_root / "approvals")
         audit_log = AuditLog(data_root / "logs", read_only=config.read_only_smoke_mode)
@@ -351,6 +867,28 @@ class JarvisRuntime:
             service_role=os.getenv("JARVIS_SERVICE_ROLE", "interactive").strip().lower() or "interactive",
             mission_support=mission_support,
             self_improvement_store=SelfImprovementStore(data_root / "system"),
+            artifact_outcome_store=artifact_outcome_store,
+            autonomy_state_store=autonomy_state_store,
+            checklist_store=checklist_store,
+            plan_store=plan_store,
+            draft_store=draft_store,
+            research_packet_store=research_packet_store,
+            research_task_store=research_task_store,
+            recommendation_store=recommendation_store,
+            decision_matrix_store=decision_matrix_store,
+            itinerary_store=itinerary_store,
+            task_list_store=task_list_store,
+            evidence_bundle_store=evidence_bundle_store,
+            recap_packet_store=recap_packet_store,
+            source_set_store=source_set_store,
+            structured_note_store=structured_note_store,
+            action_brief_store=action_brief_store,
+            decision_memo_store=decision_memo_store,
+            option_card_store=option_card_store,
+            pros_cons_store=pros_cons_store,
+            constraint_map_store=constraint_map_store,
+            question_set_store=question_set_store,
+            workflow_run_store=workflow_run_store,
         )
         runtime.startup_build = runtime._service_build_snapshot()
         runtime._record_service_runtime_startup()
@@ -4897,6 +5435,86 @@ class JarvisRuntime:
     def approval_history(self) -> list[dict]:
         return self.approval_store.list_all()
 
+    def _google_workspace_posture(self) -> dict[str, Any]:
+        default_status = self.google_workspace.status().to_dict()
+        accounts = [
+            self.google_account_snapshot(item["account_id"])
+            for item in self.list_personal_accounts()
+            if item["provider"] == "google"
+        ]
+        recorded_connected = [
+            entry for entry in accounts
+            if str((entry.get("account") or {}).get("status", "")).strip().lower() == "connected"
+        ]
+        usable_connected = [
+            entry for entry in accounts
+            if bool((entry.get("status") or {}).get("connected"))
+        ]
+        stale_recorded_connected_count = max(0, len(recorded_connected) - len(usable_connected))
+        missing_requirement_path = ""
+        next_recovery_step = ""
+        account_hygiene_note = ""
+
+        if usable_connected:
+            blocking_layer = "connected"
+            detail = (
+                f"{len(usable_connected)} usable Google account(s): "
+                + ", ".join(
+                    str((entry.get("account") or {}).get("label") or (entry.get("account") or {}).get("owner_display_name") or "Google account")
+                    for entry in usable_connected
+                )
+            )
+            next_recovery_step = "No Google credential recovery step is needed right now."
+        elif not bool(default_status.get("libraries_ready")):
+            blocking_layer = "import"
+            detail = "Google bridge code is unavailable in this runtime because the Google API libraries are not installed."
+            next_recovery_step = "Install the Google bridge packages in the repo venv before retrying Google status."
+        elif not bool(default_status.get("credentials_file_present")):
+            blocking_layer = "client_credentials"
+            detail = "Google bridge code is ready, but client credentials are missing."
+            missing_requirement_path = str(self.config.google_client_secret_path)
+            next_recovery_step = f"Add the Google OAuth client file at {self.config.google_client_secret_path} and rerun `python -m jarvis google-status`."
+        elif bool(default_status.get("token_present")):
+            blocking_layer = "token_invalid"
+            detail = "Google bridge code and client credentials are present, but the local Google token is not currently valid."
+            next_recovery_step = "Reconnect the affected Google account or replace the local token, then rerun `python -m jarvis google-status`."
+        else:
+            blocking_layer = "account_connection"
+            detail = "Google bridge code and client credentials are ready, but no Google account token is connected."
+            next_recovery_step = "Connect or re-import a Google account token for one recorded account, then rerun `python -m jarvis google-status`."
+
+        if not usable_connected:
+            detail = (
+                f"{detail} "
+                f"Recorded accounts: {len(accounts)}; "
+                f"registry-connected: {len(recorded_connected)}; "
+                f"usable now: {len(usable_connected)}."
+            )
+        if stale_recorded_connected_count:
+            account_hygiene_note = (
+                f"{stale_recorded_connected_count} account record(s) are still marked connected in the registry but are not usable in this runtime."
+            )
+            detail = f"{detail} {account_hygiene_note}"
+
+        return {
+            "libraries_ready": bool(default_status.get("libraries_ready")),
+            "client_credentials_present": bool(default_status.get("credentials_file_present")),
+            "token_present": bool(default_status.get("token_present")),
+            "recorded_account_count": len(accounts),
+            "recorded_connected_account_count": len(recorded_connected),
+            "usable_connected_account_count": len(usable_connected),
+            "stale_recorded_connected_account_count": stale_recorded_connected_count,
+            "recorded_connected_accounts": recorded_connected,
+            "usable_connected_accounts": usable_connected,
+            "blocking_layer": blocking_layer,
+            "detail": detail,
+            "missing_requirement_path": missing_requirement_path,
+            "next_recovery_step": next_recovery_step,
+            "account_hygiene_note": account_hygiene_note,
+            "default_status": default_status,
+            "accounts": accounts,
+        }
+
     def status(self) -> list[dict]:
         items: list[dict] = []
 
@@ -4924,22 +5542,27 @@ class JarvisRuntime:
             }
         )
 
-        google_accounts = self.google_workspace_summary().get("accounts", [])
-        connected_google = [entry for entry in google_accounts if entry.get("status", {}).get("connected")]
+        google_posture = self._google_workspace_posture()
+        connected_google = list(google_posture.get("usable_connected_accounts") or [])
         items.append(
             {
                 "name": "google-workspace",
-                "ok": bool(connected_google),
+                "ok": bool(google_posture.get("usable_connected_account_count")),
                 "state": "connected" if connected_google else "disconnected",
-                "detail": (
-                    f"{len(connected_google)} connected account(s): "
-                    + ", ".join(
-                        str(entry.get("account", {}).get("label") or entry.get("account", {}).get("owner_display_name") or "Google account")
-                        for entry in connected_google
-                    )
-                    if connected_google
-                    else "No Google accounts are currently connected."
-                ),
+                "detail": str(google_posture.get("detail") or "Google Workspace posture is unavailable."),
+                "posture": {
+                    "libraries_ready": bool(google_posture.get("libraries_ready")),
+                    "client_credentials_present": bool(google_posture.get("client_credentials_present")),
+                    "token_present": bool(google_posture.get("token_present")),
+                    "recorded_account_count": int(google_posture.get("recorded_account_count") or 0),
+                    "recorded_connected_account_count": int(google_posture.get("recorded_connected_account_count") or 0),
+                    "usable_connected_account_count": int(google_posture.get("usable_connected_account_count") or 0),
+                    "stale_recorded_connected_account_count": int(google_posture.get("stale_recorded_connected_account_count") or 0),
+                    "blocking_layer": str(google_posture.get("blocking_layer") or ""),
+                    "missing_requirement_path": str(google_posture.get("missing_requirement_path") or ""),
+                    "next_recovery_step": str(google_posture.get("next_recovery_step") or ""),
+                    "account_hygiene_note": str(google_posture.get("account_hygiene_note") or ""),
+                },
             }
         )
 
@@ -5089,6 +5712,15 @@ class JarvisRuntime:
 
     def _relevant_profile_facts(self, actor: UserProfile, request: str, limit: int = 4) -> list[str]:
         facts = self.memory_support.profile_facts(actor, subject_user_id=actor.user_id)
+        baseline_preferences: list[str] = []
+        for item in facts:
+            summary = str(item.get("summary", "")).strip()
+            tags = {str(tag).strip().lower() for tag in list(item.get("tags", [])) if str(tag).strip()}
+            if not summary:
+                continue
+            if {"conversation-style", "teach-jarvis"} & tags:
+                baseline_preferences.append(summary)
+        baseline_preferences = baseline_preferences[:2]
 
         # L6.1: Situational retrieval — builds a context dict from the request string
         # and asks retrieve_by_situation() for semantically matched facts. Results are
@@ -5120,7 +5752,7 @@ class JarvisRuntime:
             if token not in {"that", "with", "have", "this", "from", "your", "what", "when", "into"}
         }
         scored: list[tuple[int, str]] = []
-        seen: set[str] = set(situation_facts)
+        seen: set[str] = set([*baseline_preferences, *situation_facts])
         for item in facts:
             summary = str(item.get("summary", "")).strip()
             if not summary or summary in seen:
@@ -5133,8 +5765,278 @@ class JarvisRuntime:
         keyword_facts = [summary for _, summary in scored]
 
         # Situation results first, then keyword-only extras, up to limit
-        merged = situation_facts + [s for s in keyword_facts if s not in seen]
+        merged = baseline_preferences + situation_facts + [s for s in keyword_facts if s not in seen]
         return merged[: max(0, limit)]
+
+    def _conversation_teaching_command(self, request: str) -> tuple[str, str]:
+        text = str(request or "").strip()
+        if not text:
+            return ("", "")
+        match = re.match(r"^/(correct|teach|learn)(?:\s+|:\s*)(.+)$", text, flags=re.IGNORECASE | re.DOTALL)
+        if not match:
+            return ("", "")
+        return (str(match.group(1) or "").strip().lower(), str(match.group(2) or "").strip())
+
+    def _conversation_teaching_context(self, thread: dict | None, request: str) -> dict | None:
+        mode, feedback = self._conversation_teaching_command(request)
+        if mode not in {"teach", "learn"} or not feedback:
+            return None
+        record = dict(thread) if isinstance(thread, dict) else {}
+        turns = [dict(item) for item in record.get("turns", []) if isinstance(item, dict)]
+        last_assistant = ""
+        last_user = ""
+        for turn in reversed(turns[:-1] if turns else turns):
+            role = str(turn.get("role", "")).strip().lower()
+            text = str(turn.get("text", "")).strip()
+            if role == "assistant" and text and not last_assistant:
+                last_assistant = text
+                continue
+            if role == "user" and text:
+                prior_mode, _ = self._conversation_teaching_command(text)
+                if prior_mode:
+                    continue
+                last_user = text
+                if last_assistant:
+                    break
+        return {
+            "mode": mode,
+            "feedback": feedback,
+            "last_user_message": last_user,
+            "last_assistant_message": last_assistant,
+        }
+
+    def _teaching_preference_summary(self, actor: UserProfile, feedback: str) -> str:
+        fragment = " ".join(str(feedback or "").strip().rstrip(".").split())
+        lowered = fragment.lower()
+        if lowered.startswith(("be ", "stay ", "sound ", "lead ", "start ", "avoid ", "use ", "give ", "keep ")):
+            return f"{actor.display_name} prefers Jarvis replies to {fragment}"
+        if lowered.startswith(("more ", "less ")):
+            return f"{actor.display_name} prefers Jarvis replies that are {fragment}"
+        return f"{actor.display_name} prefers Jarvis replies with {fragment}"
+
+    def _record_conversation_teaching(
+        self,
+        actor: UserProfile,
+        conversation_id: str,
+        room: str,
+        request: str,
+        *,
+        thread: dict | None = None,
+    ) -> dict:
+        context = self._conversation_teaching_context(thread, request)
+        if not context or str(context.get("mode", "")).strip().lower() != "teach":
+            return {}
+        feedback = str(context.get("feedback", "")).strip()
+        if not feedback:
+            return {}
+        summary = self._teaching_preference_summary(actor, feedback)
+        detail_parts = [
+            f"Teach Jarvis preference captured from conversation {conversation_id} in {room}.",
+            f"Requested carry-forward preference: {feedback}",
+        ]
+        if str(context.get("last_user_message", "")).strip():
+            detail_parts.append(f"Original user request: {str(context.get('last_user_message', '')).strip()}")
+        if str(context.get("last_assistant_message", "")).strip():
+            detail_parts.append(f"Jarvis reply to improve: {str(context.get('last_assistant_message', '')).strip()}")
+        result = self.remember(
+            actor.display_name,
+            "personal",
+            "personal",
+            summary,
+            " ".join(detail_parts),
+            owner=actor.display_name,
+            tags=["conversation-style", "preference", "teach-jarvis", "jarvis"],
+            subject_user_id=actor.user_id,
+            source_type="user-stated",
+            confidence="confirmed",
+            provenance="instruction",
+        )
+        if result.get("stored") and self._conversation_signal_key(summary):
+            existing = [item for item in list((thread or {}).get("memory_signals", [])) if isinstance(item, dict)]
+            teaching_signal = {
+                "summary": summary,
+                "status": "stored",
+                "occurrences": 1,
+                "memory_type": "personal",
+            }
+            self.conversation_store.update_thread(
+                conversation_id,
+                memory_signals=[*existing, teaching_signal][-12:],
+            )
+        return {
+            "mode": "teach",
+            "feedback": feedback,
+            "summary": summary,
+            "stored": bool(result.get("stored")),
+            "needs_approval": bool(result.get("needs_approval")),
+            "entry_id": str((result.get("entry") or {}).get("entry_id", "")).strip(),
+            "fact_id": str(((result.get("profile_promotion") or {}).get("fact") or {}).get("fact_id", "")).strip(),
+        }
+
+    def _learned_skill_summary(self, actor: UserProfile, feedback: str) -> str:
+        fragment = " ".join(str(feedback or "").strip().rstrip(".").split())
+        return f"{actor.display_name} wants Jarvis to learn a reusable skill: {fragment}"
+
+    def _learned_skill_slug(self, feedback: str, original_request: str = "") -> str:
+        base = self._slugify_runtime_text(feedback or original_request or "learned-skill")
+        trimmed = str(base or "learned-skill").strip("-") or "learned-skill"
+        return f"jarvis-learned-{trimmed[:48]}"
+
+    def _learned_skill_directory(self, skill_slug: str) -> Path:
+        return self._repo_root() / ".agents" / "skills" / skill_slug
+
+    def _learned_skill_markdown(self, job: dict[str, Any]) -> str:
+        skill_slug = str(job.get("skill_slug", "")).strip() or self._learned_skill_slug(
+            str(job.get("feedback", "")).strip(),
+            str(job.get("original_request", "")).strip(),
+        )
+        title = str(job.get("title", "")).strip() or skill_slug.replace("-", " ").title()
+        feedback = str(job.get("feedback", "")).strip()
+        original_request = str(job.get("original_request", "")).strip()
+        original_reply = str(job.get("original_reply", "")).strip()
+        guidance = [
+            "Lead with a concrete thesis instead of asking a taxonomy question.",
+            "Use Chris context and likely friction points before asking for more detail.",
+            "Prefer practical help over therapist-style framing.",
+        ]
+        if feedback:
+            guidance.append(f"Specific learned preference: {feedback}")
+        lines = [
+            f"# {title}",
+            "",
+            "## Purpose",
+            "Use this skill when a similar conversational pattern appears and Jarvis should answer with the learned style instead of generic coaching.",
+            "",
+            "## Trigger",
+            f"- Similar request shape: {original_request or 'See learned conversation pattern in metadata.'}",
+            "",
+            "## Behavior",
+        ]
+        lines.extend(f"- {item}" for item in guidance)
+        lines.extend(
+            [
+                "",
+                "## Learned From",
+                f"- Feedback: {feedback or 'No explicit feedback captured.'}",
+                f"- Original request: {original_request or 'Not captured.'}",
+                f"- Reply to improve: {original_reply or 'Not captured.'}",
+                "",
+                "## Notes",
+                "- This skill was generated from a live JARVIS conversation and promoted only after explicit approval.",
+            ]
+        )
+        return "\n".join(lines).strip() + "\n"
+
+    def _materialize_learned_skill(self, job: dict[str, Any]) -> dict[str, Any]:
+        skill_slug = str(job.get("skill_slug", "")).strip() or self._learned_skill_slug(
+            str(job.get("feedback", "")).strip(),
+            str(job.get("original_request", "")).strip(),
+        )
+        skill_dir = self._learned_skill_directory(skill_slug)
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        skill_path = skill_dir / "SKILL.md"
+        metadata_path = skill_dir / "learned_skill.json"
+        content = self._learned_skill_markdown({**job, "skill_slug": skill_slug})
+        skill_path.write_text(content, encoding="utf-8")
+        metadata = {
+            "skill_slug": skill_slug,
+            "job_id": str(job.get("job_id", "")).strip(),
+            "title": str(job.get("title", "")).strip(),
+            "feedback": str(job.get("feedback", "")).strip(),
+            "original_request": str(job.get("original_request", "")).strip(),
+            "original_reply": str(job.get("original_reply", "")).strip(),
+            "created_at": str(job.get("created_at", "")).strip(),
+            "promoted_at": datetime.now(timezone.utc).isoformat(),
+            "source": "conversation-learn",
+        }
+        atomic_write_json(metadata_path, metadata)
+        return {
+            "skill_slug": skill_slug,
+            "skill_path": str(skill_path),
+            "metadata_path": str(metadata_path),
+        }
+
+    def _stage_conversation_skill_learning(
+        self,
+        actor: UserProfile,
+        conversation_id: str,
+        room: str,
+        request: str,
+        *,
+        thread: dict | None = None,
+    ) -> dict[str, Any]:
+        context = self._conversation_teaching_context(thread, request)
+        if not context or str(context.get("mode", "")).strip().lower() != "learn":
+            return {}
+        feedback = str(context.get("feedback", "")).strip()
+        if not feedback:
+            return {}
+        original_request = str(context.get("last_user_message", "")).strip()
+        original_reply = str(context.get("last_assistant_message", "")).strip()
+        skill_slug = self._learned_skill_slug(feedback, original_request)
+        job_key = self._conversation_signal_key(f"{actor.user_id}|learned-skill|{feedback}")
+        existing = self.self_improvement_store.find_job_by_key(job_key)
+        if existing is not None:
+            refreshed = dict(existing)
+            refreshed["updated_at"] = datetime.now(timezone.utc).isoformat()
+            refreshed["requested_by"] = actor.display_name
+            refreshed["actor_user_id"] = actor.user_id
+            refreshed["room"] = room
+            refreshed["conversation_id"] = conversation_id
+            refreshed["skill_slug"] = str(existing.get("skill_slug", "")).strip() or skill_slug
+            refreshed["target_path"] = str(self._learned_skill_directory(str(refreshed["skill_slug"])) / "SKILL.md")
+            if original_request:
+                refreshed["original_request"] = original_request
+            if original_reply:
+                refreshed["original_reply"] = original_reply
+            if feedback:
+                refreshed["feedback"] = feedback
+                refreshed["summary"] = f"Promote a reusable Jarvis skill from live conversation feedback: {feedback}"
+                refreshed["title"] = f"Learned skill: {feedback[:72]}"
+            self.self_improvement_store.upsert_job(refreshed)
+            return {
+                "mode": "learn",
+                "proposal_id": str(refreshed.get("job_id", "")).strip(),
+                "skill_slug": str(refreshed.get("skill_slug", "")).strip() or skill_slug,
+                "status": str(refreshed.get("status", "")).strip() or "approval-required",
+                "existing": True,
+            }
+        now = datetime.now(timezone.utc).isoformat()
+        proposal_id = str(uuid.uuid4())
+        job = {
+            "job_id": proposal_id,
+            "job_key": job_key,
+            "job_type": "learned_skill",
+            "status": "approval-required",
+            "title": f"Learned skill: {feedback[:72]}",
+            "summary": f"Promote a reusable Jarvis skill from live conversation feedback: {feedback}",
+            "created_at": now,
+            "updated_at": now,
+            "requested_by": actor.display_name,
+            "actor_user_id": actor.user_id,
+            "room": room,
+            "conversation_id": conversation_id,
+            "feedback": feedback,
+            "original_request": original_request,
+            "original_reply": original_reply,
+            "skill_slug": skill_slug,
+            "target_path": str(self._learned_skill_directory(skill_slug) / "SKILL.md"),
+            "source": "conversation-learn",
+            "auto_allowed": False,
+            "review_level": "principal-approval",
+            "mutation_route": {
+                "route": "approval-required",
+                "reason": "Learned skills require explicit approval before promotion into the local skills tree.",
+            },
+        }
+        self.self_improvement_store.upsert_job(job)
+        return {
+            "mode": "learn",
+            "proposal_id": proposal_id,
+            "skill_slug": skill_slug,
+            "status": "approval-required",
+            "existing": False,
+        }
 
     def _conversation_context_excerpt(
         self,
@@ -15852,6 +16754,20 @@ class JarvisRuntime:
             request,
             thread=user_thread,
         )
+        taught_preference = self._record_conversation_teaching(
+            actor,
+            resolved_conversation_id,
+            room,
+            request,
+            thread=user_thread,
+        )
+        learned_skill_proposal = self._stage_conversation_skill_learning(
+            actor,
+            resolved_conversation_id,
+            room,
+            request,
+            thread=user_thread,
+        )
         plan = self.plan_request(actor_name, room, request)
         requested_packet = self._explicit_packet_request(request)
         requested_catalyst_page = self._explicit_catalyst_page_request(request, requested_packet)
@@ -15860,6 +16776,15 @@ class JarvisRuntime:
                 provider="policy",
                 model="policy",
                 output_text=self.tutoring_support.denial_response(actor, request, plan.rationale),
+            )
+            self._record_interactive_result_run(
+                plan=plan,
+                actor_name=actor.display_name,
+                room=room,
+                request=request,
+                result=result,
+                runtime_surface="converse",
+                metadata={"conversation_id": resolved_conversation_id, "source": source, "policy_denied": True},
             )
             self.audit_log.log_response(
                 plan,
@@ -15883,6 +16808,15 @@ class JarvisRuntime:
                     plan=plan,
                     continuity_context=continuity_context,
                 )
+            self._record_interactive_result_run(
+                plan=plan,
+                actor_name=actor.display_name,
+                room=room,
+                request=request,
+                result=result,
+                runtime_surface="converse",
+                metadata={"conversation_id": resolved_conversation_id, "source": source},
+            )
             self.audit_log.log_response(
                 plan,
                 provider=result.provider,
@@ -15898,6 +16832,18 @@ class JarvisRuntime:
             seed_work_id=self._conversation_seed_work_id(user_thread),
         )
         final_output_text = result.output_text
+        if taught_preference.get("feedback"):
+            acknowledgement = "I'll carry that forward in future replies."
+            if taught_preference.get("needs_approval"):
+                acknowledgement = "I'll use that in this thread, and I staged it for memory review before it becomes durable."
+            if acknowledgement.lower() not in final_output_text.lower():
+                final_output_text = f"{acknowledgement}\n\n{final_output_text}".strip()
+        if learned_skill_proposal.get("proposal_id"):
+            learn_ack = "I staged that as a reusable skill proposal for approval."
+            if learned_skill_proposal.get("existing"):
+                learn_ack = "That reusable skill proposal is already staged for approval."
+            if learn_ack.lower() not in final_output_text.lower():
+                final_output_text = f"{learn_ack}\n\n{final_output_text}".strip()
         if catalyst_capture and catalyst_capture.get("ok"):
             capture_line = str(catalyst_capture.get("summary", "")).strip()
             if capture_line:
@@ -15959,10 +16905,35 @@ class JarvisRuntime:
                 thread=assistant_thread,
             ),
             "learned_memory": learned_memory,
+            "taught_preference": taught_preference,
+            "learned_skill_proposal": learned_skill_proposal,
             "catalyst_capture": catalyst_capture or {},
             "constitutional_citation": constitutional_citation,
             "requested_packet": requested_packet,
             "requested_catalyst_page": requested_catalyst_page,
+            "action_truth": _build_action_truth_summary(
+                result=result,
+                requested_packet=requested_packet,
+                requested_catalyst_page=requested_catalyst_page,
+            ),
+            "created_checklist": dict(result.created_checklist) if isinstance(result.created_checklist, dict) and result.created_checklist else {},
+            "created_plan": dict(result.created_plan) if isinstance(result.created_plan, dict) and result.created_plan else {},
+            "created_draft": dict(result.created_draft) if isinstance(result.created_draft, dict) and result.created_draft else {},
+            "created_research_packet": dict(result.created_research_packet) if isinstance(result.created_research_packet, dict) and result.created_research_packet else {},
+            "created_recommendation": dict(result.created_recommendation) if isinstance(result.created_recommendation, dict) and result.created_recommendation else {},
+            "created_decision_matrix": dict(result.created_decision_matrix) if isinstance(result.created_decision_matrix, dict) and result.created_decision_matrix else {},
+            "created_itinerary": dict(result.created_itinerary) if isinstance(result.created_itinerary, dict) and result.created_itinerary else {},
+            "created_task_list": dict(result.created_task_list) if isinstance(result.created_task_list, dict) and result.created_task_list else {},
+            "created_evidence_bundle": dict(result.created_evidence_bundle) if isinstance(result.created_evidence_bundle, dict) and result.created_evidence_bundle else {},
+            "created_recap_packet": dict(result.created_recap_packet) if isinstance(result.created_recap_packet, dict) and result.created_recap_packet else {},
+            "created_source_set": dict(result.created_source_set) if isinstance(result.created_source_set, dict) and result.created_source_set else {},
+            "created_structured_note": dict(result.created_structured_note) if isinstance(result.created_structured_note, dict) and result.created_structured_note else {},
+            "created_action_brief": dict(result.created_action_brief) if isinstance(result.created_action_brief, dict) and result.created_action_brief else {},
+            "created_decision_memo": dict(result.created_decision_memo) if isinstance(result.created_decision_memo, dict) and result.created_decision_memo else {},
+            "created_option_card": dict(result.created_option_card) if isinstance(result.created_option_card, dict) and result.created_option_card else {},
+            "created_pros_cons": dict(result.created_pros_cons) if isinstance(result.created_pros_cons, dict) and result.created_pros_cons else {},
+            "created_constraint_map": dict(result.created_constraint_map) if isinstance(result.created_constraint_map, dict) and result.created_constraint_map else {},
+            "created_question_set": dict(result.created_question_set) if isinstance(result.created_question_set, dict) and result.created_question_set else {},
         }
 
     def _try_handle_conversation_intercepts(
@@ -15971,10 +16942,64 @@ class JarvisRuntime:
         room: str,
         request: str,
     ) -> OpenAIResult | None:
+        plan_result = self._with_creation_truth_proof(self._try_handle_plan_creation(actor_name, room, request))
+        if plan_result is not None:
+            return plan_result
+        draft_result = self._with_creation_truth_proof(self._try_handle_draft_creation(actor_name, room, request))
+        if draft_result is not None:
+            return draft_result
+        research_result = self._with_creation_truth_proof(self._try_handle_research_packet_creation(actor_name, room, request))
+        if research_result is not None:
+            return research_result
+        recommendation_result = self._with_creation_truth_proof(self._try_handle_recommendation_creation(actor_name, room, request))
+        if recommendation_result is not None:
+            return recommendation_result
+        matrix_result = self._with_creation_truth_proof(self._try_handle_decision_matrix_creation(actor_name, room, request))
+        if matrix_result is not None:
+            return matrix_result
+        itinerary_result = self._with_creation_truth_proof(self._try_handle_itinerary_creation(actor_name, room, request))
+        if itinerary_result is not None:
+            return itinerary_result
+        task_list_result = self._with_creation_truth_proof(self._try_handle_task_list_creation(actor_name, room, request))
+        if task_list_result is not None:
+            return task_list_result
+        evidence_bundle_result = self._with_creation_truth_proof(self._try_handle_evidence_bundle_creation(actor_name, room, request))
+        if evidence_bundle_result is not None:
+            return evidence_bundle_result
+        recap_packet_result = self._with_creation_truth_proof(self._try_handle_recap_packet_creation(actor_name, room, request))
+        if recap_packet_result is not None:
+            return recap_packet_result
+        source_set_result = self._with_creation_truth_proof(self._try_handle_source_set_creation(actor_name, room, request))
+        if source_set_result is not None:
+            return source_set_result
+        structured_note_result = self._with_creation_truth_proof(self._try_handle_structured_note_creation(actor_name, room, request))
+        if structured_note_result is not None:
+            return structured_note_result
+        action_brief_result = self._with_creation_truth_proof(self._try_handle_action_brief_creation(actor_name, room, request))
+        if action_brief_result is not None:
+            return action_brief_result
+        decision_memo_result = self._with_creation_truth_proof(self._try_handle_decision_memo_creation(actor_name, room, request))
+        if decision_memo_result is not None:
+            return decision_memo_result
+        option_card_result = self._with_creation_truth_proof(self._try_handle_option_card_creation(actor_name, room, request))
+        if option_card_result is not None:
+            return option_card_result
+        pros_cons_result = self._with_creation_truth_proof(self._try_handle_pros_cons_creation(actor_name, room, request))
+        if pros_cons_result is not None:
+            return pros_cons_result
+        constraint_map_result = self._with_creation_truth_proof(self._try_handle_constraint_map_creation(actor_name, room, request))
+        if constraint_map_result is not None:
+            return constraint_map_result
+        question_set_result = self._with_creation_truth_proof(self._try_handle_question_set_creation(actor_name, room, request))
+        if question_set_result is not None:
+            return question_set_result
         if self._should_allow_conversation_mission_intercept(request):
             mission_result = self._try_handle_mission_creation(actor_name, room, request)
             if mission_result is not None:
                 return mission_result
+        checklist_result = self._with_creation_truth_proof(self._try_handle_checklist_creation(actor_name, room, request))
+        if checklist_result is not None:
+            return checklist_result
         reminder_result = self._try_handle_reminder(request)
         if reminder_result is not None:
             return reminder_result
@@ -16075,6 +17100,15 @@ class JarvisRuntime:
                 model="policy",
                 output_text=self.tutoring_support.denial_response(actor, request, plan.rationale),
             )
+            self._record_interactive_result_run(
+                plan=plan,
+                actor_name=actor.display_name,
+                room=room,
+                request=request,
+                result=result,
+                runtime_surface="respond",
+                metadata={"policy_denied": True},
+            )
             self.audit_log.log_response(
                 plan,
                 provider=result.provider,
@@ -16083,6 +17117,176 @@ class JarvisRuntime:
                 output_text=result.output_text,
             )
             return result
+        plan_result = self._try_handle_plan_creation(actor_name, room, request)
+        if plan_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=plan_result.provider,
+                model=plan_result.model,
+                active_nodes=["plan-engine"],
+                output_text=plan_result.output_text,
+            )
+            return plan_result
+        draft_result = self._try_handle_draft_creation(actor_name, room, request)
+        if draft_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=draft_result.provider,
+                model=draft_result.model,
+                active_nodes=["draft-engine"],
+                output_text=draft_result.output_text,
+            )
+            return draft_result
+        research_result = self._try_handle_research_packet_creation(actor_name, room, request)
+        if research_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=research_result.provider,
+                model=research_result.model,
+                active_nodes=["research-packet-engine"],
+                output_text=research_result.output_text,
+            )
+            return research_result
+        recommendation_result = self._try_handle_recommendation_creation(actor_name, room, request)
+        if recommendation_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=recommendation_result.provider,
+                model=recommendation_result.model,
+                active_nodes=["recommendation-engine"],
+                output_text=recommendation_result.output_text,
+            )
+            return recommendation_result
+        matrix_result = self._try_handle_decision_matrix_creation(actor_name, room, request)
+        if matrix_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=matrix_result.provider,
+                model=matrix_result.model,
+                active_nodes=["decision-matrix-engine"],
+                output_text=matrix_result.output_text,
+            )
+            return matrix_result
+        itinerary_result = self._try_handle_itinerary_creation(actor_name, room, request)
+        if itinerary_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=itinerary_result.provider,
+                model=itinerary_result.model,
+                active_nodes=["itinerary-engine"],
+                output_text=itinerary_result.output_text,
+            )
+            return itinerary_result
+        task_list_result = self._try_handle_task_list_creation(actor_name, room, request)
+        if task_list_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=task_list_result.provider,
+                model=task_list_result.model,
+                active_nodes=["task-list-engine"],
+                output_text=task_list_result.output_text,
+            )
+            return task_list_result
+        evidence_bundle_result = self._try_handle_evidence_bundle_creation(actor_name, room, request)
+        if evidence_bundle_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=evidence_bundle_result.provider,
+                model=evidence_bundle_result.model,
+                active_nodes=["evidence-bundle-engine"],
+                output_text=evidence_bundle_result.output_text,
+            )
+            return evidence_bundle_result
+        recap_packet_result = self._try_handle_recap_packet_creation(actor_name, room, request)
+        if recap_packet_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=recap_packet_result.provider,
+                model=recap_packet_result.model,
+                active_nodes=["recap-packet-engine"],
+                output_text=recap_packet_result.output_text,
+            )
+            return recap_packet_result
+        source_set_result = self._try_handle_source_set_creation(actor_name, room, request)
+        if source_set_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=source_set_result.provider,
+                model=source_set_result.model,
+                active_nodes=["source-set-engine"],
+                output_text=source_set_result.output_text,
+            )
+            return source_set_result
+        structured_note_result = self._try_handle_structured_note_creation(actor_name, room, request)
+        if structured_note_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=structured_note_result.provider,
+                model=structured_note_result.model,
+                active_nodes=["structured-note-engine"],
+                output_text=structured_note_result.output_text,
+            )
+            return structured_note_result
+        action_brief_result = self._try_handle_action_brief_creation(actor_name, room, request)
+        if action_brief_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=action_brief_result.provider,
+                model=action_brief_result.model,
+                active_nodes=["action-brief-engine"],
+                output_text=action_brief_result.output_text,
+            )
+            return action_brief_result
+        decision_memo_result = self._try_handle_decision_memo_creation(actor_name, room, request)
+        if decision_memo_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=decision_memo_result.provider,
+                model=decision_memo_result.model,
+                active_nodes=["decision-memo-engine"],
+                output_text=decision_memo_result.output_text,
+            )
+            return decision_memo_result
+        option_card_result = self._try_handle_option_card_creation(actor_name, room, request)
+        if option_card_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=option_card_result.provider,
+                model=option_card_result.model,
+                active_nodes=["option-card-engine"],
+                output_text=option_card_result.output_text,
+            )
+            return option_card_result
+        pros_cons_result = self._try_handle_pros_cons_creation(actor_name, room, request)
+        if pros_cons_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=pros_cons_result.provider,
+                model=pros_cons_result.model,
+                active_nodes=["pros-cons-engine"],
+                output_text=pros_cons_result.output_text,
+            )
+            return pros_cons_result
+        constraint_map_result = self._try_handle_constraint_map_creation(actor_name, room, request)
+        if constraint_map_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=constraint_map_result.provider,
+                model=constraint_map_result.model,
+                active_nodes=["constraint-map-engine"],
+                output_text=constraint_map_result.output_text,
+            )
+            return constraint_map_result
+        question_set_result = self._try_handle_question_set_creation(actor_name, room, request)
+        if question_set_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=question_set_result.provider,
+                model=question_set_result.model,
+                active_nodes=["question-set-engine"],
+                output_text=question_set_result.output_text,
+            )
+            return question_set_result
         mission_result = self._try_handle_mission_creation(actor_name, room, request)
         if mission_result is not None:
             self.audit_log.log_response(
@@ -16093,6 +17297,16 @@ class JarvisRuntime:
                 output_text=mission_result.output_text,
             )
             return mission_result
+        checklist_result = self._try_handle_checklist_creation(actor_name, room, request)
+        if checklist_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=checklist_result.provider,
+                model=checklist_result.model,
+                active_nodes=["checklist-engine"],
+                output_text=checklist_result.output_text,
+            )
+            return checklist_result
         # ── Reminder intercept ────────────────────────────────────────────────
         reminder_result = self._try_handle_reminder(request)
         if reminder_result is not None:
@@ -16128,6 +17342,14 @@ class JarvisRuntime:
             return cal_result
         # ─────────────────────────────────────────────────────────────────────
         result = run_response_graph(self, plan)
+        self._record_interactive_result_run(
+            plan=plan,
+            actor_name=actor.display_name,
+            room=room,
+            request=request,
+            result=result,
+            runtime_surface="respond",
+        )
         self.audit_log.log_response(
             plan,
             provider=result.provider,
@@ -16145,6 +17367,655 @@ class JarvisRuntime:
         r"\b(?:remind(?:er)?|set\s+(?:a\s+)?reminder|add\s+(?:a\s+)?task|schedule|calendar|email|message|draft|note\s+to\s+self)\b",
         re.IGNORECASE,
     )
+
+    def _try_handle_plan_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_plan_response(
+                self.plan_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="plan-engine",
+                    model="plan-engine",
+                    output_text=f"I can sketch one, but I can't create a real plan object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="plan-engine",
+                model="plan-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_plan=dict(payload.get("created_plan", {}))
+                if isinstance(payload.get("created_plan"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_draft_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_draft_response(
+                self.draft_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="draft-engine",
+                    model="draft-engine",
+                    output_text=f"I can sketch one, but I can't create a real draft object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="draft-engine",
+                model="draft-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_draft=dict(payload.get("created_draft", {}))
+                if isinstance(payload.get("created_draft"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_research_packet_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_research_packet_response(
+                self.research_packet_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+                retriever=lambda topic: retrieve_research_material(topic, limit=3, fetch_content=True),
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="research-packet-engine",
+                    model="research-packet-engine",
+                    output_text=f"I can scope one, but I can't create a real research packet object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="research-packet-engine",
+                model="research-packet-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_research_packet=dict(payload.get("created_research_packet", {}))
+                if isinstance(payload.get("created_research_packet"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_recommendation_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_recommendation_response(
+                self.recommendation_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="recommendation-engine",
+                    model="recommendation-engine",
+                    output_text=f"I can frame one, but I can't create a real recommendation object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="recommendation-engine",
+                model="recommendation-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_recommendation=dict(payload.get("created_recommendation", {}))
+                if isinstance(payload.get("created_recommendation"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_decision_matrix_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_decision_matrix_response(
+                self.decision_matrix_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="decision-matrix-engine",
+                    model="decision-matrix-engine",
+                    output_text=f"I can frame one, but I can't create a real decision matrix object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="decision-matrix-engine",
+                model="decision-matrix-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_decision_matrix=dict(payload.get("created_decision_matrix", {}))
+                if isinstance(payload.get("created_decision_matrix"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_itinerary_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_itinerary_response(
+                self.itinerary_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="itinerary-engine",
+                    model="itinerary-engine",
+                    output_text=f"I can frame one, but I can't create a real itinerary object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="itinerary-engine",
+                model="itinerary-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_itinerary=dict(payload.get("created_itinerary", {}))
+                if isinstance(payload.get("created_itinerary"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_task_list_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_task_list_response(
+                self.task_list_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="task-list-engine",
+                    model="task-list-engine",
+                    output_text=f"I can frame one, but I can't create a real task-list object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="task-list-engine",
+                model="task-list-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_task_list=dict(payload.get("created_task_list", {}))
+                if isinstance(payload.get("created_task_list"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_evidence_bundle_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_evidence_bundle_response(
+                self.evidence_bundle_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="evidence-bundle-engine",
+                    model="evidence-bundle-engine",
+                    output_text=f"I can frame one, but I can't create a real evidence-bundle object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="evidence-bundle-engine",
+                model="evidence-bundle-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_evidence_bundle=dict(payload.get("created_evidence_bundle", {}))
+                if isinstance(payload.get("created_evidence_bundle"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_recap_packet_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_recap_packet_response(
+                self.recap_packet_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="recap-packet-engine",
+                    model="recap-packet-engine",
+                    output_text=f"I can frame one, but I can't create a real recap-packet object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="recap-packet-engine",
+                model="recap-packet-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_recap_packet=dict(payload.get("created_recap_packet", {}))
+                if isinstance(payload.get("created_recap_packet"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_source_set_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_source_set_response(
+                self.source_set_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="source-set-engine",
+                    model="source-set-engine",
+                    output_text=f"I can frame one, but I can't create a real source-set object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="source-set-engine",
+                model="source-set-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_source_set=dict(payload.get("created_source_set", {}))
+                if isinstance(payload.get("created_source_set"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_structured_note_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_structured_note_response(
+                self.structured_note_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="structured-note-engine",
+                    model="structured-note-engine",
+                    output_text=f"I can frame one, but I can't create a real structured-note object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="structured-note-engine",
+                model="structured-note-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_structured_note=dict(payload.get("created_structured_note", {}))
+                if isinstance(payload.get("created_structured_note"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_action_brief_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_action_brief_response(
+                self.action_brief_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="action-brief-engine",
+                    model="action-brief-engine",
+                    output_text=f"I can frame one, but I can't create a real action-brief object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="action-brief-engine",
+                model="action-brief-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_action_brief=dict(payload.get("created_action_brief", {}))
+                if isinstance(payload.get("created_action_brief"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_decision_memo_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_decision_memo_response(
+                self.decision_memo_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="decision-memo-engine",
+                    model="decision-memo-engine",
+                    output_text=f"I can frame one, but I can't create a real decision-memo object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="decision-memo-engine",
+                model="decision-memo-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_decision_memo=dict(payload.get("created_decision_memo", {}))
+                if isinstance(payload.get("created_decision_memo"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_option_card_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_option_card_response(
+                self.option_card_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="option-card-engine",
+                    model="option-card-engine",
+                    output_text=f"I can frame one, but I can't create a real option-card object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="option-card-engine",
+                model="option-card-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_option_card=dict(payload.get("created_option_card", {}))
+                if isinstance(payload.get("created_option_card"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_pros_cons_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_pros_cons_response(
+                self.pros_cons_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="pros-cons-engine",
+                    model="pros-cons-engine",
+                    output_text=f"I can frame one, but I can't create a real pros-cons object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="pros-cons-engine",
+                model="pros-cons-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_pros_cons=dict(payload.get("created_pros_cons", {}))
+                if isinstance(payload.get("created_pros_cons"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_constraint_map_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_constraint_map_response(
+                self.constraint_map_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="constraint-map-engine",
+                    model="constraint-map-engine",
+                    output_text=f"I can frame one, but I can't create a real constraint-map object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="constraint-map-engine",
+                model="constraint-map-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_constraint_map=dict(payload.get("created_constraint_map", {}))
+                if isinstance(payload.get("created_constraint_map"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_question_set_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_question_set_response(
+                self.question_set_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="question-set-engine",
+                    model="question-set-engine",
+                    output_text=f"I can frame one, but I can't create a real question-set object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="question-set-engine",
+                model="question-set-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_question_set=dict(payload.get("created_question_set", {}))
+                if isinstance(payload.get("created_question_set"), dict)
+                else {},
+            ),
+        )
+
+    def _try_handle_checklist_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        actor = self.get_actor(actor_name)
+        try:
+            payload = build_direct_checklist_response(
+                self.checklist_store,
+                actor=actor.display_name,
+                room=room,
+                request=request,
+            )
+        except RuntimeError as exc:
+            return self._record_artifact_creation_result(
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="checklist-engine",
+                    model="checklist-engine",
+                    output_text=f"I can outline one, but I can't create a real checklist object in this mode: {exc}",
+                ),
+            )
+        if payload is None:
+            return None
+        return self._record_artifact_creation_result(
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="checklist-engine",
+                model="checklist-engine",
+                output_text=str(payload.get("output_text", "")).strip(),
+                created_checklist=dict(payload.get("created_checklist", {}))
+                if isinstance(payload.get("created_checklist"), dict)
+                else {},
+            ),
+        )
 
     def _try_handle_mission_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
         cleaned = str(request or "").strip()
@@ -16878,6 +18749,8 @@ class JarvisRuntime:
                 "top_next_action": str(refreshed.get("next_step", "")).strip(),
             }
         refreshed["approvals_detail"] = self.mission_support.mission_approvals(str(refreshed.get("mission_id", "")).strip())
+        refreshed["outputs_detail"] = self.mission_support.mission_outputs(str(refreshed.get("mission_id", "")).strip())
+        refreshed["delegation_reports"] = self.mission_support.mission_delegation_reports(str(refreshed.get("mission_id", "")).strip())
         refreshed["agent_profiles"] = self.mission_support.mission_agents(str(refreshed.get("mission_id", "")).strip())
         refreshed["work_state_summary"] = self.mission_support.mission_work_state(str(refreshed.get("mission_id", "")).strip()).get("summary", {})
         refreshed["accountability_update"] = self._mission_accountability_update(refreshed)
@@ -17154,11 +19027,457 @@ class JarvisRuntime:
     def mission_outputs(self, mission_id: str) -> list[dict[str, Any]]:
         return self.mission_support.mission_outputs(mission_id)
 
+    def mission_delegation_reports(self, mission_id: str) -> list[dict[str, Any]]:
+        return self.mission_support.mission_delegation_reports(mission_id)
+
+    def mission_delegation_report(self, mission_id: str, report_id: str) -> dict[str, Any] | None:
+        return self.mission_support.mission_delegation_report(mission_id, report_id)
+
     def mission_agents(self, mission_id: str) -> list[dict[str, Any]]:
         return self.mission_support.mission_agents(mission_id)
 
     def mission_work_state_snapshot(self, mission_id: str) -> dict[str, Any]:
         return self.mission_support.mission_work_state(mission_id)
+
+    def _resolve_artifact_outcome_target(
+        self,
+        *,
+        target_kind: str,
+        target_id: str,
+        mission_id: str = "",
+    ) -> dict[str, Any]:
+        kind_key = str(target_kind or "").strip().lower()
+        target_key = str(target_id or "").strip()
+        mission_key = str(mission_id or "").strip()
+        if not kind_key:
+            raise ValueError("target_kind is required")
+        if not target_key:
+            raise ValueError("target_id is required")
+
+        if kind_key == "delegation_report":
+            if not mission_key:
+                raise ValueError("mission_id is required for delegation_report outcome capture")
+            report = self.mission_support.mission_delegation_report(mission_key, target_key)
+            if report is None:
+                raise KeyError("Delegation report not found.")
+            return {
+                "target_kind": "delegation_report",
+                "target_id": target_key,
+                "mission_id": mission_key,
+                "target_category": "delegated_output",
+                "target_label": str(report.get("title", "")).strip() or "Delegation report",
+                "artifact_ref": str(report.get("artifact_ref", "")).strip(),
+                "storage_mode": "mission_delegation_report_record",
+                "backing_store_files": [],
+                "source_record": dict(report),
+            }
+
+        lookup = _OUTCOME_CAPTURE_OBJECT_LOOKUPS.get(kind_key)
+        if lookup is None:
+            allowed = ", ".join(sorted([*list(_OUTCOME_CAPTURE_OBJECT_LOOKUPS), "delegation_report"]))
+            raise ValueError(f"Unsupported target_kind. Expected one of: {allowed}")
+        store_attr, getter_name = lookup
+        store = getattr(self, store_attr, None)
+        if store is None:
+            raise KeyError(f"{kind_key} storage is unavailable in this runtime.")
+        getter = getattr(store, getter_name, None)
+        if getter is None:
+            raise KeyError(f"{kind_key} lookup is unavailable in this runtime.")
+        record = getter(target_key)
+        if not isinstance(record, dict):
+            raise KeyError(f"{kind_key} not found.")
+        return {
+            "target_kind": kind_key,
+            "target_id": target_key,
+            "mission_id": "",
+            "target_category": "work_object",
+            "target_label": str(record.get("title", "")).strip() or str(record.get("topic", "")).strip() or kind_key.replace("_", " "),
+            "artifact_ref": "",
+            "storage_mode": "persisted_local_object_record",
+            "backing_store_files": list(_LOCAL_OBJECT_BACKING_FILES.get(kind_key, ())),
+            "source_record": dict(record),
+        }
+
+    def record_artifact_outcome(
+        self,
+        actor_name: str,
+        *,
+        target_kind: str,
+        target_id: str,
+        outcome: str,
+        mission_id: str = "",
+        note: str = "",
+    ) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        resolved = self._resolve_artifact_outcome_target(
+            target_kind=target_kind,
+            target_id=target_id,
+            mission_id=mission_id,
+        )
+        recorded = self.artifact_outcome_store.record_outcome(
+            recorded_by=actor.display_name,
+            target_kind=str(resolved.get("target_kind", "")).strip(),
+            target_id=str(resolved.get("target_id", "")).strip(),
+            mission_id=str(resolved.get("mission_id", "")).strip(),
+            target_category=str(resolved.get("target_category", "")).strip(),
+            target_label=str(resolved.get("target_label", "")).strip(),
+            artifact_ref=str(resolved.get("artifact_ref", "")).strip(),
+            storage_mode=str(resolved.get("storage_mode", "")).strip(),
+            backing_store_files=list(resolved.get("backing_store_files", [])),
+            outcome=outcome,
+            note=note,
+        )
+        history = self.artifact_outcome_store.list_outcomes(
+            target_kind=str(resolved.get("target_kind", "")).strip(),
+            target_id=str(resolved.get("target_id", "")).strip(),
+            mission_id=str(resolved.get("mission_id", "")).strip(),
+        )
+        return {
+            "message": "Outcome recorded. No automatic learning or behavior change was triggered in this path.",
+            "target": {k: v for k, v in resolved.items() if k != "source_record"},
+            "recorded_outcome": recorded,
+            "outcome_history": history,
+            "allowed_outcomes": sorted(ALLOWED_ARTIFACT_OUTCOMES),
+            "learning_effect": "none",
+        }
+
+    def artifact_outcome_snapshot(
+        self,
+        *,
+        target_kind: str,
+        target_id: str,
+        mission_id: str = "",
+    ) -> dict[str, Any]:
+        resolved = self._resolve_artifact_outcome_target(
+            target_kind=target_kind,
+            target_id=target_id,
+            mission_id=mission_id,
+        )
+        history = self.artifact_outcome_store.list_outcomes(
+            target_kind=str(resolved.get("target_kind", "")).strip(),
+            target_id=str(resolved.get("target_id", "")).strip(),
+            mission_id=str(resolved.get("mission_id", "")).strip(),
+        )
+        return {
+            "target": {k: v for k, v in resolved.items() if k != "source_record"},
+            "outcome_history": history,
+            "latest_outcome": dict(history[-1]) if history else {},
+            "allowed_outcomes": sorted(ALLOWED_ARTIFACT_OUTCOMES),
+            "learning_effect": "none",
+        }
+
+    def artifact_outcome_summary(
+        self,
+        *,
+        mission_id: str = "",
+        limit: int = 12,
+    ) -> dict[str, Any]:
+        summary = self.artifact_outcome_store.summary(
+            mission_id=str(mission_id or "").strip(),
+            limit=limit,
+        )
+        return {
+            "mission_id": str(summary.get("mission_id", "")).strip(),
+            "total_records": int(summary.get("total_records", 0) or 0),
+            "counts_by_outcome": dict(summary.get("counts_by_outcome") or {}),
+            "counts_by_target_kind": dict(summary.get("counts_by_target_kind") or {}),
+            "counts_by_mission": dict(summary.get("counts_by_mission") or {}),
+            "recent_outcomes": [dict(item) for item in list(summary.get("recent_outcomes") or []) if isinstance(item, dict)],
+            "learning_effect": "none",
+            "allowed_outcomes": sorted(ALLOWED_ARTIFACT_OUTCOMES),
+        }
+
+    def create_research_task(
+        self,
+        actor_name: str,
+        *,
+        title: str,
+        question: str,
+        desired_scope: str = "",
+        status: str = "queued",
+        constraints: list[str] | None = None,
+        source_expectations: list[str] | None = None,
+    ) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        created = self.research_task_store.create_task(
+            actor=actor.display_name,
+            title=title,
+            question=question,
+            desired_scope=desired_scope,
+            status=status,
+            constraints=constraints,
+            source_expectations=source_expectations,
+        )
+        return {
+            "message": "Research task captured. It is queued intent only until real research work is explicitly performed.",
+            "task": created,
+            "research_effect": "not_performed",
+            "allowed_statuses": sorted(ALLOWED_RESEARCH_TASK_STATUSES),
+        }
+
+    def create_autonomy_state(
+        self,
+        actor_name: str,
+        *,
+        title: str,
+        objective: str,
+        status: str = "queued",
+        current_focus: str = "",
+        next_step: str = "",
+        requested_scope: str = "",
+        initiation_reason: str = "",
+        approval_state: str = "required",
+        approval_required: bool = True,
+        allowed_action_boundary: str = "",
+        blocked_reason: str = "",
+    ) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        created = self.autonomy_state_store.create_state(
+            actor=actor.display_name,
+            title=title,
+            objective=objective,
+            status=status,
+            current_focus=current_focus,
+            next_step=next_step,
+            requested_scope=requested_scope,
+            initiation_reason=initiation_reason,
+            approval_state=approval_state,
+            approval_required=approval_required,
+            allowed_action_boundary=allowed_action_boundary,
+            blocked_reason=blocked_reason,
+        )
+        return {
+            "message": (
+                "Autonomy initiation recorded. This is an inspectable initiation-boundary record only; it does not mean autonomous execution has started, "
+                "approval has been bypassed, or background work is already in progress."
+            ),
+            "autonomy_state": created,
+            "autonomy_effect": "visibility_only",
+            **self._autonomy_truth_contract(),
+        }
+
+    def _autonomy_truth_contract(self) -> dict[str, Any]:
+        return {
+            "allowed_statuses": sorted(ALLOWED_AUTONOMY_STATE_STATUSES),
+            "allowed_approval_states": sorted(ALLOWED_AUTONOMY_APPROVAL_STATES),
+            "allowed_plan_action_statuses": sorted(ALLOWED_AUTONOMY_PLAN_ACTION_STATUSES),
+            "allowed_control_actions": sorted(ALLOWED_AUTONOMY_CONTROL_ACTIONS),
+            "allowed_control_postures": sorted(ALLOWED_AUTONOMY_CONTROL_POSTURES),
+            "allowed_readiness_states": sorted(ALLOWED_AUTONOMY_READINESS_STATES),
+            "allowed_follow_through_statuses": sorted(ALLOWED_AUTONOMY_FOLLOW_THROUGH_STATUSES),
+        }
+
+    def autonomy_state_snapshot(self, autonomy_id: str) -> dict[str, Any]:
+        record = self.autonomy_state_store.get_state(autonomy_id)
+        if not isinstance(record, dict):
+            raise KeyError(f"Unknown autonomy state: {autonomy_id}")
+        return {
+            "autonomy_state": record,
+            "autonomy_effect": "visibility_only",
+            **self._autonomy_truth_contract(),
+        }
+
+    def autonomy_state_queue_snapshot(self) -> dict[str, Any]:
+        states = self.autonomy_state_store.list_states()
+        counts_by_status: dict[str, int] = {}
+        for item in states:
+            status_key = str(item.get("status", "")).strip() or "queued"
+            counts_by_status[status_key] = counts_by_status.get(status_key, 0) + 1
+        return {
+            "autonomy_states": states,
+            "counts_by_status": counts_by_status,
+            "total_states": len(states),
+            "autonomy_effect": "visibility_only",
+            **self._autonomy_truth_contract(),
+        }
+
+    def add_autonomy_action_plan(
+        self,
+        autonomy_id: str,
+        *,
+        planning_note: str = "",
+        proposed_actions: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        updated = self.autonomy_state_store.add_action_plan(
+            autonomy_id,
+            planning_note=planning_note,
+            proposed_actions=proposed_actions,
+        )
+        return {
+            "message": (
+                "Autonomy action plan recorded. These actions are proposed only and remain not run until a later path explicitly records real execution."
+            ),
+            "autonomy_state": updated,
+            "autonomy_effect": "visibility_only",
+            **self._autonomy_truth_contract(),
+        }
+
+    def apply_autonomy_readiness_state(
+        self,
+        actor_name: str,
+        autonomy_id: str,
+        *,
+        readiness_state: str,
+        readiness_reason: str = "",
+    ) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        updated = self.autonomy_state_store.apply_readiness_state(
+            autonomy_id,
+            actor=actor.display_name,
+            readiness_state=readiness_state,
+            readiness_reason=readiness_reason,
+        )
+        return {
+            "message": (
+                "Autonomy readiness recorded. This is a stored approval-gated readiness posture only; it does not mean execution started, background work is occurring, or approval has been bypassed."
+            ),
+            "autonomy_state": updated,
+            "autonomy_effect": "visibility_only",
+            **self._autonomy_truth_contract(),
+        }
+
+    def trigger_autonomy_local_follow_through(
+        self,
+        actor_name: str,
+        autonomy_id: str,
+        *,
+        trigger_note: str = "",
+    ) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        updated = self.autonomy_state_store.trigger_local_follow_through(
+            autonomy_id,
+            actor=actor.display_name,
+            trigger_note=trigger_note,
+        )
+        return {
+            "message": (
+                "Local follow-through proof recorded. This ran one bounded local proof action only: a local status packet was written and linked to the autonomy record. No invisible background work, networked execution, or multi-step autonomy was started."
+            ),
+            "autonomy_state": updated,
+            "autonomy_effect": "local_follow_through_proof_only",
+            **self._autonomy_truth_contract(),
+        }
+
+    def apply_autonomy_control_action(
+        self,
+        actor_name: str,
+        autonomy_id: str,
+        *,
+        action: str,
+        control_reason: str = "",
+    ) -> dict[str, Any]:
+        actor = self.get_actor(actor_name)
+        updated = self.autonomy_state_store.apply_control_action(
+            autonomy_id,
+            actor=actor.display_name,
+            action=action,
+            reason=control_reason,
+        )
+        return {
+            "message": (
+                "Autonomy control transition recorded. This updates recorded autonomy state posture only; it does not prove real background execution was running, paused, resumed, or interrupted."
+            ),
+            "autonomy_state": updated,
+            "autonomy_effect": "visibility_only",
+            **self._autonomy_truth_contract(),
+        }
+
+    def research_task_snapshot(self, task_id: str) -> dict[str, Any]:
+        record = self.research_task_store.get_task(task_id)
+        if not isinstance(record, dict):
+            raise KeyError(f"Unknown research task: {task_id}")
+        return {
+            "task": record,
+            "research_effect": "not_performed" if not bool(record.get("research_performed")) else "performed",
+            "allowed_statuses": sorted(ALLOWED_RESEARCH_TASK_STATUSES),
+        }
+
+    def update_research_task(
+        self,
+        task_id: str,
+        *,
+        title: str = "",
+        question: str = "",
+        desired_scope: str = "",
+        status: str = "",
+        constraints: list[str] | None = None,
+        source_expectations: list[str] | None = None,
+    ) -> dict[str, Any]:
+        updated = self.research_task_store.update_task(
+            task_id,
+            title=title,
+            question=question,
+            desired_scope=desired_scope,
+            status=status,
+            constraints=constraints,
+            source_expectations=source_expectations,
+        )
+        return {
+            "message": (
+                "Research task updated. Status and task detail changes do not imply that research, source discovery, "
+                "or autonomous execution already happened."
+            ),
+            "task": updated,
+            "research_effect": "not_performed" if not bool(updated.get("research_performed")) else "performed",
+            "allowed_statuses": sorted(ALLOWED_RESEARCH_TASK_STATUSES),
+        }
+
+    def add_research_task_evidence(
+        self,
+        task_id: str,
+        *,
+        source_label: str,
+        source_locator: str = "",
+        evidence_note: str = "",
+        capture_status: str = "",
+        confidence_label: str = "",
+    ) -> dict[str, Any]:
+        created = self.research_task_store.add_evidence_item(
+            task_id,
+            source_label=source_label,
+            source_locator=source_locator,
+            evidence_note=evidence_note,
+            capture_status=capture_status,
+            confidence_label=confidence_label,
+        )
+        snapshot = self.research_task_snapshot(task_id)
+        return {
+            "message": (
+                "Evidence item attached. Manual evidence capture does not imply completed research, validated synthesis, "
+                "or autonomous source discovery."
+            ),
+            "task": dict(snapshot.get("task") or {}),
+            "evidence_item": created,
+            "research_effect": str(snapshot.get("research_effect", "not_performed")).strip() or "not_performed",
+        }
+
+    def generate_research_task_synthesis(self, task_id: str) -> dict[str, Any]:
+        synthesis = self.research_task_store.generate_synthesis(task_id)
+        snapshot = self.research_task_snapshot(task_id)
+        return {
+            "message": (
+                "Evidence-backed synthesis generated from the evidence items already attached to this task. "
+                "It remains limited to that attached evidence set and does not imply completed research, autonomous discovery, "
+                "or external validation."
+            ),
+            "task": dict(snapshot.get("task") or {}),
+            "synthesis": synthesis,
+            "research_effect": str(snapshot.get("research_effect", "not_performed")).strip() or "not_performed",
+        }
+
+    def research_task_queue_snapshot(self) -> dict[str, Any]:
+        tasks = self.research_task_store.list_tasks()
+        counts_by_status: dict[str, int] = {}
+        for item in tasks:
+            status_key = str(item.get("status", "")).strip() or "queued"
+            counts_by_status[status_key] = counts_by_status.get(status_key, 0) + 1
+        return {
+            "tasks": tasks,
+            "counts_by_status": counts_by_status,
+            "total_tasks": len(tasks),
+            "research_effect": "not_performed",
+            "allowed_statuses": sorted(ALLOWED_RESEARCH_TASK_STATUSES),
+        }
 
     def update_agent_work_state(
         self,
@@ -17235,6 +19554,34 @@ class JarvisRuntime:
             receiving_agent=receiving_agent,
             accepted=accepted,
             note=note,
+        )
+        actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
+        self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
+        return self._enriched_mission(updated)
+
+    def record_delegation_output(
+        self,
+        mission_id: str,
+        delegation_id: str,
+        *,
+        producing_agent: str,
+        title: str,
+        summary: str,
+        detail: str = "",
+        key_output: str = "",
+        next_step: str = "",
+        evidence_note: str = "",
+    ) -> dict[str, Any]:
+        updated = self.mission_support.record_delegation_output(
+            mission_id,
+            delegation_id,
+            producing_agent=producing_agent,
+            title=title,
+            summary=summary,
+            detail=detail,
+            key_output=key_output,
+            next_step=next_step,
+            evidence_note=evidence_note,
         )
         actor_name = str(updated.get("actor", "Chris")).strip() or "Chris"
         self._invalidate_snapshot_cache(actor_name, surfaces=("dashboard", "shell_state", "today_board", "proactive_state", "cognitive"))
@@ -17754,9 +20101,24 @@ class JarvisRuntime:
         return overview
 
     def google_workspace_status(self) -> dict:
+        posture = self._google_workspace_posture()
         return {
-            "default": self.google_workspace.status().to_dict(),
-            "accounts": [self.google_account_snapshot(item["account_id"]) for item in self.list_personal_accounts() if item["provider"] == "google"],
+            "posture": {
+                "libraries_ready": bool(posture.get("libraries_ready")),
+                "client_credentials_present": bool(posture.get("client_credentials_present")),
+                "token_present": bool(posture.get("token_present")),
+                "recorded_account_count": int(posture.get("recorded_account_count") or 0),
+                "recorded_connected_account_count": int(posture.get("recorded_connected_account_count") or 0),
+                "usable_connected_account_count": int(posture.get("usable_connected_account_count") or 0),
+                "stale_recorded_connected_account_count": int(posture.get("stale_recorded_connected_account_count") or 0),
+                "blocking_layer": str(posture.get("blocking_layer") or ""),
+                "detail": str(posture.get("detail") or ""),
+                "missing_requirement_path": str(posture.get("missing_requirement_path") or ""),
+                "next_recovery_step": str(posture.get("next_recovery_step") or ""),
+                "account_hygiene_note": str(posture.get("account_hygiene_note") or ""),
+            },
+            "default": posture.get("default_status") or self.google_workspace.status().to_dict(),
+            "accounts": posture.get("accounts") or [],
         }
 
     def google_workspace_summary(self) -> dict:
@@ -19391,6 +21753,7 @@ class JarvisRuntime:
         access_policy: str = "",
         source_type: str = "user-stated",
         confidence: str = "confirmed",
+        provenance: str = "observed_fact",
     ) -> dict:
         actor = self.get_actor(actor_name)
         result = self.memory_support.remember(
@@ -19407,6 +21770,7 @@ class JarvisRuntime:
             access_policy=access_policy,
             source_type=source_type,
             confidence=confidence,
+            provenance=provenance,
         )
         entry = result.get("entry")
         if result.get("stored") and isinstance(entry, dict):
@@ -19461,11 +21825,38 @@ class JarvisRuntime:
         viewer, subject = self._personalization_subject(viewer_name, subject_user_id)
         persona = self.build_persona_snapshot(subject.display_name, refresh=False)
         facts = self.memory_support.profile_facts(viewer, subject_user_id=subject.user_id)[:12]
-        proposals = [
+        memory_proposals = [
             item for item in self.memory_support.proposals(status="pending")
             if str(item.get("subject_user_id", "")).strip().lower() == subject.user_id
             or (not str(item.get("subject_user_id", "")).strip() and str(item.get("owner", "")).strip() == subject.display_name)
         ][:12]
+        skill_proposals = [
+            {
+                "proposal_id": str(item.get("job_id", "")).strip(),
+                "proposal_type": "learned_skill",
+                "title": str(item.get("title", "Learned skill proposal")).strip(),
+                "summary": str(item.get("summary", "")).strip(),
+                "confidence": "confirmed",
+                "status": str(item.get("status", "")).strip(),
+                "skill_slug": str(item.get("skill_slug", "")).strip(),
+                "target_path": str(item.get("target_path", "")).strip(),
+                "feedback": str(item.get("feedback", "")).strip(),
+            }
+            for item in self.self_improvement_store.jobs()
+            if str(item.get("job_type", "")).strip() == "learned_skill"
+            and str(item.get("status", "")).strip() == "approval-required"
+            and str(item.get("actor_user_id", "")).strip().lower() == subject.user_id
+        ][:12]
+        proposals = [
+            *[
+                {
+                    **item,
+                    "proposal_type": str(item.get("proposal_type", "memory")).strip() or "memory",
+                }
+                for item in memory_proposals
+            ],
+            *skill_proposals,
+        ]
         first_light_history = [
             item for item in self.first_light_store.load().get("history", [])
             if str(item.get("user_id", "")).strip().lower() == subject.user_id
@@ -19494,6 +21885,7 @@ class JarvisRuntime:
             "personalization": personalization,
             "profile_facts": facts,
             "pending_proposals": proposals,
+            "pending_skill_proposals": skill_proposals,
             "first_light_history": first_light_history,
             "governance": {
                 "can_review_all": viewer.permissions == "adult",
@@ -19770,6 +22162,62 @@ class JarvisRuntime:
 
     def memory_proposals(self, status: str = "") -> list[dict]:
         return self.memory_support.proposals(status=status)
+
+    def resolve_learning_proposal(self, proposal_id: str, decision: str) -> dict:
+        decision_clean = str(decision or "").strip().lower()
+        if decision_clean not in {"approved", "rejected"}:
+            raise ValueError("decision must be approved or rejected")
+        try:
+            return self.resolve_memory_proposal(proposal_id, decision_clean)
+        except KeyError:
+            pass
+        job = self.self_improvement_store.get_job(proposal_id)
+        if not job or str(job.get("job_type", "")).strip() != "learned_skill":
+            raise KeyError(f"Unknown learning proposal: {proposal_id}")
+        now = datetime.now(timezone.utc).isoformat()
+        if decision_clean == "rejected":
+            updated = {
+                **job,
+                "status": "rejected",
+                "updated_at": now,
+                "last_result": {
+                    "ok": True,
+                    "decision": "rejected",
+                    "summary": "Learned skill proposal was rejected.",
+                    "resolved_at": now,
+                },
+            }
+            self.self_improvement_store.upsert_job(updated)
+            return {
+                "proposal_id": proposal_id,
+                "proposal_type": "learned_skill",
+                "status": "rejected",
+                "job": updated,
+            }
+        materialized = self._materialize_learned_skill(job)
+        updated = {
+            **job,
+            "status": "promoted",
+            "updated_at": now,
+            "approved_at": now,
+            "skill_slug": str(materialized.get("skill_slug", "")).strip(),
+            "skill_path": str(materialized.get("skill_path", "")).strip(),
+            "metadata_path": str(materialized.get("metadata_path", "")).strip(),
+            "last_result": {
+                "ok": True,
+                "decision": "approved",
+                "summary": "Learned skill promoted into the local .agents/skills tree.",
+                "resolved_at": now,
+            },
+        }
+        self.self_improvement_store.upsert_job(updated)
+        return {
+            "proposal_id": proposal_id,
+            "proposal_type": "learned_skill",
+            "status": "approved",
+            "job": updated,
+            "skill": materialized,
+        }
 
     def resolve_memory_proposal(self, proposal_id: str, decision: str) -> dict:
         result = self.memory_support.resolve_proposal(proposal_id, decision)
