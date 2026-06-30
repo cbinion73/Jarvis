@@ -10,7 +10,7 @@
 	<array/>
 	<key>com.apple.developer.homekit</key>
 	<true/>
-	<key>com.apple.developer.carplay-voice-based-conversation</key>
+	<key>com.apple.developer.carplay-maps</key>
 	<true/>
 	<key>com.apple.developer.siri</key>
 	<true/>

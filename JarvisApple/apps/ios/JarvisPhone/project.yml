@@ -76,7 +76,7 @@ targets:
         com.apple.developer.weatherkit: true
         com.apple.developer.homekit: true
         com.apple.developer.siri: true
-        com.apple.developer.carplay-voice-based-conversation: true
+        com.apple.developer.carplay-maps: true
         com.apple.security.application-groups:
           - group.com.binion.jarvisphone
         com.apple.developer.healthkit: true

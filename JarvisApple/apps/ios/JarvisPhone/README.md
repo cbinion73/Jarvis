@@ -1,6 +1,6 @@
 # JarvisPhone
 
-Initial native target for Codex in Xcode.
+Checked-in native iPhone target for JARVIS.
 
 ## V1 target
 
@@ -13,7 +13,7 @@ Initial native target for Codex in Xcode.
 
 ## Immediate work
 
-1. create the iOS app target in Xcode
-2. attach `JarvisKit`, `JarvisKitHealth`, `JarvisKitIntents`, `JarvisNotifications`
-3. add HealthKit capability and entitlements
-4. render mock health summary first
+1. open `JarvisPhone.xcodeproj` in Xcode
+2. verify the checked-in `JarvisPhone`, widget, notification, and watch targets still resolve package dependencies
+3. validate signing, provisioning, and Apple capabilities on the current machine
+4. render mock health summary first, then verify the navigation and CarPlay seam

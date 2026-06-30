@@ -1,21 +1,65 @@
 import CarPlay
 import JarvisKit
+import MapKit
 
 @MainActor
-final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDelegate {
+final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDelegate, CPMapTemplateDelegate {
+    private struct NavigationTripBundle {
+        let trip: CPTrip
+        let routeChoice: CPRouteChoice
+        let tripEstimates: CPTravelEstimates
+        let maneuvers: [CPManeuver]
+        let routeKey: String
+    }
+
+    private enum RouteSectionHeader {
+        static let activeRoute = "Active Route"
+        static let nextTurns = "Next Turns"
+        static let guidance = "Guidance"
+        static let destinations = "Go Again"
+        static let smartStops = "Smart Stops"
+        static let tripSetup = "Trip Setup"
+    }
+
+    private enum ConversationSectionHeader {
+        static let status = "Conversation Ready"
+        static let prompts = "Try Asking"
+        static let context = "Recent Context"
+        static let followUp = "Try Next"
+    }
+
+    private enum IntelligenceSectionHeader {
+        static let driveContext = "Drive Context"
+        static let whatMatters = "What Matters"
+        static let needsYou = "Needs You"
+        static let inMotion = "Already Moving"
+        static let backend = "Backend Pulse"
+    }
+
+    private enum IntelligenceAction {
+        case need(NeedsItem)
+        case publishReview(PublishReview)
+    }
 
     private let interfaceController: CPInterfaceController
     private let client = AppleAPIClient.shared
     private var refreshTimer: Timer?
 
-    private var tabBar: CPTabBarTemplate?
-
     private let briefTemplate = CPListTemplate(title: "JARVIS Brief", sections: [])
     private let needsTemplate = CPListTemplate(title: "Needs You", sections: [])
-    private let routeTemplate = CPListTemplate(title: "Route", sections: [])
     private let publishTemplate = CPListTemplate(title: "Publish", sections: [])
     private let opsTemplate = CPListTemplate(title: "Catalyst", sections: [])
+    private let mapTemplate = CPMapTemplate()
+    private let routeTemplate = CPListTemplate(title: "Routes", sections: [])
+    private let conversationTemplate = CPListTemplate(title: "Talk", sections: [])
+    private let intelligenceTemplate = CPListTemplate(title: "Intel", sections: [])
 
+    private var latestBriefing: BriefingPacket?
+    private var voiceState: VoiceConsoleState?
+    private var activeConversationId = ""
+    private var conversationPrompts: [String] = []
+    private var activeConversationFollowUps: [String] = []
+    private var activeConversationTemplate: CPListTemplate?
     private var pendingNeeds: [NeedsItem] = []
     private var navigationChoices: [CarPlayNavigationChoice] = []
     private var navigationOverview: NavigationLocationsOverview?
@@ -23,11 +67,16 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     private var activeRouteStops: [NavigationStop] = []
     private var activeRouteTemplate: CPListTemplate?
     private var routeCurrentItemSelectable = false
+    private var activeTrip: CPTrip?
+    private var activeRouteChoice: CPRouteChoice?
+    private var activeRouteKey: String?
+    private var navigationSession: CPNavigationSession?
     private var publishQueue: [CarPlayPublishQueueEntry] = []
     private var publishReviews: [PublishReview] = []
     private var publishLaunchWorkspace: PublishLaunchWorkspace?
     private var publishHistory: [PublishHistoryEntry] = []
     private var opsOverview: CarPlayOpsOverview?
+    private var intelligenceActions: [IntelligenceAction] = []
 
     init(interfaceController: CPInterfaceController) {
         self.interfaceController = interfaceController
@@ -35,20 +84,18 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     }
 
     func start() {
-        briefTemplate.tabImage = UIImage(systemName: "sun.horizon.fill")
-        needsTemplate.tabImage = UIImage(systemName: "exclamationmark.circle.fill")
-        routeTemplate.tabImage = UIImage(systemName: "map.fill")
-        publishTemplate.tabImage = UIImage(systemName: "doc.richtext.fill")
-        opsTemplate.tabImage = UIImage(systemName: "square.grid.2x2.fill")
+        mapTemplate.mapDelegate = self
+        mapTemplate.guidanceBackgroundColor = UIColor(red: 0.06, green: 0.16, blue: 0.28, alpha: 1.0)
+        mapTemplate.tripEstimateStyle = .dark
+        mapTemplate.automaticallyHidesNavigationBar = false
+        mapTemplate.hidesButtonsWithNavigationBar = false
 
-        needsTemplate.delegate = self
         routeTemplate.delegate = self
-        publishTemplate.delegate = self
-        opsTemplate.delegate = self
+        conversationTemplate.delegate = self
+        intelligenceTemplate.delegate = self
+        updateNavigationControls()
 
-        let tab = CPTabBarTemplate(templates: [briefTemplate, needsTemplate, routeTemplate, publishTemplate, opsTemplate])
-        tabBar = tab
-        interfaceController.setRootTemplate(tab, animated: false, completion: nil)
+        interfaceController.setRootTemplate(mapTemplate, animated: false, completion: nil)
 
         Task { await refreshAll() }
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 90, repeats: true) { [weak self] _ in
@@ -60,28 +107,15 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     func stop() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        navigationSession?.cancelTrip()
+        navigationSession = nil
     }
 
     private func refreshAll() async {
-        async let briefing = loadBriefing()
-        async let needs = loadNeeds()
         async let route = loadNavigation()
-        async let publish = loadPublishing()
-        async let ops = loadOps()
-        _ = await (briefing, needs, route, publish, ops)
-    }
-
-    private func loadBriefing() async {
-        do {
-            let packet = try await client.fetchBriefing()
-            briefTemplate.updateSections(buildBriefSections(from: packet))
-        } catch {
-            briefTemplate.updateSections([
-                CPListSection(items: [
-                    CPListItem(text: "Couldn't load briefing", detailText: error.localizedDescription),
-                ]),
-            ])
-        }
+        async let conversation = loadConversation()
+        async let intelligence = loadIntelligence()
+        _ = await (route, conversation, intelligence)
     }
 
     private func buildBriefSections(from packet: BriefingPacket) -> [CPListSection] {
@@ -113,6 +147,257 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         }
 
         return sections
+    }
+
+    private func loadConversation() async {
+        do {
+            let state = try await client.fetchVoiceState(conversationId: activeConversationId)
+            voiceState = state
+            if !state.conversation.conversationId.isEmpty {
+                activeConversationId = state.conversation.conversationId
+            }
+
+            let statusDetail = [
+                state.voiceStack.providerLabel,
+                state.voiceStack.voiceLabel,
+                state.voiceStack.detail,
+            ]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            let statusItem = CPListItem(
+                text: state.voiceStack.cloudReady || state.voiceStack.localReady ? "Voice ready" : "Voice limited",
+                detailText: statusDetail.isEmpty ? "Conversation lane is available." : statusDetail
+            )
+            statusItem.setImage(
+                UIImage(systemName: state.voiceStack.cloudReady || state.voiceStack.localReady ? "waveform.circle.fill" : "exclamationmark.waveform")?
+                    .withTintColor(state.voiceStack.cloudReady || state.voiceStack.localReady ? .systemBlue : .systemOrange, renderingMode: .alwaysOriginal)
+            )
+
+            let threadDetail = state.conversation.latestAssistantText.isEmpty
+                ? state.conversation.title
+                : state.conversation.latestAssistantText
+            let threadItem = CPListItem(
+                text: state.conversation.turnCount > 0 ? "Current thread" : "Start a route-aware thread",
+                detailText: threadDetail.isEmpty ? "JARVIS is ready for a hands-free route question." : threadDetail
+            )
+            threadItem.setImage(
+                UIImage(systemName: "bubble.left.and.bubble.right.fill")?
+                    .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+            )
+
+            conversationPrompts = mergedConversationPrompts(
+                primary: state.quickCommands,
+                fallback: fallbackConversationPrompts()
+            )
+            let promptItems = conversationPrompts.map { prompt in
+                let item = CPListItem(text: prompt, detailText: "Send this to JARVIS")
+                item.setImage(
+                    UIImage(systemName: "mic.fill")?
+                        .withTintColor(.systemPurple, renderingMode: .alwaysOriginal)
+                )
+                return item
+            }
+
+            let recentTurns = state.conversation.recentTurns.suffix(2)
+            let contextItems: [CPListItem]
+            if recentTurns.isEmpty {
+                let item = CPListItem(text: "No recent exchange yet", detailText: "Use a suggested prompt to start a driving-safe thread.")
+                item.setImage(
+                    UIImage(systemName: "clock.badge.questionmark")?
+                        .withTintColor(.systemGray, renderingMode: .alwaysOriginal)
+                )
+                contextItems = [item]
+            } else {
+                contextItems = recentTurns.map { turn in
+                    let label = turn.role.lowercased() == "assistant" ? "JARVIS" : "You"
+                    let item = CPListItem(text: label, detailText: turn.text)
+                    item.setImage(
+                        UIImage(systemName: turn.role.lowercased() == "assistant" ? "brain.head.profile" : "person.fill")?
+                            .withTintColor(turn.role.lowercased() == "assistant" ? .systemBlue : .systemGray, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+            }
+
+            conversationTemplate.updateSections([
+                CPListSection(items: [statusItem, threadItem], header: ConversationSectionHeader.status, sectionIndexTitle: nil),
+                CPListSection(items: promptItems, header: ConversationSectionHeader.prompts, sectionIndexTitle: nil),
+                CPListSection(items: contextItems, header: ConversationSectionHeader.context, sectionIndexTitle: nil),
+            ])
+        } catch {
+            conversationPrompts = fallbackConversationPrompts()
+            let item = CPListItem(text: "Couldn't load conversation", detailText: error.localizedDescription)
+            conversationTemplate.updateSections([CPListSection(items: [item])])
+        }
+    }
+
+    private func loadIntelligence() async {
+        async let briefingTask: BriefingPacket? = try? await client.fetchBriefing()
+        async let needsTask: [NeedsItem]? = try? await client.fetchNeeds()
+        async let publishTask: PublishOverview? = try? await client.fetchPublishing()
+        async let opsTask: CarPlayOpsOverview? = try? await client.fetchCarPlayOps()
+
+        latestBriefing = await briefingTask
+        pendingNeeds = await needsTask ?? []
+        let publish = await publishTask
+        publishReviews = publish?.pendingReviews ?? []
+        opsOverview = await opsTask
+
+        intelligenceActions = []
+        var sections: [CPListSection] = []
+
+        var driveContextItems: [CPListItem] = []
+        if let headline = currentRoute.flatMap({ JarvisCarPlayPresentation.currentRouteHeadline(state: navigationOverview?.navigationState, route: $0) }) ??
+            JarvisCarPlayPresentation.currentRouteHeadline(state: navigationOverview?.navigationState, route: nil) {
+            let item = CPListItem(text: headline.title, detailText: headline.detail)
+            item.setImage(
+                UIImage(systemName: "arrow.triangle.turn.up.right.circle.fill")?
+                    .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+            )
+            driveContextItems.append(item)
+        }
+        if let focus = opsOverview?.currentFocus {
+            let item = CPListItem(
+                text: "Shared focus: \(focus.module)",
+                detailText: focus.reason.isEmpty ? "JARVIS is keeping that lane warm in the background." : focus.reason
+            )
+            item.setImage(
+                UIImage(systemName: "scope")?
+                    .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+            )
+            driveContextItems.append(item)
+        }
+        if driveContextItems.isEmpty {
+            let item = CPListItem(text: "No active drive context yet", detailText: "Trip context will sharpen once a route or timing pressure is active.")
+            driveContextItems = [item]
+        }
+        sections.append(CPListSection(items: driveContextItems, header: IntelligenceSectionHeader.driveContext, sectionIndexTitle: nil))
+
+        if let briefing = latestBriefing {
+            let briefItems = briefing.briefingItems.prefix(3).map { entry in
+                let item = CPListItem(text: entry.text, detailText: entry.agent)
+                if entry.priority == "high" {
+                    item.setImage(
+                        UIImage(systemName: "exclamationmark.circle.fill")?
+                            .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+                    )
+                }
+                return item
+            }
+            if !briefItems.isEmpty {
+                sections.append(CPListSection(items: Array(briefItems), header: IntelligenceSectionHeader.whatMatters, sectionIndexTitle: nil))
+            }
+        }
+
+        var needsItems: [CPListItem] = []
+        for need in pendingNeeds.prefix(2) {
+            intelligenceActions.append(.need(need))
+            needsItems.append(
+                CPListItem(text: need.text, detailText: "\(need.agent) · \(need.risk.capitalized) risk", image: riskImage(for: need.risk), showsDisclosureIndicator: false)
+            )
+        }
+        for review in publishReviews.prefix(2) {
+            intelligenceActions.append(.publishReview(review))
+            let item = CPListItem(
+                text: review.title,
+                detailText: review.stageDisplay.isEmpty ? review.stageKey : review.stageDisplay,
+                image: UIImage(systemName: "doc.text.magnifyingglass")?
+                    .withTintColor(.systemOrange, renderingMode: .alwaysOriginal),
+                showsDisclosureIndicator: false
+            )
+            needsItems.append(item)
+        }
+        if needsItems.isEmpty {
+            let item = CPListItem(text: "No approvals waiting", detailText: "Nothing in JARVIS is asking for a decision right now.")
+            item.setImage(
+                UIImage(systemName: "checkmark.circle.fill")?
+                    .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+            )
+            needsItems = [item]
+        }
+        sections.append(CPListSection(items: needsItems, header: IntelligenceSectionHeader.needsYou, sectionIndexTitle: nil))
+
+        var inMotionItems: [CPListItem] = []
+        if let briefing = latestBriefing {
+            inMotionItems.append(contentsOf: briefing.workingItems.prefix(2).map { item in
+                let row = CPListItem(text: item.agent, detailText: item.action)
+                row.setImage(
+                    UIImage(systemName: "gearshape.2.fill")?
+                        .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
+                )
+                return row
+            })
+        }
+        if let launch = publish?.launchControl {
+            let detail = [launch.phase.replacingOccurrences(of: "_", with: " ").capitalized, launch.nextAction]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            let item = CPListItem(text: launch.title, detailText: detail)
+            item.setImage(
+                UIImage(systemName: "shippingbox.fill")?
+                    .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+            )
+            inMotionItems.append(item)
+        }
+        if let firstAgent = opsOverview?.agentOps.first {
+            let detail = [firstAgent.assignment, firstAgent.attentionReason.isEmpty ? firstAgent.purpose : firstAgent.attentionReason]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            let item = CPListItem(text: "\(firstAgent.name) · \(firstAgent.status.capitalized)", detailText: detail)
+            item.setImage(
+                UIImage(systemName: "person.2.badge.gearshape.fill")?
+                    .withTintColor(.systemPurple, renderingMode: .alwaysOriginal)
+            )
+            inMotionItems.append(item)
+        }
+        if inMotionItems.isEmpty {
+            let item = CPListItem(text: "No active backend motion yet", detailText: "JARVIS will surface background work here once it is live.")
+            inMotionItems = [item]
+        }
+        sections.append(CPListSection(items: inMotionItems, header: IntelligenceSectionHeader.inMotion, sectionIndexTitle: nil))
+
+        var backendItems: [CPListItem] = []
+        if let mission = opsOverview?.missionSummary, !mission.headline.isEmpty {
+            let item = CPListItem(text: "Mission pressure", detailText: mission.headline)
+            item.setImage(
+                UIImage(systemName: "flag.2.crossed.fill")?
+                    .withTintColor(.systemRed, renderingMode: .alwaysOriginal)
+            )
+            backendItems.append(item)
+        }
+        if let activity = opsOverview?.recentActivity.first {
+            let item = CPListItem(
+                text: activity.title,
+                detailText: [activity.detail, activity.routeLabel].filter { !$0.isEmpty }.joined(separator: " · ")
+            )
+            item.setImage(
+                UIImage(systemName: "clock.arrow.circlepath")?
+                    .withTintColor(.systemGray, renderingMode: .alwaysOriginal)
+            )
+            backendItems.append(item)
+        }
+        if let memory = voiceState?.memoryOverview {
+            let detail = [
+                "\(memory.profileFactCount) profile facts",
+                "\(memory.pendingProposals) pending memory proposals",
+                memory.longHorizonLines.first ?? "",
+            ]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · ")
+            let item = CPListItem(text: "Continuity memory", detailText: detail)
+            item.setImage(
+                UIImage(systemName: "brain")?
+                    .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+            )
+            backendItems.append(item)
+        }
+        if backendItems.isEmpty {
+            let item = CPListItem(text: "Backend pulse is quiet", detailText: "All-of-JARVIS context will surface here when it meaningfully changes the drive.")
+            backendItems = [item]
+        }
+        sections.append(CPListSection(items: backendItems, header: IntelligenceSectionHeader.backend, sectionIndexTitle: nil))
+
+        intelligenceTemplate.updateSections(sections)
     }
 
     private func loadNeeds() async {
@@ -153,6 +438,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             let overview = try await client.fetchNavigationLocations()
             navigationOverview = overview
             navigationChoices = JarvisCarPlayPresentation.navigationChoices(from: overview)
+            activeRouteStops = []
 
             var routeHeadline: (title: String, detail: String)?
             if let lastRoute = overview.navigationState?.lastRoute,
@@ -164,6 +450,12 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                         destination: lastRoute.destination
                     )
                     currentRoute = liveRoute
+                    if let stops = try? await client.fetchNavigationStops(
+                        origin: lastRoute.origin,
+                        destination: lastRoute.destination
+                    ) {
+                        activeRouteStops = Array(stops.sections.flatMap(\.items).prefix(4))
+                    }
                     routeHeadline = JarvisCarPlayPresentation.currentRouteHeadline(
                         state: overview.navigationState,
                         route: liveRoute
@@ -181,57 +473,104 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
 
             var sections: [CPListSection] = []
             let overviewItem = CPListItem(
-                text: "Navigation Command Center",
+                text: routeHeadline?.title ?? "Navigation is ready",
                 detailText: routeHeadline?.detail.isEmpty == false
                     ? routeHeadline?.detail
-                    : "Live route timing, hazard posture, and smart stop continuity."
+                    : "Choose a destination from the phone or saved places to start navigation."
             )
             overviewItem.setImage(
-                UIImage(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")?
+                UIImage(systemName: "arrow.turn.up.right")?
                     .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
             )
-            let weatherItem = CPListItem(
-                text: "Weather Along Route",
+            let conditionItem = CPListItem(
+                text: "Road Conditions",
                 detailText: currentRoute?.hazardActive == true
                     ? "Hazard active. Use voice guidance before leaving."
                     : "No major route hazard surfaced in the live preview."
             )
-            weatherItem.setImage(
+            conditionItem.setImage(
                 UIImage(systemName: "cloud.sun.rain.fill")?
                     .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [overviewItem, weatherItem], header: "1. Navigation Command Center", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [overviewItem, conditionItem], header: RouteSectionHeader.activeRoute, sectionIndexTitle: nil))
 
-            routeCurrentItemSelectable = routeHeadline != nil
-            if let routeHeadline {
-                let currentItem = CPListItem(text: routeHeadline.title, detailText: routeHeadline.detail)
+            routeCurrentItemSelectable = currentRoute != nil
+            if let route = currentRoute {
+                let currentItem = CPListItem(
+                    text: route.route.steps.first?.instruction.isEmpty == false ? route.route.steps.first?.instruction ?? "Open active route" : "Open active route",
+                    detailText: JarvisCarPlayPresentation.routeDetail(for: route)
+                )
                 currentItem.setImage(
-                    UIImage(systemName: "point.bottomleft.forward.to.point.topright.scurvepath")?
+                    UIImage(systemName: "location.fill")?
                         .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
                 )
-                let voiceItem = CPListItem(
-                    text: "Voice Navigation",
-                    detailText: currentRoute?.hazardActive == true
-                        ? "Ask JARVIS about weather, delays, and leave-by timing."
-                        : "Hands-free guidance is ready for the next route question."
-                )
-                voiceItem.setImage(
-                    UIImage(systemName: "waveform")?
-                        .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
-                )
-                sections.append(CPListSection(items: [currentItem, voiceItem], header: "2. Active Route & Voice Consultation", sectionIndexTitle: nil))
+                let stepItems = route.route.steps.dropFirst().prefix(3).map { step in
+                    let detail = [
+                        step.name,
+                        step.distanceMiles.map { String(format: "%.1f mi", $0) } ?? "",
+                    ]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " · ")
+                    let item = CPListItem(text: step.instruction, detailText: detail)
+                    item.setImage(UIImage(systemName: "arrow.turn.up.right"))
+                    return item
+                }
+                sections.append(CPListSection(items: [currentItem] + stepItems, header: RouteSectionHeader.nextTurns, sectionIndexTitle: nil))
             }
+
+            let voiceItem = CPListItem(
+                text: "Voice Guidance",
+                detailText: currentRoute?.hazardActive == true
+                    ? "Ask JARVIS about weather, delays, and leave-by timing."
+                    : "Hands-free guidance is ready for the next route question."
+            )
+            voiceItem.setImage(
+                UIImage(systemName: "waveform")?
+                    .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
+            )
+            let liveViewItem = CPListItem(
+                text: "Drive Focus",
+                detailText: currentRoute == nil
+                    ? "A focused route surface appears once a trip is active."
+                    : "Focused in-car guidance keeps the next move front and center."
+            )
+            liveViewItem.setImage(
+                UIImage(systemName: "viewfinder.circle")?
+                    .withTintColor(.systemPurple, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [voiceItem, liveViewItem], header: RouteSectionHeader.guidance, sectionIndexTitle: nil))
 
             if navigationChoices.isEmpty {
                 let item = CPListItem(text: "No destinations yet", detailText: "Save family places or recent trips from the phone app.")
-                sections.append(CPListSection(items: [item], header: "3. Smart Destinations", sectionIndexTitle: nil))
+                sections.append(CPListSection(items: [item], header: RouteSectionHeader.destinations, sectionIndexTitle: nil))
             } else {
                 let items = navigationChoices.map { choice in
                     let item = CPListItem(text: choice.title, detailText: choice.detail)
                     item.setImage(icon(for: choice.source))
                     return item
                 }
-                sections.append(CPListSection(items: items, header: "3. Smart Destinations", sectionIndexTitle: nil))
+                sections.append(CPListSection(items: items, header: RouteSectionHeader.destinations, sectionIndexTitle: nil))
+            }
+
+            if activeRouteStops.isEmpty {
+                let item = CPListItem(text: "No smart stops surfaced", detailText: "Fuel, coffee, and food will appear once a route is active.")
+                sections.append(CPListSection(items: [item], header: RouteSectionHeader.smartStops, sectionIndexTitle: nil))
+            } else {
+                let items = activeRouteStops.map { stop in
+                    let detail = [
+                        stop.address,
+                        stop.distanceFromRoute.map { String(format: "+%.1f mi", $0) } ?? "",
+                    ]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " · ")
+                    let item = CPListItem(text: stop.name, detailText: detail)
+                    item.setImage(
+                        UIImage(systemName: "mappin.and.ellipse")?
+                            .withTintColor(.systemOrange, renderingMode: .alwaysOriginal)
+                    )
+                    return item
+                }
+                sections.append(CPListSection(items: items, header: RouteSectionHeader.smartStops, sectionIndexTitle: nil))
             }
 
             let originItem = CPListItem(
@@ -260,12 +599,304 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "calendar.badge.clock")?
                     .withTintColor(.systemPurple, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [originItem, plannerItem, orchestrationItem], header: "4. Planner & Travel Orchestration", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [originItem, plannerItem, orchestrationItem], header: RouteSectionHeader.tripSetup, sectionIndexTitle: nil))
             routeTemplate.updateSections(sections)
+            refreshNavigationSurface()
         } catch {
+            navigationSession?.cancelTrip()
+            navigationSession = nil
+            activeTrip = nil
+            activeRouteChoice = nil
+            activeRouteKey = nil
+            mapTemplate.hideTripPreviews()
+            updateNavigationControls()
             let item = CPListItem(text: "Couldn't load route planner", detailText: error.localizedDescription)
             routeTemplate.updateSections([CPListSection(items: [item])])
         }
+    }
+
+    private func updateNavigationControls() {
+        let routesButton = CPBarButton(title: "Routes") { [weak self] _ in
+            self?.showRouteChooser()
+        }
+        routesButton.buttonStyle = .rounded
+
+        let talkButton = CPBarButton(title: "Talk") { [weak self] _ in
+            self?.showConversationLane()
+        }
+        talkButton.buttonStyle = .rounded
+
+        let intelButton = CPBarButton(title: "Intel") { [weak self] _ in
+            self?.showIntelligenceLane()
+        }
+        intelButton.buttonStyle = .rounded
+
+        let refreshImage = UIImage(systemName: "arrow.clockwise") ?? UIImage()
+        let refreshButton = CPBarButton(image: refreshImage) { [weak self] _ in
+            guard let self else { return }
+            Task { await self.refreshAll() }
+        }
+        refreshButton.buttonStyle = .rounded
+
+        mapTemplate.leadingNavigationBarButtons = [routesButton, talkButton]
+        mapTemplate.trailingNavigationBarButtons = [intelButton, refreshButton]
+
+        let routesMapButton = CPMapButton { [weak self] _ in
+            self?.showRouteChooser()
+        }
+        routesMapButton.image = UIImage(systemName: "list.bullet.rectangle.portrait")
+
+        let detailsMapButton = CPMapButton { [weak self] _ in
+            self?.showActiveRouteDetail()
+        }
+        detailsMapButton.image = UIImage(systemName: "location.viewfinder")
+        detailsMapButton.isHidden = currentRoute == nil
+
+        mapTemplate.mapButtons = [routesMapButton, detailsMapButton]
+    }
+
+    private func refreshNavigationSurface() {
+        updateNavigationControls()
+
+        guard let route = currentRoute else {
+            navigationSession?.cancelTrip()
+            navigationSession = nil
+            activeTrip = nil
+            activeRouteChoice = nil
+            activeRouteKey = nil
+            mapTemplate.hideTripPreviews()
+            return
+        }
+
+        let bundle = makeNavigationTripBundle(for: route)
+        activeTrip = bundle.trip
+        activeRouteChoice = bundle.routeChoice
+        mapTemplate.hideTripPreviews()
+        mapTemplate.update(
+            bundle.tripEstimates,
+            for: bundle.trip,
+            with: route.hazardActive ? .orange : .green
+        )
+
+        let isSameRoute = activeRouteKey == bundle.routeKey
+        if !isSameRoute {
+            navigationSession?.cancelTrip()
+            navigationSession = mapTemplate.startNavigationSession(for: bundle.trip)
+            activeRouteKey = bundle.routeKey
+        }
+
+        guard let navigationSession else { return }
+        navigationSession.add(bundle.maneuvers)
+        navigationSession.upcomingManeuvers = bundle.maneuvers
+        navigationSession.currentRoadNameVariants = currentRoadNameVariants(for: route)
+        navigationSession.maneuverState = .initial
+        if let firstManeuver = bundle.maneuvers.first,
+           let firstEstimates = firstManeuver.initialTravelEstimates {
+            navigationSession.updateEstimates(firstEstimates, for: firstManeuver)
+        }
+    }
+
+    private func makeNavigationTripBundle(for route: NavigationRouteOverview) -> NavigationTripBundle {
+        let summary = JarvisCarPlayPresentation.routeDetail(for: route)
+        let routeChoice = CPRouteChoice(
+            summaryVariants: [summary.isEmpty ? route.destination.label : summary],
+            additionalInformationVariants: [route.summary.isEmpty ? "Smart navigation is ready." : route.summary],
+            selectionSummaryVariants: ["Start navigation to \(route.destination.label)"]
+        )
+
+        let originCoordinate = CLLocationCoordinate2D(latitude: route.origin.lat, longitude: route.origin.lon)
+        let destinationCoordinate = CLLocationCoordinate2D(latitude: route.destination.lat, longitude: route.destination.lon)
+
+        let originPlacemark = MKPlacemark(coordinate: originCoordinate)
+        let destinationPlacemark = MKPlacemark(coordinate: destinationCoordinate)
+        let originMapItem = MKMapItem(placemark: originPlacemark)
+        originMapItem.name = route.origin.label
+        let destinationMapItem = MKMapItem(placemark: destinationPlacemark)
+        destinationMapItem.name = route.destination.label
+
+        let trip = CPTrip(origin: originMapItem, destination: destinationMapItem, routeChoices: [routeChoice])
+        trip.destinationNameVariants = [route.destination.label]
+
+        let tripEstimates = CPTravelEstimates(
+            distanceRemaining: Measurement(
+                value: route.route.distanceMiles ?? -1,
+                unit: UnitLength.miles
+            ),
+            timeRemaining: TimeInterval((route.route.durationMinutes ?? -1) * 60)
+        )
+
+        let maneuvers = buildManeuvers(for: route)
+        return NavigationTripBundle(
+            trip: trip,
+            routeChoice: routeChoice,
+            tripEstimates: tripEstimates,
+            maneuvers: maneuvers,
+            routeKey: routeKey(for: route)
+        )
+    }
+
+    private func buildManeuvers(for route: NavigationRouteOverview) -> [CPManeuver] {
+        if route.route.steps.isEmpty {
+            let maneuver = CPManeuver()
+            maneuver.instructionVariants = ["Head toward \(route.destination.label)"]
+            maneuver.dashboardInstructionVariants = maneuver.instructionVariants
+            maneuver.notificationInstructionVariants = maneuver.instructionVariants
+            maneuver.symbolImage = UIImage(systemName: "arrow.up")
+            maneuver.dashboardSymbolImage = maneuver.symbolImage
+            maneuver.notificationSymbolImage = maneuver.symbolImage
+            maneuver.maneuverType = .startRoute
+            maneuver.roadFollowingManeuverVariants = [route.destination.label]
+            maneuver.initialTravelEstimates = CPTravelEstimates(
+                distanceRemaining: Measurement(
+                    value: route.route.distanceMiles ?? -1,
+                    unit: UnitLength.miles
+                ),
+                timeRemaining: TimeInterval((route.route.durationMinutes ?? -1) * 60)
+            )
+            if route.hazardActive {
+                maneuver.cardBackgroundColor = UIColor.systemOrange
+            }
+            return [maneuver]
+        }
+
+        return Array(route.route.steps.prefix(4)).map { step in
+            let maneuver = CPManeuver()
+            maneuver.instructionVariants = [step.instruction]
+            maneuver.dashboardInstructionVariants = [step.instruction]
+            maneuver.notificationInstructionVariants = [step.instruction]
+            maneuver.symbolImage = UIImage(systemName: maneuverSymbolName(for: step))
+            maneuver.dashboardSymbolImage = maneuver.symbolImage
+            maneuver.notificationSymbolImage = maneuver.symbolImage
+            maneuver.maneuverType = maneuverType(for: step)
+            if !step.name.isEmpty {
+                maneuver.roadFollowingManeuverVariants = [step.name]
+            }
+            maneuver.initialTravelEstimates = CPTravelEstimates(
+                distanceRemaining: Measurement(
+                    value: step.distanceMiles ?? route.route.distanceMiles ?? -1,
+                    unit: UnitLength.miles
+                ),
+                timeRemaining: TimeInterval((step.durationMinutes ?? route.route.durationMinutes ?? -1) * 60)
+            )
+            if route.hazardActive {
+                maneuver.cardBackgroundColor = UIColor.systemOrange
+            }
+            return maneuver
+        }
+    }
+
+    private func currentRoadNameVariants(for route: NavigationRouteOverview) -> [String] {
+        let road = route.route.steps.first(where: { !$0.name.isEmpty })?.name ?? route.destination.label
+        return [road]
+    }
+
+    private func routeKey(for route: NavigationRouteOverview) -> String {
+        "\(route.origin.label.lowercased())::\(route.destination.label.lowercased())"
+    }
+
+    private func maneuverType(for step: NavigationRouteStep) -> CPManeuverType {
+        let maneuver = step.maneuver.lowercased()
+        let modifier = step.modifier.lowercased()
+
+        switch maneuver {
+        case "arrive":
+            return modifier.contains("left") ? .arriveAtDestinationLeft : modifier.contains("right") ? .arriveAtDestinationRight : .arriveAtDestination
+        case "depart":
+            return modifier.contains("uturn") ? .startRouteWithUTurn : .startRoute
+        case "merge":
+            return .changeHighway
+        case "fork":
+            return modifier.contains("left") ? .keepLeft : modifier.contains("right") ? .keepRight : .followRoad
+        case "roundabout", "rotary":
+            return .enterRoundabout
+        default:
+            if modifier.contains("uturn") {
+                return .uTurn
+            }
+            if modifier.contains("sharp left") {
+                return .sharpLeftTurn
+            }
+            if modifier.contains("sharp right") {
+                return .sharpRightTurn
+            }
+            if modifier.contains("slight left") {
+                return .slightLeftTurn
+            }
+            if modifier.contains("slight right") {
+                return .slightRightTurn
+            }
+            if modifier.contains("left") {
+                return .leftTurn
+            }
+            if modifier.contains("right") {
+                return .rightTurn
+            }
+            if modifier.contains("straight") {
+                return .straightAhead
+            }
+            return .followRoad
+        }
+    }
+
+    private func maneuverSymbolName(for step: NavigationRouteStep) -> String {
+        let modifier = step.modifier.lowercased()
+        let maneuver = step.maneuver.lowercased()
+
+        if modifier.contains("uturn") {
+            return "arrow.uturn.backward"
+        }
+        if modifier.contains("sharp left") {
+            return "arrow.turn.up.left"
+        }
+        if modifier.contains("sharp right") {
+            return "arrow.turn.up.right"
+        }
+        if modifier.contains("slight left") {
+            return "arrow.up.left"
+        }
+        if modifier.contains("slight right") {
+            return "arrow.up.right"
+        }
+        if modifier.contains("left") {
+            return "arrow.turn.up.left"
+        }
+        if modifier.contains("right") {
+            return "arrow.turn.up.right"
+        }
+        if maneuver == "arrive" {
+            return "flag.checkered"
+        }
+        if maneuver == "merge" {
+            return "arrow.merge"
+        }
+        return "arrow.up"
+    }
+
+    private func showRouteChooser() {
+        interfaceController.pushTemplate(routeTemplate, animated: true, completion: nil)
+    }
+
+    private func showActiveRouteDetail() {
+        if let activeRouteTemplate {
+            interfaceController.pushTemplate(activeRouteTemplate, animated: true, completion: nil)
+            return
+        }
+        guard let route = currentRoute else { return }
+        Task {
+            await presentRouteExperience(
+                origin: route.origin.label,
+                destination: route.destination.label,
+                persistSelection: false
+            )
+        }
+    }
+
+    private func showConversationLane() {
+        interfaceController.pushTemplate(conversationTemplate, animated: true, completion: nil)
+    }
+
+    private func showIntelligenceLane() {
+        interfaceController.pushTemplate(intelligenceTemplate, animated: true, completion: nil)
     }
 
     private func loadPublishing() async {
@@ -672,12 +1303,41 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             return
         }
 
+        if listTemplate === conversationTemplate {
+            Task {
+                await handleConversationSelection(indexPath: indexPath)
+                completionHandler()
+            }
+            return
+        }
+
         if listTemplate === activeRouteTemplate {
             Task {
                 await handleRouteDetailSelection(indexPath: indexPath)
                 completionHandler()
             }
             return
+        }
+
+        if listTemplate === activeConversationTemplate {
+            Task {
+                await handleConversationFollowUpSelection(indexPath: indexPath)
+                completionHandler()
+            }
+            return
+        }
+
+        if listTemplate === intelligenceTemplate {
+            let needsSectionIndex = intelligenceTemplate.sections.firstIndex { $0.header == IntelligenceSectionHeader.needsYou }
+            if let needsSectionIndex, indexPath.section == needsSectionIndex, indexPath.item < intelligenceActions.count {
+                switch intelligenceActions[indexPath.item] {
+                case .need(let need):
+                    presentApproveAlert(for: need, completion: completionHandler)
+                case .publishReview(let review):
+                    presentPublishReviewAlert(for: review, completion: completionHandler)
+                }
+                return
+            }
         }
 
         if listTemplate === publishTemplate {
@@ -716,15 +1376,20 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
     }
 
     private func handleRouteSelection(indexPath: (section: Int, item: Int)) async {
-        let hasCurrentRouteSection = routeCurrentItemSelectable ? 1 : 0
-        if routeCurrentItemSelectable, indexPath.section == 0, let route = currentRoute {
+        let routeSections = routeTemplate.sections
+        let upcomingSectionIndex = routeSections.firstIndex { $0.header == RouteSectionHeader.nextTurns }
+        if routeCurrentItemSelectable,
+           let upcomingSectionIndex,
+           indexPath.section == upcomingSectionIndex,
+           indexPath.item == 0,
+           let route = currentRoute {
             let origin = route.origin.label
             let destination = route.destination.label
             await presentRouteExperience(origin: origin, destination: destination, persistSelection: false)
             return
         }
 
-        let destinationSectionIndex = hasCurrentRouteSection
+        let destinationSectionIndex = routeSections.firstIndex { $0.header == RouteSectionHeader.destinations }
         guard indexPath.section == destinationSectionIndex, indexPath.item < navigationChoices.count else {
             return
         }
@@ -761,12 +1426,91 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
 
     private func handleRouteDetailSelection(indexPath: (section: Int, item: Int)) async {
         guard let template = activeRouteTemplate else { return }
-        let stopSectionIndex = template.sections.firstIndex { $0.header == "Smart Stops" }
+        let stopSectionIndex = template.sections.firstIndex { $0.header == RouteSectionHeader.smartStops }
         guard let stopSectionIndex, indexPath.section == stopSectionIndex, indexPath.item < activeRouteStops.count else {
             return
         }
         let stop = activeRouteStops[indexPath.item]
         presentStopDetail(stop)
+    }
+
+    private func handleConversationSelection(indexPath: (section: Int, item: Int)) async {
+        let promptSectionIndex = conversationTemplate.sections.firstIndex { $0.header == ConversationSectionHeader.prompts }
+        guard let promptSectionIndex, indexPath.section == promptSectionIndex, indexPath.item < conversationPrompts.count else {
+            return
+        }
+        await sendConversationPrompt(conversationPrompts[indexPath.item])
+    }
+
+    private func handleConversationFollowUpSelection(indexPath: (section: Int, item: Int)) async {
+        guard let template = activeConversationTemplate else { return }
+        let followUpSectionIndex = template.sections.firstIndex { $0.header == ConversationSectionHeader.followUp }
+        guard let followUpSectionIndex, indexPath.section == followUpSectionIndex, indexPath.item < activeConversationFollowUps.count else {
+            return
+        }
+        await sendConversationPrompt(activeConversationFollowUps[indexPath.item])
+    }
+
+    private func sendConversationPrompt(_ prompt: String) async {
+        do {
+            let response = try await client.speak(
+                text: prompt,
+                actorId: "chris",
+                conversationId: activeConversationId.isEmpty ? nil : activeConversationId
+            )
+            if !response.conversationId.isEmpty {
+                activeConversationId = response.conversationId
+            }
+            await loadConversation()
+            await loadIntelligence()
+            presentConversationResponse(prompt: prompt, response: response)
+        } catch {
+            let alert = CPAlertTemplate(
+                titleVariants: ["Couldn't reach JARVIS"],
+                actions: [CPAlertAction(title: error.localizedDescription, style: .cancel) { _ in }]
+            )
+            interfaceController.presentTemplate(alert, animated: true, completion: nil)
+        }
+    }
+
+    private func presentConversationResponse(prompt: String, response: SpeakResponse) {
+        let promptItem = CPListItem(text: "You asked", detailText: prompt)
+        promptItem.setImage(
+            UIImage(systemName: "person.fill")?
+                .withTintColor(.systemGray, renderingMode: .alwaysOriginal)
+        )
+        let replyItem = CPListItem(
+            text: response.agent.isEmpty ? "JARVIS" : response.agent,
+            detailText: response.displayText.isEmpty ? response.response : response.displayText
+        )
+        replyItem.setImage(
+            UIImage(systemName: "brain.head.profile")?
+                .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+        )
+
+        activeConversationFollowUps = mergedConversationPrompts(
+            primary: response.followUpSuggestions,
+            fallback: fallbackConversationPrompts()
+        )
+        let followUpItems = activeConversationFollowUps.map { suggestion in
+            let item = CPListItem(text: suggestion, detailText: "Keep the thread moving")
+            item.setImage(
+                UIImage(systemName: "arrowshape.turn.up.right.circle.fill")?
+                    .withTintColor(.systemPurple, renderingMode: .alwaysOriginal)
+            )
+            return item
+        }
+
+        let template = CPListTemplate(
+            title: "JARVIS",
+            sections: [
+                CPListSection(items: [promptItem, replyItem], header: ConversationSectionHeader.status, sectionIndexTitle: nil),
+                CPListSection(items: followUpItems, header: ConversationSectionHeader.followUp, sectionIndexTitle: nil),
+            ]
+        )
+        template.delegate = self
+        activeConversationTemplate = template
+        interfaceController.pushTemplate(template, animated: true, completion: nil)
     }
 
     private func handleOpsSelection(indexPath: (section: Int, item: Int)) async {
@@ -820,16 +1564,55 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
         return Array(([normalized] + filtered).prefix(8))
     }
 
+    private func fallbackConversationPrompts() -> [String] {
+        if let route = currentRoute {
+            var prompts = [
+                "What should I know about this drive?",
+                "What matters before I arrive?",
+            ]
+            if route.hazardActive {
+                prompts.append("Should I reroute?")
+            }
+            prompts.append(activeRouteStops.isEmpty ? "Where should we stop if needed?" : "Which stop makes the most sense?")
+            return prompts
+        }
+        return [
+            "Help me think through this drive.",
+            "What matters before I head out?",
+            "What should I handle on the way?",
+        ]
+    }
+
+    private func mergedConversationPrompts(primary: [String], fallback: [String], limit: Int = 5) -> [String] {
+        var seen = Set<String>()
+        var merged: [String] = []
+        for candidate in primary + fallback {
+            let trimmed = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            let key = trimmed.lowercased()
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            merged.append(trimmed)
+            if merged.count == limit {
+                break
+            }
+        }
+        return merged
+    }
+
     private func presentRouteExperience(origin: String, destination: String, persistSelection: Bool) async {
         do {
             let route = try await client.fetchNavigationRoute(origin: origin, destination: destination)
             let stops = try await client.fetchNavigationStops(origin: origin, destination: destination)
             currentRoute = route
             activeRouteStops = Array(stops.sections.flatMap(\.items).prefix(6))
+            await loadConversation()
+            await loadIntelligence()
+            refreshNavigationSurface()
 
             var sections: [CPListSection] = []
             let summaryItem = CPListItem(
-                text: "\(route.origin.label) -> \(route.destination.label)",
+                text: route.route.steps.first?.instruction.isEmpty == false ? route.route.steps.first?.instruction ?? "\(route.origin.label) -> \(route.destination.label)" : "\(route.origin.label) -> \(route.destination.label)",
                 detailText: [route.summary, JarvisCarPlayPresentation.routeDetail(for: route)]
                     .filter { !$0.isEmpty }
                     .joined(separator: " · ")
@@ -848,7 +1631,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "checkmark.shield.fill")?
                     .withTintColor(.systemGreen, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [summaryItem, recommendationItem], header: "1. Active Route", sectionIndexTitle: nil))
+            sections.append(CPListSection(items: [summaryItem, recommendationItem], header: RouteSectionHeader.activeRoute, sectionIndexTitle: nil))
 
             if !route.route.steps.isEmpty {
                 let stepItems = route.route.steps.prefix(4).map { step in
@@ -862,26 +1645,7 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                     item.setImage(UIImage(systemName: "arrow.turn.up.right"))
                     return item
                 }
-                sections.append(CPListSection(items: stepItems, header: "2. Voice & Maneuvers", sectionIndexTitle: nil))
-            }
-
-            if activeRouteStops.isEmpty {
-                let item = CPListItem(text: "No smart stops surfaced", detailText: "Try a different destination from the phone app.")
-                sections.append(CPListSection(items: [item], header: "3. Smart Stops Along Route", sectionIndexTitle: nil))
-            } else {
-                let items = activeRouteStops.map { stop in
-                    let detail = [
-                        stop.address,
-                        stop.routeMileMarker.map { String(format: "mile %.0f", $0) } ?? "",
-                        stop.distanceFromRoute.map { String(format: "+%.1f mi detour", $0) } ?? "",
-                    ]
-                        .filter { !$0.isEmpty }
-                        .joined(separator: " · ")
-                    let item = CPListItem(text: stop.name, detailText: detail)
-                    item.setImage(UIImage(systemName: "mappin.and.ellipse"))
-                    return item
-                }
-                sections.append(CPListSection(items: items, header: "3. Smart Stops Along Route", sectionIndexTitle: nil))
+                sections.append(CPListSection(items: stepItems, header: RouteSectionHeader.nextTurns, sectionIndexTitle: nil))
             }
 
             let consultationItem = CPListItem(
@@ -902,7 +1666,46 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
                 UIImage(systemName: "cloud.sun.rain.fill")?
                     .withTintColor(.systemTeal, renderingMode: .alwaysOriginal)
             )
-            sections.append(CPListSection(items: [consultationItem, intelligenceItem], header: "4. Route Intelligence & Voice", sectionIndexTitle: nil))
+            let liveViewItem = CPListItem(
+                text: "Drive Focus",
+                detailText: "Focused guidance keeps the next turn easy to scan."
+            )
+            liveViewItem.setImage(
+                UIImage(systemName: "viewfinder.circle")?
+                    .withTintColor(.systemPurple, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [consultationItem, liveViewItem], header: RouteSectionHeader.guidance, sectionIndexTitle: nil))
+
+            let destinationItem = CPListItem(
+                text: route.destination.label,
+                detailText: JarvisCarPlayPresentation.routeDetail(for: route)
+            )
+            destinationItem.setImage(
+                UIImage(systemName: "flag.checkered.2.crossed")?
+                    .withTintColor(.systemBlue, renderingMode: .alwaysOriginal)
+            )
+            sections.append(CPListSection(items: [destinationItem], header: RouteSectionHeader.destinations, sectionIndexTitle: nil))
+
+            if activeRouteStops.isEmpty {
+                let item = CPListItem(text: "No smart stops surfaced", detailText: "Try a different destination from the phone app.")
+                sections.append(CPListSection(items: [item], header: RouteSectionHeader.smartStops, sectionIndexTitle: nil))
+            } else {
+                let items = activeRouteStops.map { stop in
+                    let detail = [
+                        stop.address,
+                        stop.routeMileMarker.map { String(format: "mile %.0f", $0) } ?? "",
+                        stop.distanceFromRoute.map { String(format: "+%.1f mi detour", $0) } ?? "",
+                    ]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " · ")
+                    let item = CPListItem(text: stop.name, detailText: detail)
+                    item.setImage(UIImage(systemName: "mappin.and.ellipse"))
+                    return item
+                }
+                sections.append(CPListSection(items: items, header: RouteSectionHeader.smartStops, sectionIndexTitle: nil))
+            }
+
+            sections.append(CPListSection(items: [intelligenceItem], header: RouteSectionHeader.tripSetup, sectionIndexTitle: nil))
 
             let detailTemplate = CPListTemplate(title: destination, sections: sections)
             detailTemplate.delegate = self
@@ -915,6 +1718,14 @@ final class JarvisCarPlayController: NSObject, @preconcurrency CPListTemplateDel
             )
             interfaceController.presentTemplate(alert, animated: true, completion: nil)
         }
+    }
+
+    func mapTemplateDidCancelNavigation(_ mapTemplate: CPMapTemplate) {
+        navigationSession = nil
+        activeTrip = nil
+        activeRouteChoice = nil
+        activeRouteKey = nil
+        updateNavigationControls()
     }
 
     private func presentStopDetail(_ stop: NavigationStop) {

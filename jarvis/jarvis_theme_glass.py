@@ -19604,7 +19604,7 @@ body::after {{
 
             <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">5. While You Were Away</div><h3>Continuity. Progress. Preparedness.</h3></div></div><div class="command-activity-list" id="command-away-list"></div><div class="command-section-link" onclick="window.location.href='/activity-center'">View full overnight report →</div></div></section>
 
-            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">6. Movement & Route</div><h3>Your day in motion.</h3></div></div><div class="command-mini-grid"><div class="command-route-map"><svg viewBox="0 0 260 160" preserveAspectRatio="none"><path d="M28 136 C50 120 62 86 104 88 C142 90 154 54 184 46 C202 41 218 26 230 18" stroke="rgba(78,162,255,0.92)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="8 9"></path><circle cx="28" cy="136" r="9" fill="#e7a64d"></circle><circle cx="230" cy="18" r="9" fill="#8ed6ff"></circle></svg></div><div class="command-mini-grid" style="grid-template-columns:1fr;"><div class="command-mini-card"><strong id="command-route-next">Next move</strong><span id="command-route-next-copy">Loading route posture…</span></div><div class="command-mini-card"><strong id="command-route-traffic">Traffic</strong><span id="command-route-weather">Loading conditions…</span></div></div></div><div class="command-section-link" onclick="switchView('navigate')">Open full calendar →</div></div></section>
+            <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">6. Movement & Route</div><h3>Your day in motion.</h3></div></div><div class="command-mini-grid"><div class="command-route-map"><svg viewBox="0 0 260 160" preserveAspectRatio="none"><path d="M28 136 C50 120 62 86 104 88 C142 90 154 54 184 46 C202 41 218 26 230 18" stroke="rgba(78,162,255,0.92)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="8 9"></path><circle cx="28" cy="136" r="9" fill="#e7a64d"></circle><circle cx="230" cy="18" r="9" fill="#8ed6ff"></circle></svg></div><div class="command-mini-grid" style="grid-template-columns:1fr;"><div class="command-mini-card"><strong id="command-route-next">Next move</strong><span id="command-route-next-copy">Loading route posture…</span></div><div class="command-mini-card"><strong id="command-route-traffic">Traffic</strong><span id="command-route-weather">Loading conditions…</span></div></div></div><div class="command-section-link" onclick="switchView('navigate')">Open full navigation →</div></div></section>
 
             <section class="command-card command-span-3"><div class="command-card-inner"><div class="command-card-header"><div><div class="command-card-number">7. Family & Household</div><h3>What matters at home.</h3></div></div><div class="command-family-list" id="command-family-list"></div><div class="command-section-link" onclick="switchView('calendar')">View household hub →</div></div></section>
 
@@ -25235,7 +25235,7 @@ body::after {{
           </div>
           <div class="navigation-side-footer">
             <strong>Travel Context</strong>
-            <p id="navigation-runtime-note">Navigation is live and connected.</p>
+            <p id="navigation-runtime-note">Navigation status is loading.</p>
             <div class="navigation-consult-actions" style="margin-top:12px;">
               <button type="button" id="navigation-refresh-button" onclick="refreshNavigateDesktop()">Refresh Navigation</button>
               <button type="button" onclick="navigationSidebarAction('module-route')">Open Navigation Center</button>
@@ -25284,7 +25284,7 @@ body::after {{
                     </div>
                     <div class="nav-route-actions">
                       <button class="nav-swap-btn" onclick="navSwapInputs()">&#8645;</button>
-                      <button class="nav-go-btn" onclick="navGetRoute()">Plan Route</button>
+                      <button class="nav-go-btn" onclick="navGetRoute()">Preview Route</button>
                     </div>
                   </div>
                   <div class="nav-summary-bar" id="nav-summary-bar" style="display:none">
@@ -25295,11 +25295,11 @@ body::after {{
                   <div class="navigation-insight-row" style="margin-top:16px;">
                     <div class="navigation-promo-card">
                       <strong>JARVIS Recommendation</strong>
-                      <span id="nav-brief-recommendation">Leave by 9:38 AM to stay ahead of heavier traffic and preserve the next meeting window.</span>
+                      <span id="nav-brief-recommendation">Preview a route to load shared route state and any live route intelligence this runtime can provide.</span>
                     </div>
                     <div class="navigation-promo-card">
                       <strong>Route Window</strong>
-                      <span id="nav-brief-window">Next best departure window: 10:00 AM to 10:30 AM. Weather remains stable until late morning.</span>
+                      <span id="nav-brief-window">If live routing is unavailable here, JARVIS will say so plainly and keep the saved route context only.</span>
                     </div>
                   </div>
                 </div>
@@ -25343,7 +25343,7 @@ body::after {{
                       <strong id="nav-map-eta-main">1h 24m</strong>
                       <span id="nav-map-distance-main">82 mi</span>
                       <span id="nav-map-risk-copy">Light traffic · low route risk</span>
-                      <div class="nav-summary-chip" style="margin-top:10px;">Live route intelligence</div>
+                      <div class="nav-summary-chip" style="margin-top:10px;">Route context</div>
                     </div>
                     <div class="nav-map-tools">
                       <button class="nav-secondary-btn" onclick="navGetRoute()">Re-center</button>
@@ -25568,7 +25568,7 @@ body::after {{
                   <div class="navigation-card">
                     <h4>Recommended Next Action</h4>
                     <div class="navigation-promo-card">
-                      <strong id="nav-voice-action-title">Leave by 9:38 AM</strong>
+                      <strong id="nav-voice-action-title">Preview route</strong>
                       <span id="nav-voice-action-copy">Best control point before the corridor starts adding uncertainty to the rest of the day.</span>
                     </div>
                   </div>
@@ -26779,6 +26779,27 @@ async function init() {{
 ═══════════════════════════════════════════════════════════════ */
 function switchView(name) {{
   if (name === 'command') name = 'chat';
+  const routeAliases = {{
+    activity: '/activity-center',
+    approvals: '/approval-queue',
+    mission: '/mission-board',
+    storm: '/storm-dashboard',
+    supervision: '/supervision-snapshot',
+  }};
+  if (name === 'settings') {{
+    if (typeof openSettings === 'function') {{
+      closeMobileNav();
+      openSettings();
+      return;
+    }}
+    window.location.href = '/settings-center';
+    return;
+  }}
+  if (routeAliases[name]) {{
+    closeMobileNav();
+    window.location.href = routeAliases[name];
+    return;
+  }}
   closeMobileNav();  // close drawer on mobile when navigating
   document.querySelectorAll('.view').forEach(v => {{
     v.style.display = 'none';
@@ -36160,7 +36181,7 @@ let _calendarRequestSerial = 0;
 
 function calendarRuntimeNote(text) {{
   const el = document.getElementById('calendar-runtime-note');
-  if (el) el.textContent = text || 'Calendar is live and connected.';
+  if (el) el.textContent = text || 'Calendar status is loading.';
 }}
 
 function calendarToast(message, level = 'info') {{
@@ -36380,7 +36401,7 @@ function renderCalendarDesktop(modulePayload) {{
   const dateSource = todayPayload.date || payload.local_today || payload.generated_at || new Date().toISOString();
   const dateText = calendarPrettyDate(dateSource);
 
-  calendarRuntimeNote(payload.runtime_note || availabilityNotes[0] || 'Calendar is live and connected.');
+  calendarRuntimeNote(payload.runtime_note || availabilityNotes[0] || 'Calendar status is loading.');
 
   setEl('calendarDateLabel', dateText);
   setEl('calendar-focus-title', focusEvent ? (focusEvent.title || 'Protected focus lane') : 'Create a protected focus block');
@@ -37922,8 +37943,30 @@ function agentsRouteName(name) {{
   return raw || 'agents';
 }}
 
+function agentsRouteHref(viewName) {{
+  const raw = String(viewName || '').trim().toLowerCase();
+  const routeMap = {{
+    overview: '/briefing-center',
+    chat: '/command-center',
+    activity: '/activity-center',
+    agents: '/agent-ops-center',
+    approvals: '/approval-queue',
+    chronicle: '/chronicle-center',
+    health: '/health-center',
+    huddle: '/huddle-center',
+    mission: '/mission-board',
+    navigate: '/navigation-center',
+    publishing: '/publish',
+    settings: '/settings-center',
+    supervision: '/supervision-snapshot',
+    workshop: '/workshop-center',
+  }};
+  return routeMap[raw] || '/' + raw;
+}}
+
 async function agentsOpenRoute(name, label = 'Open Related Surface', detail = '') {{
   const viewName = agentsRouteName(name);
+  const routeHref = agentsRouteHref(viewName);
   agentsRuntimeNote(`Opening ${{label}}…`);
   try {{
     await agentsRecordAction({{
@@ -37934,7 +37977,7 @@ async function agentsOpenRoute(name, label = 'Open Related Surface', detail = ''
       result_summary: `${{label}} opened from Agents.`,
       related_kind: 'route',
       related_label: label,
-      route: viewName === 'agents' ? '/agent-ops-center' : '/' + viewName,
+      route: routeHref,
       route_label: label,
     }});
   }} catch (_error) {{
@@ -45127,7 +45170,7 @@ async function settingsBuildVoice() {{
   }} catch(e) {{ opts = {{}}; }}
 
   const providers = opts.providers || [];
-  const currentProvider = current.provider || 'elevenlabs';
+  const currentProvider = current.provider || 'fish';
   const currentVoice = current.voice_id || current.voice || '';
 
   const providerOptions = providers.map(p =>
@@ -50082,7 +50125,7 @@ let _navigateDesktopState = null;
 let _navigateDesktopRequestSerial = 0;
 
 function navigationRuntimeNote(text) {{
-  _setText('navigation-runtime-note', text || 'Navigation is live and connected.');
+  _setText('navigation-runtime-note', text || 'Navigation status is loading.');
 }}
 
 function navigationText(...values) {{
@@ -50091,6 +50134,19 @@ function navigationText(...values) {{
     if (text) return text;
   }}
   return '';
+}}
+
+function navigationPreviewWarningText(value) {{
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const lower = text.toLowerCase();
+  if (lower.includes('certificate_verify_failed') || lower.includes('certificate verify failed')) {{
+    return 'Live route intelligence is blocked by upstream certificate verification in this runtime.';
+  }}
+  if (lower.includes('google maps is not configured')) {{
+    return 'Google Maps is not configured in this runtime.';
+  }}
+  return text;
 }}
 
 function navigationTitleCase(value) {{
@@ -50172,10 +50228,10 @@ function navigationSidebarAction(action) {{
       route_label: 'Open Settings',
       succeeded: true,
     }});
-    if (typeof commandOpenCommandRoute === 'function') {{
-      commandOpenCommandRoute('/settings-center', 'settings');
+    if (typeof openSettings === 'function') {{
+      openSettings();
     }} else {{
-      switchView('settings');
+      navigationRuntimeNote('Navigation settings are unavailable in this runtime.');
     }}
     return;
   }}
@@ -50347,7 +50403,8 @@ function renderNavigateModule(payload) {{
     var previewDuration = previewRoute.duration_minutes ? Math.max(1, Math.round(Number(previewRoute.duration_minutes))) + ' min' : '--';
     var trafficPosture = preview.hazard_active ? 'Watch' : (sections.some(function(section) {{ return (section.items || []).length > 4; }}) ? 'Active' : 'Light');
     var weatherPosture = preview.hazard_active ? 'Hazard' : (preview.warning ? 'Mixed' : 'Stable');
-    var runtimeText = navigationText(payload?.summary, payload?.remains_partial, 'Navigation is live and connected.');
+    var runtimeText = navigationText(payload?.summary, payload?.remains_partial, 'Navigation status is loading.');
+    var previewWarning = navigationPreviewWarningText(preview.warning);
 
     navigationRuntimeNote(runtimeText);
     _setText('nav-brief-recommendation', navigationText(
@@ -50356,7 +50413,7 @@ function renderNavigateModule(payload) {{
         'Plan a route to get live departure guidance.'
     ));
     _setText('nav-brief-window', navigationText(
-        preview.warning,
+        previewWarning,
         payload?.remains_partial,
         routeHistory[0] ? 'Last route updated ' + navigationRelativeTime(routeHistory[0].last_previewed_at || routeHistory[0].saved_at) + '.' : '',
         'Persisted route history and smart stops are available once a live route is previewed.'
@@ -50500,7 +50557,7 @@ function renderNavigateModule(payload) {{
     var weatherGrid = document.getElementById('navigation-weather-grid');
     if (weatherGrid) {{
         var weatherRows = [
-            {{ title: 'Route', copy: navigationText(preview.summary, preview.warning, 'Route weather context will appear after a preview.') }},
+            {{ title: 'Route', copy: navigationText(preview.summary, previewWarning, 'Route weather context will appear after a preview.') }},
             {{ title: 'Hazard', copy: preview.hazard_active ? 'Active route hazard surfaced.' : 'No active hazard surfaced.' }},
             {{ title: 'Stops', copy: sections.reduce(function(total, section) {{ return total + ((section.items || []).length || 0); }}, 0) + ' route-fit stop suggestions.' }},
         ];
@@ -50678,9 +50735,25 @@ async function navFetchDetailedRoute(origin, dest, options = undefined) {{
             body: JSON.stringify({{origin: origin, destination: dest}})
         }});
         var data = await response.json();
+        if (data.persisted && data.message) {{
+            var persistedNote = navigationText(
+                data.message,
+                'Detailed live routing is unavailable in this runtime.'
+            );
+            navigationRuntimeNote(persistedNote);
+            _setText('nav-brief-recommendation', persistedNote);
+            _setText('nav-brief-window', 'The route was saved to shared navigation state, but live map, turn-by-turn, and start-navigation controls remain unavailable here.');
+            await refreshNavigateDesktop(true);
+            if (!opts.quiet) showToast('Saved route without live map preview');
+            return null;
+        }}
         if (data.error || !data.routes || !data.routes.length) {{
-            if (!opts.quiet) showToast('Route not found');
-            navigationRuntimeNote('Navigation route preview is unavailable right now.');
+            if (!opts.quiet) showToast('Detailed route unavailable');
+            navigationRuntimeNote(navigationText(
+                data.message,
+                navigationPreviewWarningText(data.error),
+                'Navigation route preview is unavailable right now.'
+            ));
             return null;
         }}
         _navRouteData = data;
@@ -50714,8 +50787,8 @@ async function navFetchDetailedRoute(origin, dest, options = undefined) {{
         }}
         return data;
     }} catch (_error) {{
-        navigationRuntimeNote('Navigation route preview failed.');
-        if (!opts.quiet) showToast('Route not found');
+        navigationRuntimeNote('Detailed live routing is unavailable right now.');
+        if (!opts.quiet) showToast('Detailed route unavailable');
         return null;
     }}
 }}

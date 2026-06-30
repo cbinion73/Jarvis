@@ -616,6 +616,27 @@ class AgentDelegationRecord:
 
 
 @dataclass(slots=True)
+class DelegationReportRecord:
+    report_id: str
+    mission_id: str
+    delegation_id: str
+    producer_agent: str
+    title: str
+    summary: str
+    detail: str
+    key_output: str = ""
+    next_step: str = ""
+    evidence_note: str = ""
+    status: str = "completed-with-output"
+    handoff_id: str = ""
+    delegator_agent: str = ""
+    delegate_agent: str = ""
+    created_at: str = ""
+    output_id: str = ""
+    artifact_ref: str = ""
+
+
+@dataclass(slots=True)
 class AgentEscalationRecord:
     escalation_id: str
     mission_id: str
@@ -708,6 +729,7 @@ class MissionDossier:
     agent_work_states: dict[str, AgentWorkState] = field(default_factory=dict)
     handoffs: list[AgentHandoffRecord] = field(default_factory=list)
     delegations: list[AgentDelegationRecord] = field(default_factory=list)
+    delegation_reports: list[DelegationReportRecord] = field(default_factory=list)
     escalations: list[AgentEscalationRecord] = field(default_factory=list)
     ownership_transfers: list[OwnershipTransferRecord] = field(default_factory=list)
     duplicate_suppressions: list[DuplicateWorkSuppressionRecord] = field(default_factory=list)

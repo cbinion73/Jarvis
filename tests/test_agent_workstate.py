@@ -190,6 +190,127 @@ class AgentWorkStateTests(unittest.TestCase):
         self.assertGreaterEqual(summary["blocked_tasks"], 1)
         self.assertEqual(summary["duplicate_suppressions"], 1)
 
+    def test_delegation_report_creates_inspectable_output_and_updates_status(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="Review the next weather move and delegate the proof cleanly.",
+        )
+        mission_id = dossier["mission_id"]
+        from_agent = dossier["selected_agents"][0]
+        to_agent = dossier["selected_agents"][1]
+
+        updated = self.support.create_agent_handoff(
+            mission_id,
+            from_agent=from_agent,
+            to_agent=to_agent,
+            task_title="Review weather posture",
+            summary="Take the weather review and return a concrete readout.",
+            partial_work="The lead already framed the travel context.",
+            transfer_ownership=False,
+        )
+        delegation_id = updated["delegations"][0]["delegation_id"]
+
+        completed = self.support.record_delegation_output(
+            mission_id,
+            delegation_id,
+            producing_agent=to_agent,
+            title="Weather review delivered",
+            summary="Storm returned a concrete travel weather readout.",
+            detail="Traffic and storm posture were reviewed and reduced into one inspectable report.",
+            key_output="Travel weather is clear enough to proceed without rerouting.",
+            next_step="Share the weather readout with the lead agent.",
+            evidence_note="Bounded local weather review only; no background autonomy claim.",
+        )
+
+        self.assertEqual(completed["delegations"][0]["status"], "completed-with-output")
+        reports = self.support.mission_delegation_reports(mission_id)
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0]["producer_agent"], to_agent)
+        self.assertEqual(reports[0]["key_output"], "Travel weather is clear enough to proceed without rerouting.")
+        self.assertEqual(reports[0]["next_step"], "Share the weather readout with the lead agent.")
+        self.assertEqual(reports[0]["evidence_note"], "Bounded local weather review only; no background autonomy claim.")
+        self.assertTrue(reports[0]["artifact_ref"].startswith(f"/api/missions/{mission_id}/delegation-reports/"))
+
+        outputs = self.support.mission_outputs(mission_id)
+        self.assertTrue(any(item["kind"] == "delegation-report" for item in outputs))
+        self.assertTrue(any(item["payload_ref"] == reports[0]["artifact_ref"] for item in outputs))
+
+        work_state = self.support.mission_work_state(mission_id)
+        self.assertEqual(work_state["summary"]["delegations_requested"], 0)
+        self.assertEqual(work_state["summary"]["delegations_completed_with_output"], 1)
+        self.assertEqual(work_state["summary"]["delegations_unavailable"], 0)
+        self.assertEqual(work_state["delegations"][0]["inspectable_output_status"], "completed-with-output")
+        self.assertEqual(work_state["delegations"][0]["artifact_ref"], reports[0]["artifact_ref"])
+
+    def test_delegation_report_requires_more_than_title_and_summary_to_complete(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="Delegate a bounded review and keep the output honest.",
+        )
+        mission_id = dossier["mission_id"]
+        from_agent = dossier["selected_agents"][0]
+        to_agent = dossier["selected_agents"][1]
+
+        updated = self.support.create_agent_handoff(
+            mission_id,
+            from_agent=from_agent,
+            to_agent=to_agent,
+            task_title="Review weather posture",
+            summary="Take the weather review and return a concrete readout.",
+            partial_work="The lead already framed the travel context.",
+            transfer_ownership=False,
+        )
+        delegation_id = updated["delegations"][0]["delegation_id"]
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Delegation reports need at least one useful supporting field",
+        ):
+            self.support.record_delegation_output(
+                mission_id,
+                delegation_id,
+                producing_agent=to_agent,
+                title="Weather review delivered",
+                summary="Storm returned a concrete travel weather readout.",
+            )
+
+    def test_rejected_delegation_is_marked_unavailable_for_inspectable_output(self) -> None:
+        dossier = self.support.create_mission(
+            actor="Chris",
+            room="office",
+            request="Compare next steps and keep ownership boundaries explicit.",
+        )
+        mission_id = dossier["mission_id"]
+        from_agent = dossier["selected_agents"][0]
+        to_agent = dossier["selected_agents"][1]
+
+        updated = self.support.create_agent_handoff(
+            mission_id,
+            from_agent=from_agent,
+            to_agent=to_agent,
+            task_title="Take the next comparison pass",
+            summary="Review the comparison lane and accept ownership only if it is clean.",
+            partial_work="The lead already staged first-pass framing.",
+            transfer_ownership=True,
+        )
+
+        rejected = self.support.acknowledge_agent_handoff(
+            mission_id,
+            updated["handoffs"][0]["handoff_id"],
+            receiving_agent=to_agent,
+            accepted=False,
+            note="This is not clean enough to accept yet.",
+        )
+
+        self.assertEqual(rejected["delegations"][0]["status"], "rejected")
+        work_state = self.support.mission_work_state(mission_id)
+        self.assertEqual(work_state["summary"]["delegations_requested"], 0)
+        self.assertEqual(work_state["summary"]["delegations_completed_with_output"], 0)
+        self.assertEqual(work_state["summary"]["delegations_unavailable"], 1)
+        self.assertEqual(work_state["delegations"][0]["inspectable_output_status"], "unavailable")
+
     def test_mission_control_summary_includes_agent_society_health(self) -> None:
         dossier = self.support.create_mission(
             actor="Chris",

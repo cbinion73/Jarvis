@@ -14,7 +14,7 @@ _lock = threading.Lock()
 
 DEFAULT_PROFILE = {
     "theme": "glass",
-    "voice_provider": "elevenlabs",
+    "voice_provider": "fish",
     "voice_id": "",
     "language": "en",
     "timezone": "America/New_York",

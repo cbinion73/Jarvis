@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 import unittest
 from types import SimpleNamespace
 
+from jarvis.chat_only_page import render_chat_only_shell
 from jarvis.jarvis_theme_glass import render_glass_shell
 
 
@@ -18,6 +20,17 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("@media (max-width: 1440px), (max-height: 940px)", html)
         self.assertIn("--bar-safe-h: 166px;", html)
         self.assertIn("padding: 8px 24px calc(12px + env(safe-area-inset-bottom, 0px));", html)
+
+    def test_render_chat_only_shell_uses_existing_conversation_apis(self) -> None:
+        html = render_chat_only_shell(self.runtime)
+
+        self.assertIn("Chat with JARVIS", html)
+        self.assertIn("/api/respond", html)
+        self.assertIn("/api/chat-state", html)
+        self.assertIn("/api/conversations/", html)
+        self.assertIn("/api/chat-uploads", html)
+        self.assertIn("Open command center", html)
+        self.assertIn("Chat-only mode keeps the experience conversational.", html)
 
     def test_render_glass_shell_exposes_health_desktop_launcher(self) -> None:
         html = render_glass_shell(self.runtime)
@@ -70,7 +83,8 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/apple/calendar/events/", html)
         self.assertIn("/calendar-center", html)
         self.assertIn("Refresh Calendar", html)
-        self.assertIn("Calendar is live and connected.", html)
+        self.assertIn("Calendar is loading live schedule intelligence…", html)
+        self.assertIn("Calendar status is loading.", html)
 
     def test_render_glass_shell_wires_dining_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
@@ -109,6 +123,12 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/activity/operator-action", html)
         self.assertIn("Refresh Navigation", html)
         self.assertIn("Open Navigation Center", html)
+        self.assertIn("Navigation status is loading.", html)
+        self.assertIn(">Preview Route</button>", html)
+        self.assertIn("Saved route without live map preview", html)
+        self.assertIn("The route was saved to shared navigation state, but live map, turn-by-turn, and start-navigation controls remain unavailable here.", html)
+        self.assertIn("function navigationPreviewWarningText(", html)
+        self.assertNotIn("Leave by 9:38 AM to stay ahead of heavier traffic and preserve the next meeting window.", html)
 
     def test_render_glass_shell_wires_vision_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
@@ -183,6 +203,8 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("/api/activity/operator-action", html)
         self.assertIn("Open Recovery Loop", html)
         self.assertIn("Schedule Family Time", html)
+        self.assertIn("Open full navigation →", html)
+        self.assertNotIn("Open full calendar →", html)
 
     def test_render_glass_shell_wires_needs_you_runtime_controls(self) -> None:
         html = render_glass_shell(self.runtime)
@@ -218,6 +240,66 @@ class GlassThemeShellTests(unittest.TestCase):
         self.assertIn("function openChroniclePrayerCard(", html)
         self.assertIn("data-entry=", html)
         self.assertIn("data-prayer=", html)
+
+    def test_render_glass_shell_wires_navigation_settings_to_shared_overlay(self) -> None:
+        html = render_glass_shell(self.runtime)
+        nav_action_idx = html.index("function navigationSidebarAction(action)")
+        sync_idx = html.index("function syncNavigationStoryboard()")
+        nav_action_block = html[nav_action_idx:sync_idx]
+
+        self.assertIn("function navigationSidebarAction(action)", nav_action_block)
+        self.assertIn("if (typeof openSettings === 'function')", nav_action_block)
+        self.assertIn("openSettings();", nav_action_block)
+        self.assertIn("Navigation settings are unavailable in this runtime.", nav_action_block)
+        self.assertNotIn("switchView('settings')", nav_action_block)
+
+    def test_render_glass_shell_routes_missing_view_aliases_to_real_surfaces(self) -> None:
+        html = render_glass_shell(self.runtime)
+        switch_idx = html.index("function switchView(name)")
+        load_idx = html.index("function loadViewData(name)")
+        switch_block = html[switch_idx:load_idx]
+
+        self.assertIn("activity: '/activity-center'", switch_block)
+        self.assertIn("approvals: '/approval-queue'", switch_block)
+        self.assertIn("mission: '/mission-board'", switch_block)
+        self.assertIn("storm: '/storm-dashboard'", switch_block)
+        self.assertIn("supervision: '/supervision-snapshot'", switch_block)
+        self.assertIn("if (name === 'settings')", switch_block)
+        self.assertIn("window.location.href = '/settings-center';", switch_block)
+
+    def test_render_glass_shell_literal_switch_view_targets_are_backed(self) -> None:
+        html = render_glass_shell(self.runtime)
+        view_ids = set(re.findall(r'id="view-([a-zA-Z0-9_-]+)"', html))
+        targets = {
+            first or second
+            for first, second in re.findall(r"switchView\\('([^']+)'\\)|switchView\\(\"([^\"]+)\"\\)", html)
+        }
+        allowed_aliases = {
+            "command",
+            "activity",
+            "approvals",
+            "mission",
+            "settings",
+            "storm",
+            "supervision",
+        }
+        missing = sorted(name for name in targets if name not in view_ids and name not in allowed_aliases)
+        self.assertEqual(missing, [])
+
+    def test_render_glass_shell_records_agents_routes_with_real_surface_paths(self) -> None:
+        html = render_glass_shell(self.runtime)
+        href_idx = html.index("function agentsRouteHref(viewName)")
+        open_idx = html.index("async function agentsOpenRoute(")
+        href_block = html[href_idx:open_idx]
+        open_block = html[open_idx:html.index("async function agentsApplyApprovalAction(")]
+
+        self.assertIn("activity: '/activity-center'", href_block)
+        self.assertIn("approvals: '/approval-queue'", href_block)
+        self.assertIn("mission: '/mission-board'", href_block)
+        self.assertIn("settings: '/settings-center'", href_block)
+        self.assertIn("supervision: '/supervision-snapshot'", href_block)
+        self.assertIn("const routeHref = agentsRouteHref(viewName);", open_block)
+        self.assertIn("route: routeHref,", open_block)
         self.assertIn("/api/chronicle/module", html)
         self.assertIn("/api/chronicle/recent", html)
         self.assertIn("/api/chronicle/context", html)

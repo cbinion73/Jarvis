@@ -1,0 +1,121 @@
+## A. Exact Prompts Tested
+- already-covered opener family:
+  - `Help me figure out whether to leave my job.`
+  - `I think I should quit.`
+  - `I think I should leave my job.`
+  - `I think I should resign.`
+  - `I might need to leave this job.`
+  - `I want out of this job.`
+  - `I should probably leave my job.`
+  - `I might need to quit.`
+  - `I should probably resign.`
+  - `I may need to quit.`
+  - `I should leave this job.`
+  - `I think I need to leave this job.`
+  - `I want to quit my job.`
+- remaining nearby family under review:
+  - `I think I need to put in my notice.`
+  - `I think I need to hand in my notice.`
+- residual probes after the patch:
+  - `I might need to walk away from this job.`
+  - `I may need to leave this company.`
+- bounded controls:
+  - `I hate my job.`
+  - `I am burned out at work.`
+  - `I want to retire.`
+
+## B. Whether a Defect Was Found
+- Yes.
+- One real remaining bounded usefulness defect was present at the start of this pass:
+  - formal job-exit notice phrasing still fell through to the generic fallback.
+- Concrete misses before the repair:
+  - `I think I need to put in my notice.`
+  - `I think I need to hand in my notice.`
+- After repairing that smallest local issue, the seam still is not fully acceptance-complete because two nearby job-exit prompts remain generic:
+  - `I might need to walk away from this job.`
+  - `I may need to leave this company.`
+
+## C. Exact Code / Tests Changed
+- Code changed:
+  - `jarvis/companion_spine.py`
+  - Expanded `DECISION_REQUEST_TERMS` with the smallest remaining job-exit notice family:
+    - `put in my notice`
+    - `hand in my notice`
+- Tests changed:
+  - `tests/test_companion_spine.py`
+  - Added focused opener coverage for:
+    - `I think I need to put in my notice.`
+    - `I think I need to hand in my notice.`
+- Existing bounded controls remained in place:
+  - `I am burned out at work.`
+  - `I want to retire.`
+
+## D. Exact Verification Commands Run
+- Compile:
+  - `python3 -m py_compile jarvis/companion_spine.py tests/test_companion_spine.py`
+- Focused pytest:
+  - `python3 -m pytest -q tests/test_companion_spine.py -k "decision_shaped_job_prompt_gets_decision_fork or decision_shaped_torn_prompt_gets_decision_fork or quit_prompt_gets_decision_fork or leave_my_job_prompt_gets_decision_fork or resign_prompt_gets_decision_fork or should_probably_resign_prompt_gets_decision_fork or quit_my_job_prompt_gets_decision_fork or put_in_my_notice_prompt_gets_decision_fork or hand_in_my_notice_prompt_gets_decision_fork or burned_out_prompt_does_not_get_decision_fork or retire_prompt_does_not_get_decision_fork"`
+- Compact in-process smoke:
+  - `python3 - <<'PY'`
+  - `from jarvis.companion_spine import generate_companion_fallback`
+  - `packet={'available_capabilities':['ongoing conversation in this shell','conversation turn persistence']}`
+  - `prompts=[`
+  - `    'Help me figure out whether to leave my job.',`
+  - `    'I think I should quit.',`
+  - `    'I think I should leave my job.',`
+  - `    'I think I should resign.',`
+  - `    'I might need to leave this job.',`
+  - `    'I want out of this job.',`
+  - `    'I should probably leave my job.',`
+  - `    'I might need to quit.',`
+  - `    'I should probably resign.',`
+  - `    'I may need to quit.',`
+  - `    'I should leave this job.',`
+  - `    'I think I need to leave this job.',`
+  - `    'I want to quit my job.',`
+  - `    'I think I need to put in my notice.',`
+  - `    'I think I need to hand in my notice.',`
+  - `    'I might need to walk away from this job.',`
+  - `    'I may need to leave this company.',`
+  - `    'I hate my job.',`
+  - `    'I am burned out at work.',`
+  - `    'I want to retire.',`
+  - `]`
+  - `for prompt in prompts:`
+  - `    print(f'PROMPT: {prompt}\\nREPLY: {generate_companion_fallback(prompt, packet)}\\n')`
+  - `PY`
+
+## E. Verification Results
+- Compile:
+  - passed with no output
+- Focused pytest:
+  - `11 passed, 163 deselected in 0.25s`
+- Smoke proof:
+  - The decision opener now correctly catches:
+    - `Help me figure out whether to leave my job.`
+    - `I think I should quit.`
+    - `I think I should leave my job.`
+    - `I think I should resign.`
+    - `I might need to leave this job.`
+    - `I want out of this job.`
+    - `I should probably leave my job.`
+    - `I might need to quit.`
+    - `I should probably resign.`
+    - `I may need to quit.`
+    - `I should leave this job.`
+    - `I think I need to leave this job.`
+    - `I want to quit my job.`
+    - `I think I need to put in my notice.`
+    - `I think I need to hand in my notice.`
+  - Bounded controls still stay out:
+    - `I hate my job.` -> generic fallback
+    - `I am burned out at work.` -> generic fallback
+    - `I want to retire.` -> retirement opener
+  - Remaining nearby job-exit prompts still generic:
+    - `I might need to walk away from this job.`
+    - `I may need to leave this company.`
+
+## F. Recommendation
+- Another bounded pass
+- This closeout pass repaired one real remaining notice-family defect, but the job-exit opener is not yet clean enough to close on acceptance evidence.
+- The next pass should stay narrow and decide whether the remaining `walk away from this job` / `leave this company` family belongs in the same opener seam or whether the current boundary is the truthful stopping point.

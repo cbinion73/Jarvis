@@ -696,6 +696,7 @@ class MemorySupport:
             boundary_label=str(entry.get("boundary_label", "")).strip(),
             created_at=_now_iso(),
             updated_at=_now_iso(),
+            provenance=str(payload.get("provenance") or entry.get("provenance") or "observed_fact").strip() or "observed_fact",
         )
 
     def _promote_entry_to_profile_fact(self, entry: dict, payload: dict) -> dict | None:
@@ -720,6 +721,7 @@ class MemorySupport:
                 boundary_label=candidate.boundary_label,
                 created_at=str(existing.get("created_at", candidate.created_at)),
                 updated_at=_now_iso(),
+                provenance=str(existing.get("provenance", candidate.provenance)).strip() or candidate.provenance,
             )
         stored = self.store.upsert_profile_fact(candidate)
         return {"fact": stored, "status": "updated" if existing else "created"}
@@ -739,6 +741,7 @@ class MemorySupport:
         access_policy: str = "",
         source_type: str = "user-stated",
         confidence: str = "confirmed",
+        provenance: str = "observed_fact",
     ) -> dict:
         tag_list = self._normalize_tags(tags or [], memory_type)
         resolved_subject_user_id, resolved_owner = self._resolve_subject(actor, owner, subject_user_id, scope, memory_type)
@@ -756,6 +759,7 @@ class MemorySupport:
             "memory_type": memory_type,
             "source_type": source_type,
             "confidence": confidence,
+            "provenance": provenance,
             "hash": hashlib.sha256(detail.encode("utf-8")).hexdigest(),
         }
         if needs_approval or sensitivity == "sensitive":
@@ -802,6 +806,7 @@ class MemorySupport:
             boundary_label=boundary_label,
             source_type=source_type,
             confidence=confidence,
+            provenance=provenance,
         )
         stored = self.store.add_entry(entry)
         result = {"stored": True, "entry": stored, "needs_approval": False}

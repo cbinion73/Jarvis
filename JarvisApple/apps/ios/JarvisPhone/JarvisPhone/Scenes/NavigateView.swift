@@ -30,18 +30,18 @@ struct NavigateView: View {
 
         var title: String {
             switch self {
-            case .overview: return "Overview"
+            case .overview: return "Map"
             case .stops: return "Smart Stops"
-            case .settings: return "Route Intel"
+            case .settings: return "Route"
             case .voice: return "Voice"
             }
         }
 
         var systemImage: String {
             switch self {
-            case .overview: return "point.bottomleft.forward.to.point.topright.scurvepath"
+            case .overview: return "map.fill"
             case .stops: return "sparkles"
-            case .settings: return "slider.horizontal.3"
+            case .settings: return "list.bullet.rectangle.portrait"
             case .voice: return "waveform"
             }
         }
@@ -340,45 +340,45 @@ struct NavigateView: View {
     private var phoneStoryboardStages: [StoryboardStage] {
         [
             StoryboardStage(
-                id: "planner",
+                id: "guidance",
                 number: "1",
-                title: "Planner",
-                detail: route == nil ? "Search and launch a route." : "Saved places and recents stay live.",
+                title: "Turn-by-Turn",
+                detail: route == nil ? "Guidance wakes up as soon as a route is active." : "Next turn, street name, and live ETA stay in view.",
                 accent: slate
             ),
             StoryboardStage(
-                id: "route",
+                id: "upcoming",
                 number: "2",
-                title: route == nil ? "Active Route" : "On Route",
-                detail: "ETA, traffic, and current travel posture.",
+                title: "Upcoming",
+                detail: "See what comes after the next move before it sneaks up on you.",
                 accent: .white.opacity(0.82)
             ),
             StoryboardStage(
-                id: "stops",
+                id: "live-view",
                 number: "3",
-                title: "Smart Stops",
-                detail: "Coffee, food, parks, and family-fit options.",
+                title: "Live View",
+                detail: "A visual lane for the next turn when the route gets dense.",
                 accent: stopGreen
             ),
             StoryboardStage(
-                id: "detail",
+                id: "destination",
                 number: "4",
-                title: "Stop Detail",
-                detail: "Detour cost and route-fit before you commit.",
+                title: "Destination",
+                detail: route == nil ? "Trip snapshot, arrival timing, and a clean start point." : "Everything you need to know before arrival.",
                 accent: .orange
             ),
             StoryboardStage(
-                id: "intel",
+                id: "stops",
                 number: "5",
-                title: "Route Intel",
-                detail: "Weather, timing risk, and traffic outlook.",
+                title: "Smart Stops",
+                detail: "Coffee, fuel, food, and family-fit options ranked on route.",
                 accent: .cyan
             ),
             StoryboardStage(
-                id: "voice",
+                id: "overview",
                 number: "6",
-                title: "Voice",
-                detail: "Hands-free route questions and guidance.",
+                title: "Route Overview",
+                detail: "Traffic, weather, and arrival posture in one glance.",
                 accent: .pink
             ),
         ]
@@ -538,11 +538,13 @@ struct NavigateView: View {
                 phoneStoryboardStrip
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Where to?")
+                    Text("Destination")
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.white)
                     plannerSearchField
                 }
+
+                phoneDestinationSnapshotCard
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -743,6 +745,14 @@ struct NavigateView: View {
                 }
 
                 intelligenceCard(
+                    title: "Route Overview",
+                    value: routeOverviewHeadline,
+                    detail: routeOverviewDetail,
+                    footer: routeOverviewFooter,
+                    chartTint: slate
+                )
+
+                intelligenceCard(
                     title: "Weather on Route",
                     value: weatherHeadline,
                     detail: weatherDetail,
@@ -797,7 +807,7 @@ struct NavigateView: View {
                             Text("JARVIS")
                                 .font(.title3.weight(.semibold))
                                 .foregroundStyle(.white)
-                            Text("Voice Navigation")
+                            Text("Voice Guidance")
                                 .font(.caption)
                                 .foregroundStyle(.white.opacity(0.72))
                         }
@@ -1251,7 +1261,7 @@ struct NavigateView: View {
             Text(subtitle)
                 .font(.headline)
                 .foregroundStyle(slate)
-            Text("Concept storyboard with live route continuity.")
+            Text("Voice-first navigation with live route continuity.")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.62))
         }
@@ -1271,12 +1281,12 @@ struct NavigateView: View {
                     )
                     .frame(width: 24, height: 24)
                     .overlay(Image(systemName: "location.north.fill").font(.caption2.bold()).foregroundStyle(.white))
-                Text("CONCEPT STORYBOARD")
+                Text("DRIVER STORYBOARD")
                     .font(.caption2.weight(.semibold))
                     .tracking(1.2)
                     .foregroundStyle(.white.opacity(0.72))
             }
-            Text("Route aware. Weather aware.")
+            Text("Built for the road ahead.")
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.5))
         }
@@ -1315,35 +1325,37 @@ struct NavigateView: View {
     private var phoneRecentPlaces: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Recent Places")
+                Text("Smart Destinations")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.72))
                 Spacer()
             }
 
             VStack(spacing: 10) {
-                ForEach(Array(savedLocations.prefix(4))) { location in
+                ForEach(destinationFavoritesAndRecents) { location in
                     Button {
-                        selectedSavedLocationID = location.id
-                        queueDestination(location.address, autoPlan: true)
+                        if let savedID = location.savedLocationID {
+                            selectedSavedLocationID = savedID
+                        }
+                        queueDestination(location.query, autoPlan: true)
                     } label: {
                         HStack(spacing: 12) {
                             Circle()
                                 .fill(slate.opacity(0.22))
                                 .frame(width: 34, height: 34)
-                                .overlay(Image(systemName: "location.fill").foregroundStyle(slate))
+                                .overlay(Image(systemName: location.icon).foregroundStyle(location.tint))
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(location.label)
+                                Text(location.title)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.white)
-                                Text(location.address)
+                                Text(location.subtitle)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
                             }
                             Spacer()
-                            Text(savedLocationDriveEstimate(for: location))
+                            Text(location.trailing)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(stopGreen)
                         }
@@ -1354,12 +1366,6 @@ struct NavigateView: View {
                 }
             }
         }
-    }
-
-    private func savedLocationDriveEstimate(for location: NavigationSavedLocation) -> String {
-        if location.label.localizedCaseInsensitiveContains("home") { return "12 min" }
-        if location.label.localizedCaseInsensitiveContains("work") { return "18 min" }
-        return "Trip"
     }
 
     private func mapFloatButton(systemName: String) -> some View {
@@ -1541,22 +1547,18 @@ struct NavigateView: View {
 
     private var phoneBottomNavigation: some View {
         HStack {
-            phoneBottomItem(title: "Home", icon: "house", active: panelMode == .overview && route == nil) {
-                showPlannerHomeWhileRouteActive = true
-                panelMode = .overview
-            }
-            phoneBottomItem(title: "Map", icon: "map", active: panelMode == .overview && route != nil) {
-                showPlannerHomeWhileRouteActive = false
+            phoneBottomItem(title: "Map", icon: "map", active: panelMode == .overview) {
+                showPlannerHomeWhileRouteActive = route == nil
                 panelMode = .overview
             }
             phoneBottomItem(title: "Trips", icon: "point.bottomleft.forward.to.point.topright.scurvepath", active: panelMode == .settings) {
                 panelMode = .settings
             }
-            phoneBottomItem(title: "Saved", icon: "bookmark", active: panelMode == .stops) {
+            phoneBottomItem(title: "Stops", icon: "sparkles", active: panelMode == .stops) {
                 stopRailMode = .list
                 panelMode = .stops
             }
-            phoneBottomItem(title: "Profile", icon: "person", active: panelMode == .voice) {
+            phoneBottomItem(title: "Voice", icon: "waveform", active: panelMode == .voice) {
                 panelMode = .voice
             }
         }
@@ -1753,6 +1755,198 @@ struct NavigateView: View {
                 .tint(.white)
             }
         }
+    }
+
+    private struct DestinationQuickPick: Identifiable {
+        let id: String
+        let title: String
+        let subtitle: String
+        let query: String
+        let icon: String
+        let tint: Color
+        let trailing: String
+        let savedLocationID: String?
+    }
+
+    private var destinationFavoritesAndRecents: [DestinationQuickPick] {
+        var picks: [DestinationQuickPick] = []
+        var seen = Set<String>()
+
+        for location in savedLocations.prefix(2) {
+            let key = location.label.lowercased()
+            guard seen.insert(key).inserted else { continue }
+            picks.append(
+                DestinationQuickPick(
+                    id: "saved-\(location.id)",
+                    title: location.label,
+                    subtitle: location.address,
+                    query: location.address.isEmpty ? location.label : location.address,
+                    icon: "house.fill",
+                    tint: slate,
+                    trailing: savedLocationDriveEstimate(forLabel: location.label),
+                    savedLocationID: location.id
+                )
+            )
+        }
+
+        for favorite in favoriteDestinations.prefix(2) {
+            let key = favorite.lowercased()
+            guard seen.insert(key).inserted else { continue }
+            picks.append(
+                DestinationQuickPick(
+                    id: "favorite-\(favorite)",
+                    title: favorite,
+                    subtitle: "Favorite destination",
+                    query: favorite,
+                    icon: "star.fill",
+                    tint: .yellow,
+                    trailing: "Saved",
+                    savedLocationID: nil
+                )
+            )
+        }
+
+        for recent in recentDestinations.prefix(2) {
+            let key = recent.lowercased()
+            guard seen.insert(key).inserted else { continue }
+            picks.append(
+                DestinationQuickPick(
+                    id: "recent-\(recent)",
+                    title: recent,
+                    subtitle: "Recent trip",
+                    query: recent,
+                    icon: "clock.fill",
+                    tint: .cyan,
+                    trailing: "Recent",
+                    savedLocationID: nil
+                )
+            )
+        }
+
+        return Array(picks.prefix(4))
+    }
+
+    private func savedLocationDriveEstimate(forLabel label: String) -> String {
+        if label.localizedCaseInsensitiveContains("home") { return "12 min" }
+        if label.localizedCaseInsensitiveContains("work") { return "18 min" }
+        return "Trip"
+    }
+
+    private var phoneDestinationSnapshotCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Destination View")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.68))
+                    Text(destinationSnapshotTitle)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(destinationSnapshotSubtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.72))
+                }
+                Spacer()
+                Image(systemName: "flag.checkered.2.crossed")
+                    .foregroundStyle(stopGreen)
+                    .font(.title3.weight(.semibold))
+            }
+
+            HStack(spacing: 10) {
+                metricStrip(title: destinationSnapshotArrival, subtitle: "arrival")
+                metricStrip(title: destinationSnapshotDuration, subtitle: "travel time")
+                metricStrip(title: destinationSnapshotDistance, subtitle: "distance")
+            }
+
+            Text(destinationSnapshotSummary)
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.84))
+
+            HStack(spacing: 10) {
+                Button {
+                    if route == nil {
+                        Task { await planRoute() }
+                    } else {
+                        showPlannerHomeWhileRouteActive = false
+                        panelMode = .overview
+                    }
+                } label: {
+                    Label(route == nil ? "Preview Route" : "Start Navigation", systemImage: route == nil ? "eye.fill" : "location.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(slate)
+
+                Button {
+                    panelMode = .settings
+                } label: {
+                    Label("Route", systemImage: "list.bullet.rectangle.portrait")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+            }
+        }
+        .padding(16)
+        .background(cardFill, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private var destinationSnapshotTitle: String {
+        if let route {
+            return route.destination.label
+        }
+        let trimmed = destinationText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return trimmed
+        }
+        return selectedSavedLocation?.label ?? "Choose a destination"
+    }
+
+    private var destinationSnapshotSubtitle: String {
+        if let selectedSavedLocation {
+            return selectedSavedLocation.geography.isEmpty ? selectedSavedLocation.address : selectedSavedLocation.geography
+        }
+        return route == nil ? "Plan a route and JARVIS will keep timing, weather, and stops in sync." : "Live destination snapshot is ready."
+    }
+
+    private var destinationSnapshotArrival: String {
+        arrivalTimeText ?? "--"
+    }
+
+    private var destinationSnapshotDuration: String {
+        route?.route.durationMinutes.map { "\($0) min" } ?? "--"
+    }
+
+    private var destinationSnapshotDistance: String {
+        route?.route.distanceMiles.map { String(format: "%.0f mi", $0) } ?? "--"
+    }
+
+    private var destinationSnapshotSummary: String {
+        if let route, !route.summary.isEmpty {
+            return route.summary
+        }
+        return "Built for turn-by-turn guidance, smart stops, and voice-first navigation."
+    }
+
+    private var routeOverviewHeadline: String {
+        if let route {
+            let minutes = route.route.durationMinutes.map { "\($0) min" } ?? "--"
+            let miles = route.route.distanceMiles.map { String(format: "%.0f mi", $0) } ?? "--"
+            return "\(miles) • \(minutes)"
+        }
+        return "Ready"
+    }
+
+    private var routeOverviewDetail: String {
+        route?.summary.isEmpty == false ? route?.summary ?? "" : "Traffic, timing, and smart stops will lock in once the route is active."
+    }
+
+    private var routeOverviewFooter: String {
+        arrivalTimeText.map { "Arrive \($0)" } ?? "Waiting for route preview"
     }
 
     private func detailCapsule(icon: String, text: String, tint: Color) -> some View {
