@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import asdict
 from typing import Any, TypedDict
 
 try:
@@ -166,6 +167,8 @@ def _build_live_context(runtime) -> str:
 
 
 def run_response_graph(runtime, plan: RequestPlan, continuity_context: str = "") -> OpenAIResult:
+    step_events: list[dict[str, Any]] = []
+
     def load_context(state: ResponseGraphState) -> ResponseGraphState:
         current_runtime = state["runtime"]
         current_plan = state["plan"]
@@ -186,7 +189,16 @@ def run_response_graph(runtime, plan: RequestPlan, continuity_context: str = "")
                 context_parts.append(retrieved.strip())
         if current_continuity_context.strip():
             context_parts.append(current_continuity_context.strip())
-        return {"context_excerpt": "\n\n".join(context_parts).strip()}
+        update = {"context_excerpt": "\n\n".join(context_parts).strip()}
+        step_events.append(
+            {
+                "node": "load_context",
+                "status": "completed",
+                "updated_keys": ["context_excerpt"],
+                "context_present": bool(str(update.get("context_excerpt", "")).strip()),
+            }
+        )
+        return update
 
     def generate(state: ResponseGraphState) -> ResponseGraphState:
         current_runtime = state["runtime"]
@@ -201,6 +213,16 @@ def run_response_graph(runtime, plan: RequestPlan, continuity_context: str = "")
             plan=current_plan,
             continuity_context=context_excerpt,
         )
+        created_objects = getattr(current_runtime, "_created_objects_from_result", lambda *_args, **_kwargs: [])(result)
+        step_events.append(
+            {
+                "node": "generate",
+                "status": "completed",
+                "updated_keys": ["result"],
+                "provider": str(result.provider or "").strip(),
+                "created_object_count": len(created_objects),
+            }
+        )
         return {"result": result}
 
     compiled = _compile_graph(
@@ -210,23 +232,86 @@ def run_response_graph(runtime, plan: RequestPlan, continuity_context: str = "")
             [("load_context", load_context), ("generate", generate)],
         ),
     )
-    final_state = compiled.invoke(
-        {
-            "runtime": runtime,
-            "plan": plan,
-            "continuity_context": continuity_context,
-        }
-    )
-    return final_state["result"]
+    initial_state = {
+        "runtime": runtime,
+        "plan": plan,
+        "continuity_context": continuity_context,
+    }
+    try:
+        final_state = compiled.invoke(initial_state)
+        result = final_state["result"]
+    except Exception as exc:
+        record_fn = getattr(runtime, "record_workflow_run", None)
+        if callable(record_fn):
+            record_fn(
+                workflow_kind="response_graph",
+                actor=plan.actor,
+                room=plan.room,
+                request=plan.request,
+                status="failed",
+                provider="",
+                model=plan.model,
+                graph_name="response_graph",
+                runtime_surface="graph",
+                active_nodes=["response_graph", plan.module],
+                nodes_planned=["load_context", "generate"],
+                step_events=step_events,
+                execution_trace=[],
+                created_objects=[],
+                plan=plan,
+                result_summary={"error": str(exc)},
+                output_text="",
+                metadata={"plan": asdict(plan), "continuity_context_supplied": bool(continuity_context.strip())},
+            )
+        raise
+    record_fn = getattr(runtime, "record_workflow_run", None)
+    if callable(record_fn):
+        created_objects = getattr(runtime, "_created_objects_from_result", lambda *_args, **_kwargs: [])(result)
+        record = record_fn(
+            workflow_kind="response_graph",
+            actor=plan.actor,
+            room=plan.room,
+            request=plan.request,
+            status="completed",
+            provider=result.provider,
+            model=result.model,
+            graph_name="response_graph",
+            runtime_surface="graph",
+            active_nodes=["response_graph", plan.module, result.provider],
+            nodes_planned=["load_context", "generate"],
+            step_events=step_events,
+            execution_trace=list(getattr(result, "execution_trace", []) or []),
+            created_objects=created_objects,
+            plan=plan,
+            result_summary={
+                "created_object_count": len(created_objects),
+                "execution_trace_count": len(list(getattr(result, "execution_trace", []) or [])),
+            },
+            output_text=str(result.output_text or "").strip(),
+            metadata={"plan": asdict(plan), "continuity_context_supplied": bool(continuity_context.strip())},
+        )
+        if record and isinstance(result.execution_trace, list):
+            result.execution_trace.append(
+                {
+                    "type": "workflow_run",
+                    "status": "recorded",
+                    "workflow_kind": "response_graph",
+                    "run_id": str(record.get("run_id", "") or "").strip(),
+                }
+            )
+    return result
 
 
 def run_party_mode_graph(runtime, actor_name: str, room: str, prompt: str, selected_agents: list[Any]) -> dict[str, Any]:
+    step_events: list[dict[str, Any]] = []
+
     def load_context(state: PartyModeGraphState) -> PartyModeGraphState:
         current_runtime = state["runtime"]
         current_prompt = state["prompt"]
         retrieved_context = ""
         if current_runtime.openviking_support.enabled and current_prompt.strip():
             retrieved_context = current_runtime.openviking_support.party_mode_context(current_prompt, limit=5)
+        step_events.append({"node": "load_context", "status": "completed", "updated_keys": ["retrieved_context"]})
         return {"retrieved_context": retrieved_context}
 
     def gather_participants(state: PartyModeGraphState) -> PartyModeGraphState:
@@ -261,6 +346,14 @@ def run_party_mode_graph(runtime, actor_name: str, room: str, prompt: str, selec
                     "response": output_text,
                 }
             )
+        step_events.append(
+            {
+                "node": "gather_participants",
+                "status": "completed",
+                "updated_keys": ["participants"],
+                "participant_count": len(participants),
+            }
+        )
         return {"participants": participants}
 
     def synthesize(state: PartyModeGraphState) -> PartyModeGraphState:
@@ -289,6 +382,7 @@ def run_party_mode_graph(runtime, actor_name: str, room: str, prompt: str, selec
             synthesis_context,
             max_output_tokens=320,
         ).strip()
+        step_events.append({"node": "synthesize", "status": "completed", "updated_keys": ["synthesis"]})
         return {"synthesis": synthesis}
 
     compiled = _compile_graph(
@@ -311,11 +405,33 @@ def run_party_mode_graph(runtime, actor_name: str, room: str, prompt: str, selec
             "selected_agents": selected_agents,
         }
     )
-    return {
+    result = {
         "participants": final_state.get("participants", []),
         "retrieved_context": final_state.get("retrieved_context", ""),
         "synthesis": final_state.get("synthesis", ""),
     }
+    record_fn = getattr(runtime, "record_workflow_run", None)
+    if callable(record_fn):
+        record_fn(
+            workflow_kind="party_mode_graph",
+            actor=actor_name,
+            room=room,
+            request=prompt,
+            status="completed",
+            provider="openai",
+            model=str(getattr(runtime.config, "openai_text_model", "") or "").strip(),
+            graph_name="party_mode_graph",
+            runtime_surface="graph",
+            active_nodes=["party_mode_graph"],
+            nodes_planned=["load_context", "gather_participants", "synthesize"],
+            step_events=step_events,
+            execution_trace=[],
+            created_objects=[],
+            result_summary={"participant_count": len(result["participants"])},
+            output_text=str(result.get("synthesis", "") or "").strip(),
+            metadata={"selected_agent_count": len(selected_agents)},
+        )
+    return result
 
 
 def run_background_cycle_graph(
@@ -325,6 +441,8 @@ def run_background_cycle_graph(
     recent_activity: list[dict[str, Any]],
     integration_status: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    step_events: list[dict[str, Any]] = []
+
     def tick_scheduler(state: BackgroundGraphState) -> BackgroundGraphState:
         current_runtime = state["runtime"]
         scheduler_snapshot = current_runtime.background_scheduler.tick(
@@ -333,10 +451,12 @@ def run_background_cycle_graph(
             recent_activity=state["recent_activity"],
             quiet_hours=(current_runtime.household.quiet_start, current_runtime.household.quiet_end),
         )
+        step_events.append({"node": "tick_scheduler", "status": "completed", "updated_keys": ["scheduler_snapshot"]})
         return {"scheduler_snapshot": scheduler_snapshot}
 
     def curate_memory(state: BackgroundGraphState) -> BackgroundGraphState:
         current_runtime = state["runtime"]
+        step_events.append({"node": "curate_memory", "status": "completed", "updated_keys": ["memory_curator_snapshot"]})
         return {"memory_curator_snapshot": current_runtime.memory_curator.rules_snapshot(state["recent_activity"])}
 
     def sync_openviking(state: BackgroundGraphState) -> BackgroundGraphState:
@@ -353,6 +473,7 @@ def run_background_cycle_graph(
                 "detail": status.get("detail", ""),
                 "pending_entries": len(current_runtime.memory_support.store.list_entries()),
             }
+        step_events.append({"node": "sync_openviking", "status": "completed", "updated_keys": ["openviking_sync"]})
         return {"openviking_sync": sync_result}
 
     compiled = _compile_graph(
@@ -374,11 +495,33 @@ def run_background_cycle_graph(
             "integration_status": integration_status,
         }
     )
-    return {
+    result = {
         "scheduler": final_state.get("scheduler_snapshot", {}),
         "memory_curator": final_state.get("memory_curator_snapshot", {}),
         "openviking_sync": final_state.get("openviking_sync", {}),
     }
+    record_fn = getattr(runtime, "record_workflow_run", None)
+    if callable(record_fn):
+        record_fn(
+            workflow_kind="background_cycle_graph",
+            actor="system",
+            room="background",
+            request=f"background-cycle:{active_mode}",
+            status="completed",
+            provider="system",
+            model="background-cycle",
+            graph_name="background_cycle_graph",
+            runtime_surface="graph",
+            active_nodes=["background_cycle_graph"],
+            nodes_planned=["tick_scheduler", "curate_memory", "sync_openviking"],
+            step_events=step_events,
+            execution_trace=[],
+            created_objects=[],
+            result_summary={"recent_activity_count": len(recent_activity)},
+            output_text="",
+            metadata={"active_mode": active_mode},
+        )
+    return result
 
 
 def run_wealth_leverage_graph(runtime, actor_name: str, room: str, prompt: str, selected_agents: list[Any]) -> dict[str, Any]:
@@ -388,6 +531,7 @@ def run_wealth_leverage_graph(runtime, actor_name: str, room: str, prompt: str, 
         "tooling and automation leverage",
         "ROI-aware experimentation",
     ]
+    step_events: list[dict[str, Any]] = []
 
     def load_context(state: WealthLeverageGraphState) -> WealthLeverageGraphState:
         current_runtime = state["runtime"]
@@ -400,6 +544,7 @@ def run_wealth_leverage_graph(runtime, actor_name: str, room: str, prompt: str, 
         )
         if current_runtime.openviking_support.enabled:
             retrieved_context = current_runtime.openviking_support.party_mode_context(retrieval_prompt, limit=5)
+        step_events.append({"node": "load_context", "status": "completed", "updated_keys": ["retrieved_context"]})
         return {"retrieved_context": retrieved_context}
 
     def gather_participants(state: WealthLeverageGraphState) -> WealthLeverageGraphState:
@@ -438,6 +583,14 @@ def run_wealth_leverage_graph(runtime, actor_name: str, room: str, prompt: str, 
                     "response": response,
                 }
             )
+        step_events.append(
+            {
+                "node": "gather_participants",
+                "status": "completed",
+                "updated_keys": ["participants"],
+                "participant_count": len(participants),
+            }
+        )
         return {"participants": participants}
 
     def synthesize(state: WealthLeverageGraphState) -> WealthLeverageGraphState:
@@ -469,6 +622,7 @@ def run_wealth_leverage_graph(runtime, actor_name: str, room: str, prompt: str, 
             model=current_runtime.config.openai_text_model,
             max_output_tokens=420,
         ).strip()
+        step_events.append({"node": "synthesize", "status": "completed", "updated_keys": ["synthesis"]})
         return {"synthesis": synthesis}
 
     compiled = _compile_graph(
@@ -491,9 +645,31 @@ def run_wealth_leverage_graph(runtime, actor_name: str, room: str, prompt: str, 
             "selected_agents": selected_agents,
         }
     )
-    return {
+    result = {
         "focus_areas": focus_areas,
         "participants": final_state.get("participants", []),
         "retrieved_context": final_state.get("retrieved_context", ""),
         "synthesis": final_state.get("synthesis", ""),
     }
+    record_fn = getattr(runtime, "record_workflow_run", None)
+    if callable(record_fn):
+        record_fn(
+            workflow_kind="wealth_leverage_graph",
+            actor=actor_name,
+            room=room,
+            request=prompt,
+            status="completed",
+            provider="openai",
+            model=str(getattr(runtime.config, "openai_text_model", "") or "").strip(),
+            graph_name="wealth_leverage_graph",
+            runtime_surface="graph",
+            active_nodes=["wealth_leverage_graph"],
+            nodes_planned=["load_context", "gather_participants", "synthesize"],
+            step_events=step_events,
+            execution_trace=[],
+            created_objects=[],
+            result_summary={"participant_count": len(result["participants"]), "focus_area_count": len(focus_areas)},
+            output_text=str(result.get("synthesis", "") or "").strip(),
+            metadata={"selected_agent_count": len(selected_agents)},
+        )
+    return result
