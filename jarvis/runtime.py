@@ -372,6 +372,22 @@ def _build_action_truth_summary(
     }
 
 
+def _record_artifact_creation_result_if_possible(
+    runtime: object,
+    actor_name: str,
+    room: str,
+    request: str,
+    result: OpenAIResult,
+) -> OpenAIResult:
+    helper = getattr(type(runtime), "_record_artifact_creation_result", None)
+    if callable(helper):
+        try:
+            return helper(runtime, actor_name, room, request, result)
+        except Exception:
+            return result
+    return result
+
+
 @dataclass(slots=True)
 class JarvisRuntime:
     config: AppConfig
@@ -17378,7 +17394,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17390,7 +17406,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17414,7 +17430,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17426,7 +17442,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17451,7 +17467,7 @@ class JarvisRuntime:
                 retriever=lambda topic: retrieve_research_material(topic, limit=3, fetch_content=True),
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17463,7 +17479,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17487,7 +17503,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17499,7 +17515,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17523,7 +17539,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17535,7 +17551,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17559,7 +17575,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17571,7 +17587,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17595,7 +17611,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17607,7 +17623,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17631,7 +17647,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17643,7 +17659,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17667,7 +17683,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17679,7 +17695,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17703,7 +17719,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17715,7 +17731,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17739,7 +17755,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17751,7 +17767,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17775,7 +17791,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17787,7 +17803,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17811,7 +17827,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17823,7 +17839,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17847,7 +17863,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17859,7 +17875,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17883,7 +17899,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17895,7 +17911,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17919,7 +17935,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17931,7 +17947,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17955,7 +17971,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -17967,7 +17983,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
@@ -17991,7 +18007,7 @@ class JarvisRuntime:
                 request=request,
             )
         except RuntimeError as exc:
-            return self._record_artifact_creation_result(
+            return _record_artifact_creation_result_if_possible(self, 
                 actor_name,
                 room,
                 request,
@@ -18003,7 +18019,7 @@ class JarvisRuntime:
             )
         if payload is None:
             return None
-        return self._record_artifact_creation_result(
+        return _record_artifact_creation_result_if_possible(self, 
             actor_name,
             room,
             request,
