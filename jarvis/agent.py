@@ -25,8 +25,10 @@ from typing import AsyncIterator
 
 from openai import AsyncOpenAI
 
+from .langchain_adapter import build_langchain_tools, build_openai_tools_from_langchain
 from .tools import TOOL_REGISTRY
-from .tools.base import ApprovalFlag, ToolResult
+from .tools.base import ApprovalFlag
+from .tools.middleware import execute_tool_call, preflight_tool_call
 
 # ── Model configuration ────────────────────────────────────────────────────
 # Priority: 1) Local Ollama  2) Groq (llama)  3) OpenAI fallback
@@ -111,7 +113,7 @@ MEMORY
 
 # ── Convert Anthropic-format TOOL_DEFINITIONS to OpenAI function-calling ──
 
-def _to_openai_tools() -> list[dict]:
+def _to_openai_tools_direct() -> list[dict]:
     """Convert Anthropic tool schema dicts to OpenAI function-calling format."""
     result = []
     for module in TOOL_REGISTRY.values():
@@ -129,7 +131,27 @@ def _to_openai_tools() -> list[dict]:
     return result
 
 
-OPENAI_TOOL_DEFINITIONS = _to_openai_tools()
+_LANGCHAIN_TOOLS_CACHE: list[object] | None = None
+_OPENAI_TOOL_DEFINITIONS_CACHE: list[dict] | None = None
+
+
+def get_langchain_tools() -> list[object]:
+    """Expose JARVIS tools as LangChain-compatible tools for experiments."""
+    global _LANGCHAIN_TOOLS_CACHE
+    if _LANGCHAIN_TOOLS_CACHE is None:
+        _LANGCHAIN_TOOLS_CACHE = build_langchain_tools(TOOL_REGISTRY)
+    return list(_LANGCHAIN_TOOLS_CACHE)
+
+
+def get_openai_tool_definitions() -> list[dict]:
+    """Expose the active tool surface for OpenAI-compatible function calling."""
+    global _OPENAI_TOOL_DEFINITIONS_CACHE
+    if _OPENAI_TOOL_DEFINITIONS_CACHE is None:
+        try:
+            _OPENAI_TOOL_DEFINITIONS_CACHE = build_openai_tools_from_langchain(TOOL_REGISTRY)
+        except Exception:
+            _OPENAI_TOOL_DEFINITIONS_CACHE = _to_openai_tools_direct()
+    return list(_OPENAI_TOOL_DEFINITIONS_CACHE)
 
 
 # ── Event types ───────────────────────────────────────────────────────────
@@ -157,25 +179,6 @@ def resolve_approval(approval_id: str, approved: bool) -> bool:
     _approval_decisions[approval_id] = approved
     _pending_approvals[approval_id].set()
     return True
-
-
-# ── Tool execution ─────────────────────────────────────────────────────────
-
-async def _execute_tool(tool_name: str, tool_input: dict) -> ToolResult:
-    """Dispatch to the right tool module. Exceptions become error ToolResults."""
-    tool_module = TOOL_REGISTRY.get(tool_name)
-    if tool_module is None:
-        return ToolResult(
-            output=f"Unknown tool: '{tool_name}'. Available: {list(TOOL_REGISTRY.keys())}",
-            error=True,
-        )
-    try:
-        return await tool_module.run(**tool_input)
-    except Exception as exc:  # noqa: BLE001
-        return ToolResult(
-            output=f"Tool '{tool_name}' raised {type(exc).__name__}: {exc}",
-            error=True,
-        )
 
 
 # ── Main agent loop ────────────────────────────────────────────────────────
@@ -225,7 +228,7 @@ async def run_agent(
                 stream = await client.chat.completions.create(
                     model=active_model,
                     messages=working_messages,
-                    tools=OPENAI_TOOL_DEFINITIONS,
+                    tools=get_openai_tool_definitions(),
                     tool_choice="auto",
                     max_completion_tokens=8192,
                     stream=True,
@@ -319,14 +322,15 @@ async def run_agent(
                     },
                 )
 
-                # ── Approval gate ──────────────────────────────────────────
-                tool_module = TOOL_REGISTRY.get(tool_name)
-                approval_flag = ApprovalFlag.NONE
-                if tool_module is not None:
-                    try:
-                        approval_flag = tool_module.needs_approval(tool_input_dict)
-                    except Exception:  # noqa: BLE001
-                        approval_flag = ApprovalFlag.NONE
+                # ── Preflight policy ───────────────────────────────────────
+                preflight = preflight_tool_call(
+                    tool_name,
+                    tool_input_dict,
+                    tool_call_id=tool_call_id,
+                    conversation_id=conversation_id,
+                    tool_registry=TOOL_REGISTRY,
+                )
+                approval_flag = preflight.approval_flag
 
                 if approval_flag == ApprovalFlag.REQUIRED:
                     approval_id = str(uuid.uuid4())
@@ -340,6 +344,8 @@ async def run_agent(
                             "tool":        tool_name,
                             "input":       tool_input_dict,
                             "tool_use_id": tool_call_id,
+                            "warnings":    list(preflight.warnings),
+                            "metadata":    dict(preflight.metadata),
                         },
                     )
 
@@ -376,8 +382,15 @@ async def run_agent(
                         )
                         continue
 
-                # ── Execute the tool ───────────────────────────────────────
-                result: ToolResult = await _execute_tool(tool_name, tool_input_dict)
+                outcome = await execute_tool_call(
+                    tool_name,
+                    tool_input_dict,
+                    tool_call_id=tool_call_id,
+                    conversation_id=conversation_id,
+                    tool_registry=TOOL_REGISTRY,
+                    preflight=preflight,
+                )
+                result = outcome.result
 
                 yield StreamEvent(
                     type="tool_result",
@@ -385,6 +398,9 @@ async def run_agent(
                         "tool":        tool_name,
                         "output":      result.output,
                         "error":       result.error,
+                        "approval_flag": outcome.preflight.approval_flag.value,
+                        "warnings":    list(outcome.preflight.warnings),
+                        "metadata":    dict(result.metadata),
                         "tool_use_id": tool_call_id,
                     },
                 )
