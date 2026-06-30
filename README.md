@@ -174,6 +174,20 @@ python -m jarvis catalyst-project-brief --actor Chris --project-name "Project" -
 
 </details>
 
+## Obsidian Retrieval
+
+JARVIS can ground responses in your local Obsidian vault. When `llama-index-core` is available, the Obsidian retriever uses LlamaIndex chunking and caches a chunk index on disk. If the package is unavailable, JARVIS automatically falls back to the native file-level retriever.
+
+```bash
+JARVIS_OBSIDIAN_VAULT=/Volumes/Monday/Obsidian
+JARVIS_OBSIDIAN_INDEX_PATH=/Volumes/Monday/JARVIS/indexes/obsidian/index.json
+JARVIS_OBSIDIAN_RETRIEVER=llamaindex
+JARVIS_OBSIDIAN_CHUNK_SIZE=768
+JARVIS_OBSIDIAN_CHUNK_OVERLAP=80
+```
+
+`JARVIS_ENABLE_OBSIDIAN_CONVERSATION=true` still controls whether the default conversation path is allowed to inject live note context.
+
 ---
 
 ## Related Docs
