@@ -18,6 +18,7 @@ from .models import (
     AgentMessage,
     AgentTaskRef,
     AgentWorkState,
+    DelegationReportRecord,
     DuplicateWorkSuppressionRecord,
     ApprovalRequest,
     MissionActionDecision,
@@ -515,6 +516,7 @@ class MissionSupport:
         dossier["agent_work_states"] = work_states
         dossier["handoffs"] = list(dossier.get("handoffs") or [])
         dossier["delegations"] = list(dossier.get("delegations") or [])
+        dossier["delegation_reports"] = list(dossier.get("delegation_reports") or [])
         dossier["escalations"] = list(dossier.get("escalations") or [])
         dossier["ownership_transfers"] = list(dossier.get("ownership_transfers") or [])
         dossier["duplicate_suppressions"] = list(dossier.get("duplicate_suppressions") or [])
@@ -701,6 +703,30 @@ class MissionSupport:
         work_states = dict(dossier.get("agent_work_states") or {})
         handoffs = list(dossier.get("handoffs") or [])
         ownership_transfers = list(dossier.get("ownership_transfers") or [])
+        delegation_reports = list(dossier.get("delegation_reports") or [])
+        report_by_delegation = {
+            str(item.get("delegation_id", "")).strip(): dict(item)
+            for item in delegation_reports
+            if str(item.get("delegation_id", "")).strip()
+        }
+        delegations: list[dict[str, Any]] = []
+        for item in list(dossier.get("delegations") or []):
+            delegation = dict(item or {})
+            delegation_id = str(delegation.get("delegation_id", "")).strip()
+            report = report_by_delegation.get(delegation_id)
+            status_key = str(delegation.get("status", "")).strip().lower()
+            if report:
+                inspectable_output_status = "completed-with-output"
+            elif status_key in {"rejected", "cancelled", "failed", "unavailable"}:
+                inspectable_output_status = "unavailable"
+            else:
+                inspectable_output_status = "requested"
+            delegation["inspectable_output_status"] = inspectable_output_status
+            delegation["artifact_ref"] = str((report or {}).get("artifact_ref", "")).strip()
+            delegation["output_id"] = str((report or {}).get("output_id", "")).strip()
+            delegation["producer_agent"] = str((report or {}).get("producer_agent", "")).strip()
+            delegation["report_id"] = str((report or {}).get("report_id", "")).strip()
+            delegations.append(delegation)
         pending_handoffs = [
             item
             for item in handoffs
@@ -725,10 +751,17 @@ class MissionSupport:
                 "pending_transfers": len(pending_transfers),
                 "escalations": len([item for item in list(dossier.get("escalations") or []) if str(item.get("status", "")).strip().lower() == "open"]),
                 "duplicate_suppressions": len(list(dossier.get("duplicate_suppressions") or [])),
+                "delegations_requested": len([item for item in delegations if str(item.get("inspectable_output_status", "")).strip() == "requested"]),
+                "delegations_completed_with_output": len(
+                    [item for item in delegations if str(item.get("inspectable_output_status", "")).strip() == "completed-with-output"]
+                ),
+                "delegations_unavailable": len([item for item in delegations if str(item.get("inspectable_output_status", "")).strip() == "unavailable"]),
             },
             "agent_work_states": work_states,
             "handoffs": handoffs,
-            "delegations": list(dossier.get("delegations") or []),
+            "delegations": delegations,
+            "delegation_reports": delegation_reports,
+            "outputs": list(dossier.get("outputs") or []),
             "escalations": list(dossier.get("escalations") or []),
             "ownership_transfers": ownership_transfers,
             "duplicate_suppressions": list(dossier.get("duplicate_suppressions") or []),
@@ -1452,6 +1485,7 @@ class MissionSupport:
             agent_work_states={},
             handoffs=[],
             delegations=[],
+            delegation_reports=[],
             escalations=[],
             ownership_transfers=[],
             duplicate_suppressions=[],
@@ -1500,6 +1534,21 @@ class MissionSupport:
         if dossier is None:
             return []
         return list(dossier.get("outputs", []))
+
+    def mission_delegation_reports(self, mission_id: str) -> list[dict[str, Any]]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            return []
+        return list(dossier.get("delegation_reports", []))
+
+    def mission_delegation_report(self, mission_id: str, report_id: str) -> dict[str, Any] | None:
+        report_key = report_id.strip()
+        if not report_key:
+            return None
+        for item in self.mission_delegation_reports(mission_id):
+            if str(item.get("report_id", "")).strip() == report_key:
+                return dict(item)
+        return None
 
     def mission_agents(self, mission_id: str) -> list[dict[str, Any]]:
         dossier = self.get_mission(mission_id)
@@ -1738,6 +1787,140 @@ class MissionSupport:
         outputs.append(payload)
         dossier["outputs"] = outputs
         dossier["updated_at"] = _now_iso()
+        return self.save_mission(dossier)
+
+    def record_delegation_output(
+        self,
+        mission_id: str,
+        delegation_id: str,
+        *,
+        producing_agent: str,
+        title: str,
+        summary: str,
+        detail: str = "",
+        key_output: str = "",
+        next_step: str = "",
+        evidence_note: str = "",
+    ) -> dict[str, Any]:
+        dossier = self.get_mission(mission_id)
+        if dossier is None:
+            raise KeyError(f"Unknown mission: {mission_id}")
+        delegation_key = delegation_id.strip()
+        if not delegation_key:
+            raise ValueError("delegation_id is required")
+        delegations = [dict(item or {}) for item in list(dossier.get("delegations") or [])]
+        target_delegation: dict[str, Any] | None = None
+        for item in delegations:
+            if str(item.get("delegation_id", "")).strip() == delegation_key:
+                target_delegation = item
+                break
+        if target_delegation is None:
+            raise KeyError(f"Unknown delegation: {delegation_id}")
+
+        producer_key = producing_agent.strip()
+        if not producer_key:
+            raise ValueError("producing_agent is required")
+        delegate_agent = str(target_delegation.get("delegate_agent", "")).strip()
+        if delegate_agent and producer_key != delegate_agent:
+            raise ValueError("Only the delegated agent may submit inspectable output for this delegation.")
+
+        current_status = str(target_delegation.get("status", "")).strip().lower()
+        if current_status in {"rejected", "cancelled", "failed", "unavailable"}:
+            raise ValueError("This delegation is unavailable for inspectable output because it is no longer active.")
+        if current_status == "pending-acceptance":
+            raise ValueError("This delegation still needs acknowledgement before it can be marked complete with output.")
+
+        existing_reports = [dict(item or {}) for item in list(dossier.get("delegation_reports") or [])]
+        if any(str(item.get("delegation_id", "")).strip() == delegation_key for item in existing_reports):
+            raise ValueError("This delegation already has inspectable output recorded.")
+
+        cleaned_title = title.strip()
+        cleaned_summary = summary.strip()
+        cleaned_detail = detail.strip()
+        cleaned_key_output = key_output.strip()
+        cleaned_next_step = next_step.strip()
+        cleaned_evidence_note = evidence_note.strip()
+        if not cleaned_title:
+            raise ValueError("title is required")
+        if not cleaned_summary:
+            raise ValueError("summary is required")
+        if not any((cleaned_detail, cleaned_key_output, cleaned_next_step, cleaned_evidence_note)):
+            raise ValueError(
+                "Delegation reports need at least one useful supporting field: detail, key_output, next_step, or evidence_note."
+            )
+
+        now = _now_iso()
+        report_id = str(uuid.uuid4())
+        output_id = f"delegation-report-{delegation_key}"
+        artifact_ref = f"/api/missions/{mission_id}/delegation-reports/{report_id}"
+        report = asdict(
+            DelegationReportRecord(
+                report_id=report_id,
+                mission_id=mission_id,
+                delegation_id=delegation_key,
+                producer_agent=producer_key,
+                title=cleaned_title,
+                summary=cleaned_summary,
+                detail=cleaned_detail,
+                key_output=cleaned_key_output,
+                next_step=cleaned_next_step,
+                evidence_note=cleaned_evidence_note,
+                status="completed-with-output",
+                handoff_id=str(target_delegation.get("handoff_id", "")).strip(),
+                delegator_agent=str(target_delegation.get("delegator_agent", "")).strip(),
+                delegate_agent=delegate_agent,
+                created_at=now,
+                output_id=output_id,
+                artifact_ref=artifact_ref,
+            )
+        )
+
+        target_delegation["status"] = "completed-with-output"
+        target_delegation["resolved_at"] = now
+        dossier["delegations"] = delegations
+        dossier["delegation_reports"] = existing_reports + [report]
+
+        updated_handoffs: list[dict[str, Any]] = []
+        for item in list(dossier.get("handoffs") or []):
+            handoff = dict(item or {})
+            if str(handoff.get("handoff_id", "")).strip() == str(target_delegation.get("handoff_id", "")).strip():
+                handoff["status"] = "completed-with-output"
+                handoff["completed_at"] = now
+            updated_handoffs.append(handoff)
+        dossier["handoffs"] = updated_handoffs
+
+        work_states = dict(dossier.get("agent_work_states") or {})
+        producer_state = dict(work_states.get(producer_key) or {})
+        if producer_state:
+            producer_state["recent_decisions"] = self._trim_records(
+                list(producer_state.get("recent_decisions") or [])
+                + [
+                    self._decision(
+                        summary=report["title"],
+                        rationale=report["summary"],
+                        task_id=str(target_delegation.get("task_id", "")).strip(),
+                        created_at=now,
+                    )
+                ]
+            )
+            producer_state["updated_at"] = now
+            work_states[producer_key] = producer_state
+            dossier["agent_work_states"] = work_states
+
+        dossier["outputs"] = list(dossier.get("outputs") or []) + [
+            asdict(
+                MissionOutput(
+                    output_id=output_id,
+                    kind="delegation-report",
+                    title=report["title"],
+                    summary=report["summary"],
+                    status="completed-with-output",
+                    timestamp=now,
+                    payload_ref=artifact_ref,
+                )
+            )
+        ]
+        dossier["updated_at"] = now
         return self.save_mission(dossier)
 
     def set_background_prepared_outputs(self, mission_id: str, outputs: list[dict[str, Any]]) -> dict[str, Any]:

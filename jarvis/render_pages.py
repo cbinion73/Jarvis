@@ -6,8 +6,9 @@ from html import escape
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
+from .artifact_outcomes import ALLOWED_ARTIFACT_OUTCOMES
 from .runtime import JarvisRuntime
 from .settings import LocationSettingsStore, VoiceSettingsStore
 from .voice_audio import generate_tts_audio
@@ -4365,8 +4366,9 @@ def render_mission_board_module_page(payload: dict) -> str:
   </main>
   <script>
     const initialPayload = {raw_json};
+    const initialRouteParams = new URLSearchParams(window.location.search);
     let currentPayload = initialPayload;
-    let selectedMissionId = "";
+    let selectedMissionId = String(initialRouteParams.get("mission_id") || "").trim();
 
     const heroStatus = document.getElementById("hero-status");
     const heroNow = document.getElementById("hero-now");
@@ -4944,6 +4946,81 @@ def render_mission_board_module_page(payload: dict) -> str:
       }}
     }}
 
+    async function submitDelegationReport(missionId, delegationId) {{
+      if (!missionId || !delegationId) return;
+      const producerAgent = String(document.querySelector(`[data-delegation-producer="${{delegationId}}"]`)?.value || "").trim();
+      const title = String(document.querySelector(`[data-delegation-title="${{delegationId}}"]`)?.value || "").trim();
+      const summary = String(document.querySelector(`[data-delegation-summary="${{delegationId}}"]`)?.value || "").trim();
+      const detail = String(document.querySelector(`[data-delegation-detail="${{delegationId}}"]`)?.value || "").trim();
+      const keyOutput = String(document.querySelector(`[data-delegation-key-output="${{delegationId}}"]`)?.value || "").trim();
+      const nextStep = String(document.querySelector(`[data-delegation-next-step="${{delegationId}}"]`)?.value || "").trim();
+      const evidenceNote = String(document.querySelector(`[data-delegation-evidence-note="${{delegationId}}"]`)?.value || "").trim();
+      if (!producerAgent || !title || !summary || !(detail || keyOutput || nextStep || evidenceNote)) {{
+        actionNote.textContent = "Choose the reporting agent, add a report title and summary, and include at least one useful field: detail, key output, next step, or evidence note.";
+        return;
+      }}
+      actionNote.textContent = `Submitting delegation report ${{delegationId}}…`;
+      try {{
+        const response = await fetch(`/api/missions/${{encodeURIComponent(missionId)}}/delegations/${{encodeURIComponent(delegationId)}}/report`, {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            producing_agent: producerAgent,
+            title,
+            summary,
+            detail,
+            key_output: keyOutput,
+            next_step: nextStep,
+            evidence_note: evidenceNote,
+          }}),
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{
+          throw new Error(payload.detail || payload.error || "Delegation report submission failed");
+        }}
+        const report = Array.isArray(payload.delegation_reports) ? payload.delegation_reports.find((item) => String(item?.delegation_id || "").trim() === delegationId) : null;
+        const recorded = await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: "Submit Delegation Report",
+          title,
+          status: "completed-with-output",
+          detail: `Action succeeded: /api/missions/${{missionId}}/delegations/${{delegationId}}/report`,
+          why_now: summary,
+          result_summary: report?.artifact_ref
+            ? `Delegated work is now inspectable at ${{report.artifact_ref}}.`
+            : "Delegated work completed with inspectable output.",
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: true,
+        }});
+        actionNote.textContent = recorded
+          ? `Delegation report ${{delegationId}} submitted and recorded in shared activity.`
+          : `Delegation report ${{delegationId}} submitted.`;
+        await refreshMissionBoard();
+      }} catch (error) {{
+        const errorText = String(error);
+        await recordMissionActivity({{
+          actor: "Chris",
+          domain: "mission-board",
+          action: "Submit Delegation Report",
+          title: title || delegationId,
+          status: "failed",
+          detail: `Action failed: /api/missions/${{missionId}}/delegations/${{delegationId}}/report`,
+          why_now: errorText,
+          result_summary: `Delegation report submission failed: ${{errorText}}`,
+          route: "/mission-board",
+          route_label: "Open Mission Board",
+          related_kind: "mission",
+          related_label: missionId,
+          succeeded: false,
+        }});
+        actionNote.textContent = `Delegation report submission failed: ${{errorText}}`;
+      }}
+    }}
+
     function renderDetail(payload) {{
       const mission = currentMission(payload);
       const detail = currentMissionDetail(payload) || {{}};
@@ -4962,11 +5039,17 @@ def render_mission_board_module_page(payload: dict) -> str:
       const relatedRoutes = Array.isArray(detail.related_routes) ? detail.related_routes : [];
       const relatedSeams = Array.isArray(detail.related_seams) ? detail.related_seams : [];
       const handoffs = Array.isArray(detail.handoffs) ? detail.handoffs : [];
+      const outputsDetail = Array.isArray(detail.outputs_detail) ? detail.outputs_detail : [];
+      const delegationReports = Array.isArray(detail.delegation_reports) ? detail.delegation_reports : [];
       const pendingHandoffs = handoffs.filter((item) => {{
         const status = String(item?.status || "").trim().toLowerCase();
         return status === "pending" || status === "pending-acceptance";
       }});
       const ownershipTransfers = Array.isArray(detail.ownership_transfers) ? detail.ownership_transfers : [];
+      const delegations = Array.isArray(workState.delegations) ? workState.delegations : [];
+      const requestedDelegations = delegations.filter((item) => String(item?.inspectable_output_status || "").trim() === "requested");
+      const completedDelegations = delegations.filter((item) => String(item?.inspectable_output_status || "").trim() === "completed-with-output");
+      const unavailableDelegations = delegations.filter((item) => String(item?.inspectable_output_status || "").trim() === "unavailable");
       const handoffOptions = missionAgentOptions(detail, workState);
       const truthLabels = detail.truth_labels || {{}};
       const truthChips = Object.entries(truthLabels)
@@ -5012,6 +5095,9 @@ def render_mission_board_module_page(payload: dict) -> str:
             <div><label>Pending Handoffs</label><strong>${{esc(summary.pending_handoffs || 0)}}</strong></div>
             <div><label>Pending Reviews</label><strong>${{esc(summary.pending_reviews || 0)}}</strong></div>
             <div><label>Duplicate Suppressions</label><strong>${{esc(summary.duplicate_suppressions || 0)}}</strong></div>
+            <div><label>Delegations Requested</label><strong>${{esc(summary.delegations_requested || 0)}}</strong></div>
+            <div><label>Delegations Completed</label><strong>${{esc(summary.delegations_completed_with_output || 0)}}</strong></div>
+            <div><label>Delegations Unavailable</label><strong>${{esc(summary.delegations_unavailable || 0)}}</strong></div>
           </div>
           <div class="meta">
             ${{listBlock("Milestones", milestoneRows, "Mission milestones will appear once JARVIS builds the plan.")}}
@@ -5088,6 +5174,7 @@ def render_mission_board_module_page(payload: dict) -> str:
         li("Selected Agents", selectedAgents.join(", ") || "none recorded"),
         li("Task Agents", taskAgents.join(", ") || "none recorded"),
         li("Pending Handoffs", String(summary.pending_handoffs || 0), String(summary.pending_transfers || 0) + " transfer(s) waiting"),
+        li("Delegation Proof", String(summary.delegations_completed_with_output || 0) + " completed", String(summary.delegations_requested || 0) + " requested / " + String(summary.delegations_unavailable || 0) + " unavailable"),
         li("Escalations", String(summary.escalations || 0), String(summary.duplicate_suppressions || 0) + " duplicate suppression record(s)"),
         ...relatedSeams.map((item) => li(`Related Seam: ${{item.name || "Seam"}}`, item.what_became_real || "No seam outcome captured yet.", `${{item.module || "Progress"}} · ${{item.status || "Wired"}} · ${{item.surface_path || "/command-center"}}`)),
         ...relatedRoutes.map((item) => li(item.label || "Related Route", item.href || "")),
@@ -5185,6 +5272,105 @@ def render_mission_board_module_page(payload: dict) -> str:
           }}).join("")
         : '<div class="mission-card"><strong>No pending handoffs.</strong><span>This mission does not currently need a receiving-agent acknowledgement.</span></div>';
 
+      const requestedDelegationCards = requestedDelegations.length
+        ? requestedDelegations.map((item) => {{
+            const delegationId = String(item?.delegation_id || "").trim();
+            const producer = String(item?.delegate_agent || "").trim();
+            return `
+              <div class="mission-card">
+                <strong>${{esc(item.scope || "Delegated work")}}</strong>
+                <span>${{esc(item.delegator_agent || "unknown delegator")}} → ${{esc(item.delegate_agent || "unknown delegate")}}</span>
+                <div class="chips">
+                  ${{chip("report pending", "steady")}}
+                  ${{chip(item.status || "requested", "steady")}}
+                  ${{producer ? chip(`producer: ${{producer}}`) : chip("producer missing", "regressed")}}
+                </div>
+                <span>${{esc(item.expected_result || item.rationale || "This delegation is waiting for a concrete inspectable result.")}}</span>
+                <div class="meta">
+                  <div><label>Delegation ID</label><strong>${{esc(delegationId || "not recorded")}}</strong></div>
+                  <div><label>Task ID</label><strong>${{esc(item.task_id || "not recorded")}}</strong></div>
+                  <div><label>Artifact Status</label><strong>${{esc(item.inspectable_output_status || "requested")}}</strong></div>
+                </div>
+                <div class="meta">
+                  <div>
+                    <label>Producer</label>
+                    <input data-delegation-producer="${{esc(delegationId)}}" value="${{esc(producer)}}" placeholder="Delegated agent id" />
+                  </div>
+                  <div>
+                    <label>Report Title</label>
+                    <input data-delegation-title="${{esc(delegationId)}}" value="" placeholder="What work was completed?" />
+                  </div>
+                  <div>
+                    <label>Report Summary</label>
+                    <input data-delegation-summary="${{esc(delegationId)}}" value="" placeholder="Short inspectable result summary" />
+                  </div>
+                  <div>
+                    <label>Report Detail</label>
+                    <input data-delegation-detail="${{esc(delegationId)}}" value="" placeholder="What came back, in plain language?" />
+                  </div>
+                  <div>
+                    <label>Key Output</label>
+                    <input data-delegation-key-output="${{esc(delegationId)}}" value="" placeholder="Most useful concrete output" />
+                  </div>
+                  <div>
+                    <label>Next Step</label>
+                    <input data-delegation-next-step="${{esc(delegationId)}}" value="" placeholder="What should happen next?" />
+                  </div>
+                  <div>
+                    <label>Evidence Note</label>
+                    <input data-delegation-evidence-note="${{esc(delegationId)}}" value="" placeholder="Evidence or provenance note, if applicable" />
+                  </div>
+                </div>
+                <div class="action-row">
+                  <button type="button" data-submit-delegation-report="${{esc(delegationId)}}">Submit Delegation Report</button>
+                </div>
+              </div>
+            `;
+          }}).join("")
+        : '<div class="mission-card"><strong>No delegation reports are pending.</strong><span>There is no active delegated work waiting for report completion on this mission.</span></div>';
+
+      const completedDelegationCards = completedDelegations.length
+        ? completedDelegations.map((item) => {{
+            const report = delegationReports.find((entry) => String(entry?.delegation_id || "").trim() === String(item?.delegation_id || "").trim()) || {{}};
+            const output = outputsDetail.find((entry) => String(entry?.output_id || "").trim() === String(item?.output_id || "").trim()) || {{}};
+            const artifactRef = String(report?.artifact_ref || item?.artifact_ref || output?.payload_ref || "").trim();
+            return `
+              <div class="mission-card">
+                <strong>${{esc(report.title || item.scope || "Delegation report")}}</strong>
+                <span>${{esc(report.summary || output.summary || "Delegated work completed with inspectable output.")}}</span>
+                <div class="chips">
+                  ${{chip("completed with output", "accepted")}}
+                  ${{report?.producer_agent ? chip(`producer: ${{report.producer_agent}}`) : ""}}
+                  ${{item?.delegate_agent ? chip(`delegate: ${{item.delegate_agent}}`) : ""}}
+                </div>
+                <div class="meta">
+                  <div><label>Report ID</label><strong>${{esc(report.report_id || item.report_id || "not recorded")}}</strong></div>
+                  <div><label>Output ID</label><strong>${{esc(report.output_id || item.output_id || output.output_id || "not recorded")}}</strong></div>
+                  <div><label>Artifact</label><strong>${{esc(artifactRef || "not recorded")}}</strong></div>
+                </div>
+                <div class="action-row">
+                  ${{report?.report_id ? `<a href="/mission-board/delegation-report/${{esc(selectedMissionId)}}/${{esc(report.report_id)}}?return_to=%2Fmission-board%3Fmission_id%3D${{encodeURIComponent(selectedMissionId)}}%23delegation-review-completed">Inspect Delegation Report</a>` : '<span class="status-note">Readable report view unavailable.</span>'}}
+                  ${{report?.report_id ? `<a href="/mission-board/artifact-outcome/delegation_report/${{esc(report.report_id)}}?mission_id=${{encodeURIComponent(selectedMissionId)}}&return_to=%2Fmission-board%3Fmission_id%3D${{encodeURIComponent(selectedMissionId)}}%23delegation-review-completed">Open Outcome Review</a>` : ''}}
+                </div>
+              </div>
+            `;
+          }}).join("")
+        : '<div class="mission-card"><strong>No delegation reports completed yet.</strong><span>Completed delegated work will appear here with an inspectable artifact path.</span></div>';
+
+      const unavailableDelegationCards = unavailableDelegations.length
+        ? unavailableDelegations.map((item) => `
+            <div class="mission-card">
+              <strong>${{esc(item.scope || "Delegated work")}}</strong>
+              <span>${{esc(item.delegator_agent || "unknown delegator")}} → ${{esc(item.delegate_agent || "unknown delegate")}}</span>
+              <div class="chips">
+                ${{chip("unavailable", "regressed")}}
+                ${{chip(item.status || "unavailable", "regressed")}}
+              </div>
+              <span>${{esc(item.expected_result || item.rationale || "This delegation is not currently eligible for a report in this path.")}}</span>
+            </div>
+          `).join("")
+        : "";
+
       handoffsEl.innerHTML = `
         <div class="mission-card">
           <strong>Author New Handoff</strong>
@@ -5241,6 +5427,23 @@ def render_mission_board_module_page(payload: dict) -> str:
             <button type="button" id="create-handoff-button">Create Handoff</button>
           </div>
         </div>
+        <div class="mission-card">
+          <strong>Delegation Report Queue</strong>
+          <span>Requested delegations stay pending until a real report is submitted. Completed delegations keep an inspectable artifact path.</span>
+          <div class="chips">
+            ${{chip(`requested: ${{requestedDelegations.length}}`, requestedDelegations.length ? "steady" : "")}}
+            ${{chip(`completed: ${{completedDelegations.length}}`, completedDelegations.length ? "accepted" : "")}}
+            ${{chip(`unavailable: ${{unavailableDelegations.length}}`, unavailableDelegations.length ? "regressed" : "")}}
+          </div>
+          <div class="action-row">
+            <a href="#delegation-review-requested">Pending Delegation Reports</a>
+            <a href="#delegation-review-completed">Completed Delegation Reports</a>
+            <a href="#delegation-review-unavailable">Unavailable Delegation Reports</a>
+          </div>
+        </div>
+        <div id="delegation-review-requested">${{requestedDelegationCards}}</div>
+        <div id="delegation-review-completed">${{completedDelegationCards}}</div>
+        <div id="delegation-review-unavailable">${{unavailableDelegationCards}}</div>
         ${{pendingCards}}
       `;
 
@@ -5256,6 +5459,14 @@ def render_mission_board_module_page(payload: dict) -> str:
           const accepted = String(button.getAttribute("data-handoff-accepted") || "").trim() === "true";
           acknowledgeMissionHandoff(selectedMissionId, handoffId, receivingAgent, accepted).catch((error) => {{
             actionNote.textContent = `Mission handoff acknowledgement failed: ${{String(error)}}`;
+          }});
+        }});
+      }});
+      document.querySelectorAll("[data-submit-delegation-report]").forEach((button) => {{
+        button.addEventListener("click", () => {{
+          const delegationId = button.getAttribute("data-submit-delegation-report") || "";
+          submitDelegationReport(selectedMissionId, delegationId).catch((error) => {{
+            actionNote.textContent = `Delegation report submission failed: ${{String(error)}}`;
           }});
         }});
       }});
@@ -5343,6 +5554,13 @@ def render_mission_board_module_page(payload: dict) -> str:
       document.querySelectorAll("[data-select-mission]").forEach((button) => {{
         button.addEventListener("click", () => {{
           selectedMissionId = button.getAttribute("data-select-mission") || "";
+          const nextUrl = new URL(window.location.href);
+          if (selectedMissionId) {{
+            nextUrl.searchParams.set("mission_id", selectedMissionId);
+          }} else {{
+            nextUrl.searchParams.delete("mission_id");
+          }}
+          window.history.replaceState({{}}, "", nextUrl.toString());
           renderDetail(payload);
           actionNote.textContent = `Focused mission ${{selectedMissionId || "detail"}} for review.`;
         }});
@@ -7584,9 +7802,43 @@ def render_daily_brief_module_page(payload: dict) -> str:
     generated_at = _esc(brief.get("generated_at") or payload.get("generated_at") or "")
     what_changed = _bullets(brief.get("what_changed") or [])
     what_matters = _numbered(brief.get("what_matters") or [])
+    what_is_waiting = _bullets(brief.get("what_is_waiting") or [])
+    while_you_were_away = _bullets(brief.get("while_you_were_away") or [])
     forgotten = _bullets(brief.get("may_have_forgotten") or [])
     prepared = _bullets(brief.get("jarvis_prepared") or [])
     recommendation = _esc(brief.get("recommendation") or "Check open loops before starting new work.")
+    recommendation_action = dict(brief.get("recommendation_action") or {})
+    action_kind_raw = str(recommendation_action.get("action_kind") or "narrative_only").strip() or "narrative_only"
+    action_kind_label = {
+        "direct_route": "Direct route",
+        "bounded_request": "Bounded handoff",
+        "narrative_only": "Narrative only",
+    }.get(action_kind_raw, "Narrative only")
+    action_kind_css = {
+        "direct_route": "direct",
+        "bounded_request": "bounded",
+        "narrative_only": "narrative",
+    }.get(action_kind_raw, "narrative")
+    action_title = _esc(
+        recommendation_action.get("title")
+        or ("Direct next surface" if action_kind_raw == "direct_route" else "Next handoff" if action_kind_raw == "bounded_request" else "No direct surface staged")
+    )
+    action_detail = _esc(
+        recommendation_action.get("detail")
+        or ("JARVIS did not stage a more specific next-action surface for this brief." if action_kind_raw == "narrative_only" else "A truthful next-action surface is available.")
+    )
+    action_truth_note = _esc(
+        recommendation_action.get("truth_note")
+        or (
+            "No direct route or saved object was staged for this recommendation yet."
+            if action_kind_raw == "narrative_only"
+            else "This route opens a real current surface. It does not mean the work is already complete."
+        )
+    )
+    action_route = _esc(recommendation_action.get("route") or "")
+    action_route_label = _esc(recommendation_action.get("route_label") or ("Open linked surface" if action_route else "No direct route staged"))
+    action_link_hidden = " hidden" if not action_route else ""
+    action_note_hidden = "" if not action_route else " hidden"
     truth_labels = brief.get("truth_labels") or {}
     recommended_route = dict(payload.get("recommended_route") or {})
     recommended_route_title = _esc(recommended_route.get("title") or "No guided workspace selected yet.")
@@ -7620,6 +7872,8 @@ def render_daily_brief_module_page(payload: dict) -> str:
     mem_chips = _truth_chips(["memory", "profile_facts"])
     ws_chips = _truth_chips(["workstreams"])
     agent_chips = _truth_chips(["agents"])
+    waiting_chips = _truth_chips(["open_loops", "email"])
+    away_chips = _truth_chips(["activity_trace", "delegation_trace", "research_trace", "outcome_trace", "autonomy_trace"])
     conn_chips = _truth_chips(["health_data", "calendar", "email"])
 
     actor = _esc(payload.get("actor") or "Chris")
@@ -7763,6 +8017,52 @@ def render_daily_brief_module_page(payload: dict) -> str:
     .recommendation p {{
       font-size: 16px; line-height: 1.6; color: var(--text); font-weight: 500;
     }}
+    .recommendation-action {{
+      margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(121,216,255,0.16);
+      display: grid; gap: 10px;
+    }}
+    .recommendation-action .action-label {{
+      font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--muted);
+    }}
+    .recommendation-action .action-meta {{
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }}
+    .action-kind {{
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      padding: 4px 9px; border-radius: 999px; border: 1px solid transparent;
+    }}
+    .action-kind.direct {{
+      color: var(--accent2); border-color: rgba(168,240,200,0.28); background: rgba(168,240,200,0.08);
+    }}
+    .action-kind.bounded {{
+      color: #ffd37d; border-color: rgba(255,211,125,0.28); background: rgba(255,211,125,0.08);
+    }}
+    .action-kind.narrative {{
+      color: var(--muted); border-color: rgba(139,175,197,0.28); background: rgba(139,175,197,0.08);
+    }}
+    .action-title {{
+      font-size: 14px; font-weight: 600; color: var(--text);
+    }}
+    .action-detail {{
+      font-size: 13px; line-height: 1.55; color: var(--text);
+    }}
+    .action-links {{
+      display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+    }}
+    .action-link {{
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line);
+      background: rgba(121,216,255,0.12); color: var(--text); text-decoration: none;
+      font-size: 13px; font-weight: 600;
+    }}
+    .action-link:hover {{ background: rgba(121,216,255,0.18); }}
+    .action-route-note {{
+      font-size: 12px; color: var(--muted);
+    }}
+    .action-truth {{
+      font-size: 12px; line-height: 1.5; color: var(--muted);
+    }}
 
     /* ---- Signal status footer ---- */
     .signal-footer {{
@@ -7840,6 +8140,28 @@ def render_daily_brief_module_page(payload: dict) -> str:
       </div>
     </div>
 
+    <!-- What Is Waiting -->
+    <div class="section" id="section-waiting">
+      <div class="section-head">
+        <h2>What Is Waiting</h2>
+        <div class="truth-chips">{waiting_chips}</div>
+      </div>
+      <div class="section-body">
+        <ul id="list-waiting">{what_is_waiting}</ul>
+      </div>
+    </div>
+
+    <!-- What JARVIS Did While You Were Away -->
+    <div class="section" id="section-away">
+      <div class="section-head">
+        <h2>What JARVIS Did While You Were Away</h2>
+        <div class="truth-chips">{away_chips}</div>
+      </div>
+      <div class="section-body">
+        <ul id="list-away">{while_you_were_away}</ul>
+      </div>
+    </div>
+
     <!-- What May Have Been Forgotten -->
     <div class="section" id="section-forgotten">
       <div class="section-head">
@@ -7866,6 +8188,19 @@ def render_daily_brief_module_page(payload: dict) -> str:
     <div class="recommendation" id="section-rec">
       <div class="rec-label">Recommendation</div>
       <p id="rec-text">{recommendation}</p>
+      <div class="recommendation-action" id="brief-action">
+        <div class="action-label">Next Honest Step</div>
+        <div class="action-meta">
+          <span class="action-kind {action_kind_css}" id="action-kind">{_esc(action_kind_label)}</span>
+          <strong class="action-title" id="action-title">{action_title}</strong>
+        </div>
+        <p class="action-detail" id="action-detail">{action_detail}</p>
+        <div class="action-links">
+          <a id="action-link" class="action-link" href="{action_route or '#'}"{action_link_hidden}>{action_route_label}</a>
+          <span id="action-route-note" class="action-route-note"{action_note_hidden}>No direct handoff is staged for this recommendation yet.</span>
+        </div>
+        <div class="action-truth" id="action-truth">{action_truth_note}</div>
+      </div>
     </div>
 
     <div class="section" id="section-conversation-route">
@@ -7940,6 +8275,8 @@ def render_daily_brief_module_page(payload: dict) -> str:
       const sets = [
         ["list-changed",   bullets(brief.what_changed)],
         ["list-matters",   numbered(brief.what_matters)],
+        ["list-waiting",   bullets(brief.what_is_waiting)],
+        ["list-away",      bullets(brief.while_you_were_away)],
         ["list-forgotten", bullets(brief.may_have_forgotten)],
         ["list-prepared",  bullets(brief.jarvis_prepared)],
       ];
@@ -7949,6 +8286,57 @@ def render_daily_brief_module_page(payload: dict) -> str:
       }});
       const rec = document.getElementById("rec-text");
       if (rec && brief.recommendation) rec.textContent = brief.recommendation;
+      renderRecommendationAction(brief.recommendation_action || {{}});
+    }}
+
+    function renderRecommendationAction(action) {{
+      const kind = String((action && action.action_kind) || "narrative_only");
+      const kindLabels = {{
+        direct_route: "Direct route",
+        bounded_request: "Bounded handoff",
+        narrative_only: "Narrative only",
+      }};
+      const kindClasses = {{
+        direct_route: "direct",
+        bounded_request: "bounded",
+        narrative_only: "narrative",
+      }};
+      const kindEl = document.getElementById("action-kind");
+      const titleEl = document.getElementById("action-title");
+      const detailEl = document.getElementById("action-detail");
+      const linkEl = document.getElementById("action-link");
+      const routeNoteEl = document.getElementById("action-route-note");
+      const truthEl = document.getElementById("action-truth");
+      const route = String((action && action.route) || "");
+      const routeLabel = String((action && action.route_label) || (route ? "Open linked surface" : ""));
+      if (kindEl) {{
+        kindEl.textContent = kindLabels[kind] || "Narrative only";
+        kindEl.className = "action-kind " + (kindClasses[kind] || "narrative");
+      }}
+      if (titleEl) {{
+        titleEl.textContent = String((action && action.title) || (kind === "direct_route" ? "Direct next surface" : kind === "bounded_request" ? "Next handoff" : "No direct surface staged"));
+      }}
+      if (detailEl) {{
+        detailEl.textContent = String((action && action.detail) || (kind === "narrative_only" ? "JARVIS did not stage a more specific next-action surface for this brief." : "A truthful next-action surface is available."));
+      }}
+      if (truthEl) {{
+        truthEl.textContent = String((action && action.truth_note) || (kind === "narrative_only" ? "No direct route or saved object was staged for this recommendation yet." : "This route opens a real current surface. It does not mean the work is already complete."));
+      }}
+      if (linkEl) {{
+        if (route) {{
+          linkEl.href = route;
+          linkEl.textContent = routeLabel;
+          linkEl.hidden = false;
+        }} else {{
+          linkEl.hidden = true;
+          linkEl.href = "#";
+          linkEl.textContent = "";
+        }}
+      }}
+      if (routeNoteEl) {{
+        routeNoteEl.hidden = !!route;
+        routeNoteEl.textContent = route ? "" : "No direct handoff is staged for this recommendation yet.";
+      }}
     }}
 
     async function regenerate() {{
@@ -9549,7 +9937,7 @@ def render_chronicle_module_page(payload: dict) -> str:
       </div>
       <div class="topbar-links">
         <a href="/api/chronicle/module">Module JSON</a>
-        <a href="/api/devotional-pause">Devotional API</a>
+        <a href="/api/chronicle/status">Chronicle Status API</a>
         <a href="/command-center">Command Center</a>
       </div>
     </section>
@@ -9988,6 +10376,64 @@ def render_chronicle_module_page(payload: dict) -> str:
 
 
 def render_settings_module_page(payload: dict) -> str:
+    voice = payload.get("voice") or {}
+    voice_options = payload.get("voice_options") or {}
+    stack_status = voice.get("stack_status") or voice_options.get("stack_status") or {}
+
+    def _voice_state_label(value: object, fallback: str) -> str:
+        text = str(value or "").strip()
+        if not text:
+            return fallback
+        return text.replace("_", " ")
+
+    def _voice_diag_text(value: object, fallback: str) -> str:
+        text = str(value or "").strip()
+        if not text:
+            return fallback
+        return text if len(text) <= 140 else f"{text[:137]}..."
+
+    def _voice_li(title: str, summary: str, detail: str = "") -> str:
+        detail_html = f"<span>{escape(detail)}</span>" if detail else ""
+        return f"<li><strong>{escape(title)}</strong><span>{escape(summary)}</span>{detail_html}</li>"
+
+    configured_source = str(voice.get("selected_provider_label") or "--")
+    configured_readiness = (
+        "ready"
+        if stack_status.get("selected_tts_provider_ready") is True
+        else _voice_state_label(stack_status.get("selected_tts_provider_state"), "not ready")
+    )
+    configured_reason = _voice_diag_text(
+        stack_status.get("selected_tts_provider_reason"),
+        "Saved provider selection only; this is not proof the live route is available.",
+    )
+    live_readiness = (
+        "live"
+        if stack_status.get("selected_tts_provider_live_ready") is True
+        else _voice_state_label(stack_status.get("selected_tts_provider_live_state"), "not checked yet")
+    )
+    live_reason = _voice_diag_text(
+        stack_status.get("selected_tts_provider_live_reason"),
+        "No live provider check has been recorded yet.",
+    )
+    live_blocker = (
+        _voice_diag_text(stack_status.get("selected_tts_provider_live_reason"), "No live blocker recorded.")
+        if stack_status.get("selected_tts_provider_live_ready") is False
+        else "none recorded"
+    )
+    last_live_fallback = str(stack_status.get("last_live_effective_tts_provider") or "none recorded")
+    fallback_note = _voice_diag_text(
+        stack_status.get("effective_tts_note"),
+        "No live fallback outcome has been recorded yet.",
+    )
+    initial_voice_diagnostics = "".join(
+        [
+            _voice_li("Configured source", configured_source, "Saved provider selection only; it does not prove live audio."),
+            _voice_li("Configured readiness", configured_readiness, configured_reason),
+            _voice_li("Last live readiness", live_readiness, live_reason),
+            _voice_li("Last live blocker", live_blocker, live_reason if stack_status.get("selected_tts_provider_live_ready") is False else ""),
+            _voice_li("Last live fallback", last_live_fallback, fallback_note),
+        ]
+    )
     raw_json = json.dumps(payload, indent=2)
     return _apply_module_surface_chrome(f"""<!doctype html>
 <html lang="en">
@@ -10233,9 +10679,16 @@ def render_settings_module_page(payload: dict) -> str:
           <label>Piper Speaker
             <input id="voice-speaker" placeholder="Optional speaker id">
           </label>
-          <button type="submit">Save Voice Settings</button>
+          <label>Preview Phrase
+            <input id="voice-preview-text" value="Good evening, sir. Voice calibration complete.">
+          </label>
+          <div class="account-actions">
+            <button type="submit">Save Voice Settings</button>
+            <button type="button" id="preview-voice-settings">Save + Preview</button>
+          </div>
         </form>
-        <p class="status-note" id="voice-note">Save live voice settings through the same runtime-backed store used by the shell.</p>
+        <p class="status-note" id="voice-note">Save voice settings through the same runtime-backed store used by the shell. Configured posture and last-known live posture appear below.</p>
+        <ul id="voice-diagnostics-list">{initial_voice_diagnostics}</ul>
       </section>
       <section class="panel span-6">
         <h2>Location Controls</h2>
@@ -10325,6 +10778,7 @@ def render_settings_module_page(payload: dict) -> str:
     const statusNote = document.getElementById("settings-status-note");
     const moduleStatusList = document.getElementById("module-status-list");
     const accountsList = document.getElementById("accounts-list");
+    const voiceDiagnosticsList = document.getElementById("voice-diagnostics-list");
     const permissionsList = document.getElementById("permissions-list");
     const identityList = document.getElementById("identity-list");
     const locationsList = document.getElementById("locations-list");
@@ -10347,6 +10801,150 @@ def render_settings_module_page(payload: dict) -> str:
 
     function li(title, summary, detail = "") {{
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
+    }}
+
+    function voiceStateLabel(value, fallback = "not checked yet") {{
+      if (!value) {{
+        return fallback;
+      }}
+      return String(value).replace(/_/g, " ");
+    }}
+
+    function compactVoiceDetail(value, fallback = "No detail recorded.") {{
+      const text = String(value || "").trim();
+      if (!text) {{
+        return fallback;
+      }}
+      return text.length > 140 ? `${{text.slice(0, 137)}}...` : text;
+    }}
+
+    function selectedVoiceConfiguredReadiness(stackStatus = {{}}) {{
+      if (stackStatus.selected_tts_provider_ready === true) {{
+        return "ready";
+      }}
+      return voiceStateLabel(stackStatus.selected_tts_provider_state, "not ready");
+    }}
+
+    function selectedVoiceLiveReadiness(stackStatus = {{}}) {{
+      if (stackStatus.selected_tts_provider_live_ready === true) {{
+        return "live";
+      }}
+      return voiceStateLabel(stackStatus.selected_tts_provider_live_state, "not checked yet");
+    }}
+
+    function selectedVoiceLiveBlocker(stackStatus = {{}}) {{
+      if (stackStatus.selected_tts_provider_live_ready === false) {{
+        return compactVoiceDetail(stackStatus.selected_tts_provider_live_reason, "No live blocker recorded.");
+      }}
+      return "none recorded";
+    }}
+
+    function selectedVoiceFallback(stackStatus = {{}}) {{
+      return stackStatus.last_live_effective_tts_provider || "none recorded";
+    }}
+
+    function voicePreviewHeaderValue(headers, names) {{
+      for (const name of names) {{
+        const value = headers?.get?.(name);
+        if (value) {{
+          return value;
+        }}
+      }}
+      return "";
+    }}
+
+    function summarizeVoicePreviewResult(response) {{
+      const headers = response?.headers;
+      const requested = voicePreviewHeaderValue(headers, [
+        "X-Jarvis-Voice-Requested-Provider",
+        "X-Jarvis-Tts-Requested-Provider",
+      ]) || "auto";
+      const effective = voicePreviewHeaderValue(headers, [
+        "X-Jarvis-Voice-Effective-Provider",
+        "X-Jarvis-Tts-Effective-Provider",
+        "X-Jarvis-Voice-Provider",
+        "X-Jarvis-Tts-Provider",
+      ]) || "unknown";
+      const fallbackFrom = voicePreviewHeaderValue(headers, ["X-Jarvis-Voice-Fallback-From"]);
+      const blocker = compactVoiceDetail(
+        voicePreviewHeaderValue(headers, [
+          "X-Jarvis-Voice-Fallback-Reason",
+          "X-Jarvis-Tts-Fallback-Reason",
+        ]),
+        "",
+      );
+      if (fallbackFrom || (requested && effective && requested !== effective && requested !== "auto")) {{
+        return blocker
+          ? `Preview requested ${{requested}}, but playback used ${{effective}}. Live blocker: ${{blocker}}`
+          : `Preview requested ${{requested}}, but playback used ${{effective}}.`;
+      }}
+      return `Preview requested ${{requested}} and played with ${{effective}}.`;
+    }}
+
+    async function voicePreviewErrorDetail(response) {{
+      const fallback = `Voice preview unavailable (${{response?.status || "unknown"}})`;
+      if (!response) {{
+        return fallback;
+      }}
+      try {{
+        const clone = response.clone();
+        const contentType = String(clone.headers?.get?.("Content-Type") || "").toLowerCase();
+        if (contentType.includes("application/json")) {{
+          const payload = await clone.json();
+          return String(payload?.detail || payload?.error || fallback);
+        }}
+        const text = String(await clone.text()).trim();
+        return text || fallback;
+      }} catch (_error) {{
+        return fallback;
+      }}
+    }}
+
+    async function previewVoiceSettings() {{
+      const note = document.getElementById("voice-note");
+      note.textContent = "Saving configured voice source and running preview…";
+      try {{
+        const saveResponse = await fetch("/api/voice-settings", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            tts_provider: document.getElementById("voice-provider").value,
+            elevenlabs_voice: document.getElementById("voice-elevenlabs").value,
+            piper_model_path: document.getElementById("voice-piper").value,
+            piper_speaker: document.getElementById("voice-speaker").value,
+          }}),
+        }});
+        const savePayload = await saveResponse.json();
+        if (!saveResponse.ok) {{
+          throw new Error(String(savePayload?.detail || savePayload?.error || "Voice save failed."));
+        }}
+        note.textContent = "Configured voice source saved. Running preview through the current voice route…";
+        const previewText = String(document.getElementById("voice-preview-text")?.value || "").trim() || "Good evening, sir. Voice calibration complete.";
+        const response = await fetch("/api/voice/synthesize", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{ text: previewText, actor_id: "chris" }}),
+        }});
+        if (!response.ok) {{
+          throw new Error(await voicePreviewErrorDetail(response));
+        }}
+        const previewSummary = summarizeVoicePreviewResult(response);
+        note.textContent = previewSummary;
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.onended = () => {{
+          URL.revokeObjectURL(audioUrl);
+        }};
+        audio.onerror = () => {{
+          URL.revokeObjectURL(audioUrl);
+          note.textContent = `${{previewSummary}} Browser playback failed after the route returned audio.`;
+        }};
+        await audio.play();
+        await refreshSettingsState();
+      }} catch (error) {{
+        note.textContent = `Preview failed: ${{String(error)}}`;
+      }}
     }}
 
     function optionMarkup(items, selectedId) {{
@@ -10499,6 +11097,14 @@ def render_settings_module_page(payload: dict) -> str:
       document.getElementById("profile-show-publishing").checked = Boolean((permissions.dashboard || {{}}).show_publishing);
       const stackStatus = voice.stack_status || voiceOptions.stack_status || {{}};
       const clientSecret = (((payload.google || {{}}).client_secret) || {{}});
+      const configuredReason = compactVoiceDetail(
+        stackStatus.selected_tts_provider_reason,
+        "Saved provider selection only; this is not proof the live route is available."
+      );
+      const liveReason = compactVoiceDetail(
+        stackStatus.selected_tts_provider_live_reason,
+        "No live provider check has been recorded yet."
+      );
       moduleStatusList.innerHTML = [
         li("What Became Real", payload.what_became_real || "No settings seam note recorded yet."),
         li("What Remains Partial", payload.remains_partial || "No partial work recorded."),
@@ -10506,6 +11112,21 @@ def render_settings_module_page(payload: dict) -> str:
         li("Voice Stack", stackStatus.summary || voice.selected_provider_label || "No voice stack summary available."),
         li("Google Client Secret", clientSecret.configured ? "Configured" : "Missing", clientSecret.detail || ""),
         li("Connector Attention", String((payload.counts || {{}}).connector_attention_count || 0), "Connectors still asking for stabilization or expanded scope"),
+      ].join("");
+      voiceDiagnosticsList.innerHTML = [
+        li("Configured source", voice.selected_provider_label || "--", "Saved provider selection only; it does not prove live audio."),
+        li("Configured readiness", selectedVoiceConfiguredReadiness(stackStatus), configuredReason),
+        li("Last live readiness", selectedVoiceLiveReadiness(stackStatus), liveReason),
+        li(
+          "Last live blocker",
+          selectedVoiceLiveBlocker(stackStatus),
+          stackStatus.selected_tts_provider_live_ready === false ? liveReason : ""
+        ),
+        li(
+          "Last live fallback",
+          selectedVoiceFallback(stackStatus),
+          compactVoiceDetail(stackStatus.effective_tts_note, "No live fallback outcome has been recorded yet.")
+        ),
       ].join("");
 
       accountsList.innerHTML = accounts.slice(0, 8).map((account) => li(
@@ -10568,7 +11189,9 @@ def render_settings_module_page(payload: dict) -> str:
           }}),
         }});
         const payload = await response.json();
-        note.textContent = payload.message || "Voice settings updated.";
+        note.textContent = payload.settings?.selected_provider_label
+          ? `Saved. Configured voice source: ${{payload.settings.selected_provider_label}}.`
+          : (payload.message || "Voice settings updated.");
         await refreshSettingsState();
       }} catch (error) {{
         note.textContent = `Voice save failed: ${{String(error)}}`;
@@ -10748,6 +11371,11 @@ def render_settings_module_page(payload: dict) -> str:
     document.getElementById("connector-settings-form").addEventListener("submit", saveConnectorSettings);
     document.getElementById("family-identity-form").addEventListener("submit", saveFamilyIdentity);
     document.getElementById("voice-settings-form").addEventListener("submit", saveVoiceSettings);
+    document.getElementById("preview-voice-settings").addEventListener("click", () => {{
+      previewVoiceSettings().catch((error) => {{
+        document.getElementById("voice-note").textContent = `Preview failed: ${{String(error)}}`;
+      }});
+    }});
     document.getElementById("location-settings-form").addEventListener("submit", saveLocationSettings);
     document.getElementById("profile-settings-form").addEventListener("submit", saveProfileSettings);
     render(initialPayload);
@@ -11009,7 +11637,7 @@ def render_navigation_module_page(payload: dict) -> str:
     <section class="topbar">
       <div>
         <strong>JARVIS Navigation Desktop Experience</strong>
-        <span>Concept storyboard with live route intelligence, smart stops, and voice consultation backed by the real navigation payload.</span>
+        <span>Concept storyboard with saved route continuity, route-preview status, and voice consultation grounded in the real navigation payload.</span>
       </div>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
@@ -11018,8 +11646,8 @@ def render_navigation_module_page(payload: dict) -> str:
     </section>
     <section class="storyboard-strip" aria-label="Navigation storyboard">
       <article class="story-card"><strong>1</strong><h3>Navigation Home / Planner</h3><p>Plan smarter with live saved places, family-aware origin posture, and recent destination continuity.</p></article>
-      <article class="story-card"><strong>2</strong><h3>Live Route Intelligence</h3><p>Persisted route timing, hazard posture, and weather-aware guidance stay attached to the active route.</p></article>
-      <article class="story-card"><strong>3</strong><h3>Smart Stops Along Route</h3><p>JARVIS keeps coffee, food, parks, and family-fit places aligned to the actual route preview.</p></article>
+      <article class="story-card"><strong>2</strong><h3>Live Route Intelligence</h3><p>When the runtime can supply it, route timing, hazard posture, and weather-aware guidance stay attached to the active route.</p></article>
+      <article class="story-card"><strong>3</strong><h3>Smart Stops Along Route</h3><p>When route preview data is available, JARVIS keeps coffee, food, parks, and family-fit places aligned to that route.</p></article>
       <article class="story-card"><strong>4</strong><h3>Stop Detail &amp; Modification</h3><p>Detour impact, route fit, and next actions stay visible before you commit a stop to the trip.</p></article>
       <article class="story-card"><strong>5</strong><h3>Travel Orchestration</h3><p>Origin mode, favorites, and recent routes help JARVIS coordinate the full travel plan instead of a one-off search.</p></article>
       <article class="story-card"><strong>6</strong><h3>Voice Navigation</h3><p>Recent route continuity feeds voice-ready guidance so the consultation stays grounded in live travel context.</p></article>
@@ -11028,7 +11656,7 @@ def render_navigation_module_page(payload: dict) -> str:
       <div>
         <div class="eyebrow">Concept Storyboard</div>
         <h1>Navigation Command Center</h1>
-        <p>A route-aware module with persisted state, live route-weather intelligence, smart stops, and voice-ready consultation, using the JPG look and feel while keeping the actual JARVIS navigation payloads and mutation flow underneath.</p>
+        <p>A route-aware module with persisted state, route-preview status, smart stops, and voice-ready consultation, using the JPG look and feel while keeping the actual JARVIS navigation payloads and mutation flow underneath.</p>
         <div class="stats">
           <div class="stat"><span>Status</span><strong id="hero-status">Loading...</strong></div>
           <div class="stat"><span>Saved Locations</span><strong id="hero-locations">0</strong></div>
@@ -11039,8 +11667,8 @@ def render_navigation_module_page(payload: dict) -> str:
       </div>
       <div class="hero-side">
         <div class="hero-note">
-          <strong>Live Route Intelligence Workspace</strong>
-          <div id="route-intel-copy">Persisted route posture and route-weather insight will appear here after hydration.</div>
+          <strong>Route Preview Workspace</strong>
+          <div id="route-intel-copy">Persisted route posture and any available route-weather insight will appear here after hydration.</div>
         </div>
         <div class="hero-note">
           <strong>Voice Navigation Consultation</strong>
@@ -11071,7 +11699,7 @@ def render_navigation_module_page(payload: dict) -> str:
           </label>
           <button type="submit">Preview Route Intelligence</button>
         </form>
-        <p class="status-note" id="navigation-route-note">Use this to run a live route preview and persist the route state.</p>
+        <p class="status-note" id="navigation-route-note">Use this to save a route preview and load live route intelligence when this runtime can provide it.</p>
         <pre id="navigation-route-output">Awaiting route preview.</pre>
       </section>
       <section class="panel span-6">
@@ -11089,7 +11717,7 @@ def render_navigation_module_page(payload: dict) -> str:
       <section class="panel span-6">
         <h2>7. Resume Route History</h2>
         <ul id="route-history-list"></ul>
-        <p class="status-note" id="route-history-note">Stored routes can be resumed across desktop, iPhone, and CarPlay.</p>
+        <p class="status-note" id="route-history-note">Stored routes can be resumed from shared navigation state in this runtime.</p>
       </section>
       <section class="panel span-6">
         <h2>8. Voice Navigation Consultation &amp; Recent Route Continuity</h2>
@@ -11101,12 +11729,12 @@ def render_navigation_module_page(payload: dict) -> str:
       </section>
     </div>
     <section class="footer-capabilities" aria-label="Navigation capability footer">
-      <article class="capability"><strong>Route Intelligence</strong><span>Real-time traffic, incidents, and predictive route insight from the live module payload.</span></article>
-      <article class="capability"><strong>Weather Aware</strong><span>Route-specific weather and timing guidance reflect the latest preview rather than static concept copy.</span></article>
-      <article class="capability"><strong>Smart Stops</strong><span>Suggested places remain tied to the chosen route, detour cost, and category selection.</span></article>
+      <article class="capability"><strong>Route Intelligence</strong><span>When live routing is available, traffic, incidents, and route insight flow into the active route payload.</span></article>
+      <article class="capability"><strong>Weather Aware</strong><span>Route-specific weather and timing guidance reflect the latest available preview rather than static concept copy.</span></article>
+      <article class="capability"><strong>Smart Stops</strong><span>Suggested places stay tied to the stored route context, detour cost, and category selection when preview data is available.</span></article>
       <article class="capability"><strong>Time Optimized</strong><span>Leave-by posture, recent trips, and current origin mode all stay visible in one travel workflow.</span></article>
       <article class="capability"><strong>Family &amp; Travel</strong><span>Saved family places and favorite destinations remain first-class inside the actual planner.</span></article>
-      <article class="capability"><strong>Voice First</strong><span>Recent route continuity and hazard posture feed the voice consultation lane for hands-free travel.</span></article>
+      <article class="capability"><strong>Voice First</strong><span>Recent route continuity and any available hazard posture feed the voice consultation lane for hands-free travel.</span></article>
     </section>
   </main>
   <script>
@@ -11138,20 +11766,38 @@ def render_navigation_module_page(payload: dict) -> str:
       return `<li><strong>${{esc(title)}}</strong><span>${{esc(summary)}}</span>${{detail ? `<span>${{esc(detail)}}</span>` : ""}}</li>`;
     }}
 
+    function routeWarningText(value) {{
+      const text = String(value ?? "").trim();
+      if (!text) return "";
+      const lower = text.toLowerCase();
+      if (lower.includes("certificate_verify_failed") || lower.includes("certificate verify failed")) {{
+        return "Live route intelligence is blocked by upstream certificate verification in this runtime.";
+      }}
+      if (lower.includes("google maps is not configured")) {{
+        return "Google Maps is not configured in this runtime.";
+      }}
+      return text;
+    }}
+
     function render(payload) {{
       const state = payload.navigation_state || {{}};
       const locations = Array.isArray(payload.saved_locations) ? payload.saved_locations : [];
       const preview = payload.route_preview || {{}};
+      const warningText = routeWarningText(preview.warning);
 
       heroStatus.textContent = payload.status || "Stubbed";
       heroLocations.textContent = String(locations.length);
       heroFavorites.textContent = String((state.favorite_destinations || []).length);
       heroRecent.textContent = String((state.recent_destinations || []).length);
       statusNote.textContent = payload.summary || "No navigation summary captured yet.";
-      document.getElementById("route-intel-copy").textContent = preview.summary || "No live route preview is persisted yet.";
-      document.getElementById("voice-copy").textContent = preview.hazard_active
-        ? "Weather or hazard pressure is active on the current route."
-        : "Voice guidance is clear for the current route posture.";
+      document.getElementById("route-intel-copy").textContent = preview.summary || warningText || "No persisted route preview is available yet.";
+      document.getElementById("voice-copy").textContent = warningText
+        ? "Voice guidance is limited to saved route context because live route intelligence is unavailable in this runtime."
+        : (preview.hazard_active
+          ? "Weather or hazard pressure is active on the current route."
+          : (preview.summary
+            ? "Voice guidance is clear for the current route posture."
+            : "Voice guidance will reflect the saved route context after a preview is recorded."));
 
       document.getElementById("navigation-origin").value = (state.last_route || {{}}).origin || "";
       document.getElementById("navigation-destination").value = (state.last_route || {{}}).destination || "";
@@ -11182,7 +11828,7 @@ def render_navigation_module_page(payload: dict) -> str:
         li("Recommended Stop", leadStop.name || "Smart stop", leadStop.address || "No address available."),
         li("Detour Impact", leadStop.distance_from_route_miles != null ? `${{Number(leadStop.distance_from_route_miles).toFixed(1)}} mi off route` : "Minimal detour expected."),
         li("Route Fit", leadStop.route_mile_marker != null ? `Around mile ${{Math.round(Number(leadStop.route_mile_marker))}} on the active route.` : "Route mile marker will appear after a full preview."),
-        li("Next Move", "Use Preview Route Intelligence again to refresh stop rankings and route timing before leaving."),
+        li("Next Move", "Use Preview Route Intelligence again to refresh stop rankings and any available route timing before leaving."),
       ].join("") : '<li><strong>No stop detail yet.</strong><span>Run a route preview and JARVIS will surface a lead stop with detour and route-fit detail here.</span></li>';
 
       stopsList.innerHTML = (preview.sections || []).slice(0, 6).map((section) => li(
@@ -12376,6 +13022,1815 @@ def render_agent_hierarchy_page(runtime: JarvisRuntime) -> str:
     refreshLists();
     syncEditor();
   </script>
+</body>
+</html>"""
+
+
+def render_delegation_report_page(payload: dict[str, object]) -> str:
+    mission_id = str(payload.get("mission_id", "")).strip()
+    mission_title = str(payload.get("mission_title", "")).strip() or "Mission"
+    return_to = str(payload.get("return_to", "")).strip()
+    report = dict(payload.get("report") or {})
+    available = bool(payload.get("available"))
+    status = str(payload.get("status", "")).strip() or ("Useful" if available else "Unavailable")
+    summary = str(payload.get("summary", "")).strip() or "Inspectable delegation report review surface."
+    artifact_ref = str(report.get("artifact_ref", "")).strip()
+    producer_agent = str(report.get("producer_agent", "")).strip() or "not recorded"
+    delegator_agent = str(report.get("delegator_agent", "")).strip() or "not recorded"
+    delegate_agent = str(report.get("delegate_agent", "")).strip() or "not recorded"
+    report_id = str(report.get("report_id", "")).strip() or "not recorded"
+    output_id = str(report.get("output_id", "")).strip() or "not recorded"
+    completion_status = str(report.get("status", "")).strip() or "not recorded"
+    title = str(report.get("title", "")).strip() or "Delegation report"
+    report_summary = str(report.get("summary", "")).strip()
+    report_detail = str(report.get("detail", "")).strip()
+    report_key_output = str(report.get("key_output", "")).strip()
+    report_next_step = str(report.get("next_step", "")).strip()
+    report_evidence_note = str(report.get("evidence_note", "")).strip()
+    created_at = str(report.get("created_at", "")).strip() or "not recorded"
+    outcome_href = (
+        f"/mission-board/artifact-outcome/delegation_report/{escape(report_id)}"
+        f"?mission_id={escape(mission_id)}"
+        f"&return_to=%2Fmission-board%2Fdelegation-report%2F{escape(mission_id)}%2F{escape(report_id)}"
+        if mission_id and report_id != "not recorded"
+        else ""
+    )
+    body_html = (
+        f"<p>{escape(report_detail)}</p>"
+        if report_detail
+        else '<p class="status-note">No additional report body was stored for this delegation. The summary and provenance below are the real inspectable output available in this runtime path.</p>'
+    )
+    return_href = return_to or (f"/mission-board?mission_id={mission_id}#delegation-review-completed" if mission_id else "/mission-board")
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delegation Report Review</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #050b16;
+      --bg-2: #08111f;
+      --panel: rgba(8, 20, 34, 0.9);
+      --panel-strong: rgba(7, 18, 30, 0.98);
+      --line: rgba(111, 229, 255, 0.16);
+      --ink: #edf7ff;
+      --muted: #90b7d4;
+      --cyan: #71e2ff;
+      --ok: #7df0b3;
+      --alert: #ff8b8b;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(65, 171, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 52%, #08111d 100%);
+    }}
+    a, button, input, textarea, select {{ font: inherit; }}
+    a {{ color: inherit; text-decoration: none; }}
+    .shell {{ max-width: 1320px; margin: 0 auto; padding: 24px 28px 40px; display: grid; gap: 18px; }}
+    .hero, .panel {{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }}
+    .hero {{ padding: 18px 20px; display: grid; gap: 12px; }}
+    .eyebrow {{ color: var(--muted); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }}
+    h1, h2 {{ margin: 0; font-weight: 600; }}
+    p {{ margin: 0; line-height: 1.55; }}
+    .actions {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+    .actions a {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--cyan);
+    }}
+    .layout {{ display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; }}
+    .panel {{ padding: 18px; display: grid; gap: 14px; }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .meta div {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    label {{
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }}
+    strong {{ color: var(--cyan); font-weight: 600; }}
+    .chips {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--ink);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }}
+    .chip.accepted {{ color: var(--ok); }}
+    .chip.regressed {{ color: var(--alert); }}
+    .status-note {{ color: var(--muted); }}
+    .body-card {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+    }}
+    pre {{
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--ink);
+      background: rgba(6, 14, 24, 0.88);
+      border: 1px solid rgba(111, 229, 255, 0.1);
+      padding: 14px;
+      overflow: auto;
+    }}
+    @media (max-width: 960px) {{
+      .layout, .meta {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Mission Board Delegation Review</div>
+      <h1>{escape(title)}</h1>
+      <p>{escape(summary)}</p>
+      <div class="chips">
+        <span class="chip {'accepted' if available else 'regressed'}">{escape(status)}</span>
+        <span class="chip {'accepted' if completion_status == 'completed-with-output' else 'regressed'}">{escape(completion_status)}</span>
+      </div>
+      <p class="status-note">This page shows inspectable delegation output and recorded provenance only. It does not by itself prove hidden agent work beyond the stored report fields and artifact reference shown here.</p>
+      <div class="actions">
+        <a href="/mission-board">Back to Mission Board</a>
+        {f'<a href="/mission-board?mission_id={escape(mission_id)}">Open Mission {escape(mission_title)}</a>' if mission_id else ''}
+        <a href="{escape(return_href)}">Return to Delegation Queue</a>
+        {f'<a href="{outcome_href}">Open Outcome Review</a>' if outcome_href else ''}
+        {f'<a href="{escape(artifact_ref)}">Open Raw Artifact</a>' if artifact_ref else ''}
+      </div>
+    </section>
+    <div class="layout">
+      <section class="panel">
+        <h2>Readable Output</h2>
+        <div class="body-card">
+          <label>Summary</label>
+          <strong>{escape(report_summary or "No summary was stored for this delegation report.")}</strong>
+          <label>Key Output</label>
+          <strong>{escape(report_key_output or "No key output was stored for this delegation report.")}</strong>
+          <label>Next Step</label>
+          <strong>{escape(report_next_step or "No next step was stored for this delegation report.")}</strong>
+          <label>Evidence / Provenance Note</label>
+          <strong>{escape(report_evidence_note or "No evidence or provenance note was stored for this delegation report.")}</strong>
+          <label>Detail</label>
+          {body_html}
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Provenance</h2>
+        <div class="meta">
+          <div><label>Mission</label><strong>{escape(mission_title)}</strong></div>
+          <div><label>Mission ID</label><strong>{escape(mission_id or "not recorded")}</strong></div>
+          <div><label>Producer</label><strong>{escape(producer_agent)}</strong></div>
+          <div><label>Delegator</label><strong>{escape(delegator_agent)}</strong></div>
+          <div><label>Delegate</label><strong>{escape(delegate_agent)}</strong></div>
+          <div><label>Completed</label><strong>{escape(created_at)}</strong></div>
+          <div><label>Report ID</label><strong>{escape(report_id)}</strong></div>
+          <div><label>Output ID</label><strong>{escape(output_id)}</strong></div>
+          <div><label>Artifact Ref</label><strong>{escape(artifact_ref or "not recorded")}</strong></div>
+        </div>
+        <div class="body-card">
+          <label>Raw Report Payload</label>
+          <pre>{escape(json.dumps(report, indent=2))}</pre>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>"""
+
+
+def render_artifact_outcome_page(payload: dict[str, object]) -> str:
+    target = dict(payload.get("target") or {})
+    return_to = str(payload.get("return_to", "")).strip()
+    mission_id = str(target.get("mission_id", "")).strip()
+    target_kind = str(target.get("target_kind", "")).strip() or "artifact"
+    target_id = str(target.get("target_id", "")).strip() or "not recorded"
+    target_label = str(target.get("target_label", "")).strip() or target_kind.replace("_", " ")
+    target_category = str(target.get("target_category", "")).strip() or "artifact"
+    artifact_ref = str(target.get("artifact_ref", "")).strip()
+    storage_mode = str(target.get("storage_mode", "")).strip() or "not recorded"
+    backing_store_files = [str(item).strip() for item in list(target.get("backing_store_files") or []) if str(item).strip()]
+    learning_effect = str(payload.get("learning_effect", "")).strip() or "none"
+    history = [dict(item) for item in list(payload.get("outcome_history") or []) if isinstance(item, dict)]
+    latest = dict(payload.get("latest_outcome") or {})
+    available = bool(latest)
+    latest_outcome_value = str(latest.get("outcome", "")).strip()
+    latest_note_value = str(latest.get("note", "")).strip()
+    status = "Outcome Recorded" if available else "No Outcome Recorded Yet"
+    summary = (
+        "This page shows explicit recorded outcome history for this target only."
+        if available
+        else "No outcome has been recorded for this artifact yet in the current runtime path."
+    )
+    authoring_heading = "Update Outcome" if available else "Record Outcome"
+    authoring_intro = (
+        "You can record a new explicit judgment here if the latest outcome needs to be revised."
+        if available
+        else "You can record one explicit outcome judgment here for this real target."
+    )
+    return_href = return_to or "/mission-board"
+    if return_href.startswith("/mission-board/artifact-outcomes"):
+        return_label = "Return to Outcome Summary"
+    elif return_href.startswith("/mission-board/delegation-report/"):
+        return_label = "Return to Delegation Review"
+    elif return_href.startswith("/mission-board"):
+        return_label = "Return to Mission Board"
+    else:
+        return_label = "Return to Review Surface"
+    outcome_rows = (
+        "".join(
+            f"""
+            <div class="history-row">
+              <strong>{escape(str(item.get("outcome", "")).strip() or "not recorded")}</strong>
+              <span>{escape(str(item.get("note", "")).strip() or "No outcome note was recorded.")}</span>
+              <span>{escape(str(item.get("recorded_at", "")).strip() or "not recorded")}</span>
+            </div>
+            """
+            for item in reversed(history)
+        )
+        if history
+        else '<p class="status-note">No explicit outcome has been recorded yet.</p>'
+    )
+    store_files_html = (
+        "<ul>" + "".join(f"<li>{escape(item)}</li>" for item in backing_store_files) + "</ul>"
+        if backing_store_files
+        else '<p class="status-note">No backing store file list is exposed for this target.</p>'
+    )
+    related_review_href = (
+        f"/mission-board/delegation-report/{escape(mission_id)}/{escape(target_id)}"
+        if target_kind == "delegation_report" and mission_id and target_id != "not recorded"
+        else ""
+    )
+    summary_href = "/mission-board/artifact-outcomes"
+    if mission_id:
+        summary_href += "?" + urlencode({"mission_id": mission_id})
+    outcome_options_html = "".join(
+        f'<option value="{escape(item)}"{" selected" if item == latest_outcome_value else ""}>{escape(item)}</option>'
+        for item in ALLOWED_ARTIFACT_OUTCOMES
+    )
+    api_target_payload = {
+        "actor": "Chris",
+        "target_kind": target_kind,
+        "target_id": target_id,
+        "mission_id": mission_id,
+    }
+    api_target_json = json.dumps(api_target_payload)
+    current_review_url = f"/mission-board/artifact-outcome/{target_kind}/{target_id}"
+    query_params: dict[str, str] = {}
+    if mission_id:
+        query_params["mission_id"] = mission_id
+    if return_to:
+        query_params["return_to"] = return_to
+    if query_params:
+        current_review_url += "?" + urlencode(query_params)
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Artifact Outcome Review</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #050b16;
+      --bg-2: #08111f;
+      --panel: rgba(8, 20, 34, 0.9);
+      --panel-strong: rgba(7, 18, 30, 0.98);
+      --line: rgba(111, 229, 255, 0.16);
+      --ink: #edf7ff;
+      --muted: #90b7d4;
+      --cyan: #71e2ff;
+      --ok: #7df0b3;
+      --alert: #ff8b8b;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(65, 171, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 52%, #08111d 100%);
+    }}
+    a {{ color: inherit; text-decoration: none; }}
+    .shell {{ max-width: 1320px; margin: 0 auto; padding: 24px 28px 40px; display: grid; gap: 18px; }}
+    .hero, .panel {{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }}
+    .hero {{ padding: 18px 20px; display: grid; gap: 12px; }}
+    .eyebrow {{ color: var(--muted); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }}
+    h1, h2 {{ margin: 0; font-weight: 600; }}
+    p {{ margin: 0; line-height: 1.55; }}
+    .actions {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+    .actions a {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--cyan);
+    }}
+    .layout {{ display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }}
+    .panel {{ padding: 18px; display: grid; gap: 14px; }}
+    .meta {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .meta div, .history-row {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    label {{
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }}
+    strong {{ color: var(--cyan); font-weight: 600; }}
+    .chips {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--ink);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }}
+    .chip.accepted {{ color: var(--ok); }}
+    .chip.regressed {{ color: var(--alert); }}
+    .status-note {{ color: var(--muted); }}
+    .authoring-form {{
+      display: grid;
+      gap: 12px;
+    }}
+    .field {{
+      display: grid;
+      gap: 8px;
+    }}
+    select, textarea, button {{
+      width: 100%;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--ink);
+      font: inherit;
+    }}
+    select, button {{
+      min-height: 42px;
+      padding: 0 12px;
+    }}
+    textarea {{
+      min-height: 110px;
+      padding: 12px;
+      resize: vertical;
+    }}
+    button {{
+      cursor: pointer;
+      color: var(--cyan);
+      font-weight: 600;
+    }}
+    .authoring-feedback {{
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 14px;
+    }}
+    .authoring-feedback.error {{
+      color: var(--alert);
+    }}
+    .authoring-feedback.success {{
+      color: var(--ok);
+    }}
+    ul {{
+      margin: 0;
+      padding-left: 20px;
+    }}
+    @media (max-width: 960px) {{
+      .layout, .meta {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Artifact Outcome Review</div>
+      <h1>{escape(target_label)}</h1>
+      <p>{escape(summary)}</p>
+      <div class="chips">
+        <span class="chip {'accepted' if available else 'regressed'}">{escape(status)}</span>
+        <span class="chip">{escape(target_kind)}</span>
+        <span class="chip">{escape(target_category)}</span>
+        <span class="chip">learning effect: {escape(learning_effect)}</span>
+      </div>
+      <div class="actions">
+        <a href="{escape(return_href)}">{escape(return_label)}</a>
+        <a href="{escape(summary_href)}">Open Outcome Summary</a>
+        {f'<a href="{related_review_href}">Open Related Review</a>' if related_review_href else ''}
+        {f'<a href="{escape(artifact_ref)}">Open Raw Artifact</a>' if artifact_ref else ''}
+      </div>
+    </section>
+    <div class="layout">
+      <section class="panel">
+        <h2>Outcome History</h2>
+        {outcome_rows}
+      </section>
+      <section class="panel">
+        <h2>Target Provenance</h2>
+        <div class="meta">
+          <div><label>Target Kind</label><strong>{escape(target_kind)}</strong></div>
+          <div><label>Target ID</label><strong>{escape(target_id)}</strong></div>
+          <div><label>Mission ID</label><strong>{escape(mission_id or "not recorded")}</strong></div>
+          <div><label>Storage Mode</label><strong>{escape(storage_mode)}</strong></div>
+          <div><label>Artifact Ref</label><strong>{escape(artifact_ref or "not recorded")}</strong></div>
+          <div><label>Latest Outcome</label><strong>{escape(str(latest.get("outcome", "")).strip() or "not recorded")}</strong></div>
+          <div><label>Latest Note</label><strong>{escape(str(latest.get("note", "")).strip() or "not recorded")}</strong></div>
+          <div><label>Latest Recorded</label><strong>{escape(str(latest.get("recorded_at", "")).strip() or "not recorded")}</strong></div>
+          <div><label>Recorded By</label><strong>{escape(str(latest.get("recorded_by", "")).strip() or "not recorded")}</strong></div>
+        </div>
+        <div class="history-row">
+          <label>Backing Store Files</label>
+          {store_files_html}
+        </div>
+        <div class="history-row">
+          <label>Learning Boundary</label>
+          <span>No automatic learning or behavior change is implied by this surface.</span>
+        </div>
+      </section>
+    </div>
+    <section class="panel">
+      <h2>{escape(authoring_heading)}</h2>
+      <p class="status-note">{escape(authoring_intro)}</p>
+      <form class="authoring-form" id="artifact-outcome-form">
+        <div class="field">
+          <label for="artifact-outcome-select">Outcome</label>
+          <select id="artifact-outcome-select" name="outcome">
+            {outcome_options_html}
+          </select>
+        </div>
+        <div class="field">
+          <label for="artifact-outcome-note">Note</label>
+          <textarea id="artifact-outcome-note" name="note" placeholder="Optional plain-language note about what happened next.">{escape(latest_note_value)}</textarea>
+        </div>
+        <button id="artifact-outcome-submit" type="submit">{escape(authoring_heading)}</button>
+        <div class="authoring-feedback" id="artifact-outcome-feedback" aria-live="polite"></div>
+      </form>
+      <p class="status-note">Recording an outcome here updates the real stored review history for this target. It does not trigger automatic learning or behavior change.</p>
+    </section>
+  </main>
+  <script>
+    (() => {{
+      const form = document.getElementById("artifact-outcome-form");
+      const feedback = document.getElementById("artifact-outcome-feedback");
+      const select = document.getElementById("artifact-outcome-select");
+      const note = document.getElementById("artifact-outcome-note");
+      const submit = document.getElementById("artifact-outcome-submit");
+      const basePayload = {api_target_json};
+      const reviewUrl = {json.dumps(current_review_url)};
+
+      form?.addEventListener("submit", async (event) => {{
+        event.preventDefault();
+        feedback.textContent = "Recording outcome...";
+        feedback.className = "authoring-feedback";
+        submit.disabled = true;
+        try {{
+          const response = await fetch("/api/artifact-outcomes", {{
+            method: "POST",
+            headers: {{
+              "Content-Type": "application/json",
+            }},
+            body: JSON.stringify({{
+              ...basePayload,
+              outcome: select.value,
+              note: note.value.trim(),
+            }}),
+          }});
+          const payload = await response.json().catch(() => ({{}}));
+          if (!response.ok) {{
+            throw new Error(String(payload.detail || "Outcome recording is unavailable in the current runtime path."));
+          }}
+          feedback.textContent = "Outcome recorded. Reloading the readable review state...";
+          feedback.className = "authoring-feedback success";
+          window.location.assign(reviewUrl);
+        }} catch (error) {{
+          feedback.textContent = error instanceof Error ? error.message : "Outcome recording is unavailable in the current runtime path.";
+          feedback.className = "authoring-feedback error";
+        }} finally {{
+          submit.disabled = false;
+        }}
+      }});
+    }})();
+  </script>
+</body>
+</html>"""
+
+
+def render_artifact_outcome_summary_page(payload: dict[str, object]) -> str:
+    mission_id = str(payload.get("mission_id", "")).strip()
+    total_records = int(payload.get("total_records", 0) or 0)
+    learning_effect = str(payload.get("learning_effect", "")).strip() or "none"
+    counts_by_outcome = dict(payload.get("counts_by_outcome") or {})
+    counts_by_target_kind = dict(payload.get("counts_by_target_kind") or {})
+    counts_by_mission = dict(payload.get("counts_by_mission") or {})
+    recent_outcomes = [dict(item) for item in list(payload.get("recent_outcomes") or []) if isinstance(item, dict)]
+    scope_label = f"Mission {mission_id}" if mission_id else "All Recorded Outcomes"
+    summary = (
+        f"This page shows the explicit recorded outcome history for mission {mission_id}."
+        if mission_id
+        else "This page shows the explicit recorded outcome history across the current runtime path."
+    )
+    return_href = f"/mission-board?mission_id={mission_id}" if mission_id else "/mission-board"
+    current_summary_href = "/mission-board/artifact-outcomes"
+    if mission_id:
+        current_summary_href += "?" + urlencode({"mission_id": mission_id})
+    counts_by_outcome_html = (
+        "".join(
+            f'<div class="stat-card"><label>{escape(str(key))}</label><strong>{int(value)}</strong></div>'
+            for key, value in sorted(counts_by_outcome.items())
+        )
+        if counts_by_outcome
+        else '<p class="status-note">No explicit outcomes have been recorded yet.</p>'
+    )
+    counts_by_target_kind_html = (
+        "".join(
+            f'<div class="stat-card"><label>{escape(str(key))}</label><strong>{int(value)}</strong></div>'
+            for key, value in sorted(counts_by_target_kind.items())
+        )
+        if counts_by_target_kind
+        else '<p class="status-note">No target-kind counts are available yet.</p>'
+    )
+    counts_by_mission_html = (
+        "".join(
+            f'<div class="stat-card"><label>{escape(str(key))}</label><strong>{int(value)}</strong></div>'
+            for key, value in sorted(counts_by_mission.items())
+        )
+        if counts_by_mission
+        else '<p class="status-note">No mission-scoped counts are available yet.</p>'
+    )
+    recent_rows_html = (
+        "".join(
+            f"""
+            <div class="history-row">
+              <div>
+                <label>{escape(str(item.get("target_label", "")).strip() or str(item.get("target_kind", "")).strip() or "artifact")}</label>
+                <strong>{escape(str(item.get("outcome", "")).strip() or "not recorded")}</strong>
+              </div>
+              <span>{escape(str(item.get("note", "")).strip() or "No outcome note was recorded.")}</span>
+              <span>{escape(str(item.get("recorded_at", "")).strip() or "not recorded")}</span>
+              <div class="row-actions">
+                <span>{escape(str(item.get("target_kind", "")).strip() or "artifact")}</span>
+                <a href="/mission-board/artifact-outcome/{escape(str(item.get("target_kind", "")).strip())}/{escape(str(item.get("target_id", "")).strip())}?{urlencode({'mission_id': str(item.get('mission_id', '')).strip(), 'return_to': current_summary_href}) if str(item.get('mission_id', '')).strip() else urlencode({'return_to': current_summary_href})}">Open Review</a>
+              </div>
+            </div>
+            """
+            for item in recent_outcomes
+        )
+        if recent_outcomes
+        else '<p class="status-note">No explicit outcomes have been recorded yet in this scope.</p>'
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Outcome Summary</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #050b16;
+      --bg-2: #08111f;
+      --panel: rgba(8, 20, 34, 0.9);
+      --panel-strong: rgba(7, 18, 30, 0.98);
+      --line: rgba(111, 229, 255, 0.16);
+      --ink: #edf7ff;
+      --muted: #90b7d4;
+      --cyan: #71e2ff;
+      --ok: #7df0b3;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(65, 171, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 52%, #08111d 100%);
+    }}
+    a {{ color: inherit; text-decoration: none; }}
+    .shell {{ max-width: 1320px; margin: 0 auto; padding: 24px 28px 40px; display: grid; gap: 18px; }}
+    .hero, .panel {{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }}
+    .hero, .panel {{ padding: 18px; display: grid; gap: 12px; }}
+    .eyebrow {{ color: var(--muted); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }}
+    h1, h2 {{ margin: 0; font-weight: 600; }}
+    p {{ margin: 0; line-height: 1.55; }}
+    .actions {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+    .actions a {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--cyan);
+    }}
+    .chips {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--ink);
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }}
+    .layout {{ display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }}
+    .stats {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .stat-card, .history-row {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    .history-row {{
+      grid-template-columns: 1.2fr 1.5fr 1fr auto;
+      align-items: start;
+    }}
+    .row-actions {{
+      display: grid;
+      gap: 8px;
+      justify-items: end;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }}
+    .row-actions a {{
+      min-height: 32px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--cyan);
+    }}
+    label {{
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }}
+    strong {{ color: var(--cyan); font-weight: 600; }}
+    .status-note {{ color: var(--muted); }}
+    @media (max-width: 960px) {{
+      .layout, .stats {{ grid-template-columns: 1fr; }}
+      .history-row {{ grid-template-columns: 1fr; }}
+      .row-actions {{ justify-items: start; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Outcome Summary</div>
+      <h1>{escape(scope_label)}</h1>
+      <p>{escape(summary)}</p>
+      <div class="chips">
+        <span class="chip">total records: {total_records}</span>
+        <span class="chip">learning effect: {escape(learning_effect)}</span>
+      </div>
+      <div class="actions">
+        <a href="{escape(return_href)}">Return</a>
+        <a href="/api/artifact-outcomes-summary{('?' + urlencode({'mission_id': mission_id})) if mission_id else ''}">Open Raw Summary</a>
+      </div>
+    </section>
+    <div class="layout">
+      <section class="panel">
+        <h2>Counts By Outcome</h2>
+        <div class="stats">
+          {counts_by_outcome_html}
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Counts By Target Kind</h2>
+        <div class="stats">
+          {counts_by_target_kind_html}
+        </div>
+      </section>
+    </div>
+    <section class="panel">
+      <h2>Counts By Mission</h2>
+      <div class="stats">
+        {counts_by_mission_html}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Recent Explicit Outcomes</h2>
+      <p class="status-note">This is recorded outcome history only. It does not imply automatic learning, optimization, or behavior change.</p>
+      {recent_rows_html}
+    </section>
+  </main>
+</body>
+</html>"""
+
+
+def render_research_task_queue_page(payload: dict[str, object]) -> str:
+    tasks = [dict(item) for item in list(payload.get("tasks") or []) if isinstance(item, dict)]
+    counts_by_status = dict(payload.get("counts_by_status") or {})
+    total_tasks = int(payload.get("total_tasks", 0) or 0)
+    research_effect = str(payload.get("research_effect", "")).strip() or "not_performed"
+    current_queue_href = "/mission-board/research-tasks"
+    counts_html = (
+        "".join(
+            f'<div class="stat-card"><label>{escape(str(key))}</label><strong>{int(value)}</strong></div>'
+            for key, value in sorted(counts_by_status.items())
+        )
+        if counts_by_status
+        else '<p class="status-note">No research tasks are queued yet.</p>'
+    )
+    task_cards_html = (
+        "".join(
+            f"""
+            <article class="task-card">
+              <div class="task-topline">
+                <div>
+                  <label>{escape(str(item.get("title", "")).strip() or "Research task")}</label>
+                  <h2>{escape(str(item.get("question", "")).strip() or "No research question recorded.")}</h2>
+                </div>
+                <div class="chips">
+                  <span class="chip">{escape(str(item.get("status", "")).strip() or "queued")}</span>
+                  <span class="chip">{escape(str(item.get("object_kind", "")).strip() or "research_task")}</span>
+                </div>
+              </div>
+              <div class="task-grid">
+                <div><label>Task ID</label><strong>{escape(str(item.get("task_id", "")).strip() or "not recorded")}</strong></div>
+                <div><label>Desired Scope</label><strong>{escape(str(item.get("desired_scope", "")).strip() or "No scope detail recorded.")}</strong></div>
+                <div><label>Constraints</label><strong>{escape(", ".join(str(entry).strip() for entry in list(item.get("constraints") or []) if str(entry).strip()) or "No explicit constraints recorded.")}</strong></div>
+                <div><label>Source Expectations</label><strong>{escape(", ".join(str(entry).strip() for entry in list(item.get("source_expectations") or []) if str(entry).strip()) or "No source expectations recorded.")}</strong></div>
+                <div><label>Created</label><strong>{escape(str(item.get("created_at", "")).strip() or "not recorded")}</strong></div>
+                <div><label>Research State</label><strong>{"Not yet researched" if not bool(item.get("research_performed")) else "Research recorded"}</strong></div>
+              </div>
+              <div class="task-boundary">
+                <span>This task is an inspectable research task record only. It does not claim that research, source discovery, or autonomous background work has already happened.</span>
+                <a href="/mission-board/research-tasks/{escape(str(item.get("task_id", "")).strip())}?return_to={urlencode({'return_to': current_queue_href}).split('=', 1)[1]}">Inspect Research Task Record</a>
+                <a href="/api/research-tasks/{escape(str(item.get("task_id", "")).strip())}">Open Raw Task</a>
+              </div>
+            </article>
+            """
+            for item in tasks
+        )
+        if tasks
+        else '<p class="status-note">No research tasks have been captured in the current runtime path.</p>'
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research Task Queue</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #050b16;
+      --bg-2: #08111f;
+      --panel: rgba(8, 20, 34, 0.9);
+      --panel-strong: rgba(7, 18, 30, 0.98);
+      --line: rgba(111, 229, 255, 0.16);
+      --ink: #edf7ff;
+      --muted: #90b7d4;
+      --cyan: #71e2ff;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(65, 171, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 52%, #08111d 100%);
+    }}
+    a {{ color: inherit; text-decoration: none; }}
+    .shell {{ max-width: 1320px; margin: 0 auto; padding: 24px 28px 40px; display: grid; gap: 18px; }}
+    .hero, .panel, .task-card {{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }}
+    .hero, .panel, .task-card {{ padding: 18px; display: grid; gap: 12px; }}
+    .eyebrow, label {{ color: var(--muted); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }}
+    h1, h2 {{ margin: 0; font-weight: 600; }}
+    p {{ margin: 0; line-height: 1.55; }}
+    .actions, .chips {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+    .actions a, .chip, .task-boundary a {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--cyan);
+    }}
+    .chip {{ min-height: 28px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); }}
+    .stats, .task-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }}
+    .stat-card, .task-grid div {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    strong {{ color: var(--cyan); font-weight: 600; }}
+    .task-topline, .task-boundary {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      flex-wrap: wrap;
+    }}
+    .task-boundary {{
+      border-top: 1px solid rgba(111, 229, 255, 0.12);
+      padding-top: 12px;
+      color: var(--muted);
+    }}
+    .status-note {{ color: var(--muted); }}
+    @media (max-width: 960px) {{
+      .stats, .task-grid {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Research Task Queue</div>
+      <h1>Inspectable Research Task Records</h1>
+      <p>This surface shows inspectable research task records only. A queued task here does not mean the research has already been performed.</p>
+      <div class="chips">
+        <span class="chip">total tasks: {total_tasks}</span>
+        <span class="chip">research effect: {escape(research_effect)}</span>
+      </div>
+      <div class="actions">
+        <a href="/mission-board">Return to Mission Board</a>
+        <a href="/api/research-tasks">Open Raw Queue</a>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Counts By Status</h2>
+      <div class="stats">
+        {counts_html}
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Queued Tasks</h2>
+      <p class="status-note">No automatic web research, source discovery, or background execution is implied by this queue.</p>
+      {task_cards_html}
+    </section>
+  </main>
+</body>
+</html>"""
+
+
+def render_research_task_page(payload: dict[str, object]) -> str:
+    task = dict(payload.get("task") or {})
+    return_to = str(payload.get("return_to", "")).strip() or "/mission-board/research-tasks"
+    task_id = str(task.get("task_id", "")).strip() or "not recorded"
+    title = str(task.get("title", "")).strip() or "Research task"
+    question = str(task.get("question", "")).strip() or "No research question recorded."
+    desired_scope = str(task.get("desired_scope", "")).strip() or "No scope detail recorded."
+    status = str(task.get("status", "")).strip() or "queued"
+    constraints = [str(item).strip() for item in list(task.get("constraints") or []) if str(item).strip()]
+    source_expectations = [str(item).strip() for item in list(task.get("source_expectations") or []) if str(item).strip()]
+    evidence_items = [dict(item) for item in list(task.get("evidence_items") or []) if isinstance(item, dict)]
+    synthesis = dict(task.get("synthesis") or {})
+    created_at = str(task.get("created_at", "")).strip() or "not recorded"
+    updated_at = str(task.get("updated_at", "")).strip() or "not recorded"
+    truth_mode = str(task.get("truth_mode", "")).strip() or "explicit_intent_only"
+    research_effect = str(payload.get("research_effect", "")).strip() or "not_performed"
+    allowed_statuses = [str(item).strip() for item in list(payload.get("allowed_statuses") or []) if str(item).strip()]
+    research_state = "Research has not yet been performed for this task in the current runtime path."
+    raw_task_href = f"/api/research-tasks/{task_id}"
+    status_options_html = "".join(
+        f'<option value="{escape(item)}"{" selected" if item == status else ""}>{escape(item)}</option>'
+        for item in allowed_statuses
+    )
+    current_review_url = f"/mission-board/research-tasks/{task_id}?{urlencode({'return_to': return_to})}"
+    evidence_rows_html = (
+        "".join(
+            f"""
+            <div class="evidence-card">
+              <div class="task-topline">
+                <div>
+                  <label>{escape(str(item.get("source_label", "")).strip() or "Evidence item")}</label>
+                  <strong>{escape(str(item.get("source_locator", "")).strip() or "No locator recorded.")}</strong>
+                </div>
+                <div class="chips">
+                  <span class="chip">{escape(str(item.get("capture_status", "")).strip() or "captured")}</span>
+                  <span class="chip">{escape(str(item.get("confidence_label", "")).strip() or "confidence not recorded")}</span>
+                  <span class="chip">{escape(str(item.get("capture_mode", "")).strip() or "manual_entry")}</span>
+                </div>
+              </div>
+              <div class="boundary">
+                <label>Evidence Note</label>
+                <strong>{escape(str(item.get("evidence_note", "")).strip() or "No evidence note recorded.")}</strong>
+                <span class="status-note">Captured at {escape(str(item.get("captured_at", "")).strip() or "not recorded")}. This item does not by itself prove final synthesis, validation, or completed research.</span>
+              </div>
+            </div>
+            """
+            for item in evidence_items
+        )
+        if evidence_items
+        else '<p class="status-note">No explicit evidence items have been attached to this task yet.</p>'
+    )
+    synthesis_html = (
+        f"""
+        <div class="boundary">
+          <label>Latest Summary</label>
+          <strong>{escape(str(synthesis.get("summary", "")).strip() or "No synthesis summary recorded.")}</strong>
+          <span class="status-note">Generated at {escape(str(synthesis.get("generated_at", "")).strip() or "not recorded")} from {escape(str(synthesis.get("evidence_count", 0) or 0))} attached evidence item(s). This remains an attached-evidence-only synthesis.</span>
+        </div>
+        <div class="grid">
+          <div>
+            <label>Synthesis Mode</label>
+            <strong>{escape(str(synthesis.get("synthesis_mode", "")).strip() or "attached_evidence_only")}</strong>
+          </div>
+          <div>
+            <label>Evidence IDs Used</label>
+            <strong>{escape(", ".join(str(item).strip() for item in list(synthesis.get("evidence_ids_used") or []) if str(item).strip()) or "No evidence ids recorded.")}</strong>
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>What Appears Supported</label>
+            <ul>{"".join(f"<li>{escape(str(item).strip())}</li>" for item in list(synthesis.get("supported_points") or []) if str(item).strip()) or "<li>No supported points recorded.</li>"}</ul>
+          </div>
+          <div>
+            <label>Uncertain / Missing</label>
+            <ul>{
+                "".join(f"<li>{escape(str(item).strip())}</li>" for item in ([*list(synthesis.get("uncertainties") or []), *list(synthesis.get("missing_information") or [])]) if str(item).strip())
+                or "<li>No explicit uncertainty notes recorded.</li>"
+            }</ul>
+          </div>
+        </div>
+        """
+        if synthesis
+        else '<p class="status-note">No evidence-backed synthesis has been generated for this task yet. Attach at least one evidence item first, then generate a task-scoped synthesis from that attached evidence only.</p>'
+    )
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research Task Review</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #050b16;
+      --bg-2: #08111f;
+      --panel: rgba(8, 20, 34, 0.9);
+      --panel-strong: rgba(7, 18, 30, 0.98);
+      --line: rgba(111, 229, 255, 0.16);
+      --ink: #edf7ff;
+      --muted: #90b7d4;
+      --cyan: #71e2ff;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(65, 171, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 52%, #08111d 100%);
+    }}
+    a {{ color: inherit; text-decoration: none; }}
+    .shell {{ max-width: 1200px; margin: 0 auto; padding: 24px 28px 40px; display: grid; gap: 18px; }}
+    .hero, .panel {{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }}
+    .eyebrow, label {{ color: var(--muted); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }}
+    h1, h2 {{ margin: 0; font-weight: 600; }}
+    p {{ margin: 0; line-height: 1.55; }}
+    .actions, .chips {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+    .actions a, .chip {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--cyan);
+    }}
+    .chip {{ min-height: 28px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .grid div, .boundary {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    .evidence-card {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 10px;
+    }}
+    .field {{
+      display: grid;
+      gap: 8px;
+    }}
+    input, select, textarea, button {{
+      width: 100%;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--ink);
+      font: inherit;
+    }}
+    input, select, button {{
+      min-height: 42px;
+      padding: 0 12px;
+    }}
+    textarea {{
+      min-height: 96px;
+      padding: 12px;
+      resize: vertical;
+    }}
+    button {{
+      cursor: pointer;
+      color: var(--cyan);
+      font-weight: 600;
+    }}
+    .update-feedback {{
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 14px;
+    }}
+    .update-feedback.error {{ color: #ff8b8b; }}
+    .update-feedback.success {{ color: #7df0b3; }}
+    strong {{ color: var(--cyan); font-weight: 600; }}
+    .status-note {{ color: var(--muted); }}
+    ul {{
+      margin: 0;
+      padding-left: 20px;
+    }}
+    @media (max-width: 960px) {{
+      .grid {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Research Task Review</div>
+      <h1>{escape(title)}</h1>
+      <p>{escape(question)}</p>
+      <div class="chips">
+        <span class="chip">{escape(status)}</span>
+        <span class="chip">{escape(str(task.get("object_kind", "")).strip() or "research_task")}</span>
+        <span class="chip">research effect: {escape(research_effect)}</span>
+      </div>
+      <div class="actions">
+        <a href="{escape(return_to)}">Return to Research Task Queue</a>
+        <a href="{escape(raw_task_href)}">Open Raw Task</a>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Task Detail</h2>
+      <div class="grid">
+        <div><label>Task ID</label><strong>{escape(task_id)}</strong></div>
+        <div><label>Created</label><strong>{escape(created_at)}</strong></div>
+        <div><label>Updated</label><strong>{escape(updated_at)}</strong></div>
+        <div><label>Desired Scope</label><strong>{escape(desired_scope)}</strong></div>
+        <div><label>Truth Mode</label><strong>{escape(truth_mode)}</strong></div>
+        <div><label>Constraints</label><strong>{escape(", ".join(constraints) or "No explicit constraints recorded.")}</strong></div>
+        <div><label>Source Expectations</label><strong>{escape(", ".join(source_expectations) or "No source expectations recorded.")}</strong></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Research Boundary</h2>
+      <div class="boundary">
+        <label>Current State</label>
+        <strong>{escape(research_state)}</strong>
+        <span class="status-note">This task is an inspectable research task record only. It does not claim completed research, discovered sources, or autonomous background execution.</span>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Evidence Items</h2>
+      <p class="status-note">Evidence items captured here are explicit attached inputs only. They do not, by themselves, prove final conclusions, validated synthesis, or completed research.</p>
+      {evidence_rows_html}
+    </section>
+    <section class="panel">
+      <h2>Evidence-Backed Synthesis</h2>
+      <p class="status-note">This synthesis flow uses only the evidence items already attached to this task. Attach at least one evidence item first. It must stay explicit about what seems supported, what remains uncertain, and what is still missing or unverified.</p>
+      {synthesis_html}
+      <form id="research-task-synthesis-form" style="display: grid; gap: 10px; margin-top: 12px;">
+        <button id="research-task-synthesis-submit" type="submit">Generate Evidence-Backed Synthesis</button>
+        <div id="research-task-synthesis-feedback" class="update-feedback" aria-live="polite"></div>
+      </form>
+    </section>
+    <section class="panel">
+      <h2>Update Task</h2>
+      <p class="status-note">You can revise the task fields and move the status through the bounded workflow here. Changing status alone still does not prove that research output or sources exist.</p>
+      <form id="research-task-update-form" class="grid">
+        <div class="field">
+          <label for="research-task-title">Title</label>
+          <input id="research-task-title" name="title" value="{escape(title)}">
+        </div>
+        <div class="field">
+          <label for="research-task-status">Status</label>
+          <select id="research-task-status" name="status">
+            {status_options_html}
+          </select>
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label for="research-task-question">Research Question</label>
+          <textarea id="research-task-question" name="question">{escape(question)}</textarea>
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label for="research-task-scope">Desired Scope</label>
+          <textarea id="research-task-scope" name="desired_scope">{escape(desired_scope)}</textarea>
+        </div>
+        <div class="field">
+          <label for="research-task-constraints">Constraints</label>
+          <textarea id="research-task-constraints" name="constraints">{escape("\\n".join(constraints))}</textarea>
+        </div>
+        <div class="field">
+          <label for="research-task-sources">Source Expectations</label>
+          <textarea id="research-task-sources" name="source_expectations">{escape("\\n".join(source_expectations))}</textarea>
+        </div>
+        <div style="grid-column: 1 / -1; display: grid; gap: 10px;">
+          <button id="research-task-update-submit" type="submit">Update Research Task</button>
+          <div id="research-task-update-feedback" class="update-feedback" aria-live="polite"></div>
+        </div>
+      </form>
+    </section>
+    <section class="panel">
+      <h2>Add Evidence Item</h2>
+      <p class="status-note">Use this flow for explicit manual evidence capture. It records what was attached, but it does not claim that Jarvis discovered the source or finished the research task.</p>
+      <form id="research-task-evidence-form" class="grid">
+        <div class="field">
+          <label for="research-evidence-label">Source Label</label>
+          <input id="research-evidence-label" name="source_label" placeholder="Example: City comparison spreadsheet">
+        </div>
+        <div class="field">
+          <label for="research-evidence-locator">Source Locator or URL/Path</label>
+          <input id="research-evidence-locator" name="source_locator" placeholder="https://example.com or /local/path">
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label for="research-evidence-note">Evidence Note</label>
+          <textarea id="research-evidence-note" name="evidence_note" placeholder="Short excerpt summary or why this item matters."></textarea>
+        </div>
+        <div class="field">
+          <label for="research-evidence-status">Capture Status</label>
+          <input id="research-evidence-status" name="capture_status" value="captured">
+        </div>
+        <div class="field">
+          <label for="research-evidence-confidence">Confidence</label>
+          <input id="research-evidence-confidence" name="confidence_label" placeholder="Example: preliminary">
+        </div>
+        <div style="grid-column: 1 / -1; display: grid; gap: 10px;">
+          <button id="research-task-evidence-submit" type="submit">Attach Evidence Item</button>
+          <div id="research-task-evidence-feedback" class="update-feedback" aria-live="polite"></div>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script>
+    (() => {{
+      const form = document.getElementById("research-task-synthesis-form");
+      const feedback = document.getElementById("research-task-synthesis-feedback");
+      const submit = document.getElementById("research-task-synthesis-submit");
+      const reviewUrl = {json.dumps(current_review_url)};
+      form?.addEventListener("submit", async (event) => {{
+        event.preventDefault();
+        feedback.textContent = "Generating attached-evidence-only synthesis...";
+        feedback.className = "update-feedback";
+        submit.disabled = true;
+        try {{
+          const response = await fetch("/api/research-tasks/{escape(task_id)}/synthesis", {{
+            method: "POST",
+            headers: {{
+              "Content-Type": "application/json",
+            }},
+            body: JSON.stringify({{}}),
+          }});
+          const payload = await response.json().catch(() => ({{}}));
+          if (!response.ok) {{
+            throw new Error(String(payload.detail || "Evidence-backed synthesis is unavailable in the current runtime path."));
+          }}
+          feedback.textContent = "Synthesis generated. Reloading the readable review state...";
+          feedback.className = "update-feedback success";
+          window.location.assign(reviewUrl);
+        }} catch (error) {{
+          feedback.textContent = error instanceof Error ? error.message : "Evidence-backed synthesis is unavailable in the current runtime path.";
+          feedback.className = "update-feedback error";
+        }} finally {{
+          submit.disabled = false;
+        }}
+      }});
+    }})();
+    (() => {{
+      const form = document.getElementById("research-task-update-form");
+      const feedback = document.getElementById("research-task-update-feedback");
+      const submit = document.getElementById("research-task-update-submit");
+      const reviewUrl = {json.dumps(current_review_url)};
+      const splitLines = (value) => value.split("\\n").map((item) => item.trim()).filter(Boolean);
+      form?.addEventListener("submit", async (event) => {{
+        event.preventDefault();
+        feedback.textContent = "Updating task...";
+        feedback.className = "update-feedback";
+        submit.disabled = true;
+        try {{
+          const response = await fetch("/api/research-tasks/{escape(task_id)}", {{
+            method: "POST",
+            headers: {{
+              "Content-Type": "application/json",
+            }},
+            body: JSON.stringify({{
+              title: document.getElementById("research-task-title").value,
+              question: document.getElementById("research-task-question").value,
+              desired_scope: document.getElementById("research-task-scope").value,
+              status: document.getElementById("research-task-status").value,
+              constraints: splitLines(document.getElementById("research-task-constraints").value),
+              source_expectations: splitLines(document.getElementById("research-task-sources").value),
+            }}),
+          }});
+          const payload = await response.json().catch(() => ({{}}));
+          if (!response.ok) {{
+            throw new Error(String(payload.detail || "Research task update is unavailable in the current runtime path."));
+          }}
+          feedback.textContent = "Task updated. Reloading the readable review state...";
+          feedback.className = "update-feedback success";
+          window.location.assign(reviewUrl);
+        }} catch (error) {{
+          feedback.textContent = error instanceof Error ? error.message : "Research task update is unavailable in the current runtime path.";
+          feedback.className = "update-feedback error";
+        }} finally {{
+          submit.disabled = false;
+        }}
+      }});
+    }})();
+    (() => {{
+      const form = document.getElementById("research-task-evidence-form");
+      const feedback = document.getElementById("research-task-evidence-feedback");
+      const submit = document.getElementById("research-task-evidence-submit");
+      const reviewUrl = {json.dumps(current_review_url)};
+      form?.addEventListener("submit", async (event) => {{
+        event.preventDefault();
+        feedback.textContent = "Attaching evidence item...";
+        feedback.className = "update-feedback";
+        submit.disabled = true;
+        try {{
+          const response = await fetch("/api/research-tasks/{escape(task_id)}/evidence", {{
+            method: "POST",
+            headers: {{
+              "Content-Type": "application/json",
+            }},
+            body: JSON.stringify({{
+              source_label: document.getElementById("research-evidence-label").value,
+              source_locator: document.getElementById("research-evidence-locator").value,
+              evidence_note: document.getElementById("research-evidence-note").value,
+              capture_status: document.getElementById("research-evidence-status").value,
+              confidence_label: document.getElementById("research-evidence-confidence").value,
+            }}),
+          }});
+          const payload = await response.json().catch(() => ({{}}));
+          if (!response.ok) {{
+            throw new Error(String(payload.detail || "Evidence capture is unavailable in the current runtime path."));
+          }}
+          feedback.textContent = "Evidence item attached. Reloading the readable review state...";
+          feedback.className = "update-feedback success";
+          window.location.assign(reviewUrl);
+        }} catch (error) {{
+          feedback.textContent = error instanceof Error ? error.message : "Evidence capture is unavailable in the current runtime path.";
+          feedback.className = "update-feedback error";
+        }} finally {{
+          submit.disabled = false;
+        }}
+      }});
+    }})();
+  </script>
+</body>
+</html>"""
+
+
+def render_autonomy_state_queue_page(payload: dict[str, object]) -> str:
+    states = [dict(item) for item in list(payload.get("autonomy_states") or []) if isinstance(item, dict)]
+    counts_by_status = dict(payload.get("counts_by_status") or {})
+    queue_rows_html = (
+        "".join(
+            f"""
+            <div class="task-card">
+              <div class="task-topline">
+                <div>
+                  <label>{escape(str(item.get("title", "")).strip() or "Autonomy state")}</label>
+                  <strong>{escape(str(item.get("objective", "")).strip() or "No autonomy objective recorded.")}</strong>
+                </div>
+                <div class="chips">
+                  <span class="chip">{escape(str(item.get("status", "")).strip() or "queued")}</span>
+                  <span class="chip">{escape(str(item.get("object_kind", "")).strip() or "autonomy_state")}</span>
+                </div>
+              </div>
+              <div class="grid">
+                <div><label>Autonomy ID</label><strong>{escape(str(item.get("autonomy_id", "")).strip() or "not recorded")}</strong></div>
+                <div><label>Initiated By</label><strong>{escape(str(item.get("initiated_by", "")).strip() or "not recorded")}</strong></div>
+                <div><label>Current Focus</label><strong>{escape(str(item.get("current_focus", "")).strip() or "No current focus recorded.")}</strong></div>
+                <div><label>Next Step</label><strong>{escape(str(item.get("next_step", "")).strip() or "No next step recorded.")}</strong></div>
+                <div><label>Approval State</label><strong>{escape(str(item.get("approval_state", "")).strip() or "required")}</strong></div>
+                <div><label>Allowed Boundary</label><strong>{escape(str(item.get("allowed_action_boundary", "")).strip() or "record_visibility_only")}</strong></div>
+                <div><label>Proposed Actions</label><strong>{escape(str(item.get("planned_action_count", 0) or 0))}</strong></div>
+                <div><label>Control Posture</label><strong>{escape(str(item.get("current_control_posture", "")).strip() or "recorded_active")}</strong></div>
+                <div><label>Readiness State</label><strong>{escape(str(item.get("readiness_state", "")).strip() or "not_ready")}</strong></div>
+                <div><label>Follow-Through</label><strong>{escape(str(item.get("local_follow_through_status", "")).strip() or "not_triggered")}</strong></div>
+                <div><label>Updated</label><strong>{escape(str(item.get("updated_at", "")).strip() or "not recorded")}</strong></div>
+              </div>
+              <div class="boundary">
+                <label>Initiation Boundary</label>
+                <strong>{escape(str(item.get("requested_scope", "")).strip() or "No explicit requested scope recorded.")}</strong>
+                <span class="status-note">Reason: {escape(str(item.get("initiation_reason", "")).strip() or "No initiation reason recorded.")}</span>
+                <span class="status-note">Blocked reason: {escape(str(item.get("blocked_reason", "")).strip() or "No blocked reason recorded.")}</span>
+                <span class="status-note">Planned actions remain proposed only unless a later slice records real execution.</span>
+                <span class="status-note">This surface shows stored autonomy records and boundaries. It does not by itself prove autonomous execution, fake agents, or completed background work.</span>
+                <a href="/mission-board/autonomy-states/{escape(str(item.get('autonomy_id', '')).strip())}?return_to=%2Fmission-board%2Fautonomy-states">Inspect Autonomy State Record</a>
+                <a href="/api/autonomy-states/{escape(str(item.get('autonomy_id', '')).strip())}">Open Raw State</a>
+              </div>
+            </div>
+            """
+            for item in states
+        )
+        if states
+        else '<p class="status-note">No autonomy-state visibility records have been captured in the current runtime path.</p>'
+    )
+    status_summary = ", ".join(f"{escape(str(key))}: {value}" for key, value in sorted(counts_by_status.items())) or "No autonomy states recorded."
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autonomy State Queue</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #050b16;
+      --bg-2: #08111f;
+      --panel: rgba(8, 20, 34, 0.9);
+      --panel-strong: rgba(7, 18, 30, 0.98);
+      --line: rgba(111, 229, 255, 0.16);
+      --ink: #edf7ff;
+      --muted: #90b7d4;
+      --cyan: #71e2ff;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(65, 171, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 52%, #08111d 100%);
+    }}
+    a {{ color: var(--cyan); text-decoration: none; }}
+    .shell {{ max-width: 1200px; margin: 0 auto; padding: 24px 28px 40px; display: grid; gap: 18px; }}
+    .hero, .panel {{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }}
+    .eyebrow, label {{ color: var(--muted); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }}
+    h1, h2 {{ margin: 0; font-weight: 600; }}
+    p {{ margin: 0; line-height: 1.55; }}
+    .actions, .chips {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+    .chip {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 0 12px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--ink);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .grid div, .boundary, .task-card {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    .task-card {{ gap: 10px; }}
+    .task-topline {{
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }}
+    strong {{ color: var(--cyan); font-weight: 600; }}
+    .status-note {{ color: var(--muted); }}
+    @media (max-width: 960px) {{
+      .grid {{ grid-template-columns: 1fr; }}
+      .task-topline {{ flex-direction: column; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Autonomy State Queue</div>
+      <h1>Recorded Autonomy State and Boundary Queue</h1>
+      <p>This surface makes bounded autonomy state, approval boundaries, planning posture, control posture, readiness, and local follow-through proof legible as stored records. It does not by itself prove autonomous competence, invisible progress, or completed background work.</p>
+      <div class="chips">
+        <span class="chip">states: {escape(str(payload.get("total_states", 0) or 0))}</span>
+        <span class="chip">visibility only</span>
+      </div>
+      <div class="actions">
+        <a href="/api/autonomy-states">Open Raw Queue</a>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Status Summary</h2>
+      <p class="status-note">{status_summary}</p>
+    </section>
+    <section class="panel">
+      <h2>Autonomy States</h2>
+      <p class="status-note">No fake agents, no invisible execution claims, and no implication that stored state equals completed autonomous work.</p>
+      {queue_rows_html}
+    </section>
+  </main>
+</body>
+</html>"""
+
+
+def render_autonomy_state_page(payload: dict[str, object]) -> str:
+    state = dict(payload.get("autonomy_state") or {})
+    return_to = str(payload.get("return_to", "")).strip() or "/mission-board/autonomy-states"
+    autonomy_id = str(state.get("autonomy_id", "")).strip() or "not recorded"
+    title = str(state.get("title", "")).strip() or "Autonomy state"
+    objective = str(state.get("objective", "")).strip() or "No autonomy objective recorded."
+    status = str(state.get("status", "")).strip() or "queued"
+    initiated_by = str(state.get("initiated_by", "")).strip() or "not recorded"
+    current_focus = str(state.get("current_focus", "")).strip() or "No current focus recorded."
+    next_step = str(state.get("next_step", "")).strip() or "No next step recorded."
+    requested_scope = str(state.get("requested_scope", "")).strip() or "No explicit requested scope recorded."
+    initiation_reason = str(state.get("initiation_reason", "")).strip() or "No initiation reason recorded."
+    approval_required = bool(state.get("approval_required", False))
+    approval_state = str(state.get("approval_state", "")).strip() or "required"
+    allowed_action_boundary = str(state.get("allowed_action_boundary", "")).strip() or "record_visibility_only"
+    blocked_reason = str(state.get("blocked_reason", "")).strip() or "No blocked reason recorded."
+    created_at = str(state.get("created_at", "")).strip() or "not recorded"
+    updated_at = str(state.get("updated_at", "")).strip() or "not recorded"
+    visibility_mode = str(state.get("visibility_mode", "")).strip() or "recorded_state_only"
+    current_control_posture = str(state.get("current_control_posture", "")).strip() or "recorded_active"
+    last_control_action = str(state.get("last_control_action", "")).strip() or "No control action recorded."
+    last_control_reason = str(state.get("last_control_reason", "")).strip() or "No control reason recorded."
+    last_control_changed_by = str(state.get("last_control_changed_by", "")).strip() or "No control actor recorded."
+    last_control_changed_at = str(state.get("last_control_changed_at", "")).strip() or "No control change recorded."
+    control_history = [dict(item) for item in list(state.get("control_history") or []) if isinstance(item, dict)]
+    readiness_state = str(state.get("readiness_state", "")).strip() or "not_ready"
+    readiness_reason = str(state.get("readiness_reason", "")).strip() or "No readiness reason recorded."
+    approval_gate_status = str(state.get("approval_gate_status", "")).strip() or "approval_not_satisfied"
+    last_readiness_changed_by = str(state.get("last_readiness_changed_by", "")).strip() or "No readiness actor recorded."
+    last_readiness_changed_at = str(state.get("last_readiness_changed_at", "")).strip() or "No readiness change recorded."
+    readiness_history = [dict(item) for item in list(state.get("readiness_history") or []) if isinstance(item, dict)]
+    local_follow_through_status = str(state.get("local_follow_through_status", "")).strip() or "not_triggered"
+    last_follow_through_effect = str(state.get("last_follow_through_effect", "")).strip() or "No local effect recorded."
+    last_follow_through_triggered_by = str(state.get("last_follow_through_triggered_by", "")).strip() or "No local trigger actor recorded."
+    last_follow_through_triggered_at = str(state.get("last_follow_through_triggered_at", "")).strip() or "No local trigger recorded."
+    last_follow_through_artifact_path = str(state.get("last_follow_through_artifact_path", "")).strip() or "No local artifact recorded."
+    follow_through_history = [dict(item) for item in list(state.get("follow_through_history") or []) if isinstance(item, dict)]
+    planning_note = str(state.get("planning_note", "")).strip() or "No planning note recorded."
+    proposed_actions = [dict(item) for item in list(state.get("proposed_actions") or []) if isinstance(item, dict)]
+    follow_through_history_html = (
+        "".join(
+            f"""
+            <div class="boundary">
+              <label>Local Follow-Through {index}</label>
+              <strong>{escape(str(item.get("status", "")).strip() or "local_proof_created")}</strong>
+              <span class="status-note">Effect: {escape(str(item.get("effect", "")).strip() or "local_status_packet_written")}</span>
+              <span class="status-note">Artifact: {escape(str(item.get("artifact_path", "")).strip() or "No artifact path recorded.")}</span>
+              <span class="status-note">Trigger note: {escape(str(item.get("trigger_note", "")).strip() or "No trigger note recorded.")}</span>
+              <span class="status-note">Triggered by: {escape(str(item.get("triggered_by", "")).strip() or "No trigger actor recorded.")}</span>
+              <span class="status-note">Triggered at: {escape(str(item.get("triggered_at", "")).strip() or "No local trigger recorded.")}</span>
+              <span class="status-note">This is local proof-of-follow-through only. It is not broad autonomous execution, invisible background work, or multi-agent behavior.</span>
+            </div>
+            """
+            for index, item in enumerate(reversed(follow_through_history), start=1)
+        )
+        if follow_through_history
+        else '<p class="status-note">No local follow-through proof has been triggered for this autonomy state yet.</p>'
+    )
+    readiness_history_html = (
+        "".join(
+            f"""
+            <div class="boundary">
+              <label>Readiness Transition {index}</label>
+              <strong>{escape(str(item.get("readiness_state", "")).strip() or "not_ready")}</strong>
+              <span class="status-note">Approval gate: {escape(str(item.get("approval_gate_status", "")).strip() or "approval_not_satisfied")}</span>
+              <span class="status-note">Reason: {escape(str(item.get("readiness_reason", "")).strip() or "No readiness reason recorded.")}</span>
+              <span class="status-note">Changed by: {escape(str(item.get("changed_by", "")).strip() or "No readiness actor recorded.")}</span>
+              <span class="status-note">Changed at: {escape(str(item.get("changed_at", "")).strip() or "No readiness change recorded.")}</span>
+              <span class="status-note">This is a stored readiness gate only, not proof that autonomous follow-through is currently happening.</span>
+            </div>
+            """
+            for index, item in enumerate(reversed(readiness_history), start=1)
+        )
+        if readiness_history
+        else '<p class="status-note">No explicit readiness posture has been recorded for this autonomy state yet.</p>'
+    )
+    control_history_html = (
+        "".join(
+            f"""
+            <div class="boundary">
+              <label>Control Transition {index}</label>
+              <strong>{escape(str(item.get("action", "")).strip() or "unknown")}</strong>
+              <span class="status-note">Resulting posture: {escape(str(item.get("resulting_posture", "")).strip() or "recorded_active")}</span>
+              <span class="status-note">Reason: {escape(str(item.get("reason", "")).strip() or "No control reason recorded.")}</span>
+              <span class="status-note">Changed by: {escape(str(item.get("changed_by", "")).strip() or "No control actor recorded.")}</span>
+              <span class="status-note">Changed at: {escape(str(item.get("changed_at", "")).strip() or "No control change recorded.")}</span>
+              <span class="status-note">This is a recorded control transition only, not proof that real autonomous execution was running and got interrupted.</span>
+            </div>
+            """
+            for index, item in enumerate(reversed(control_history), start=1)
+        )
+        if control_history
+        else '<p class="status-note">No pause, resume, or abort transition has been recorded for this autonomy state yet.</p>'
+    )
+    proposed_actions_html = (
+        "".join(
+            f"""
+            <div class="boundary">
+              <label>Proposed Action {index}</label>
+              <strong>{escape(str(item.get("title", "")).strip() or "Untitled proposed action")}</strong>
+              <span class="status-note">Execution status: {escape(str(item.get("execution_status", "")).strip() or "proposed_not_run")}</span>
+              <span class="status-note">Approval needed: {"yes" if bool(item.get("approval_needed", True)) else "no"}</span>
+              <span class="status-note">Approval state: {escape(str(item.get("approval_state", "")).strip() or "required")}</span>
+              <span class="status-note">Rationale: {escape(str(item.get("rationale", "")).strip() or "No per-action rationale recorded.")}</span>
+              <span class="status-note">This action is proposed only and has not run in the current autonomy lane.</span>
+            </div>
+            """
+            for index, item in enumerate(proposed_actions, start=1)
+        )
+        if proposed_actions
+        else '<p class="status-note">No proposed action plan has been recorded for this autonomy state yet.</p>'
+    )
+    raw_state_href = f"/api/autonomy-states/{autonomy_id}"
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Autonomy State Review</title>
+  <style>
+    :root {{
+      color-scheme: dark;
+      --bg: #050b16;
+      --bg-2: #08111f;
+      --panel: rgba(8, 20, 34, 0.9);
+      --panel-strong: rgba(7, 18, 30, 0.98);
+      --line: rgba(111, 229, 255, 0.16);
+      --ink: #edf7ff;
+      --muted: #90b7d4;
+      --cyan: #71e2ff;
+      --shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+    }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top, rgba(65, 171, 255, 0.16), transparent 24%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 52%, #08111d 100%);
+    }}
+    a {{ color: var(--cyan); text-decoration: none; }}
+    .shell {{ max-width: 1200px; margin: 0 auto; padding: 24px 28px 40px; display: grid; gap: 18px; }}
+    .hero, .panel {{
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }}
+    .eyebrow, label {{ color: var(--muted); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }}
+    h1, h2 {{ margin: 0; font-weight: 600; }}
+    p {{ margin: 0; line-height: 1.55; }}
+    .actions, .chips {{ display: flex; gap: 10px; flex-wrap: wrap; }}
+    .actions a, .chip {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 36px;
+      padding: 0 12px;
+      border: 1px solid rgba(111, 229, 255, 0.18);
+      background: rgba(10, 26, 42, 0.86);
+      color: var(--cyan);
+    }}
+    .chip {{ min-height: 28px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink); }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }}
+    .grid div, .boundary {{
+      border: 1px solid rgba(111, 229, 255, 0.12);
+      background: var(--panel-strong);
+      padding: 12px 14px;
+      display: grid;
+      gap: 6px;
+    }}
+    strong {{ color: var(--cyan); font-weight: 600; }}
+    .status-note {{ color: var(--muted); }}
+    @media (max-width: 960px) {{
+      .grid {{ grid-template-columns: 1fr; }}
+    }}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Autonomy State Review</div>
+      <h1>{escape(title)}</h1>
+      <p>{escape(objective)}</p>
+      <div class="chips">
+        <span class="chip">{escape(status)}</span>
+        <span class="chip">{escape(str(state.get("object_kind", "")).strip() or "autonomy_state")}</span>
+        <span class="chip">visibility only</span>
+      </div>
+      <div class="actions">
+        <a href="{escape(return_to)}">Return to Autonomy State Queue</a>
+        <a href="{escape(raw_state_href)}">Open Raw State</a>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>State Detail</h2>
+      <div class="grid">
+        <div><label>Autonomy ID</label><strong>{escape(autonomy_id)}</strong></div>
+        <div><label>Initiated By</label><strong>{escape(initiated_by)}</strong></div>
+        <div><label>Created</label><strong>{escape(created_at)}</strong></div>
+        <div><label>Updated</label><strong>{escape(updated_at)}</strong></div>
+        <div><label>Current Focus</label><strong>{escape(current_focus)}</strong></div>
+        <div><label>Next Step</label><strong>{escape(next_step)}</strong></div>
+        <div><label>Requested Scope</label><strong>{escape(requested_scope)}</strong></div>
+        <div><label>Initiation Reason</label><strong>{escape(initiation_reason)}</strong></div>
+        <div><label>Approval Required</label><strong>{"yes" if approval_required else "no"}</strong></div>
+        <div><label>Approval State</label><strong>{escape(approval_state)}</strong></div>
+        <div><label>Allowed Action Boundary</label><strong>{escape(allowed_action_boundary)}</strong></div>
+        <div><label>Blocked Reason</label><strong>{escape(blocked_reason)}</strong></div>
+        <div><label>Visibility Mode</label><strong>{escape(visibility_mode)}</strong></div>
+        <div><label>Planned Action Count</label><strong>{escape(str(state.get("planned_action_count", 0) or 0))}</strong></div>
+        <div><label>Control Posture</label><strong>{escape(current_control_posture)}</strong></div>
+        <div><label>Readiness State</label><strong>{escape(readiness_state)}</strong></div>
+        <div><label>Approval Gate Status</label><strong>{escape(approval_gate_status)}</strong></div>
+        <div><label>Follow-Through Status</label><strong>{escape(local_follow_through_status)}</strong></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Local Follow-Through Proof</h2>
+      <div class="boundary">
+        <label>Latest Local Effect</label>
+        <strong>{escape(local_follow_through_status)}</strong>
+        <span class="status-note">Effect: {escape(last_follow_through_effect)}</span>
+        <span class="status-note">Artifact: {escape(last_follow_through_artifact_path)}</span>
+        <span class="status-note">Triggered by: {escape(last_follow_through_triggered_by)}</span>
+        <span class="status-note">Triggered at: {escape(last_follow_through_triggered_at)}</span>
+        <span class="status-note">This trigger only proves one bounded local effect: a local proof packet was written. It does not prove broad autonomous competence, invisible work, networked execution, or multi-step follow-through.</span>
+      </div>
+      {follow_through_history_html}
+    </section>
+    <section class="panel">
+      <h2>Readiness Gate</h2>
+      <div class="boundary">
+        <label>Latest Readiness</label>
+        <strong>{escape(readiness_state)}</strong>
+        <span class="status-note">Approval gate: {escape(approval_gate_status)}</span>
+        <span class="status-note">Reason: {escape(readiness_reason)}</span>
+        <span class="status-note">Changed by: {escape(last_readiness_changed_by)}</span>
+        <span class="status-note">Changed at: {escape(last_readiness_changed_at)}</span>
+        <span class="status-note">Readiness here is a stored gate only. It does not mean execution started, background work is occurring, or approval has been bypassed.</span>
+      </div>
+      {readiness_history_html}
+    </section>
+    <section class="panel">
+      <h2>Recorded Control State</h2>
+      <div class="boundary">
+        <label>Latest Control</label>
+        <strong>{escape(last_control_action)}</strong>
+        <span class="status-note">Current posture: {escape(current_control_posture)}</span>
+        <span class="status-note">Reason: {escape(last_control_reason)}</span>
+        <span class="status-note">Changed by: {escape(last_control_changed_by)}</span>
+        <span class="status-note">Changed at: {escape(last_control_changed_at)}</span>
+        <span class="status-note">Pause, resume, and abort here apply to recorded autonomy state only. They do not prove real background execution existed, was paused, resumed, or interrupted.</span>
+      </div>
+      {control_history_html}
+    </section>
+    <section class="panel">
+      <h2>Proposed Action Plan</h2>
+      <div class="boundary">
+        <label>Planning Note</label>
+        <strong>{escape(planning_note)}</strong>
+        <span class="status-note">A proposed action plan is inspectable planning only. It does not mean the actions ran, approval exists, or autonomous follow-through has already happened.</span>
+      </div>
+      {proposed_actions_html}
+    </section>
+    <section class="panel">
+      <h2>Autonomy Boundary</h2>
+      <div class="boundary">
+        <label>Current State</label>
+        <strong>Recorded autonomy state and boundary only</strong>
+        <span class="status-note">This readable state does not by itself prove autonomous execution, hidden progress, fake agents, or completed background work. It is an inspectable autonomy record with stored boundaries.</span>
+        <span class="status-note">Recorded autonomy state here does not mean autonomous action has started. The allowed action boundary, approval state, readiness gate, recorded control posture, any local follow-through proof, and any proposed actions above define what is and is not permitted.</span>
+      </div>
+    </section>
+  </main>
 </body>
 </html>"""
 

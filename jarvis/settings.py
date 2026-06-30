@@ -13,7 +13,7 @@ from .speech import voice_stack_status
 VOICE_SETTINGS_PATH = Path.cwd() / "data" / "settings" / "voice.json"
 LOCATION_SETTINGS_PATH = Path.cwd() / "data" / "settings" / "locations.json"
 PIPER_VOICE_ROOT = Path.cwd() / "assets" / "piper" / "voices"
-VALID_TTS_PROVIDERS = {"auto", "piper", "localai", "elevenlabs", "system"}
+VALID_TTS_PROVIDERS = {"auto", "piper", "localai", "elevenlabs", "fish", "system"}
 
 
 def _now_iso() -> str:
@@ -134,6 +134,7 @@ class VoiceSettingsStore:
             "providers": [
                 {"id": "auto", "label": "Auto"},
                 {"id": "elevenlabs", "label": "ElevenLabs"},
+                {"id": "fish", "label": "Fish Audio"},
                 {"id": "piper", "label": "Piper"},
                 {"id": "localai", "label": "LocalAI"},
                 {"id": "system", "label": "Browser/System Fallback"},
@@ -246,6 +247,7 @@ class VoiceSettingsStore:
         mapping = {
             "auto": "Auto",
             "elevenlabs": "ElevenLabs",
+            "fish": "Fish Audio",
             "piper": "Piper",
             "localai": "LocalAI",
             "system": "Browser/System Fallback",

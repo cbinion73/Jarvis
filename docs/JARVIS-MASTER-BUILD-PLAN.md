@@ -241,6 +241,74 @@ Story lanes:
 Success looks like:
 JARVIS can carry out limited self-directed work in ways Chris can understand, inspect, interrupt, and trust.
 
+### Epic 10. Surface Integrity and Route Repair
+
+Purpose:
+Perform a systematic repo-truth sweep of the JARVIS web surface so every page, button, link, API, and interface is either working or explicitly logged for repair.
+
+Desired end state:
+Chris should be able to move through the live JARVIS web surfaces without dead buttons, broken links, fake interfaces, or silent route failures.
+
+Architect Office should treat this as a concrete runtime integrity pass, not a cosmetic UX review or speculative redesign.
+
+Story lanes:
+
+- page-by-page web surface audit
+- button and link verification
+- API and interface route verification
+- truthful degraded-state handling for partially wired surfaces
+- bounded repair of broken UI wiring
+- explicit backlog of unrepaired or blocked surface defects
+
+Success looks like:
+Every reachable JARVIS web surface is either working end to end or captured in a concrete repair list with repo-truth evidence.
+
+### Epic 11. Navigation and CarPlay
+
+Purpose:
+Turn the existing Apple-native navigation seam into a real JARVIS navigation experience across iPhone and CarPlay, with a clean handoff path into Xcode for native finishing work.
+
+Desired end state:
+Chris should have a navigation-focused JARVIS surface that can guide a drive, surface route-aware stops and hazards, and continue cleanly into a CarPlay experience without fake map, search, save, sync, or vehicle-integration claims.
+
+Architect Office should treat this as a bounded Apple-native product lane, not as a speculative transport platform or a fake automotive capability demo.
+
+Story lanes:
+
+- iPhone navigation cockpit and route guidance
+- CarPlay turn-by-turn and safe-driving route surfaces
+- upcoming maneuvers, route overview, and destination view
+- smart stops, add-stop interactions, and route-aware stop continuity
+- traffic alert, reroute, and voice guidance surfaces
+- truthful capability boundaries around live maps, traffic, weather, hazards, and saved state
+- Xcode handoff readiness for native Apple finish work
+
+Success looks like:
+The repo contains a real, inspectable iPhone and CarPlay navigation seam that matches the intended product direction, preserves truth boundaries, and is ready for native Xcode follow-through.
+
+### Epic 12. Living Brief and Operating Picture
+
+Purpose:
+Turn the existing Morning Brief seam into the living operating picture of JARVIS so Chris can open one place and understand what changed, what matters, what is waiting, what JARVIS prepared, and what to do next.
+
+Desired end state:
+Chris should be able to open JARVIS and get a truthful, companion-style brief grounded in real current signals such as calendar pressure, email pressure, open loops, work already in motion, recent memory/context, and bounded "while you were away" progress.
+
+Architect Office should treat this as a companion-product lane, not a dashboard project. The brief must feel like a smart, loyal friend with tools laying out the table, not a widget wall.
+
+Story lanes:
+
+- real calendar-awareness in the brief
+- real email-pressure and waiting-on-people awareness
+- open-loop, mission, and workbench continuity in the brief
+- "What JARVIS Did While You Were Away" activity synthesis
+- recommendation with inspectable proof behind it
+- one-step transitions from the brief into useful work objects
+- truthful degraded behavior when a signal is unavailable or only partially wired
+
+Success looks like:
+The Daily Brief becomes a genuinely useful opening experience that reflects the real operating picture, preserves truth boundaries, and naturally routes Chris from conversation into the next useful action.
+
 ## 5. Story Shape
 
 Every story assigned by Architect Office should include:
@@ -353,6 +421,13 @@ Every story and epic should be judged through four acceptance lenses.
 - JARVIS does not imply self-direction beyond the approved action boundary.
 - Approval, pause, resume, and abort controls are explicit.
 - Background execution produces legible state instead of theater.
+
+### Epic 10. Surface Integrity and Route Repair
+
+- Web pages, buttons, links, APIs, and interfaces are tested against live repo truth.
+- Broken surface wiring is repaired when bounded and fixable.
+- Unfixed defects are captured in an explicit evidence-backed repair list.
+- UI/runtime claims do not imply working surfaces that are not actually wired.
 
 ## 8. Definition of Done
 

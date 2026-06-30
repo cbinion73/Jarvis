@@ -1,6 +1,6 @@
 # Architect Office Status
 
-Last updated: 2026-06-27
+Last updated: 2026-06-28
 
 This is the live Architect Office checklist for JARVIS.
 
@@ -23,7 +23,7 @@ Slices completed in implementation order:
 ### Epic 2. Companion Mind
 
 Status:
-- active
+- completed
 
 Story:
 - build a truthful, useful default companion conversation path Chris can talk to tomorrow
@@ -134,6 +134,92 @@ Status:
 Story:
 - let conversation produce real useful objects when hands are needed
 
+Current Epic 4 status:
+- the first Epic 4 slice is procedurally approved in slice-only isolated review state
+- the second Epic 4 slice is procedurally approved in slice-only isolated review state
+- the third Epic 4 slice is procedurally approved in slice-only isolated review state
+- the fourth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the fifth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the sixth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the seventh Epic 4 slice is procedurally approved in slice-only isolated review state
+- the eighth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the ninth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the tenth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the eleventh Epic 4 slice is procedurally approved in slice-only isolated review state
+- the twelfth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the thirteenth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the fourteenth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the fifteenth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the sixteenth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the seventeenth Epic 4 slice is procedurally approved in slice-only isolated review state
+- the eighteenth Epic 4 slice is procedurally approved in slice-only isolated review state
+- direct checklist asks now create and return a real checklist object without opening an empty surface
+- direct explicit plan asks now create and return a real plan object without opening an empty surface
+- direct explicit drafting asks now create and return a real draft object without opening an empty surface
+- direct explicit research asks now create and return a truthful research packet object without bluffing live retrieval
+- direct explicit recommendation asks now create and return a truthful recommendation object without bluffing live research proof
+- direct explicit comparison or choice asks now create and return a truthful decision-matrix object without bluffing live external proof
+- direct explicit trip, day-plan, and agenda asks now create and return a truthful itinerary object without bluffing live calendar or routing proof
+- direct explicit task-breakdown asks now create and return a truthful task-list object without bluffing live task-system sync
+- direct explicit evidence-gathering asks now create and return a truthful evidence-bundle object without bluffing live retrieval or source verification
+- direct explicit recap, summary, and brief asks now create and return a truthful recap-packet object without bluffing live retrieval or complete external synthesis
+- direct explicit source-organization asks now create and return a truthful source-set object without bluffing live retrieval or verified source collection
+- direct explicit note-capture asks now create and return a truthful structured-note object without bluffing Obsidian save or external note sync
+- direct explicit next-steps and move-forward asks now create and return a truthful action-brief object without bluffing live execution or sync
+- direct explicit recommendation-plus-rationale asks now create and return a truthful decision-memo object without bluffing validated proof or execution
+- direct explicit option-shaping asks now create and return a truthful option-card object without bluffing live discovery, ranking, or execution
+- direct explicit tradeoff asks now create and return a truthful pros-cons object without bluffing live discovery, validated analysis, or execution
+- direct explicit constraints asks now create and return a truthful constraint-map object without bluffing live discovery, policy lookup, or validated proof
+- direct explicit clarification and discovery asks now create and return a truthful question-set object without bluffing live research, validated discovery, or external retrieval
+- missing-context checklist asks stay conversational and create nothing
+- missing-context plan asks stay conversational and create nothing
+- missing-context drafting asks stay conversational and create nothing
+- missing-context research asks stay conversational and create nothing
+- missing-context recommendation asks stay conversational and create nothing
+- missing-context comparison asks stay conversational and create nothing
+- missing-context itinerary asks stay conversational and create nothing
+- missing-context task-breakdown asks stay conversational and create nothing
+- missing-context evidence asks stay conversational and create nothing
+- missing-context recap asks stay conversational and create nothing
+- missing-context source-set asks stay conversational and create nothing
+- missing-context note asks stay conversational and create nothing
+- missing-context action-brief asks stay conversational and create nothing
+- missing-context decision-memo asks stay conversational and create nothing
+- missing-context option asks stay conversational and create nothing
+- missing-context pros-cons asks stay conversational and create nothing
+- missing-context constraint asks stay conversational and create nothing
+- missing-context question-set asks stay conversational and create nothing
+- ordinary non-checklist requests do not get rerouted into checklist creation
+- ordinary non-plan requests do not get rerouted into plan creation
+- ordinary non-drafting requests do not get rerouted into draft creation
+- ordinary non-research requests do not get rerouted into research packet creation
+- ordinary non-recommendation requests do not get rerouted into recommendation creation
+- ordinary non-comparison requests do not get rerouted into decision-matrix creation
+- ordinary non-itinerary requests do not get rerouted into itinerary creation
+- ordinary non-task-breakdown requests do not get rerouted into task-list creation
+- ordinary non-evidence requests do not get rerouted into evidence-bundle creation
+- ordinary non-recap requests do not get rerouted into recap-packet creation
+- ordinary non-source-set requests do not get rerouted into source-set creation
+- ordinary non-note requests do not get rerouted into structured-note creation
+- ordinary non-next-step requests do not get rerouted into action-brief creation
+- ordinary non-decision-memo requests do not get rerouted into decision-memo creation
+- ordinary non-option requests do not get rerouted into option-card creation
+- ordinary non-tradeoff requests do not get rerouted into pros-cons creation
+- ordinary non-constraint requests do not get rerouted into constraint-map creation
+- ordinary non-clarification requests do not get rerouted into question-set creation
+- Epic 4 closeout package has been delivered from the main-repo review target
+- Epic 4 is not ready to close in `/Users/chris/Desktop/CODE/JARVIS`
+- the closeout blocker is a repo-truth gap, not an isolated Epic 4 behavior gap
+- the approved 18-lane Epic 4 object surface exists in `/Users/chris/Desktop/CODE/JARVIS-review-epic4-checklists` but is not yet materialized in the main repo checkout
+- the approved 18-lane Epic 4 object surface has now been materialized into `/Users/chris/Desktop/CODE/JARVIS`
+- the main repo now contains the Epic 4 object modules, Epic 4 creation tests, and the required runtime/openai seams
+- main-repo Epic 4 compile checks passed after materialization
+- main-repo Epic 4 creation regression suite passed after materialization
+- final Epic 4 closeout recheck against main-repo truth has been delivered
+- Epic 4 is procedurally closed from the main repo target
+- next recommended epic is Epic 5 Tool Truth and Action Surfaces
+- recommended first Epic 5 slice is search and retrieval proof with explicit evidence-backed capability language
+
 Planned lanes:
 - checklist creation
 - plan creation
@@ -146,10 +232,26 @@ Planned lanes:
 ### Epic 5. Tool Truth and Action Surfaces
 
 Status:
-- not started
+- completed
 
 Story:
 - move from advice-only interaction into truthful bounded action
+
+Current Epic 5 status:
+- the first Epic 5 slice is procedurally approved in isolated review state
+- Epic 5 slice 1 hardened the search and retrieval proof seam with explicit evidence-backed capability language
+- the isolated review target `/Users/chris/Desktop/CODE/JARVIS-review-epic5-search-retrieval-proof` passed bounded compile and regression checks
+- the second Epic 5 slice is approved from the main repo target
+- Epic 5 slice 2 hardened file and artifact creation truth with explicit local-persistence proof on real created Epic 4 objects
+- the third Epic 5 slice is approved from the main repo target
+- Epic 5 slice 3 hardened save/open boundaries with explicit action-truth summaries for opened, loaded, saved, requested, and reasoning-only paths
+- the fourth Epic 5 slice is approved from the main repo target
+- Epic 5 slice 4 hardened degraded-mode honesty in the manual AI fallback seam with plain unavailable, partially wired, and reduced-help wording
+- the fifth Epic 5 slice is approved from the main repo target
+- Epic 5 slice 5 added compact execution traces behind search, creation/save, open-request, and degraded capability claims
+- Epic 5 is procedurally closed from the main repo target
+- next recommended active epic is Epic 10 Surface Integrity and Route Repair because it was explicitly reprioritized ahead of Epic 6 by user instruction
+- Epic 5 has been explicitly reprioritized back to the active lane by user instruction
 
 Planned lanes:
 - search and retrieval proof
@@ -161,10 +263,27 @@ Planned lanes:
 ### Epic 6. Workforce and Delegation
 
 Status:
-- not started
+- completed
 
 Story:
 - add subordinate agents only when they produce inspectable work and do not become theater
+
+Current Epic 6 status:
+- completed
+- Epic 6 slice 1 is approved from the main repo target
+- Epic 6 slice 1 added a truthful delegation-proof seam with persisted delegation reports, explicit inspectable-output status, and mission/service proof paths
+- Epic 6 slice 2 is approved from the main repo target
+- Epic 6 slice 2 added a real mission-board delegation report authoring flow so requested delegations can become completed-with-output through an honest user-facing work surface
+- Epic 6 slice 3 is approved from the main repo target
+- Epic 6 slice 3 added a readable delegation report review surface so completed delegated work can be inspected as a human-friendly object with real fields and provenance
+- Epic 6 slice 4 is approved from the main repo target
+- Epic 6 slice 4 added delegation discoverability and continuity improvements so pending, completed, and unavailable delegated work is easier to find and move through inside the mission-board lane
+- Epic 6 slice 5 is approved from the main repo target
+- Epic 6 slice 5 added bounded delegation report usefulness and validation so completed delegated work now requires meaningful supporting structure and renders clearer structured fields
+- Epic 6 slice 6 is approved from the main repo target
+- Epic 6 slice 6 completed the delegation lane integrity and closeout pass, repairing the last local continuity mismatch in the readable report return path
+- Epic 6 is procedurally closed from the main repo target
+- next recommended epic is Epic 7 Learning Loop
 
 Planned lanes:
 - bounded delegation
@@ -176,10 +295,25 @@ Planned lanes:
 ### Epic 7. Learning Loop
 
 Status:
-- not started
+- completed
 
 Story:
 - make JARVIS improve over time without destabilizing truth or trust
+
+Current Epic 7 status:
+- completed
+- Epic 7 slice 1 is approved from the main repo target
+- Epic 7 slice 1 added a shared outcome-capture primitive for real Epic 4 work objects and Epic 6 delegation reports with explicit no-automatic-learning boundaries
+- Epic 7 slice 2 is approved from the main repo target
+- Epic 7 slice 2 added a bounded human-facing outcome review surface and continuity links so recorded outcomes can be inspected without staying API-only
+- Epic 7 slice 3 is approved from the main repo target
+- Epic 7 slice 3 added a bounded outcome authoring continuity surface so users can record and revise explicit outcome judgments from the readable review lane
+- Epic 7 slice 4 is approved from the main repo target
+- Epic 7 slice 4 added a bounded outcome aggregation surface so recent explicit judgments can be summarized and inspected as recorded history without implying automatic adaptation
+- Epic 7 slice 5 is approved from the main repo target
+- Epic 7 slice 5 completed the outcome lane integrity and closeout pass, repairing the final summary-to-review continuity gap
+- Epic 7 is procedurally closed from the main repo target
+- next recommended epic is Epic 8 Self-Research
 
 Planned lanes:
 - outcome capture
@@ -190,10 +324,28 @@ Planned lanes:
 ### Epic 8. Self-Research
 
 Status:
-- not started
+- completed
 
 Story:
 - eventually support self-directed research and longer-range assistance under explicit boundaries
+
+Current Epic 8 status:
+- completed
+- Epic 8 slice 1 is approved from the main repo target
+- Epic 8 slice 1 added a persisted research-task queue with inspectable API and readable queue surfaces, while keeping queued intent clearly separate from performed research
+- Epic 8 slice 2 is approved from the main repo target
+- Epic 8 slice 2 added a readable research-task review surface and queue continuity so explicit research intents can be opened and inspected as real objects
+- Epic 8 slice 3 is approved from the main repo target
+- Epic 8 slice 3 added bounded research-task authoring continuity and status control so explicit research intents can be revised without implying research was performed
+- Epic 8 slice 4 is approved from the main repo target
+- Epic 8 slice 4 added explicit evidence-item capture on a research task so real source notes can be attached inspectably without implying validated synthesis or autonomous research
+- Epic 8 slice 5 is approved from the main repo target
+- Epic 8 slice 5 added attached-evidence-only synthesis with explicit uncertainty and missing-information handling, without implying autonomous discovery, external validation, or completed research
+- Epic 8 slice 6 is approved from the main repo target
+- Epic 8 slice 6 closed the full research-task lane with one bounded wording repair so synthesis preconditions are explicit before use
+- Epic 8 is procedurally closed from the main repo target
+- next recommended epic is Epic 9 Autonomy
+- recommended first Epic 9 slice is autonomy state visibility so background work can become legible and inspectable before autonomous follow-through broadens
 
 Planned lanes:
 - scoped research tasks
@@ -204,7 +356,7 @@ Planned lanes:
 ### Epic 9. Autonomy
 
 Status:
-- not started
+- completed
 
 Story:
 - support bounded self-directed action only after the earlier trust and capability layers are stable
@@ -216,6 +368,598 @@ Planned lanes:
 - pause, resume, and abort control
 - autonomy state visibility
 - non-theatrical background execution
+- goal-directed background project work
+
+Current Epic 9 status:
+- completed
+- Epic 9 slice 1 is approved from the main repo target
+- Epic 9 slice 1 added a persisted autonomy-state visibility lane with inspectable API and readable queue/review surfaces, while keeping the lane explicitly recorded-state-only
+- Epic 9 slice 2 is approved from the main repo target
+- Epic 9 slice 2 added explicit autonomy task-initiation boundaries so new autonomy records now carry requested scope, initiation reason, approval posture, allowed boundary, and blocked reason without implying execution
+- Epic 9 slice 3 is approved from the main repo target
+- Epic 9 slice 3 added approval-aware autonomy action planning so autonomy records can now hold bounded proposed actions that stay explicitly planned-only and not-run
+- Epic 9 slice 4 is approved from the main repo target
+- Epic 9 slice 4 added pause, resume, and abort control on recorded autonomy state so bounded operator control transitions are now inspectable without implying real execution existed
+- Epic 9 slice 5 is approved from the main repo target
+- Epic 9 slice 5 added approval-gated autonomy readiness so a record can now become explicitly ready or not-ready for future follow-through without implying execution has begun
+- Epic 9 slice 6 is approved from the main repo target
+- Epic 9 slice 6 added one truthful local follow-through trigger that writes a local proof packet only when readiness and control posture allow it, without implying broad or invisible execution
+- Epic 9 slice 7 is approved from the main repo target
+- Epic 9 slice 7 completed a bounded closeout validation pass and repaired one autonomy truth-contract drift so creation, queue, snapshot, planning, control, readiness, and local follow-through now expose one consistent inspectable contract
+- Epic 9 is procedurally closed from the main repo target
+- next recommended work is the first bounded Post-Epic 9 integration-hardening slice that checks cross-epic continuity across companion, memory, hands, tool truth, workforce, learning, research, and autonomy seams
+
+### Post-Epic 9. Product Completion and Expansion
+
+Status:
+- active
+
+Story:
+- continue beyond the numbered trust-stack epics until JARVIS reaches a fully functioning product state that meets or exceeds the repo product vision without violating truth constraints
+
+Planned lanes:
+- cross-epic integration hardening
+- end-to-end acceptance and regression batteries
+- defect repair and behavioral tightening
+- useful background work that produces real inspectable value
+- product-fit expansion that remains canon-aligned
+- completion-driven closeout instead of stopping at a numbered epic boundary
+
+Current Post-Epic 9 status:
+- active
+- the first recommended bounded lane is cross-epic integration hardening
+- Post-Epic 9 slice 1 is approved from the main repo target
+- Post-Epic 9 slice 1 completed a bounded cross-epic continuity sweep and repaired one readable-surface autonomy wording drift so the approved seams describe one coherent recorded-state lane family
+- Post-Epic 9 slice 2 is approved from the main repo target
+- Post-Epic 9 slice 2 normalized delegation, outcome, research, and autonomy-adjacent boundary notes so the readable surfaces use one more consistent recorded-state and bounded-proof vocabulary
+- Post-Epic 9 slice 3 is approved from the main repo target
+- Post-Epic 9 slice 3 tightened state labels, research queue naming, and review-page return-path wording so linked recorded-state surfaces name their actual destinations without capability overstatement
+- Post-Epic 9 slice 4 is approved from the main repo target
+- Post-Epic 9 slice 4 tightened older adjacent mission-board and queue launch labels so nearby module surfaces now use the same truthful recorded-state vocabulary when opening the approved review lanes
+- the cross-epic continuity-hardening sublane is now procedurally strong enough to stop micro-copy passes unless a future defect reopens it
+- the next recommended bounded lane is end-to-end acceptance and regression batteries
+- Post-Epic 9 slice 5 is approved from the main repo target
+- Post-Epic 9 slice 5 completed a bounded end-to-end acceptance battery across the approved seam families with clean repo-truth results and no new seam defect found
+- the repo now has clean test-backed cross-epic acceptance for the approved seam family
+- Post-Epic 9 slice 6 is reviewed from the main repo target and is environment-blocked rather than product-blocked
+- Post-Epic 9 slice 6 confirmed the tiny live runtime/browser pass could not start because the current environment is missing minimum runtime dependencies such as `fastmcp` and `psycopg2`
+- Post-Epic 9 slice 7 is approved from the main repo target
+- Post-Epic 9 slice 7 restored the minimum runtime bootstrap needed for the repo-supported read-only smoke path, proved the tiny live route set against a real running server, and cleared the previously observed live-proof blocker
+- the post-Epic 9 assurance lane now has both clean repo-truth acceptance and a bounded live runtime proof layer
+- Post-Epic 9 slice 8 is approved from the main repo target
+- Post-Epic 9 slice 8 restored the minimum Google bridge package family in the repo-supported runtime environment so Gmail/Calendar now degrade for truthful account absence rather than missing imports
+- Post-Epic 9 slice 9 is approved from the main repo target
+- Post-Epic 9 slice 9 hardened account and credential posture visibility so Google-related degradation now clearly distinguishes import readiness, client-credential posture, recorded accounts, and usable runtime connections
+- Post-Epic 9 slice 10 is approved from the main repo target
+- Post-Epic 9 slice 10 hardened credential and account-state hygiene guidance so the remaining Google-disconnected posture now shows the missing file path, stale-account note, and next recovery step more clearly
+- the next recommended bounded lane is defect repair and behavioral tightening, focused only on real user-facing defects or degraded seams that still reduce practical usefulness
+- the Google optional-integration guidance sublane is now strong enough to pause unless a new concrete defect appears
+- the next recommended bounded slice should return to broader defect repair and behavioral tightening based on the next highest-value practical user-facing weakness rather than more connector messaging polish
+- the current highest-value practical weakness is that the existing Morning Brief underuses the now-working Google and Obsidian seams and still carries stale hardcoded-unavailable assumptions
+- the next recommended epic is Epic 12 Living Brief and Operating Picture, starting with Morning Brief signal-truth uplift
+- Epic 12 is now procedurally closed from the main repo target
+- the next recommended bounded lane after Epic 12 closure is object-specific brief handoff refinement only where real saved-object identifiers already exist
+- Post-Epic 9 slice 11 is approved from the main repo target
+- Post-Epic 9 slice 11 refined `Next Honest Step` so catch-up recommendations can open a real object-specific review route when a persisted delegation/report, research, outcome, or autonomy id actually exists
+- Post-Epic 9 slice 11 preserved strict truth boundaries by keeping family-level routes as the fallback whenever object-level precision is not truly available
+- the next recommended bounded lane is voice-output usefulness and provider-truth hardening, focused on making the spoken JARVIS path sound good and degrade honestly across the currently wired providers
+- Post-Epic 9 slice 12 is approved from the main repo target
+- Post-Epic 9 slice 12 hardened the spoken-output truth seam with per-provider readiness reasons, explicit effective-provider reporting, and more inspectable fallback posture across the existing voice settings/options APIs
+- Post-Epic 9 slice 12 preserved strict truth boundaries by marking providers ready only when the current runtime seam can really use them and by keeping fallback notes descriptive rather than success-claiming
+- the next recommended bounded lane is voice provider-selection continuity and live spoken-output proof, focused on making the selected provider path persist and verify cleanly across the existing voice settings/runtime seam
+- Post-Epic 9 slice 13 is approved from the main repo target
+- Post-Epic 9 slice 13 hardened `/api/voice/synthesize` so explicit saved provider selections stay explicit instead of being silently overridden by the Friday pipeline, and it added inspectable requested-versus-effective provider headers on the existing synthesis seam
+- Post-Epic 9 slice 13 preserved strict truth boundaries by keeping auto pipeline behavior distinct from explicit provider choice and by limiting live proof to the one local spoken-output path actually exercised in repo truth
+- the next recommended bounded lane is live explicit-provider route proof and truthful failure posture, focused on proving one real configured premium provider through the existing voice settings and `/api/voice/synthesize` seam and making any remaining runtime failure reason inspectable rather than silent
+- Post-Epic 9 slice 14 is approved from the main repo target
+- Post-Epic 9 slice 14 extended the spoken-output seam so explicit premium-provider requests now expose truthful fallback metadata, including requested provider, effective provider, attempted providers, fallback count, and the first real failure reason when later providers succeed
+- Post-Epic 9 slice 14 preserved strict truth boundaries by proving that the current live Fish route does not complete in this environment and by exposing the real TLS certificate blocker instead of implying the selected premium provider worked
+- the next recommended bounded lane is provider-network diagnostic posture hardening, focused on surfacing SSL and remote-request blockers more clearly in the existing voice status/settings seam so Chris can see why a configured premium provider is not truly live before trying synthesis
+- Post-Epic 9 slice 15 is approved from the main repo target
+- Post-Epic 9 slice 15 hardened the existing voice status/settings/options truth seam with last-known live runtime posture, so a provider can now be shown as configured-ready but still live-blocked with an inspectable SSL or remote-request reason and a truthful fallback outcome
+- Post-Epic 9 slice 15 preserved strict truth boundaries by leaving TLS and network behavior untouched, marking Fish as live-blocked rather than live-ready in current repo truth, and keeping the diagnostic snapshot explicitly last-known rather than predictive
+- the next recommended bounded lane is voice-settings UI diagnostic visibility, focused on rendering the new live-blocked and fallback posture clearly in the existing voice controls surface so Chris can understand why a premium provider is configured but not truly live without reading raw JSON
+- Post-Epic 9 slice 16 is approved from the main repo target
+- Post-Epic 9 slice 16 hardened the existing shell and settings-center voice controls so configured readiness, last live readiness, last live blocker, and last live fallback are now readable in the current UI instead of being buried in payload JSON
+- Post-Epic 9 slice 16 preserved strict truth boundaries by keeping the new copy tied to last-known runtime posture, explicitly avoiding any claim that a configured premium provider is live just because it is selected or statically ready
+- the next recommended bounded lane is premium-provider preview and probe honesty, focused on making the existing preview/try path surface the same configured-vs-live truth posture and failure reason clarity as the saved-settings and status surfaces
+- Post-Epic 9 slice 17 is approved from the main repo target
+- Post-Epic 9 slice 17 hardened the existing shell preview path so `Save + Preview` now reports the requested provider, effective provider after fallback, and live blocker detail instead of implying the configured premium provider simply worked
+- Post-Epic 9 slice 17 preserved strict truth boundaries by reusing the current route headers and error detail only, without introducing any new preview route, TLS workaround, or separate success logic
+- the next recommended bounded lane is settings-center preview parity, focused on giving the dedicated settings module the same concise preview honesty and fallback visibility already present in the shell voice controls
+- Post-Epic 9 slice 18 is approved from the main repo target
+- Post-Epic 9 slice 18 hardened the dedicated settings-center voice controls with a real `Save + Preview` path that now uses the existing synth route and surfaces requested provider, effective provider after fallback, and live blocker detail in the module itself
+- Post-Epic 9 slice 18 preserved strict truth boundaries by keeping the dedicated settings preview tied to the same route-backed headers and error detail as the shell, without inventing a separate success path or implying a configured premium provider worked when fallback actually handled playback
+- the next recommended bounded lane is voice-surface copy and control convergence, focused on removing any remaining wording drift between the shell and settings-center voice controls now that both surfaces expose the same truth seam
+- Post-Epic 9 slice 19 is approved from the main repo target
+- Post-Epic 9 slice 19 tightened the remaining wording drift between the shell and settings-center voice controls so both surfaces now use aligned configured-source, live-readiness, blocker, fallback, save, and preview language for the same voice truth seam
+- Post-Epic 9 slice 19 preserved strict truth boundaries by limiting the work to copy and control-name convergence only, without altering synth behavior, fallback logic, diagnostics, or transport posture
+- the next recommended bounded lane is a voice-surface end-to-end acceptance battery, focused on proving the shell and settings-center voice controls now behave consistently across save, diagnostics, preview, fallback, and truthful failure wording before Architect Office closes this voice-readability sublane
+- Post-Epic 9 slice 20 is approved from the main repo target
+- Post-Epic 9 slice 20 completed a clean end-to-end acceptance battery across the shell and settings-center voice surfaces, confirming aligned save wording, configured-vs-live diagnostics visibility, truthful preview start copy, fallback honesty, and explicit failure wording with no new bounded defect found
+- Post-Epic 9 slice 20 preserved strict truth boundaries by closing this voice-readability sublane on acceptance evidence only, without inventing additional voice work once the covered seam was already behaving consistently
+- the next recommended bounded lane is Morning Brief live-signal usefulness hardening, focused on making `/briefing-center` use the now-working Google and Obsidian support posture more practically and companion-like within the existing truthful brief seam
+- Post-Epic 9 slice 21 is approved from the main repo target
+- Post-Epic 9 slice 21 hardened the Morning Brief by lifting existing live Google Calendar event-count posture into `What Matters Today` as a practical planning cue, while keeping it explicitly count-level and non-interpretive
+- Post-Epic 9 slice 21 preserved strict truth boundaries by preferring the real Google count only when current runtime support exposed it and by keeping family-calendar count language as the truthful fallback when that live signal is absent
+- the next recommended bounded lane is Morning Brief open-loop usefulness hardening, focused on making the brief use existing waiting/open-loop pressure more helpfully and companion-like without implying sender/thread understanding or hidden execution
+- Post-Epic 9 slice 22 is approved from the main repo target
+- Post-Epic 9 slice 22 hardened the Morning Brief open-loop seam by splitting recorded pressure into `waiting on you` and `needs revisit`, making `What Is Waiting` and `What Matters Today` more practically useful without pretending to understand inbox threads or hidden obligations
+- Post-Epic 9 slice 22 preserved strict truth boundaries by staying at recorded category/count level only, using existing open-loop summary signals rather than inventing sender, thread, or commitment detail
+- the next recommended bounded lane is Morning Brief recommendation usefulness hardening, focused on making the brief recommendation and its truthful handoff feel more practically decisive when combined calendar, inbox, and open-loop pressure are all present in the same current runtime snapshot
+- Post-Epic 9 slice 23 is approved from the main repo target
+- Post-Epic 9 slice 23 hardened the Morning Brief recommendation layer so when inbox pressure, live calendar pressure, and open-loop pressure stack together, the brief now gives a more decisive first move and a truthful direct handoff into the current inbox surface
+- Post-Epic 9 slice 23 preserved strict truth boundaries by keeping the recommendation explicitly about first-surface triage only, without pretending to understand thread meaning or resolve calendar and follow-through pressure by itself
+- the next recommended bounded lane is Morning Brief while-you-were-away usefulness hardening, focused on making the existing catch-up layer more practically prioritizing and companion-like using already-recorded activity signals rather than expanding architecture
+- Post-Epic 9 slice 24 is approved from the main repo target
+- Post-Epic 9 slice 24 hardened the Morning Brief catch-up seam by prioritizing inspectable recorded outputs such as delegation, research, outcomes, and autonomy proof ahead of generic assistant activity, making `What JARVIS Did While You Were Away` more practically useful without implying richer execution than the traces prove
+- Post-Epic 9 slice 24 preserved strict truth boundaries by keeping generic assistant activity as secondary context only and by continuing to distinguish completed inspectable outputs, staged mission state, planned-only autonomy posture, and plain recorded activity
+- the next recommended bounded lane is Morning Brief support-posture usefulness hardening, focused on making the brief use existing Obsidian/local-context support posture more helpfully and companion-like without implying hidden memory retrieval or live semantic recall
+- Post-Epic 9 slice 25 is approved from the main repo target
+- Post-Epic 9 slice 25 hardened the Morning Brief Obsidian/local-context seam by turning a generic support note into a more practically useful grounding cue while explicitly stating that the brief did not open or recall any specific note
+- Post-Epic 9 slice 25 preserved strict truth boundaries by keeping Obsidian framed as support posture only, without implying hidden retrieval, semantic recall, or note-specific memory access beyond the current runtime seam
+- the next recommended bounded lane is Morning Brief acceptance and prioritization pass, focused on checking whether the recent usefulness uplifts across calendar, open-loop, recommendation, catch-up, and support-posture now cohere well enough to close the current Morning Brief sublane or whether one final bounded prioritization defect remains
+- Post-Epic 9 slice 26 is approved from the main repo target
+- Post-Epic 9 slice 26 completed a clean acceptance and prioritization pass across the current Morning Brief seam, confirming that live calendar usefulness, open-loop pressure, recommendation decisiveness, catch-up prioritization, and Obsidian support-posture now cohere as one truthful companion-style `/briefing-center` surface with no new bounded defect found
+- Post-Epic 9 slice 26 preserved strict truth boundaries by closing the current Morning Brief usefulness sublane on acceptance evidence only, without inventing additional brief work once the covered seam was already behaving consistently
+- the next recommended bounded lane is companion default-conversation usefulness hardening, focused on making the ordinary talk-to-JARVIS path feel more practically helpful and decisive in live use without broadening scope or slipping into fake memory, therapist drift, or fake autonomy
+- Post-Epic 9 slice 27 is approved from the main repo target
+- Post-Epic 9 slice 27 hardened the ordinary companion conversation seam by making overloaded week-planning requests fall back to the sharper existing capacity-pushback doctrine instead of a softer planning fork, which makes the default talk-to-JARVIS path more practically decisive in a common live-use moment
+- Post-Epic 9 slice 27 preserved strict truth boundaries by improving decisiveness without adding any fake memory, retrieval, autonomy, execution, or therapist-style framing beyond the conversation itself
+- the next recommended bounded lane is companion default-conversation acceptance and usefulness pass, focused on checking whether the recent practical-repair work now holds together cleanly across the most common live companion prompts or whether one final bounded usefulness defect remains
+- Post-Epic 9 slice 28 is approved from the main repo target
+- Post-Epic 9 slice 28 completed a clean acceptance and usefulness pass across the ordinary talk-to-JARVIS seam, confirming that common live prompt shapes now stay practical, concise, decisive, and truthful about limits with no new bounded defect found
+- Post-Epic 9 slice 28 preserved strict truth boundaries by closing the current default-conversation usefulness sublane on acceptance evidence only, without inventing broader tone work once the covered seam was already behaving consistently
+- the next recommended bounded lane is companion practical follow-up continuity hardening, focused on making second-turn follow-ups after a concrete fork stay sharp, useful, and truthfully bounded in the existing conversation seam
+- Post-Epic 9 slice 29 is approved from the main repo target
+- Post-Epic 9 slice 29 hardened the overloaded-week follow-up seam by keeping short second-turn replies like `calendar` and `fuzzy priorities` inside the same cutting thread instead of falling back to a generic reset prompt, which preserves practical continuity after a decisive first-turn fork
+- Post-Epic 9 slice 29 preserved strict truth boundaries by improving one bounded follow-up continuation path only, without adding fake memory, hidden retrieval, autonomy claims, therapist drift, or broader multi-turn redesign
+- the next recommended bounded lane is companion practical follow-up continuity acceptance pass, focused on checking whether the recent overloaded-week follow-up repair now holds cleanly across the practical follow-up seam or whether one final bounded second-turn continuity defect remains
+- Post-Epic 9 slice 30 is approved from the main repo target
+- Post-Epic 9 slice 30 completed a narrowly scoped acceptance pass across the overloaded-week practical follow-up seam and found one remaining bounded continuity defect, then repaired it by keeping short `conversation` follow-ups inside the same cut-first thread instead of letting them reset to a generic fallback
+- Post-Epic 9 slice 30 preserved strict truth boundaries by extending only the existing capacity follow-up continuation seam, without inventing broader conversation redesign, fake memory, hidden retrieval, autonomy claims, or therapist drift
+- the next recommended bounded lane is companion practical follow-up continuity closeout pass, focused on deciding whether the overloaded-week practical follow-up seam is now clean enough to close on acceptance evidence or whether one final bounded second-turn continuity defect still remains
+- Post-Epic 9 slice 31 is approved from the main repo target
+- Post-Epic 9 slice 31 completed a clean closeout pass across the overloaded-week practical follow-up seam by catching and repairing the last bounded literal-alias gaps, so natural second-turn prompts like `schedule`, `the calendar`, `what can slip`, `what has to drop`, and `that conversation` now stay inside the same practical cut-first thread instead of resetting or softening
+- Post-Epic 9 slice 31 preserved strict truth boundaries by extending alias coverage inside the existing capacity follow-up seam only, without adding broader multi-turn redesign, fake memory, hidden retrieval, autonomy claims, or therapist drift
+- Post-Epic 9 slice 31 closes the current overloaded-week practical follow-up continuity sublane on acceptance evidence
+- the next recommended bounded lane is companion decision follow-up continuity hardening, focused on making short second-turn replies after the concrete decision fork stay just as sharp, concrete, and truthfully bounded as the overloaded-week follow-up seam now does
+- Post-Epic 9 slice 32 is approved from the main repo target
+- Post-Epic 9 slice 32 hardened the concrete decision follow-up seam by keeping natural short aliases like `pay`, `upside`, `downside`, `stability`, and `future` inside the same decision thread instead of letting them reset to the generic fallback, which makes second-turn decision help stay as sharp as the first-turn fork
+- Post-Epic 9 slice 32 preserved strict truth boundaries by extending alias handling inside the existing decision follow-up seam only, without adding broader decision coaching, fake memory, hidden retrieval, autonomy claims, or therapist drift
+- the next recommended bounded lane is companion decision follow-up continuity acceptance pass, focused on checking whether the current decision second-turn seam now holds cleanly across nearby natural follow-ups or whether one final bounded continuity defect remains
+- Post-Epic 9 slice 33 is approved from the main repo target
+- Post-Epic 9 slice 33 completed a bounded decision follow-up acceptance pass and repaired the remaining natural alias gaps for the current fork, so replies like `salary`, `margin`, `burnout`, `pace`, `reputation`, `stuck`, and `the future` now stay inside the same decision thread instead of dropping to the generic fallback
+- Post-Epic 9 slice 33 preserved strict truth boundaries by extending only the existing decision follow-up alias handling, without adding broader decision coaching, fake memory, hidden retrieval, autonomy claims, or therapist drift
+- the next recommended bounded lane is companion decision follow-up continuity closeout pass, focused on deciding whether the current decision second-turn seam is now acceptance-complete or whether one final bounded ambiguity case like `either` or `both` still merits a narrow repair
+- Post-Epic 9 slice 34 is approved from the main repo target
+- Post-Epic 9 slice 34 completed a clean closeout pass across the current decision follow-up seam by catching and repairing the last bounded ambiguity gap, so compact mixed replies like `either`, `both`, `kind of both`, `some of both`, `all of it`, and `all of the above` now stay inside the same decision thread instead of resetting to a generic fallback
+- Post-Epic 9 slice 34 preserved strict truth boundaries by adding one narrow ambiguity-handling branch inside the existing decision follow-up seam only, without broadening into general decision coaching, fake memory, hidden retrieval, autonomy claims, or therapist drift
+- Post-Epic 9 slice 34 closes the current decision follow-up continuity sublane on acceptance evidence
+- the next recommended bounded lane is companion drafting follow-up continuity hardening, focused on making short second-turn replies after a concrete drafting fork stay just as sharp, useful, and truthfully bounded as the overloaded-week and decision follow-up seams now do
+- Post-Epic 9 slice 35 is approved from the main repo target
+- Post-Epic 9 slice 35 hardened the concrete drafting follow-up seam by keeping natural tone and direct-write variants like `a little warmer`, `just write it`, `write it`, and `just draft it` inside the same drafting thread instead of letting them fall back to the generic reset prompt
+- Post-Epic 9 slice 35 preserved strict truth boundaries by extending only the existing drafting follow-up seam, without adding broader drafting automation, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion drafting follow-up continuity acceptance pass, focused on checking whether the current drafting second-turn seam now holds cleanly across nearby natural follow-ups or whether one final bounded audience/length continuity defect remains
+- Post-Epic 9 slice 36 is approved from the main repo target
+- Post-Epic 9 slice 36 completed a bounded drafting follow-up acceptance pass and repaired the remaining nearby drafting-parameter continuity gap, so short replies around tone synonyms, audience-only hints, length-only hints, and text-shorthand like `formal`, `gentler`, `for my boss`, `to my brother`, `short`, `brief`, `longer`, and `just text him` now stay inside the same drafting thread instead of resetting generically
+- Post-Epic 9 slice 36 preserved strict truth boundaries by extending only the existing drafting follow-up seam, without adding broader drafting automation, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion drafting follow-up continuity closeout pass, focused on deciding whether the current drafting second-turn seam is now acceptance-complete or whether one final bounded drafting ambiguity case still merits repair
+- Post-Epic 9 slice 37 is approved from the main repo target
+- Post-Epic 9 slice 37 completed a clean closeout pass across the current drafting follow-up seam by catching and repairing the last bounded draft-vs-angle ambiguity gap, so compact replies like `either`, `both`, `kind of both`, `whatever gets it done`, `both honestly`, `not sure`, `just send it`, and `maybe the angle` now stay inside the same drafting thread instead of falling back generically
+- Post-Epic 9 slice 37 preserved strict truth boundaries by extending only the existing drafting follow-up seam, without adding broader drafting automation, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- Post-Epic 9 slice 37 closes the current drafting follow-up continuity sublane on acceptance evidence
+- the next recommended bounded lane is companion hard-conversation follow-up continuity hardening, focused on making short second-turn replies after the concrete hard-conversation fork stay just as sharp, useful, and truthfully bounded as the overloaded-week, decision, and drafting follow-up seams now do
+- Post-Epic 9 slice 38 is approved from the main repo target
+- Post-Epic 9 slice 38 hardened the concrete hard-conversation follow-up seam by keeping short natural replies like `what to say`, `how to say it`, `whether to have it`, `wording`, `tone`, `delivery`, and `should i even have it` inside the same conversation thread instead of letting them fall back generically
+- Post-Epic 9 slice 38 preserved strict truth boundaries by extending only the existing hard-conversation follow-up seam, without adding broader hard-conversation coaching, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion hard-conversation follow-up continuity acceptance pass, focused on checking whether the current conversation second-turn seam now holds cleanly across nearby natural follow-ups or whether one final bounded continuity defect remains
+- Post-Epic 9 slice 39 is approved from the main repo target
+- Post-Epic 9 slice 39 completed a bounded hard-conversation follow-up acceptance pass and repaired the remaining local continuity leak for hedged whether-to-have-it phrasing, so nearby variants like `what do i even say`, `the tone`, and `should i do it at all` now stay inside the same conversation thread instead of dropping to the generic fallback
+- Post-Epic 9 slice 39 preserved strict truth boundaries by extending only the existing hard-conversation follow-up seam, without adding broader hard-conversation coaching, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion hard-conversation follow-up continuity closeout pass, focused on deciding whether the current conversation second-turn seam is now acceptance-complete or whether one final bounded ambiguity case still merits repair
+- Post-Epic 9 slice 40 is approved from the main repo target
+- Post-Epic 9 slice 40 completed a clean closeout pass across the current hard-conversation follow-up seam by catching and repairing the last softened/article selector leak, so nearby variants like `probably both`, `all of those`, `probably the tone`, `probably the wording`, `maybe the conversation itself`, `whether i even need to`, and `if i even need to have it` now stay inside the same conversation thread instead of falling back generically
+- Post-Epic 9 slice 40 preserved strict truth boundaries by extending only the existing hard-conversation follow-up seam, without adding broader hard-conversation coaching, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- Post-Epic 9 slice 40 closes the current hard-conversation follow-up continuity sublane on acceptance evidence
+- the next recommended bounded lane is companion retirement follow-up continuity hardening, focused on making short natural second-turn replies after the concrete retirement fork stay just as sharp, useful, and truthfully bounded as the overloaded-week, decision, drafting, and hard-conversation follow-up seams now do
+- Post-Epic 9 slice 41 is approved from the main repo target
+- Post-Epic 9 slice 41 hardened the concrete retirement follow-up seam by keeping short natural replies like `probably time`, `the money part`, `identity mostly`, `maybe time`, and `all three` inside the same retirement thread instead of letting them fall back generically
+- Post-Epic 9 slice 41 preserved strict truth boundaries by extending only the existing retirement follow-up seam, without adding broader retirement planning, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion retirement follow-up continuity acceptance pass, focused on checking whether the current retirement second-turn seam now holds cleanly across nearby natural follow-ups or whether one final bounded continuity defect remains
+- Post-Epic 9 slice 42 is approved from the main repo target
+- Post-Epic 9 slice 42 completed a bounded retirement follow-up acceptance pass and repaired the remaining local continuity leak for softened/article selector variants, so nearby replies like `probably all three`, `all of it`, `the whole thing`, `not sure`, `the identity stuff`, `the time stuff`, `the money stuff`, `probably the time part`, `i think time`, `i think money`, and `i think identity` now stay inside the same retirement thread instead of dropping to the generic fallback
+- Post-Epic 9 slice 42 preserved strict truth boundaries by extending only the existing retirement follow-up seam, without adding broader retirement planning, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion retirement follow-up continuity closeout pass, focused on deciding whether the current retirement second-turn seam is now acceptance-complete or whether one final bounded ambiguity case still merits repair
+- Post-Epic 9 slice 43 is approved from the main repo target
+- Post-Epic 9 slice 43 completed a clean closeout pass across the current retirement follow-up seam by catching and packaging the final shorthand / underlying-concern alias family, so nearby replies like `numbers`, `runway`, `buy back my days`, `my days`, `pace`, `without work`, `who i am`, `meaning`, `purpose`, `kind of all three`, `all three honestly`, `all of it really`, `not sure honestly`, `maybe all of them`, and `probably everything` now stay inside the same retirement thread instead of falling back generically
+- Post-Epic 9 slice 43 preserved strict truth boundaries by extending only the existing retirement follow-up seam, without adding broader retirement planning, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- Post-Epic 9 slice 43 closes the current retirement follow-up continuity sublane on acceptance evidence
+- the next recommended bounded lane is companion capacity follow-up continuity hardening, focused on making short natural second-turn replies after the concrete overloaded-week capacity fork stay just as sharp, useful, and truthfully bounded as the decision, drafting, hard-conversation, and retirement follow-up seams now do
+- Post-Epic 9 slice 44 is approved from the main repo target
+- Post-Epic 9 slice 44 hardened the concrete overloaded-week capacity follow-up seam by keeping short natural replies like `probably the calendar`, `the schedule stuff`, `maybe priorities`, `probably the conversation`, `i do not know`, and `all of it` inside the same capacity thread instead of letting them fall back generically
+- Post-Epic 9 slice 44 preserved strict truth boundaries by extending only the existing capacity follow-up seam, without adding broader overloaded-week redesign, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion capacity follow-up continuity acceptance pass, focused on checking whether the current overloaded-week capacity second-turn seam now holds cleanly across nearby natural follow-ups or whether one final bounded continuity defect remains
+- Post-Epic 9 slice 45 is approved from the main repo target
+- Post-Epic 9 slice 45 completed a bounded capacity follow-up acceptance pass and repaired the remaining local continuity leak for softened/article selector variants, so nearby replies like `maybe the calendar`, `probably schedule`, `the priorities stuff`, `probably priorities`, `the avoiding stuff`, `probably avoiding`, `maybe avoiding`, `the conversation stuff`, `maybe the conversation`, `kind of all of it`, `some of all of it`, `probably everything`, `not sure honestly`, `all of that`, `the schedule`, `the priorities`, `the avoidance`, and `that whole conversation` now stay inside the same capacity thread instead of dropping to the generic fallback
+- Post-Epic 9 slice 45 preserved strict truth boundaries by extending only the existing capacity follow-up seam, without adding broader overloaded-week redesign, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion capacity follow-up continuity closeout pass, focused on deciding whether the current overloaded-week capacity second-turn seam is now acceptance-complete or whether one final bounded ambiguity case still merits repair
+- Post-Epic 9 slice 46 is approved from the main repo target
+- Post-Epic 9 slice 46 completed a clean closeout pass across the current overloaded-week capacity follow-up seam by catching and repairing the final compact mixed-ambiguity family, so nearby replies like `both`, `either`, `kind of both`, `some of both`, `all of those`, `all of the above`, `all of them`, `all of these`, `honestly all of them`, `more than one`, `mixed`, `the calendar and priorities`, `calendar and priorities`, `conversation and priorities`, `avoiding and the calendar`, and `the calendar or priorities` now stay inside the same capacity thread instead of falling back generically
+- Post-Epic 9 slice 46 preserved strict truth boundaries by extending only the existing capacity follow-up seam, without adding broader overloaded-week redesign, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- Post-Epic 9 slice 46 closes the current overloaded-week capacity follow-up continuity sublane on acceptance evidence
+- the next recommended bounded lane is companion vacation follow-up continuity hardening, focused on making short natural second-turn replies after the concrete vacation fork stay just as sharp, useful, and truthfully bounded as the decision, drafting, hard-conversation, retirement, and capacity follow-up seams now do
+- Post-Epic 9 slice 47 is approved from the main repo target
+- Post-Epic 9 slice 47 hardened the concrete vacation follow-up seam by keeping short natural replies like `where are we going`, `what is making it hard`, `probably where`, `the destination`, `maybe the point of it`, `honestly all three`, and `i do not know` inside the same vacation thread instead of letting them fall back generically
+- Post-Epic 9 slice 47 preserved strict truth boundaries by extending only the existing vacation follow-up seam, without adding broader vacation-planning redesign, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion vacation follow-up continuity acceptance pass, focused on checking whether the current vacation second-turn seam now holds cleanly across nearby natural follow-ups or whether one final bounded continuity defect remains
+- Post-Epic 9 slice 48 is approved from the main repo target
+- Post-Epic 9 slice 48 completed a bounded vacation follow-up acceptance pass and repaired the remaining local continuity leak for softened/article selector variants, so nearby replies like `maybe where`, `the place`, `probably the destination`, `probably the point`, `the kind of trip`, `what the trip needs to be`, `probably the hard part`, `the hard part`, `all of it`, `kind of all three`, `probably all three`, `all of those`, `both`, and `either` now stay inside the same vacation thread instead of dropping to the generic fallback
+- Post-Epic 9 slice 48 preserved strict truth boundaries by extending only the existing vacation follow-up seam, without adding broader vacation-planning redesign, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- the next recommended bounded lane is companion vacation follow-up continuity closeout pass, focused on deciding whether the current vacation second-turn seam is now acceptance-complete or whether one final bounded ambiguity case still merits repair
+- Post-Epic 9 slice 49 is approved from the main repo target
+- Post-Epic 9 slice 49 completed a clean closeout pass across the current vacation follow-up seam by catching and repairing the final compact mixed-ambiguity and shorthand purpose/blocker family, so nearby replies like `all three honestly`, `some of all three`, `all of the above`, `all of them`, `all of these`, `more than one`, `mixed`, `kind of both`, `some of both`, `probably both`, `maybe both`, `where or the point`, `the destination and the point`, `destination and timing`, `trip purpose`, `the purpose`, `what kind of trip is this`, `what kind of vacation is this`, `the blocker`, `why is it hard`, `the point and the hard part`, and `the place or the hard part` now stay inside the same vacation thread instead of falling back generically
+- Post-Epic 9 slice 49 preserved strict truth boundaries by extending only the existing vacation follow-up seam, without adding broader vacation-planning redesign, fake memory, hidden retrieval, autonomy claims, therapist drift, or general conversation redesign
+- Post-Epic 9 slice 49 closes the current vacation follow-up continuity sublane on acceptance evidence
+- the next recommended bounded lane is companion vacation opener usefulness hardening, focused on making the standalone vacation/trip/travel opener feel like a real thinking-partner fork instead of an organizer-first intake when the user is still figuring out what kind of trip they even need
+- Post-Epic 9 slice 50 is approved from the main repo target
+- Post-Epic 9 slice 50 hardened the standalone vacation opener by replacing the organizer-first intake with a concrete thinking-partner fork for `vacation`, `trip`, and `travel`, while keeping `hotel` and `flight` on the logistics-first organizer path
+- Post-Epic 9 slice 50 preserved strict truth boundaries by improving only the first-turn vacation opener, without broadening into memory claims, fake booking/retrieval, hidden execution, or follow-up seam redesign
+- the next recommended bounded lane is companion vacation opener usefulness acceptance pass, focused on checking whether the current standalone vacation opener now holds cleanly across nearby first-turn vacation/trip/travel prompts or whether one final bounded usefulness defect remains
+- Post-Epic 9 slice 51 is approved from the main repo target
+- Post-Epic 9 slice 51 completed a bounded vacation opener acceptance pass and repaired the remaining local usefulness leak for the natural alias `get away`, so nearby first-turn prompts like `I want to get away for a few days.` now stay on the vacation thinking fork instead of dropping to the generic fallback
+- Post-Epic 9 slice 51 preserved strict truth boundaries by extending only the standalone vacation opener match, while leaving broader rest/burnout language out of scope and keeping `hotel` / `flight` on the logistics-first path
+- the next recommended bounded lane is companion vacation opener usefulness closeout pass, focused on deciding whether the current standalone vacation opener is now acceptance-complete or whether one final bounded usefulness defect still remains
+- Post-Epic 9 slice 52 is approved from the main repo target
+- Post-Epic 9 slice 52 completed the vacation opener closeout pass and repaired the final nearby getaway-phrasing usefulness leak for `go away` and `out of town`, so adjacent first-turn prompts like `I need to go away for a bit.` and `I need to get out of town.` now stay on the same vacation thinking fork instead of dropping to the generic fallback
+- Post-Epic 9 slice 52 preserved strict truth boundaries by extending only the standalone vacation opener match, while keeping broader rest/burnout language out of scope and preserving `hotel` / `flight` as logistics-first organizer prompts
+- Post-Epic 9 slice 52 closes the current vacation opener usefulness sublane on acceptance evidence
+- the next recommended bounded lane is companion retirement opener usefulness hardening, focused on making adjacent first-turn retirement phrasing like stepping back from work or slowing down for good land on the existing retirement fork instead of falling through to the generic fallback
+- Post-Epic 9 slice 53 is approved from the main repo target
+- Post-Epic 9 slice 53 hardened the standalone retirement opener by extending the existing fork to nearby first-turn retirement phrasing like `step back from work`, `slow down at work for good`, and `ease out of work`, while leaving looser workload or burnout phrasing outside the retirement lane
+- Post-Epic 9 slice 53 preserved strict truth boundaries by improving only the retirement opener match, without broadening into general career-transition coaching, burnout therapy, memory claims, retrieval, or follow-up seam redesign
+- the next recommended bounded lane is companion retirement opener usefulness acceptance pass, focused on checking whether the current standalone retirement opener now holds cleanly across nearby first-turn retirement-shaped prompts or whether one final bounded usefulness defect remains
+- Post-Epic 9 slice 54 is approved from the main repo target
+- Post-Epic 9 slice 54 completed a bounded retirement opener acceptance pass and repaired the remaining nearby alias `step away from work for good`, while truthfully documenting that one final retirement-exit phrasing family still remains outside the current opener seam
+- Post-Epic 9 slice 54 preserved strict truth boundaries by extending only the retirement opener match, while keeping looser workload-reduction and burnout phrasing outside the retirement lane and avoiding broader career-transition redesign
+- the next recommended bounded lane is companion retirement opener usefulness closeout pass, focused on deciding whether one final retirement-exit phrasing family like `wind down my career for good` or `be done working soon` should be absorbed into the existing opener seam or whether the current boundary is the truthful stopping point
+- Post-Epic 9 slice 55 is approved from the main repo target
+- Post-Epic 9 slice 55 completed the retirement opener closeout pass and repaired the final in-bounds retirement-exit phrasing family for `wind down my career` and `be done working soon`, while preserving the truthful boundary that looser prompts like `I want to end my career soon.` remain outside the retirement lane
+- Post-Epic 9 slice 55 preserved strict truth boundaries by extending only the retirement opener match, while keeping workload-reduction, burnout, and broader career-dissatisfaction phrasing out of scope
+- Post-Epic 9 slice 55 closes the current retirement opener usefulness sublane on acceptance evidence
+- the next recommended bounded lane is companion hard-conversation opener usefulness hardening, focused on making nearby first-turn natural phrasing like `I need to talk to my brother` land on the existing hard-conversation fork instead of falling through to the generic fallback
+- Post-Epic 9 slice 56 is approved from the main repo target
+- Post-Epic 9 slice 56 hardened the standalone hard-conversation opener by routing nearby natural first-turn phrasing like `talk to`, `have a conversation`, and `hard conversation` into the existing conversation fork, while leaving texting and generic relationship-advice prompts outside the seam
+- Post-Epic 9 slice 56 preserved strict truth boundaries by improving only the opener trigger match, without broadening into general social coaching, texting architecture, therapy drift, memory claims, or follow-up seam redesign
+- the next recommended bounded lane is companion hard-conversation opener usefulness acceptance pass, focused on checking whether the current standalone hard-conversation opener now holds cleanly across nearby first-turn conversation-shaped prompts or whether one final bounded usefulness defect remains
+- Post-Epic 9 slice 57 is approved from the main repo target
+- Post-Epic 9 slice 57 completed a bounded hard-conversation opener acceptance pass and repaired the remaining nearby alias `sit down with`, while truthfully documenting that one final opener-family gap still remains for natural phrasing like `say something to` and `clear the air with`
+- Post-Epic 9 slice 57 preserved strict truth boundaries by extending only the hard-conversation opener match, while keeping texting prompts and generic relationship-advice requests outside the seam and avoiding broader coaching redesign
+- the next recommended bounded lane is companion hard-conversation opener usefulness closeout pass, focused on deciding whether the remaining `say something to` / `clear the air with` family belongs inside the existing hard-conversation opener seam or whether the current boundary is the truthful stopping point
+- Post-Epic 9 slice 58 is approved from the main repo target
+- Post-Epic 9 slice 58 completed the hard-conversation opener closeout pass and repaired the final in-bounds opener family for `say something to` and `clear the air with`, while preserving the truthful boundary that texting prompts, generic relationship-advice asks, and other broader communication requests stay outside this seam
+- Post-Epic 9 slice 58 preserved strict truth boundaries by extending only the hard-conversation opener match, without broadening into texting architecture, therapy drift, or general relationship coaching
+- Post-Epic 9 slice 58 closes the current hard-conversation opener usefulness sublane on acceptance evidence
+- the next recommended bounded lane is companion job-exit decision opener usefulness hardening, focused on making nearby first-turn quit-or-leave-my-job phrasing like `I think I should quit` land on the existing practical decision fork instead of falling through to the generic fallback
+- Post-Epic 9 slice 59 is approved from the main repo target
+- Post-Epic 9 slice 59 hardened the standalone job-exit decision opener by routing nearby first-turn phrasing like `leave my job`, `leave this job`, `should quit`, `need to quit`, `should resign`, `need to resign`, and `want out of this job` into the existing practical decision fork, while leaving broader dislike, burnout, and retirement phrasing outside the seam
+- Post-Epic 9 slice 59 preserved strict truth boundaries by improving only the opener trigger match, without broadening into general job-transition coaching, burnout therapy, retirement routing, or decision follow-up redesign
+- the next recommended bounded lane is companion job-exit decision opener usefulness acceptance pass, focused on checking whether the current standalone quit-or-leave-my-job opener now holds cleanly across nearby first-turn job-exit prompts or whether one final bounded usefulness defect remains
+- Post-Epic 9 slice 60 is approved from the main repo target
+- Post-Epic 9 slice 60 completed a bounded job-exit decision opener acceptance pass and repaired the remaining nearby shorthand alias family for `resign` and `quit my job`, while preserving the truthful boundary that broader dislike, burnout, and retirement phrasing stay outside the seam
+- Post-Epic 9 slice 60 preserved strict truth boundaries by extending only the job-exit opener match, without broadening into general job-transition coaching, burnout therapy, retirement routing, or decision follow-up redesign
+- the next recommended bounded lane is companion job-exit decision opener usefulness closeout pass, focused on deciding whether the current standalone quit-or-leave-my-job opener is now acceptance-complete or whether one final bounded usefulness defect still remains
+- Post-Epic 9 slice 61 is approved from the main repo target
+- Post-Epic 9 slice 61 completed a bounded job-exit decision opener closeout pass and repaired the remaining formal notice-family aliases `put in my notice` and `hand in my notice`, while truthfully documenting that one final nearby job-exit family still remains for phrasing like `walk away from this job` and `leave this company`
+- Post-Epic 9 slice 61 preserved strict truth boundaries by extending only the job-exit opener match, while keeping broader dislike, burnout, and retirement phrasing outside the seam and avoiding any decision follow-up redesign
+- the next recommended bounded lane is companion job-exit decision opener final closeout pass, focused on deciding whether the remaining `walk away from this job` / `leave this company` family belongs inside the existing job-exit opener seam or whether the current boundary is the truthful stopping point
+- Post-Epic 9 slice 62 is approved from the main repo target
+- Post-Epic 9 slice 62 completed the job-exit decision opener final closeout pass and repaired the remaining nearby family for `walk away from this job` and `leave this company`, while preserving the truthful boundary that broader dislike, burnout, and retirement phrasing stay outside the seam
+- Post-Epic 9 slice 62 preserved strict truth boundaries by extending only the job-exit opener match, without broadening into general career coaching, burnout therapy, retirement routing, or decision follow-up redesign
+- Post-Epic 9 slice 62 closes the current job-exit decision opener usefulness sublane on acceptance evidence
+- the next recommended bounded lane is companion drafting/message opener usefulness hardening, focused on making nearby first-turn phrasing like `I need to send a message to my brother` land on the existing drafting fork instead of falling through to the generic fallback
+- Post-Epic 9 slice 63 is approved from the main repo target
+- Post-Epic 9 slice 63 hardened the standalone drafting/message opener by routing nearby first-turn message-writing phrasing like `writing an email`, `write to`, `send a message`, `send a text`, and `text my` into the existing drafting fork, while keeping hard-conversation prompts and generic relationship-advice requests outside the seam
+- Post-Epic 9 slice 63 preserved strict truth boundaries by improving only the opener trigger match, without broadening into general relationship coaching, hard-conversation follow-up redesign, memory claims, or broader drafting redesign
+- the next recommended bounded lane is companion drafting/message opener usefulness acceptance pass, focused on checking whether the current standalone message-writing opener now holds cleanly across nearby first-turn drafting prompts or whether one final bounded usefulness defect remains
+- Post-Epic 9 slice 64 is approved from the main repo target
+- Post-Epic 9 slice 64 completed a bounded drafting/message opener acceptance pass and repaired the remaining nearby note/message-writing alias family for `send a note` and `write ... a message`, while preserving the truthful boundary that hard-conversation prompts and generic relationship-advice requests stay outside the seam
+- Post-Epic 9 slice 64 preserved strict truth boundaries by extending only the drafting/message opener match, without broadening into general relationship coaching, hard-conversation follow-up redesign, memory claims, or broader drafting redesign
+- the next recommended bounded lane is companion drafting/message opener usefulness closeout pass, focused on deciding whether the current standalone message-writing opener is now acceptance-complete or whether one final bounded usefulness defect still remains
+- Post-Epic 9 slice 65 is approved from the main repo target
+- Post-Epic 9 slice 65 completed the drafting/message opener closeout pass and repaired the final nearby reply/response opener family for `respond to`, `send a reply`, `send a response`, `write a reply`, and `write a response`, while preserving the truthful boundary that hard-conversation prompts and generic relationship-advice requests stay outside the seam
+- Post-Epic 9 slice 65 preserved strict truth boundaries by extending only the drafting/message opener match, without broadening into general relationship coaching, hard-conversation follow-up redesign, memory claims, or broader drafting redesign
+- Post-Epic 9 slice 65 closes the current drafting/message opener usefulness sublane on acceptance evidence
+- the next recommended bounded lane is companion book-work opener usefulness hardening, focused on making nearby first-turn book-writing prompts like `I need help with my book` or `I need to write my book` land on the existing book-work fork instead of falling through to the generic practical fallback
+- Post-Epic 9 slice 66 is approved from the main repo target
+- Post-Epic 9 slice 66 hardened the standalone book-work opener by routing nearby first-turn phrasing like `help with my book`, `write my book`, `outlining my book`, `stuck on my book`, `revise my book`, and `book chapter` into the existing book-work fork, while keeping nearby non-book writing prompts like `I need help writing this article` outside the seam
+- Post-Epic 9 slice 66 preserved strict truth boundaries by improving only the first-turn book-work opener match, without broadening into generic writing help, article/newsletter work, memory claims, or follow-up seam redesign
+- the next recommended bounded lane is companion book-work opener usefulness acceptance pass, focused on checking whether the current standalone book-work opener now holds cleanly across nearby natural first-turn authoring prompts or whether one final bounded usefulness defect remains for adjacent book-shaped wording like `memoir` or `manuscript`
+- Post-Epic 9 slice 67 is approved from the main repo target
+- Post-Epic 9 slice 67 completed a bounded book-work opener acceptance pass and repaired the remaining nearby long-form authoring noun family for `memoir`, `manuscript`, `novel`, `nonfiction book`, and `memoir chapter`, while keeping shorter-form writing prompts like `article` and `newsletter` outside the seam
+- Post-Epic 9 slice 67 preserved strict truth boundaries by extending only the first-turn book-work opener noun family, without broadening into generic writing help, shorter-form authoring, memory claims, or follow-up seam redesign
+- the next recommended bounded lane is companion book-work opener usefulness closeout pass, focused on deciding whether one final adjacent long-form noun like `autobiography` belongs inside the existing book-work opener seam or whether the current noun family boundary is the truthful stopping point
+- Post-Epic 9 slice 68 is not yet approved from the main repo target
+- Architect Office review of slice 68 confirmed the repaired `autobiography` family is working, but found one remaining adjacent long-form noun gap: `I need help with my biography.` still falls through to the generic practical fallback even though it appears to belong inside the same bounded book-work opener seam
+- slice 68 preserved the shorter-form out-of-scope boundary correctly for `article` and `newsletter`, so the remaining work is one final noun-family repair rather than a broader authoring redesign
+- the next recommended bounded lane is companion book-work opener final closeout repair, focused only on deciding whether `biography` belongs inside the existing long-form book-work opener noun family and, if so, repairing that one remaining gap without broadening into screenplay, poem, essay, or other non-book writing surfaces
+- Post-Epic 9 slice 69 is approved from the main repo target
+- Post-Epic 9 slice 69 completed the final book-work opener closeout repair by adding `biography` to the existing long-form noun family, so nearby first-turn prompts like `I need help with my biography`, `Help me with this biography chapter`, and `I need to revise my biography` now stay on the same book-work fork instead of dropping to the generic practical fallback
+- Post-Epic 9 slice 69 preserved the truthful stop between long-form book-work and shorter-form writing, with `short story`, `screenplay`, `poem`, `article`, and `newsletter` all still staying out of the book-work opener seam
+- Post-Epic 9 slice 69 closes the current companion book-work opener usefulness sublane on acceptance evidence
+- the next recommended bounded lane is companion generic practical fallback false-positive conversation hardening, focused on repairing substring-triggered misroutes where non-conversation writing nouns like `essays` currently trip the hard-conversation fork because they contain conversation substrings such as `say`
+- Post-Epic 9 slice 70 is approved from the main repo target
+- Post-Epic 9 slice 70 hardened the generic practical fallback conversation sorter by replacing loose single-word substring checks with word-boundary matching, so non-conversation writing prompts like `I need help with my collection of essays`, `I need help with this essay`, and `I need help with my essays` no longer trip the hard-conversation fork
+- Post-Epic 9 slice 70 preserved real conversation routing for in-bounds prompts like `talk to`, `have a conversation with`, `say something to`, and `clear the air with`, without widening essays into book-work or broader writing classification
+- the next recommended bounded lane is companion generic practical fallback false-positive conversation acceptance pass, focused on checking whether the current fallback conversation sorter now holds cleanly across nearby non-conversation substring cases and real conversation controls or whether one final bounded false-positive defect remains
+- Post-Epic 9 slice 71 is approved from the main repo target
+- Post-Epic 9 slice 71 completed a bounded acceptance pass across the current generic practical fallback conversation sorter, confirming that nearby substring-risk prompts like `essay collection`, `textbook`, `callback draft`, and `smalltalk scene` stay out of the hard-conversation fork while real conversation controls still route correctly
+- Post-Epic 9 slice 71 preserved the narrow boundary of this seam by adding only focused regression coverage, without broadening non-conversation writing into any other opener family or redesigning the fallback structure
+- the next recommended bounded lane is companion generic practical fallback false-positive conversation closeout pass, focused on deciding whether this sorter is now acceptance-complete or whether one final bounded false-positive conversation defect still remains
+- Post-Epic 9 slice 72 is not yet approved from the main repo target
+- Architect Office review of slice 72 confirmed the repaired `boundary` / `conflict` document-shaped prompts now stay out of the hard-conversation fork, but found one remaining adjacent defect family in the same fallback seam:
+  - document-shaped `call` prompts like `I need help with my call sheet`, `I need help with my call notes`, and `I need help with this call log` still false-positive into the hard-conversation fork
+  - explicit person-shaped `I need to call my mom.` currently under-routes out of the hard-conversation fork instead of staying with the real conversation controls
+- the next recommended bounded lane is companion generic practical fallback final call-term repair, focused only on repairing the `call` family inside the fallback conversation sorter so document-shaped `call` prompts stay out while explicit person-shaped `call` prompts route correctly
+- Post-Epic 9 slice 73 is approved from the main repo target
+- Post-Epic 9 slice 73 completed the final `call`-family repair inside the generic practical fallback seam by removing bare `call` from the loose conversation sorter and adding explicit person-shaped `call my` / `call him` / `call her` / `call them` practical patterns instead
+- Post-Epic 9 slice 73 preserved the truthful boundary so document-shaped prompts like `call sheet`, `call notes`, `call log`, and nearby `callback` wording stay out of the hard-conversation fork while explicit person-shaped `call` prompts now route correctly
+- Post-Epic 9 slice 73 closes the current companion generic practical fallback false-positive conversation sublane on acceptance evidence
+- Post-Epic 9 slice 74 is approved from the main repo target
+- Post-Epic 9 slice 74 hardened the standalone drafting opener by removing the overly broad bare `write this` trigger, so note-taking and document-writing prompts like `I need to write this down`, `I need to write this in my notes`, `I need to write this into the doc`, and nearby `write this on the whiteboard` now stay out of the drafting fork while true message-writing prompts still route correctly
+- Post-Epic 9 slice 74 preserved the truthful boundary of the drafting opener seam by keeping explicit message-writing prompts like `write to my boss`, `write her back`, and `send a message to my brother` on the drafting fork without expanding into a general writing classifier
+- the next recommended bounded lane is companion vacation opener false-positive document-writing hardening, focused on repairing overmatches where document-shaped prompts like `I need help with this travel essay`, `travel memo`, `trip report`, `vacation note`, or `hotel review` currently false-positive into the vacation/logistics openers instead of staying on a neutral practical fallback
+- Post-Epic 9 slice 75 is approved from the main repo target
+- Post-Epic 9 slice 75 hardened the standalone vacation opener by adding a narrow document-writing guard, so prompts like `travel essay`, `travel chapter`, `travel memo`, `trip report`, `vacation note`, `hotel review`, and nearby `vacation review` now stay out of the vacation and hotel/flight logistics forks while true trip-planning prompts still route correctly
+- Post-Epic 9 slice 75 preserved the truthful boundary of the vacation opener seam by keeping actual trip/vacation planning requests on the existing travel fork without broadening into a general travel-writing classifier
+- the next recommended bounded lane is companion vacation opener false-positive document-writing acceptance pass, focused on checking whether the current vacation opener now holds cleanly across nearby travel-shaped document prompts and true trip-planning controls or whether one final bounded overmatch remains
+- Post-Epic 9 slice 76 is approved from the main repo target
+- Post-Epic 9 slice 76 completed a bounded acceptance pass across the vacation opener document-writing guard and repaired the remaining nearby document-family gap for `outline`, `summary`, and `recap`, so travel-shaped document prompts like `trip outline`, `travel summary`, `vacation recap`, and `hotel summary` now stay out while true trip-planning prompts still route correctly
+- Post-Epic 9 slice 76 preserved the narrow boundary of the vacation opener seam by extending only the existing document-term guard, without broadening into a general travel-writing classifier or changing the core vacation-planning fork
+- the next recommended bounded lane is companion vacation opener false-positive document-writing closeout pass, focused on deciding whether one final nearby document-shaped term like `overview` still overmatches into the vacation opener or whether the current guard is now the truthful stopping point
+- Post-Epic 9 slice 77 is approved from the main repo target
+- Post-Epic 9 slice 77 completed the vacation opener document-writing closeout pass by adding `overview` to the existing guard, so prompts like `travel overview`, `trip overview`, and `vacation overview` now stay out of the vacation opener while real trip-planning prompts still route correctly
+- Post-Epic 9 slice 77 preserved the truthful boundary between travel planning and travel-related document writing, and closes the current companion vacation opener false-positive document-writing sublane on acceptance evidence
+- the next recommended bounded lane is companion retirement opener false-positive document-writing hardening, focused on repairing overmatches where document-shaped prompts like `retirement essay`, `retirement memo`, `retirement chapter`, `retirement review`, `retirement overview`, `retirement outline`, or `retirement recap` currently false-positive into the retirement opener instead of staying on a neutral practical fallback
+- Post-Epic 9 slice 78 is approved from the main repo target
+- Post-Epic 9 slice 78 hardened the standalone retirement opener with a narrow document-writing guard, so prompts like `retirement essay`, `retirement memo`, `retirement chapter`, `retirement review`, `retirement overview`, `retirement outline`, and `retirement recap` now stay out while true retirement prompts still route correctly
+- Post-Epic 9 slice 78 preserved the truthful boundary of the retirement opener seam by keeping actual retirement planning requests on the existing retirement fork without broadening into a general retirement-writing classifier
+- the next recommended bounded lane is companion decision opener false-positive document-writing hardening, focused on repairing overmatches where document-shaped prompts like `decision memo`, `decision outline`, `decision review`, or `job decision memo` currently false-positive into the concrete decision fork while true decision asks like `I need help deciding between two jobs` and `I need help choosing` still need to route correctly
+- Post-Epic 9 slice 79 is not yet approved from the main repo target
+- Architect Office review of slice 79 confirmed the repaired `decision memo` / `decision outline` / `decision review` family now stays out and the genuine decision verbs `deciding` and `choosing` now route correctly, but found one remaining adjacent document-family leak:
+  - `I need help with this decision summary.` still routes into the concrete decision fork
+- the next recommended bounded lane is companion decision opener final document-summary repair, focused only on deciding whether `summary` belongs inside the same decision document-writing guard and, if so, repairing that one remaining gap without broadening the decision seam further
+- Post-Epic 9 slice 80 is not yet approved from the main repo target
+- Architect Office review of slice 80 confirmed the repaired `decision summary` case now stays out and the genuine decision verbs still route correctly, but found one remaining adjacent document-family leak:
+  - `I need help with this decision recap.` still routes into the concrete decision fork
+- the next recommended bounded lane is companion decision opener final document-recap repair, focused only on deciding whether `recap` belongs inside the same decision document-writing guard and, if so, repairing that one remaining gap without broadening the decision seam further
+- Post-Epic 9 slice 81 is not yet approved from the main repo target
+- Architect Office review of slice 81 confirmed the repaired `decision recap` case now stays out and the genuine decision verbs still route correctly, but fresh repo-truth smoke found more adjacent document-family leaks still routing into the concrete decision fork:
+  - `I need help with this decision overview.`
+  - `I need help with this decision chapter.`
+  - `I need help with this decision log.`
+- the next recommended bounded lane is companion decision opener final document-family closeout repair, focused only on deciding which remaining document nouns like `overview`, `chapter`, or `log` belong inside the same decision document-writing guard and repairing only those remaining gaps without broadening the decision seam further
+- Post-Epic 9 slice 82 is not yet approved from the main repo target
+- Architect Office review of slice 82 confirmed the repaired `decision overview` / `decision chapter` / `decision log` family now stays out and the genuine decision controls still route correctly, but fresh repo-truth smoke found one remaining adjacent document-family leak:
+  - `I need help with this decision notes.` still routes into the concrete decision fork
+- the next recommended bounded lane is companion decision opener final document-notes closeout repair, focused only on deciding whether `notes` belongs inside the same decision document-writing guard and, if so, repairing that one remaining gap without broadening the decision seam further
+- Post-Epic 9 slice 83 is approved from the main repo target
+- Post-Epic 9 slice 83 completed the final decision document-family closeout pass by adding `notes` to the existing decision document-writing guard, so `decision notes` now stays out while the genuine decision controls `deciding between two jobs`, `help choosing`, and `making a decision` still route correctly
+- Post-Epic 9 slice 83 preserved the truthful boundary of the decision opener seam by extending only the existing document-term guard and closes the current decision document-writing sublane on acceptance evidence
+- Post-Epic 9 slice 61 is approved from the main repo target
+- Post-Epic 9 slice 61 completed a bounded job-exit decision opener closeout pass and repaired the remaining formal notice-family aliases `put in my notice` and `hand in my notice`, while truthfully documenting that one final nearby job-exit family still remains for phrasing like `walk away from this job` and `leave this company`
+- Post-Epic 9 slice 61 preserved strict truth boundaries by extending only the job-exit opener match, while keeping broader dislike, burnout, and retirement phrasing outside the seam and avoiding any decision follow-up redesign
+- the next recommended bounded lane is companion job-exit decision opener final closeout pass, focused on deciding whether the remaining `walk away from this job` / `leave this company` family belongs inside the existing job-exit opener seam or whether the current boundary is the truthful stopping point
+- Post-Epic 9 slice 84 is approved from the main repo target
+- Post-Epic 9 slice 84 completed an acceptance-only closeout pass for the remaining nearby job-exit phrasing family and confirmed current repo truth already routes `walk away from this job` and `leave this company` through the existing concrete job-exit decision fork with focused regression coverage already present
+- Post-Epic 9 slice 84 preserved the truthful boundary that broader burnout and retirement phrasing still stay outside the seam, and it closes this redundant main-repo job-exit closeout check without requiring any additional code change
+- the next recommended bounded lane is post-Epic-9 live-use weakness assessment, focused on identifying the single highest-value remaining first-turn chief-of-staff or companion usefulness defect in current repo truth and proposing one bounded repair slice instead of broadening architecture speculatively
+- Post-Epic 9 slice 85 is approved from the main repo target
+- Post-Epic 9 slice 85 completed a repo-truth live-use weakness assessment and identified the strongest remaining first-turn chief-of-staff defect as the lack of a concrete meeting-prep opener, with prompts like `I need to prep for a meeting`, `I have a big meeting tomorrow`, and `I need help with this meeting agenda` still falling through to weaker generic replies
+- Post-Epic 9 slice 85 also confirmed a narrower adjacent issue where `I need help drafting an email to my boss.` still lands on the hard-conversation fork, but correctly ranked the missing meeting opener family as the higher-value next bounded repair
+- the next recommended bounded lane is companion meeting opener usefulness hardening, focused on making natural first-turn meeting-prep / meeting-agenda / get-ready-for-this-meeting phrasing land on one concrete meeting-shaped fork while keeping hard-conversation, decision, and drafting seams intact
+- Post-Epic 9 slice 86 is approved from the main repo target
+- Post-Epic 9 slice 86 hardened the standalone first-turn companion seam with a concrete meeting opener, so natural meeting-prep prompts like `I need to prep for a meeting`, `I have a big meeting tomorrow`, `I need to get ready for this meeting with my boss`, `Help me think through this meeting`, and `I need help with this meeting agenda` now land on one useful meeting-shaped fork instead of weaker generic replies
+- Post-Epic 9 slice 86 preserved the truthful boundary by avoiding fake meeting context or broader calendar claims, while keeping the hard-conversation and decision seams intact and leaving the narrower drafting-adjacent boss-email issue unchanged
+- the next recommended bounded lane is companion drafting opener boss-email usefulness hardening, focused only on making explicit drafting phrasing like `I need help drafting an email to my boss` land on the existing drafting fork instead of the hard-conversation fork without broadening the surrounding conversation seam
+- Post-Epic 9 slice 87 is approved from the main repo target
+- Post-Epic 9 slice 87 repaired the narrow drafting-adjacent boss-email miss by making `I need help drafting an email to my boss.` land on the existing drafting fork, while preserving the neighboring hard-conversation, meeting, and decision seams unchanged
+- Post-Epic 9 slice 87 preserved the truthful boundary by refining only the smallest drafting trigger list, without adding fake email context, broadening the conversation sorter, or changing the surrounding practical forks
+- the next recommended bounded lane is post-Epic-9 live-use weakness reassessment, focused on identifying the single highest-value remaining first-turn chief-of-staff or companion usefulness defect in fresh current repo truth after the meeting and boss-email opener repairs
+- Post-Epic 9 slice 88 is approved from the main repo target
+- Post-Epic 9 slice 88 completed a fresh repo-truth live-use reassessment after the meeting and boss-email opener repairs and identified the strongest remaining first-turn chief-of-staff defect as the post-meeting follow-up email drafting family, with explicit prompts like `I need help writing a follow-up email after this meeting.` and `I need to send a follow-up email after this meeting.` still falling through to weaker generic replies
+- Post-Epic 9 slice 88 also confirmed that adjacent seams remain stable: meeting-follow-up wording stays on the meeting fork, hard-conversation prompts stay on the conversation fork, and decision prompts stay on the concrete decision fork
+- the next recommended bounded lane is companion post-meeting follow-up email drafting hardening, focused only on routing explicit post-meeting follow-up email phrasing into the existing drafting fork while preserving the meeting, conversation, and decision seams unchanged
+- Post-Epic 9 slice 89 is approved from the main repo target
+- Post-Epic 9 slice 89 repaired the concrete post-meeting follow-up email drafting miss by making explicit prompts like `I need help writing a follow-up email after this meeting.` and `I need to send a follow-up email after this meeting.` land on the existing drafting fork, while preserving the adjacent meeting, conversation, decision, and boss-email drafting seams unchanged
+- Post-Epic 9 slice 89 preserved the truthful boundary by refining only the smallest drafting-trigger lists, without adding fake inbox, email, or calendar context or broadening the surrounding meeting seam
+- the next recommended bounded lane is post-Epic-9 live-use weakness reassessment, focused on identifying the single highest-value remaining first-turn chief-of-staff or companion usefulness defect in fresh current repo truth after the follow-up-email drafting repair
+- Post-Epic 9 slice 90 is approved from the main repo target
+- Post-Epic 9 slice 90 completed a fresh repo-truth live-use reassessment after the follow-up-email drafting repair and identified the strongest remaining first-turn chief-of-staff weakness as the inbox opener family, with prompts like `I need help with my inbox.`, `I need to get through my inbox.`, and `I need help with my inbox triage.` still falling through to weak generic replies
+- Post-Epic 9 slice 90 also confirmed that adjacent hardened lanes remain stable: meeting-follow-up stays on the meeting fork, boss-email and follow-up-email drafting stay on the drafting fork, hard-conversation stays on the conversation fork, and decision prompts stay on the concrete decision fork
+- the next recommended bounded lane is companion inbox opener usefulness hardening, focused only on routing natural inbox / inbox-triage / clear-my-inbox phrasing into one concrete inbox-shaped fork while preserving the meeting, drafting, decision, and hard-conversation seams unchanged
+- Post-Epic 9 slice 91 is approved from the main repo target
+- Post-Epic 9 slice 91 repaired the concrete inbox-family opener weakness by making natural prompts like `I need help with my inbox.`, `I need to get through my inbox.`, `I need help with my inbox triage.`, `I need to clear my inbox.`, and `I need help triaging my inbox.` land on one concrete inbox-shaped fork, while preserving the adjacent meeting, drafting, conversation, and decision seams unchanged
+- Post-Epic 9 slice 91 preserved the truthful boundary by avoiding fake inbox, thread, or account claims and by keeping the repair inside the smallest first-turn opener seam only
+- the next recommended bounded lane is post-Epic-9 live-use weakness reassessment, focused on identifying the single highest-value remaining first-turn chief-of-staff or companion usefulness defect in fresh current repo truth after the inbox opener repair
+- Post-Epic 9 slice 92 is approved from the main repo target
+- Post-Epic 9 slice 92 completed a fresh repo-truth live-use reassessment after the inbox opener repair and identified the strongest remaining first-turn chief-of-staff weakness as the tomorrow-planning / tomorrow-scheduling opener family, with prompts like `I need help planning tomorrow.`, `I need help scheduling tomorrow.`, `I need help organizing tomorrow.`, and `I need help planning around two meetings.` still falling through to the generic practical sorter
+- Post-Epic 9 slice 92 also confirmed the truthful upgrade direction already exists nearby in current repo truth because `I need to get tomorrow under control.` already lands on the sharper capacity-pushback fork while adjacent meeting, drafting, conversation, and decision seams remain stable
+- the next recommended bounded lane is companion tomorrow-planning opener usefulness hardening, focused only on routing natural tomorrow-planning / scheduling-tomorrow / organizing-tomorrow / planning-around-meetings phrasing into one concrete tomorrow-planning fork while preserving the inbox, meeting, drafting, conversation, and decision seams unchanged
+- Post-Epic 9 slice 93 is approved from the main repo target
+- Post-Epic 9 slice 93 repaired the concrete tomorrow-planning opener weakness by making natural prompts like `I need help planning tomorrow.`, `I need help scheduling tomorrow.`, `I need help organizing tomorrow.`, and `I need help planning around two meetings.` land on one concrete tomorrow-planning fork, while preserving the adjacent inbox, meeting, drafting, conversation, decision, and existing sharper `get tomorrow under control` behavior unchanged
+- Post-Epic 9 slice 93 preserved the truthful boundary by avoiding fake calendar or schedule-awareness claims and by keeping the repair inside the smallest first-turn opener seam only
+- the next recommended bounded lane is post-Epic-9 live-use weakness reassessment, focused on identifying the single highest-value remaining first-turn chief-of-staff or companion usefulness defect in fresh current repo truth after the tomorrow-planning opener repair
+- Post-Epic 9 slice 94 is approved from the main repo target
+- Post-Epic 9 slice 94 completed a fresh repo-truth live-use reassessment after the tomorrow-planning opener repair and identified the strongest remaining first-turn chief-of-staff weakness as the presentation / proposal prep opener family, with prompts like `I need help with this presentation.`, `I need help getting ready for this presentation.`, `I need help with this proposal.`, and `I need help getting ready for this proposal.` still falling through to the generic practical sorter
+- Post-Epic 9 slice 94 also confirmed that adjacent seams remain stable: meeting agenda stays on the meeting fork, inbox stays on the inbox fork, drafting stays on the drafting fork, hard-conversation stays on the conversation fork, decision stays on the concrete decision fork, and tomorrow-planning remains on the sharper tomorrow fork
+- the next recommended bounded lane is companion presentation / proposal prep opener hardening, focused only on routing natural presentation / proposal prep phrasing into one concrete prep-shaped fork while preserving the inbox, meeting, drafting, conversation, decision, and tomorrow-planning seams unchanged
+- Post-Epic 9 slice 95 is approved from the main repo target
+- Post-Epic 9 slice 95 repaired the concrete presentation / proposal prep opener weakness by making natural prompts like `I need help with this presentation.`, `I need help getting ready for this presentation.`, `I need help with this proposal.`, and `I need help getting ready for this proposal.` land on one concrete prep-shaped fork, while preserving the adjacent inbox, meeting, drafting, conversation, decision, and tomorrow-planning seams unchanged
+- Post-Epic 9 slice 95 preserved the truthful boundary by avoiding fake presentation, proposal, audience, or deliverable context claims and by keeping the repair inside the smallest first-turn opener seam only
+- the next recommended bounded lane is post-Epic-9 live-use weakness reassessment, focused on identifying the single highest-value remaining first-turn chief-of-staff or companion usefulness defect in fresh current repo truth after the presentation / proposal prep opener repair
+- Post-Epic 9 slice 96 is approved from the main repo target
+- Post-Epic 9 slice 96 completed a fresh repo-truth live-use reassessment after the presentation / proposal prep opener repair and identified the strongest remaining first-turn chief-of-staff weakness as agenda phrasing outside the explicit meeting seam, with prompts like `I need help with this agenda.`, `I need help setting the agenda.`, and `Set the agenda with me.` still falling through to generic replies
+- Post-Epic 9 slice 96 also confirmed that adjacent seams remain stable: `meeting agenda` stays on the meeting fork, inbox stays on the inbox fork, drafting stays on the drafting fork, hard-conversation stays on the conversation fork, decision stays on the concrete decision fork, and tomorrow-planning remains on the sharper tomorrow fork
+- the next recommended bounded lane is companion agenda opener usefulness hardening, focused only on routing natural agenda phrasing outside the explicit meeting seam into one concrete agenda-shaped fork while preserving the meeting, inbox, drafting, conversation, decision, and tomorrow-planning seams unchanged
+- Post-Epic 9 slice 97 is approved from the main repo target
+- Post-Epic 9 slice 97 repaired the concrete agenda-family opener weakness by making natural prompts like `I need help with this agenda.`, `I need help setting the agenda.`, and `Set the agenda with me.` land on one concrete agenda-shaped fork, while preserving the adjacent meeting, inbox, drafting, conversation, decision, tomorrow-planning, and presentation/proposal seams unchanged
+- Post-Epic 9 slice 97 preserved the truthful boundary by avoiding fake meeting, audience, or scheduling context claims and by keeping the repair inside the smallest first-turn opener seam only
+- the next recommended bounded lane is post-Epic-9 live-use weakness reassessment, focused on identifying the single highest-value remaining first-turn chief-of-staff or companion usefulness defect in fresh current repo truth after the agenda opener repair
+
+### Epic 10. Surface Integrity and Route Repair
+
+Status:
+- completed
+
+Story:
+- perform a full repo-truth sweep of the JARVIS web surface and repair or explicitly log every broken page, button, link, API, and interface
+
+Current Epic 10 status:
+- previously reprioritized ahead of Epic 5, but now returned to queue by later user instruction
+- active
+- the first Epic 10 slice is approved from the main repo target
+- Epic 10 slice 1 completed a first-pass page inventory and bounded repair of Chronicle link wiring plus honest degraded home read APIs
+- the second Epic 10 slice is approved from the main repo target
+- Epic 10 slice 2 completed a second-pass live interaction sweep of the shared Glass shell and stateful module controls
+- Epic 10 slice 2 repaired the misleading Command navigation label and rewired Navigate settings into the real shared settings overlay seam
+- Epic 10 slice 2 preserved honest degraded behavior for blocked navigation preview and Home-backed refresh depth
+- the third Epic 10 slice is approved from the main repo target
+- Epic 10 slice 3 completed a bounded route, API, and interface verification pass across the remaining high-value live module surfaces
+- Epic 10 slice 3 repaired shared shell alias routing for missing views and corrected Agents route logging so downstream handoffs use real surface paths
+- Epic 10 slice 3 confirmed the standalone Activity, Approvals, Supervision, Settings, and Mission surfaces are either working or degrading honestly
+- the fourth Epic 10 slice is approved from the main repo target
+- Epic 10 slice 4 completed a bounded navigation and dependency-truth pass across the remaining blocked navigation-facing surfaces
+- Epic 10 slice 4 repaired the standalone `/api/nav/route` seam so it returns truthful persisted-only state instead of a local exception
+- Epic 10 slice 4 tightened navigation center and Glass shell wording so blocked live routing, maps, and resume scope are stated plainly instead of over-promised
+- the fifth Epic 10 slice is approved from the main repo target
+- Epic 10 slice 5 completed the final surface closeout and residual defect sweep
+- Epic 10 slice 5 repaired the last remaining user-visible truth defect in Calendar degraded-state wording
+- Epic 10 is procedurally closed from the main repo target
+- next recommended epic is Epic 11 Navigation and CarPlay because it was explicitly queued after Epic 10 by user request
+
+Planned lanes:
+- page-by-page web surface audit
+- button and link verification
+- API and interface route verification
+- bounded repair of broken surface wiring
+- explicit evidence-backed defect list for blocked or non-bounded repairs
+
+### Epic 11. Navigation and CarPlay
+
+Status:
+- completed
+
+Story:
+- build out the Apple-native JARVIS navigation and CarPlay lane against the real `JarvisApple` seam and prepare it for native Xcode handoff
+
+Current Epic 11 status:
+- queued by user request after Epic 10
+- not started
+- image references captured for planning:
+  - `/Users/chris/Downloads/Nav iPhone Version.jpg`
+  - `/Users/chris/Downloads/Nav Carplay.jpg`
+- this epic should be planned and built as an Apple-native navigation lane in the JARVIS app, with CarPlay support or a clean Xcode-ready handoff seam if full CarPlay delivery is not yet possible in-scope
+
+Planned lanes:
+- iPhone navigation shell and route session UI
+- CarPlay-safe turn-by-turn surface
+- upcoming maneuvers list
+- destination view and route overview
+- smart stops and add-stop interaction
+- traffic alert and reroute flow
+- voice guidance and driver-safe interaction
+- route summary, ETA, distance, and travel-time surfaces
+- native Apple handoff seam for Xcode and CarPlay implementation
+- explicit defect/blocker list for any Apple entitlement, simulator, CarPlay, mapping, or routing gaps
+
+Design anchors from the queued references:
+- dark, driver-focused navigation UI
+- strong map-forward turn-by-turn view
+- minimal clutter and large-action controls
+- CarPlay-safe hierarchy with route guidance, route overview, stops, alerts, and voice surfaces
+- iPhone companion surfaces for trips, stops, destination detail, and route summary
+
+Current Epic 11 status:
+- active
+- the repo already contains a real `JarvisApple` navigation tab, route/state models, and CarPlay scene/controller seam
+- the first Epic 11 slice is approved from the main repo target
+- Epic 11 slice 1 completed an Apple navigation handoff audit and truth-surface pass around the existing `JarvisApple` seam
+- Epic 11 slice 1 verified real Xcode project, real targets/schemes, Swift package tests, and compile-backed Apple navigation/CarPlay code paths
+- Epic 11 slice 1 repaired Apple README truth drift so repo docs no longer describe the lane as scaffold-only
+- current blocker for deeper Apple runtime proof is local CoreSimulator drift, not the absence of Apple navigation/CarPlay code
+- the second Epic 11 slice is approved from the main repo target
+- Epic 11 slice 2 completed Apple contract-truth and handoff hardening across the governance test seam and Apple handoff pack
+- Epic 11 slice 2 repaired the Apple tracker-path test mismatch so governance checks follow current repo-truth tracker locations
+- Epic 11 slice 2 tightened the Apple handoff pack so compile-backed proof is explicitly distinguished from the still-blocked simulator/runtime proof on this Mac
+- the third Epic 11 slice is approved from the main repo target
+- Epic 11 slice 3 completed the Apple seam closeout and blocker framing pass
+- Epic 11 slice 3 repaired the last remaining handoff-pack wording drift so the checked-in iOS Xcode project is treated as present repo truth rather than future work
+- Epic 11 is procedurally closed from the main repo target
+- remaining Apple limits are now clearly framed as local simulator/runtime blockers rather than repo-truth ambiguity
+- no Epic 11 expansion into unwired live automotive integrations should happen without explicit Architect Office assignment
+
+Planned lanes:
+- iPhone navigation cockpit and route guidance
+- CarPlay route, stop, and voice consultation surfaces
+- route-aware smart stops and destination continuity
+- truthful capability boundaries around maps, traffic, weather, and saved state
+- Xcode handoff readiness for native finish work
+
+### Epic 12. Living Brief and Operating Picture
+
+Status:
+- completed
+
+Story:
+- turn the Morning Brief seam into the living operating picture of JARVIS so Chris can see what changed, what matters, what is waiting, what JARVIS prepared, and what to do next
+
+Current Epic 12 status:
+- newly established from main-repo fact base
+- the repo already contains a real Morning Brief pipeline, API route, and `/briefing-center` surface
+- the current brief still hardcodes calendar and email as unavailable in the pipeline, which is now stale against current local repo truth
+- OpenAI, Google Workspace, family-calendar, and Obsidian now show working local support posture, making the brief the highest-value next product lane
+- the first recommended bounded slice is Epic 12 slice 1 brief signal-truth uplift
+- slice 1 should replace stale hardcoded-unavailable assumptions with truthful connected, empty, degraded, or unavailable signal posture based on real support seams
+- the launch-plan artifact for this epic is `artifacts/architecture-reviews/epic-12-living-brief-launch-plan.md`
+- Epic 12 slice 1 is approved from the main repo target
+- Epic 12 slice 1 removed stale hardcoded Gmail and Calendar unavailable assumptions from the Morning Brief seam and replaced them with support-backed truth posture
+- Epic 12 slice 1 added bounded Obsidian support posture to the brief without turning it into fake hidden memory
+- Epic 12 slice 1 passed focused compile and Morning Brief regression checks, and the repo-truth probe showed live Gmail, Calendar, and Obsidian posture instead of stale `not configured` defaults
+- the next recommended bounded slice is Epic 12 slice 2 What Is Waiting, focused on truthful waiting-on-people and waiting-on-systems visibility from existing email/open-loop seams only
+- Epic 12 slice 2 is approved from the main repo target
+- Epic 12 slice 2 added a compact `What Is Waiting` layer to the Morning Brief using only repo-truth inbox-pressure and recorded open-loop seams
+- Epic 12 slice 2 preserved strict truth boundaries by treating Gmail as pressure only, not sender/thread understanding, and by treating open loops as recorded system pressure only
+- Epic 12 slice 2 passed focused compile and service-surface regression checks and is visibly present on `/briefing-center`
+- the next recommended bounded slice is Epic 12 slice 3 While You Were Away, focused on turning existing activity, delegation, research, and autonomy traces into one truthful catch-up layer without implying hidden execution
+- Epic 12 slice 3 is approved from the main repo target
+- Epic 12 slice 3 added a compact `What JARVIS Did While You Were Away` layer to the Morning Brief using only inspectable activity, mission, research, outcome, and autonomy traces already present in repo truth
+- Epic 12 slice 3 preserved strict truth boundaries by explicitly separating recorded completion from staged-only mission movement and from absent trace visibility
+- Epic 12 slice 3 passed focused compile and service-surface regression checks and now surfaces truthful catch-up posture on `/briefing-center`
+- the next recommended bounded slice is Epic 12 slice 4 Recommendation to Action Surface, focused on turning the brief recommendation into one-step truthful handoff into the right work object or next move without turning the brief into a dashboard rewrite
+- Epic 12 slice 4 is approved from the main repo target
+- Epic 12 slice 4 added a compact `Next Honest Step` action surface to the Morning Brief with explicit `direct route`, `bounded handoff`, and `narrative only` modes
+- Epic 12 slice 4 preserved strict truth boundaries by pointing only to real current repo routes and by keeping composite or imprecise recommendations narrative-only
+- Epic 12 slice 4 passed focused compile and service-surface regression checks and now gives the brief a truthful one-step handoff path when one really exists
+- the next recommended bounded slice is Epic 12 slice 5 Living Brief Acceptance Pass, focused on proving the full brief is useful, truthful, companion-shaped, and stable as one integrated surface
+- Epic 12 slice 5 is approved from the main repo target
+- Epic 12 slice 5 completed a focused acceptance pass across signal truth, waiting pressure, catch-up posture, action handoff, and integrated `/briefing-center` rendering with no new seam defect found
+- Epic 12 slice 5 confirmed the living brief is acceptance-worthy from current repo truth and that its remaining risks are precision and surface-feel limits rather than truth-contract failure
+- the next recommended bounded slice is Epic 12 closeout packaging, focused on producing the final closure artifact and explicit recommendation for whether Epic 12 should be procedurally closed from the main repo target
+- Epic 12 closeout packaging is approved from the main repo target
+- Epic 12 now delivers a truthful living brief across signal truth, waiting pressure, while-you-were-away catch-up, recommendation-to-action handoff, and integrated `/briefing-center` rendering
+- Epic 12 preserved strict truth boundaries across live, connected-but-empty, degraded, planned-only, empty, direct-route, bounded-handoff, and narrative-only states without slipping into fake execution claims
+- Epic 12 is procedurally closed from the main repo target
+- the next recommended bounded lane after Epic 12 closure is object-specific brief handoff refinement only where real saved-object identifiers already exist
+
+Planned lanes:
+- real calendar-awareness in the brief
+- real email-pressure and waiting-on-people awareness
+- open-loop, mission, and workbench continuity in the brief
+- while-you-were-away activity synthesis
+- recommendation with inspectable proof behind it
+- one-step transitions from the brief into useful work objects
+- truthful degraded behavior when a signal is unavailable or partial
 
 ## Complete
 
@@ -238,6 +982,43 @@ Planned lanes:
 - [x] Over-explaining reply trim hardening procedurally approved in isolated review state
 - [x] Fork-follow-up continuity hardening procedurally approved in isolated review state
 - [x] Decision and plan-fork follow-up continuity hardening procedurally approved in isolated review state
+- [x] Epic 4 checklist object creation for direct checklist asks procedurally approved in isolated review state
+- [x] Epic 4 plan object creation for direct explicit plan asks procedurally approved in isolated review state
+- [x] Epic 4 draft object creation for direct explicit drafting asks procedurally approved in isolated review state
+- [x] Epic 4 research packet object creation for explicit research asks procedurally approved in isolated review state
+- [x] Epic 4 recommendation object creation for explicit recommendation asks procedurally approved in isolated review state
+- [x] Epic 4 decision-matrix object creation for explicit comparison or choice asks procedurally approved in isolated review state
+- [x] Epic 4 itinerary object creation for explicit trip or agenda asks procedurally approved in isolated review state
+- [x] Epic 4 task-list object creation for explicit task-breakdown asks procedurally approved in isolated review state
+- [x] Epic 4 evidence-bundle object creation for explicit evidence-gathering asks procedurally approved in isolated review state
+- [x] Epic 4 recap-packet object creation for explicit summary or recap asks procedurally approved in isolated review state
+- [x] Epic 4 source-set object creation for explicit source-organization asks procedurally approved in isolated review state
+- [x] Epic 4 structured-note object creation for explicit note-capture asks procedurally approved in isolated review state
+- [x] Epic 4 action-brief object creation for explicit next-steps or move-forward asks procedurally approved in isolated review state
+- [x] Epic 4 decision-memo object creation for explicit recommendation-plus-rationale asks procedurally approved in isolated review state
+- [x] Epic 4 option-card object creation for explicit option-shaping asks procedurally approved in isolated review state
+- [x] Epic 4 pros-cons object creation for explicit tradeoff asks procedurally approved in isolated review state
+- [x] Epic 4 constraint-map object creation for explicit constraints asks procedurally approved in isolated review state
+- [x] Epic 4 question-set object creation for explicit clarification or discovery asks procedurally approved in isolated review state
+- [x] Epic 4 closeout package delivered with explicit main-repo versus isolated-review distinction
+- [x] Epic 4 repo-truth materialization package delivered from the main repo target
+- [x] Epic 4 procedurally closed from the main repo target
+- [x] Epic 5 slice 1 search and retrieval proof procedurally approved in isolated review state
+- [x] Epic 5 slice 2 file and artifact creation proof approved from the main repo target
+- [x] Epic 5 slice 3 save/open boundaries approved from the main repo target
+- [x] Epic 5 slice 4 explicit degraded-mode honesty approved from the main repo target
+- [x] Epic 5 slice 5 execution traces approved from the main repo target
+- [x] Epic 5 procedurally closed from the main repo target
+- [x] Epic 10 slice 1 surface inventory and first-pass repair approved from the main repo target
+- [x] Epic 10 slice 2 shared-shell interaction sweep approved from the main repo target
+- [x] Epic 10 slice 3 module route and API sweep approved from the main repo target
+- [x] Epic 10 slice 4 navigation dependency-truth pass approved from the main repo target
+- [x] Epic 10 slice 5 final surface closeout approved from the main repo target
+- [x] Epic 10 procedurally closed from the main repo target
+- [x] Epic 11 slice 1 Apple navigation handoff audit approved from the main repo target
+- [x] Epic 11 slice 2 Apple truth hardening approved from the main repo target
+- [x] Epic 11 slice 3 Apple closeout pass approved from the main repo target
+- [x] Epic 11 procedurally closed from the main repo target
 
 ## Active
 
@@ -258,6 +1039,194 @@ Planned lanes:
 - [x] Run a bounded live runtime smoke for tomorrow-conversation readiness
 - [x] Restore trustworthy default local runtime behavior on the expected `8787` path
 - [x] Identify the next smallest approved Companion Mind slice after the current tomorrow-readiness approvals
+- [x] Review Epic 4 slice 1 checklist object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after checklist creation
+- [x] Review Epic 4 slice 2 plan object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after plan creation
+- [x] Review Epic 4 slice 3 draft object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after draft creation
+- [x] Review Epic 4 slice 4 research packet object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after research packet creation
+- [x] Review Epic 4 slice 5 recommendation object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after recommendation creation
+- [x] Review Epic 4 slice 6 decision-matrix object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after decision-matrix creation
+- [x] Review Epic 4 slice 7 itinerary object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after itinerary creation
+- [x] Review Epic 4 slice 8 task-list object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after task-list creation
+- [x] Review Epic 4 slice 9 evidence-bundle object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after evidence-bundle creation
+- [x] Review Epic 4 slice 10 recap-packet object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after recap-packet creation
+- [x] Review Epic 4 slice 11 source-set object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after source-set creation
+- [x] Review Epic 4 slice 12 structured-note object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after structured-note creation
+- [x] Review Epic 4 slice 13 action-brief object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after action-brief creation
+- [x] Review Epic 4 slice 14 decision-memo object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after decision-memo creation
+- [x] Review Epic 4 slice 15 option-card object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after option-card creation
+- [x] Review Epic 4 slice 16 pros-cons object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after pros-cons creation
+- [x] Review Epic 4 slice 17 constraint-map object creation in isolated state
+- [x] Decide the next bounded Epic 4 object slice after constraint-map creation
+- [x] Review Epic 4 slice 18 question-set object creation in isolated state
+- [x] Decide the next bounded Epic 4 step after question-set creation
+- [x] Request the Epic 4 closeout package and consistency review
+- [x] Review the Epic 4 closeout package from the main-repo review target
+- [x] Direct bounded Epic 4 repo-truth materialization from the approved isolated review target
+- [x] Review the Epic 4 repo-truth materialization package in the main repo
+- [x] Re-run Epic 4 closeout decision against main-repo truth
+- [x] Procedurally close Epic 4 from the main repo target
+- [x] Direct the first bounded Epic 5 implementation slice
+- [x] Review the isolated Epic 5 slice 1 package
+- [x] Procedurally approve Epic 5 slice 1 in isolated review state
+- [x] Direct the next bounded Epic 5 implementation slice
+- [x] Review the Epic 5 slice 2 package from the main repo target
+- [x] Approve Epic 5 slice 2 from the main repo target
+- [x] Direct the next bounded Epic 5 implementation slice after file and artifact creation proof
+- [x] Review the Epic 5 slice 3 package from the main repo target
+- [x] Approve Epic 5 slice 3 from the main repo target
+- [x] Direct the next bounded Epic 5 implementation slice after save/open boundaries
+- [x] Review the Epic 5 slice 4 package from the main repo target
+- [x] Approve Epic 5 slice 4 from the main repo target
+- [x] Direct the next bounded Epic 5 implementation slice after explicit degraded-mode honesty
+- [x] Review the Epic 5 slice 5 package from the main repo target
+- [x] Approve Epic 5 slice 5 from the main repo target
+- [x] Procedurally close Epic 5 from the main repo target
+- [x] Re-establish the next active post-Epic-5 implementation lane
+- [x] Review the Epic 10 slice 1 package from the main repo target
+- [x] Approve Epic 10 slice 1 from the main repo target
+- [x] Direct the next bounded Epic 10 implementation slice
+- [x] Review the Epic 10 slice 2 package from the main repo target
+- [x] Approve Epic 10 slice 2 from the main repo target
+- [x] Direct the next bounded Epic 10 implementation slice after the shared-shell interaction sweep
+- [x] Review the Epic 10 slice 3 package from the main repo target
+- [x] Approve Epic 10 slice 3 from the main repo target
+- [x] Direct the next bounded Epic 10 implementation slice after the module route and API sweep
+- [x] Review the Epic 10 slice 4 package from the main repo target
+- [x] Approve Epic 10 slice 4 from the main repo target
+- [x] Direct the next bounded Epic 10 implementation slice after the navigation dependency-truth pass
+- [x] Review the Epic 10 slice 5 package from the main repo target
+- [x] Approve Epic 10 slice 5 from the main repo target
+- [x] Procedurally close Epic 10 from the main repo target
+- [x] Direct the first bounded Epic 11 implementation slice
+- [x] Review the Epic 11 slice 1 package from the main repo target
+- [x] Approve Epic 11 slice 1 from the main repo target
+- [x] Direct the next bounded Epic 11 implementation slice
+- [x] Review the Epic 11 slice 2 package from the main repo target
+- [x] Approve Epic 11 slice 2 from the main repo target
+- [x] Direct the next bounded Epic 11 implementation slice
+- [x] Review the Epic 11 slice 3 package from the main repo target
+- [x] Approve Epic 11 slice 3 from the main repo target
+- [x] Procedurally close Epic 11 from the main repo target
+- [x] Re-establish the next active post-Epic-11 implementation lane
+- [x] Direct the first bounded Epic 6 implementation slice
+- [x] Review the Epic 6 slice 1 package from the main repo target
+- [x] Approve Epic 6 slice 1 from the main repo target
+- [x] Direct the next bounded Epic 6 implementation slice
+- [x] Review the Epic 6 slice 2 package from the main repo target
+- [x] Approve Epic 6 slice 2 from the main repo target
+- [x] Direct the next bounded Epic 6 implementation slice
+- [x] Review the Epic 6 slice 3 package from the main repo target
+- [x] Approve Epic 6 slice 3 from the main repo target
+- [x] Direct the next bounded Epic 6 implementation slice
+- [x] Review the Epic 6 slice 4 package from the main repo target
+- [x] Approve Epic 6 slice 4 from the main repo target
+- [x] Direct the next bounded Epic 6 implementation slice
+- [x] Review the Epic 6 slice 5 package from the main repo target
+- [x] Approve Epic 6 slice 5 from the main repo target
+- [x] Direct the next bounded Epic 6 implementation slice
+- [x] Review the Epic 6 slice 6 package from the main repo target
+- [x] Approve Epic 6 slice 6 from the main repo target
+- [x] Procedurally close Epic 6 from the main repo target
+- [x] Direct the first bounded Epic 7 implementation slice
+- [x] Review the Epic 7 slice 1 package from the main repo target
+- [x] Approve Epic 7 slice 1 from the main repo target
+- [x] Direct the next bounded Epic 7 implementation slice
+- [x] Review the Epic 7 slice 2 package from the main repo target
+- [x] Approve Epic 7 slice 2 from the main repo target
+- [x] Direct the next bounded Epic 7 implementation slice
+- [x] Review the Epic 7 slice 3 package from the main repo target
+- [x] Approve Epic 7 slice 3 from the main repo target
+- [x] Direct the next bounded Epic 7 implementation slice
+- [x] Review the Epic 7 slice 4 package from the main repo target
+- [x] Approve Epic 7 slice 4 from the main repo target
+- [x] Direct the next bounded Epic 7 implementation slice
+- [x] Review the Epic 7 slice 5 package from the main repo target
+- [x] Approve Epic 7 slice 5 from the main repo target
+- [x] Procedurally close Epic 7 from the main repo target
+- [x] Direct the first bounded Epic 8 implementation slice
+- [x] Review the Epic 8 slice 1 package from the main repo target
+- [x] Approve Epic 8 slice 1 from the main repo target
+- [x] Direct the next bounded Epic 8 implementation slice
+- [x] Review the Epic 8 slice 2 package from the main repo target
+- [x] Approve Epic 8 slice 2 from the main repo target
+- [x] Direct the next bounded Epic 8 implementation slice
+- [x] Review the Epic 8 slice 3 package from the main repo target
+- [x] Approve Epic 8 slice 3 from the main repo target
+- [x] Direct the next bounded Epic 8 implementation slice
+- [x] Review the Epic 8 slice 4 package from the main repo target
+- [x] Approve Epic 8 slice 4 from the main repo target
+- [x] Direct the next bounded Epic 8 implementation slice
+- [x] Review the Epic 8 slice 5 package from the main repo target
+- [x] Approve Epic 8 slice 5 from the main repo target
+- [x] Direct the next bounded Epic 8 implementation slice
+- [x] Review the Epic 8 slice 6 package from the main repo target
+- [x] Approve Epic 8 slice 6 from the main repo target
+- [x] Procedurally close Epic 8 from the main repo target
+- [x] Direct the first bounded Epic 9 implementation slice
+- [x] Review the Epic 9 slice 1 package from the main repo target
+- [x] Approve Epic 9 slice 1 from the main repo target
+- [x] Direct the next bounded Epic 9 implementation slice
+- [x] Review the Epic 9 slice 2 package from the main repo target
+- [x] Approve Epic 9 slice 2 from the main repo target
+- [x] Direct the next bounded Epic 9 implementation slice
+- [x] Review the Epic 9 slice 3 package from the main repo target
+- [x] Approve Epic 9 slice 3 from the main repo target
+- [x] Direct the next bounded Epic 9 implementation slice
+- [x] Review the Epic 9 slice 4 package from the main repo target
+- [x] Approve Epic 9 slice 4 from the main repo target
+- [x] Direct the next bounded Epic 9 implementation slice
+- [x] Review the Epic 9 slice 5 package from the main repo target
+- [x] Approve Epic 9 slice 5 from the main repo target
+- [x] Direct the next bounded Epic 9 implementation slice
+- [x] Review the Epic 9 slice 6 package from the main repo target
+- [x] Approve Epic 9 slice 6 from the main repo target
+- [x] Direct the next bounded Epic 9 implementation slice
+- [x] Review the Epic 9 slice 7 package from the main repo target
+- [x] Approve Epic 9 slice 7 from the main repo target
+- [x] Procedurally close Epic 9 from the main repo target
+- [x] Direct the first bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 1 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 1 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 2 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 2 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 3 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 3 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 4 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 4 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 5 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 5 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 6 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice after the environment blocker
+- [x] Review the Post-Epic 9 slice 7 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 7 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 8 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 8 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
+- [x] Review the Post-Epic 9 slice 9 package from the main repo target
+- [x] Approve the Post-Epic 9 slice 9 package from the main repo target
+- [x] Direct the next bounded Post-Epic 9 implementation slice
 - [x] Direct the next bounded Companion Mind implementation slice
 - [x] Require clean isolated review state for the reflective-question repair slice before formal approval
 - [x] Identify the next smallest approved Companion Mind slice after reflective-question repair approval
@@ -762,3 +1731,685 @@ Current Build Office thread:
 
 Decision rule:
 - no Build Office work is complete until Architect Office review exists
+
+Latest Architect review:
+- slice 98 `Post-Epic 9 Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help scheduling around two meetings.`
+  - `I need help scheduling around constraints.`
+  - `I need help scheduling around my constraints.`
+  - `I need help planning around constraints.`
+  - `I need help with this slide deck.`
+  - `I need help with this pitch.`
+  - `I need help planning tomorrow.`
+  - `I need help with this agenda.`
+- repo-truth result matched the report exactly:
+  - the scheduling-around-constraints family still falls through to the generic practical sorter
+  - nearby agenda and tomorrow-planning seams remain correctly hardened
+  - slide deck and pitch are still weaker than ideal but remain narrower misses than scheduling-around-constraints
+- Architect approval decision:
+  - slice 98 approved as a sound recommendation-only reassessment
+  - strongest remaining first-turn chief-of-staff defect is the scheduling-around-constraints family
+- next bounded Build Office lane:
+  - slice 99 `Post-Epic 9 Companion Scheduling-Around-Constraints Opener Hardening`
+  - scope should stay inside the smallest first-turn opener seam in `jarvis/companion_spine.py`
+  - preserve the existing tomorrow-planning, inbox, meeting, agenda, drafting, decision, and hard-conversation seams unchanged
+  - add focused opener tests for the constraints-scheduling family plus nearby preserved controls
+
+- slice 99 `Post-Epic 9 Companion Scheduling-Around-Constraints Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help scheduling around two meetings.`
+  - `I need help scheduling around constraints.`
+  - `I need help scheduling around my constraints.`
+  - `I need help planning around constraints.`
+  - `I need help planning tomorrow.`
+  - `I need help with this agenda.`
+  - `I need help drafting an email to my boss.`
+  - `I need help with a hard conversation.`
+- repo-truth result matched the Build Office report exactly:
+  - the scheduling-around-constraints family now lands on the concrete constraints-aware planning fork
+  - tomorrow-planning, agenda, drafting, and hard-conversation controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 99 approved
+  - the constraints-scheduling first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 100 `Post-Epic 9 Slide-Deck-And-Pitch Opener Hardening`
+  - stay only inside the smallest existing first-turn opener seam in `jarvis/companion_spine.py`
+  - harden natural slide-deck and pitch phrasing so they land on one concrete presentation-shaping fork instead of the generic practical sorter
+  - preserve the existing presentation/proposal, agenda, meeting, tomorrow-planning, drafting, decision, and hard-conversation seams unchanged
+  - add only focused opener tests for the slide-deck and pitch family plus nearby preserved controls
+
+- slice 100 `Post-Epic 9 Slide-Deck-And-Pitch Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with this slide deck.`
+  - `I need help with this pitch.`
+  - `I need help with this presentation.`
+  - `I need help with this proposal.`
+  - `I need help with this agenda.`
+  - `I need help planning tomorrow.`
+  - `I need help drafting an email to my boss.`
+  - `I need help with a hard conversation.`
+- repo-truth result matched the Build Office report exactly:
+  - slide-deck and pitch now route through the concrete presentation/proposal prep fork
+  - presentation, proposal, agenda, tomorrow-planning, drafting, and hard-conversation controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 100 approved
+  - the slide-deck and pitch first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 101 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - do not assume another adjacent alias family
+  - reassess fresh current repo truth after the slide-deck and pitch repair
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 101 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - tomorrow-prep phrasing
+  - meeting, presentation, drafting, decision, hard-conversation, and tomorrow-planning control families
+- repo-truth result matched the Build Office report on the key point:
+  - `preparing for tomorrow`, `getting ready for tomorrow`, `help with tomorrow`, `tomorrow's plan`, and `tomorrow morning` still miss the existing tomorrow-planning fork
+  - one variant, `I need to get ready for tomorrow.`, falls all the way to the non-practical fallback
+  - nearby controls remain stronger and more specific than the tomorrow-prep family
+- Architect approval decision:
+  - slice 101 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the tomorrow-prep family
+- next bounded Build Office lane:
+  - slice 102 `Post-Epic 9 Companion Tomorrow-Prep Opener Hardening`
+  - stay only inside the smallest existing first-turn opener seam in `jarvis/companion_spine.py`
+  - harden natural tomorrow-prep phrasing so it lands on the existing concrete tomorrow-planning fork
+  - preserve existing inbox, meeting, agenda, presentation, drafting, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the tomorrow-prep family and preserved nearby controls
+
+- slice 102 `Post-Epic 9 Companion Tomorrow-Prep Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help preparing for tomorrow.`
+  - `I need help getting ready for tomorrow.`
+  - `Help me get ready for tomorrow.`
+  - `I need to get ready for tomorrow.`
+  - `I need help with tomorrow.`
+  - `I need help with tomorrow's plan.`
+  - `I need help with tomorrow morning.`
+  - `I need help planning tomorrow.`
+  - `I need help with this agenda.`
+  - `I need help with this meeting.`
+  - `I need help drafting an email to my boss.`
+- repo-truth result matched the Build Office report exactly:
+  - the entire tomorrow-prep family now lands on the concrete tomorrow-planning fork
+  - agenda, meeting, and drafting controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 102 approved
+  - the tomorrow-prep first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 103 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the tomorrow-prep repair
+  - do not assume the next defect from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 103 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - possessive presentation-prep phrasing
+  - parallel `this ...` presentation/prep controls
+  - tomorrow, agenda, meeting, and drafting control families
+- repo-truth result matched the Build Office report on the key point:
+  - `my presentation`, `my proposal`, `my slide deck`, `my pitch`, `my proposal deck`, and `getting ready for my presentation/proposal` still fall to the generic practical sorter
+  - the parallel `this presentation / proposal / slide deck / pitch / proposal deck` prompts already land on the concrete presentation-shaping fork
+  - nearby operational controls remain sharper than this possessive family
+- Architect approval decision:
+  - slice 103 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the possessive presentation-prep family
+- next bounded Build Office lane:
+  - slice 104 `Post-Epic 9 Companion Possessive Presentation-Prep Opener Hardening`
+  - stay only inside the smallest existing first-turn opener seam in `jarvis/companion_spine.py`
+  - harden natural possessive presentation/prep phrasing so it lands on the existing concrete presentation-shaping fork
+  - preserve inbox, meeting, agenda, tomorrow-planning, drafting, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the possessive presentation family and preserved nearby controls
+
+- slice 104 `Post-Epic 9 Companion Possessive Presentation-Prep Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with my presentation.`
+  - `I need help with my proposal.`
+  - `I need help with my slide deck.`
+  - `I need help with my pitch.`
+  - `I need help with my proposal deck.`
+  - `I need help getting ready for my presentation.`
+  - `I need help getting ready for my proposal.`
+  - `I need help with this presentation.`
+  - `I need help with this agenda.`
+  - `I need help with this meeting.`
+  - `I need help drafting an email to my boss.`
+- repo-truth result matched the Build Office report exactly:
+  - the full possessive presentation-prep family now lands on the concrete presentation-shaping fork
+  - presentation, agenda, meeting, and drafting controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 104 approved
+  - the possessive presentation-prep first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 105 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the possessive presentation-prep repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 105 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - follow-up phrasing
+  - briefing phrasing
+  - agenda-for-tomorrow phrasing
+  - presentation, tomorrow, and drafting control families
+- repo-truth result matched the Build Office report on the key point:
+  - `my follow-up`, `this follow-up`, `following up after this meeting`, `the follow-up`, `a follow-up`, and `my meeting follow-up` still fall to the generic practical sorter
+  - `this meeting follow-up` already lands on the meeting fork
+  - `writing a follow-up email after this meeting` already lands on the drafting fork
+  - nearby operational controls remain sharper than the broader follow-up family
+- Architect approval decision:
+  - slice 105 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the follow-up family
+- next bounded Build Office lane:
+  - slice 106 `Post-Epic 9 Companion Follow-Up Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden natural follow-up phrasing so it lands on one truthful concrete fork rather than the generic practical sorter
+  - preserve inbox, meeting, agenda, tomorrow-planning, presentation, drafting, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the follow-up family and preserved nearby controls
+
+- slice 106 `Post-Epic 9 Companion Follow-Up Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with my follow-up.`
+  - `I need help with this follow-up.`
+  - `I need help following up after this meeting.`
+  - `I need help with the follow-up.`
+  - `I need help with a follow-up.`
+  - `I need help with my meeting follow-up.`
+  - `I need help with this meeting follow-up.`
+  - `I need help writing a follow-up email after this meeting.`
+  - `I need help with this meeting.`
+  - `I need help drafting an email to my boss.`
+  - `I need help with this agenda.`
+- repo-truth result matched the Build Office report exactly:
+  - the full follow-up family now lands on the dedicated concrete follow-up fork
+  - `this meeting follow-up` remains on the meeting fork
+  - `follow-up email after this meeting` remains on the drafting fork
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 106 approved
+  - the follow-up first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 107 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the follow-up repair
+  - do not guess between the remaining families from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 107 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - agenda-for-tomorrow phrasing
+  - briefing phrasing
+  - follow-up, agenda, tomorrow, and presentation control families
+- repo-truth result matched the Build Office report on the key point:
+  - `my agenda for tomorrow`, `setting my agenda for tomorrow`, and `set my agenda for tomorrow` still fall to the generic practical sorter
+  - `this agenda` already lands on the agenda fork
+  - `tomorrow's agenda` already lands on the tomorrow-planning fork
+  - nearby operational controls remain sharper than the agenda-for-tomorrow family
+- Architect approval decision:
+  - slice 107 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the agenda-for-tomorrow family
+- next bounded Build Office lane:
+  - slice 108 `Post-Epic 9 Companion Agenda-For-Tomorrow Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden natural agenda-for-tomorrow phrasing so it lands on one truthful concrete fork instead of the generic practical sorter
+  - preserve inbox, meeting, plain-agenda, tomorrow-planning, follow-up, presentation, drafting, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the agenda-for-tomorrow family and preserved nearby controls
+
+- slice 108 `Post-Epic 9 Companion Agenda-For-Tomorrow Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with my agenda for tomorrow.`
+  - `I need help setting my agenda for tomorrow.`
+  - `Help me set my agenda for tomorrow.`
+  - `I need help with tomorrow's agenda.`
+  - `I need help with this agenda.`
+  - `I need help planning tomorrow.`
+  - `I need help with my follow-up.`
+  - `I need help with this meeting.`
+  - `I need help drafting an email to my boss.`
+- repo-truth result matched the Build Office report exactly:
+  - the full agenda-for-tomorrow family now lands on the concrete tomorrow-planning fork
+  - plain agenda, follow-up, meeting, and drafting controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 108 approved
+  - the agenda-for-tomorrow first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 109 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the agenda-for-tomorrow repair
+  - do not guess between remaining families from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 109 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - briefing-prep phrasing
+  - agenda-for-tomorrow, follow-up, presentation, and tomorrow control families
+- repo-truth result matched the Build Office report on the key point:
+  - `this briefing`, `my briefing`, `writing a briefing`, `preparing a briefing`, `a briefing`, `getting ready for this briefing`, and `getting ready for my briefing` still fall to the generic practical sorter
+  - presentation / proposal / slide-deck / pitch prompts already land on the concrete presentation-shaping fork
+  - nearby operational controls remain sharper than the briefing-prep family
+- Architect approval decision:
+  - slice 109 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the briefing-prep family
+- next bounded Build Office lane:
+  - slice 110 `Post-Epic 9 Companion Briefing-Prep Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden natural briefing-prep phrasing so it lands on one truthful concrete prep fork instead of the generic practical sorter
+  - preserve inbox, meeting, agenda, tomorrow-planning, follow-up, presentation, drafting, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the briefing-prep family and preserved nearby controls
+
+- slice 110 `Post-Epic 9 Companion Briefing-Prep Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with this briefing.`
+  - `I need help with my briefing.`
+  - `I need help writing a briefing.`
+  - `I need help preparing a briefing.`
+  - `I need help with a briefing.`
+  - `I need help getting ready for this briefing.`
+  - `I need help getting ready for my briefing.`
+  - `I need help with this presentation.`
+  - `I need help with my presentation.`
+  - `I need help with my follow-up.`
+  - `I need help planning tomorrow.`
+  - `I need help drafting an email to my boss.`
+- repo-truth result matched the Build Office report exactly:
+  - the full briefing-prep family now lands on the concrete presentation-prep fork
+  - presentation, follow-up, tomorrow-planning, and drafting controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 110 approved
+  - the briefing-prep first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 111 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the briefing-prep repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 111 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - inbox/email-management phrasing
+  - one-on-one, deck, talking-points, and tomorrow/day-planning adjacent families
+  - inbox, drafting, meeting, presentation, and tomorrow control seams
+- repo-truth result matched the Build Office report on the key point:
+  - `my email`, `getting through email`, and `triaging email` still fall to the generic practical sorter
+  - `my inbox` already lands on the concrete inbox fork
+  - `writing an email to my boss` already lands on the drafting fork
+  - nearby operational controls remain stronger than the broader email-management family
+- Architect approval decision:
+  - slice 111 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the inbox/email-management family
+- next bounded Build Office lane:
+  - slice 112 `Post-Epic 9 Companion Email-Management / Inbox-Triage Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden natural inbox/email-management phrasing so it lands on the existing truthful inbox fork instead of the generic practical sorter
+  - preserve explicit single-message drafting prompts on the drafting fork
+  - preserve meeting, agenda, tomorrow-planning, follow-up, presentation, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the inbox/email-management family and preserved nearby controls
+
+- slice 112 `Post-Epic 9 Companion Email-Management / Inbox-Triage Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with my email.`
+  - `I need help getting through email.`
+  - `I need help triaging email.`
+  - `I need help with my inbox.`
+  - `I need help writing an email to my boss.`
+  - `I need help with this meeting.`
+  - `I need help planning tomorrow.`
+  - `I need help with my follow-up.`
+  - `I need help with this presentation.`
+- repo-truth result matched the Build Office report exactly:
+  - the full email-management family now lands on the concrete inbox fork
+  - inbox, drafting, meeting, tomorrow-planning, follow-up, and presentation controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 112 approved
+  - the email-management / inbox-triage first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 113 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the email-management repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 113 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - one-on-one / 1:1 / check-in phrasing
+  - meeting, agenda, inbox, presentation, and tomorrow control seams
+  - adjacent deck, talking-points, debrief, and after-meeting phrasing
+- repo-truth result matched the Build Office report on the key point:
+  - `my one-on-one`, `getting ready for my one-on-one`, `preparing for my one-on-one`, `my 1:1`, and `this check-in` still fall to the generic practical sorter
+  - `this meeting` already lands on the concrete meeting fork
+  - nearby operational controls remain sharper than the one-on-one/check-in family
+- Architect approval decision:
+  - slice 113 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the one-on-one / check-in meeting-adjacent family
+- next bounded Build Office lane:
+  - slice 114 `Post-Epic 9 Companion One-on-One / Check-In Meeting Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden natural one-on-one / 1:1 / check-in meeting-adjacent phrasing so it lands on the existing truthful meeting fork instead of the generic practical sorter
+  - keep explicit agenda phrasing on the agenda fork
+  - preserve inbox, drafting, presentation, tomorrow-planning, follow-up, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the one-on-one / check-in family and preserved nearby controls
+
+- slice 114 `Post-Epic 9 Companion One-on-One / Check-In Meeting Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with my one-on-one.`
+  - `I need help getting ready for my one-on-one.`
+  - `I need help preparing for my one-on-one.`
+  - `I need help with my 1:1.`
+  - `I need help with this check-in.`
+  - `I need help with this meeting.`
+  - `I need help with this agenda.`
+  - `I need help with my email.`
+  - `I need help with my follow-up.`
+  - `I need help with this presentation.`
+  - `I need help planning tomorrow.`
+- repo-truth result matched the Build Office report exactly:
+  - the full one-on-one / 1:1 / check-in family now lands on the concrete meeting fork
+  - agenda, inbox, follow-up, presentation, and tomorrow-planning controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 114 approved
+  - the one-on-one / check-in first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 115 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the one-on-one / check-in repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 115 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - deck / talking-points presentation shorthand
+  - slide-deck, presentation, and proposal prep control seams
+  - adjacent debrief, after-meeting, and planning-variant phrasing
+- repo-truth result matched the Build Office report on the key point:
+  - `this deck`, `getting ready for this deck`, and `my talking points` still fall to the generic practical sorter
+  - `this slide deck`, `this presentation`, and `this proposal` already land on the concrete presentation-prep fork
+  - nearby operational controls remain sharper than the deck/talking-points shorthand family
+- Architect approval decision:
+  - slice 115 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the deck / talking-points presentation shorthand family
+- next bounded Build Office lane:
+  - slice 116 `Post-Epic 9 Companion Deck / Talking-Points Presentation Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden natural deck / talking-points presentation shorthand so it lands on the existing truthful presentation-prep fork instead of the generic practical sorter
+  - keep meeting, agenda, inbox, drafting, follow-up, tomorrow-planning, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the deck / talking-points family and preserved nearby controls
+
+- slice 116 `Post-Epic 9 Companion Deck / Talking-Points Presentation Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with this deck.`
+  - `I need help getting ready for this deck.`
+  - `I need help with my talking points.`
+  - `I need help with this slide deck.`
+  - `I need help with this presentation.`
+  - `I need help with this meeting.`
+  - `I need help with this agenda.`
+  - `I need help with my email.`
+  - `I need help drafting an email to my boss.`
+  - `I need help planning tomorrow.`
+- repo-truth result matched the Build Office report exactly:
+  - the full deck / talking-points shorthand family now lands on the concrete presentation-prep fork
+  - presentation, meeting, agenda, inbox, drafting, and tomorrow-planning controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 116 approved
+  - the deck / talking-points presentation shorthand first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 117 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the deck / talking-points repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 117 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - post-meeting debrief / notes phrasing
+  - meeting, follow-up, agenda, and tomorrow control seams
+  - adjacent planning-variant phrasing
+- repo-truth result matched the Build Office report on the key point:
+  - `this debrief`, `after this meeting`, `my notes for this meeting`, and `meeting notes` still fall to the generic practical sorter
+  - `this meeting` already lands on the concrete meeting fork
+  - `my follow-up` already lands on the concrete follow-up fork
+  - nearby operational controls remain sharper than the post-meeting debrief / notes family
+- Architect approval decision:
+  - slice 117 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the post-meeting debrief / notes family
+- next bounded Build Office lane:
+  - slice 118 `Post-Epic 9 Companion Post-Meeting Debrief / Notes Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden natural post-meeting debrief / notes phrasing so it lands on the smallest truthful nearby seam instead of the generic practical sorter
+  - keep explicit meeting-prep prompts on the meeting fork
+  - keep explicit follow-up prompts on the follow-up fork
+  - preserve agenda, inbox, drafting, tomorrow-planning, decision, hard-conversation, and constraints-scheduling seams unchanged
+  - add only focused opener tests for the post-meeting debrief / notes family and preserved nearby controls
+
+- slice 118 `Post-Epic 9 Companion Post-Meeting Debrief / Notes Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with this debrief.`
+  - `I need help after this meeting.`
+  - `I need help with my notes for this meeting.`
+  - `I need help with meeting notes.`
+  - `I need help with my follow-up.`
+  - `I need help with this meeting.`
+  - `I need help with this agenda.`
+  - `I need help with my email.`
+  - `I need help drafting an email to my boss.`
+  - `I need help planning tomorrow.`
+- repo-truth result matched the Build Office report exactly:
+  - the full post-meeting debrief / notes family now lands on the concrete follow-up fork
+  - meeting, agenda, inbox, drafting, and tomorrow-planning controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 118 approved
+  - the post-meeting debrief / notes first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 119 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the post-meeting debrief / notes repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 119 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - tomorrow-schedule phrasing
+  - appointment-planning variants
+  - tomorrow-planning and constraints-scheduling control seams
+- repo-truth result matched the Build Office report on the key point:
+  - `my schedule tomorrow` and `my schedule for tomorrow` currently misroute into the overloaded-week pushback fork
+  - closely neighboring prompts like `planning tomorrow`, `scheduling tomorrow`, `organizing tomorrow`, and `tomorrow's schedule` already land on the concrete tomorrow-planning fork
+  - this is a wrong-fork defect, not just a generic-sorter miss
+- Architect approval decision:
+  - slice 119 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the tomorrow-schedule misroute family
+- next bounded Build Office lane:
+  - slice 120 `Post-Epic 9 Companion Tomorrow-Schedule Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden `my schedule tomorrow` / `my schedule for tomorrow` phrasing so it lands on the existing tomorrow-planning fork instead of the overloaded-week pushback fork
+  - do not weaken the overloaded-week capacity-pushback lane for genuine week/schedule overload asks
+  - keep constraints-scheduling, meeting, follow-up, agenda, inbox, drafting, presentation, decision, and hard-conversation seams unchanged
+  - add only focused opener tests for the tomorrow-schedule family and preserved nearby controls
+
+- slice 120 `Post-Epic 9 Companion Tomorrow-Schedule Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with my schedule tomorrow.`
+  - `I need help with my schedule for tomorrow.`
+  - `I need help planning tomorrow.`
+  - `I need help scheduling tomorrow.`
+  - `I need help organizing tomorrow.`
+  - `I need help with tomorrow's schedule.`
+  - `I need help with my schedule this week.`
+  - `I need help scheduling around constraints.`
+  - `I need help with this meeting.`
+  - `I need help with my email.`
+- repo-truth result matched the Build Office report exactly:
+  - the tomorrow-schedule family now lands on the concrete tomorrow-planning fork
+  - true week-level schedule overload still stays on the overloaded-week capacity-pushback lane
+  - constraints, meeting, inbox, and other nearby controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 120 approved
+  - the tomorrow-schedule wrong-fork defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 121 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the tomorrow-schedule repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 121 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - tomorrow-calendar phrasing
+  - appointment-planning variants
+  - tomorrow-planning and constraints-scheduling control seams
+- repo-truth result matched the Build Office report on the key point:
+  - `my calendar tomorrow` and `my calendar for tomorrow` currently misroute into the overloaded-week pushback fork
+  - `tomorrow's calendar` already lands on the concrete tomorrow-planning fork
+  - this is another wrong-fork defect rather than a generic-sorter miss
+- Architect approval decision:
+  - slice 121 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the tomorrow-calendar misroute family
+- next bounded Build Office lane:
+  - slice 122 `Post-Epic 9 Companion Tomorrow-Calendar Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden `my calendar tomorrow` / `my calendar for tomorrow` phrasing so it lands on the existing tomorrow-planning fork instead of the overloaded-week pushback fork
+  - do not weaken the overloaded-week capacity-pushback lane for genuine week/calendar overload asks
+  - keep constraints-scheduling, meeting, follow-up, agenda, inbox, drafting, presentation, decision, and hard-conversation seams unchanged
+  - add only focused opener tests for the tomorrow-calendar family and preserved nearby controls
+
+- slice 122 `Post-Epic 9 Companion Tomorrow-Calendar Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help with my calendar tomorrow.`
+  - `I need help with my calendar for tomorrow.`
+  - `I need help with tomorrow's calendar.`
+  - `I need help planning tomorrow.`
+  - `I need help scheduling tomorrow.`
+  - `I need help with my calendar this week.`
+  - `I need help scheduling around constraints.`
+  - `I need help with this meeting.`
+  - `I need help with my email.`
+  - `I need help drafting an email to my boss.`
+- repo-truth result matched the Build Office report exactly:
+  - the tomorrow-calendar family now lands on the concrete tomorrow-planning fork
+  - true week-level calendar overload still stays on the overloaded-week capacity-pushback lane
+  - constraints, meeting, inbox, and other nearby controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 122 approved
+  - the tomorrow-calendar wrong-fork defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 123 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the tomorrow-calendar repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 123 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - appointment-based planning phrasing
+  - tomorrow-planning and constraints-scheduling control seams
+  - adjacent mapping/outline/summary/recap phrasing
+- repo-truth result matched the Build Office report on the key point:
+  - `planning around two appointments`, `planning around my appointments`, `scheduling around appointments`, and `around my appointments tomorrow` still fall to the generic practical sorter
+  - `planning around two meetings` already lands on the tomorrow-planning fork
+  - `planning around constraints` and `scheduling around constraints` already land on the constraints-scheduling fork
+  - nearby operational controls remain sharper than the appointment-based planning family
+- Architect approval decision:
+  - slice 123 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the appointment-based planning family
+- next bounded Build Office lane:
+  - slice 124 `Post-Epic 9 Companion Appointment-Based Planning Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden appointment-based planning phrasing so it lands on the smallest truthful nearby planning seam instead of the generic practical sorter
+  - keep explicit constraints phrasing on the constraints-scheduling fork
+  - keep explicit tomorrow-planning prompts on the tomorrow-planning fork
+  - keep meeting, follow-up, agenda, inbox, drafting, presentation, decision, and hard-conversation seams unchanged
+  - add only focused opener tests for the appointment-based planning family and preserved nearby controls
+
+- slice 124 `Post-Epic 9 Companion Appointment-Based Planning Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help planning around two appointments.`
+  - `I need help planning around my appointments.`
+  - `I need help scheduling around appointments.`
+  - `I need help around my appointments tomorrow.`
+  - `I need help planning around two meetings.`
+  - `I need help planning around constraints.`
+  - `I need help scheduling around constraints.`
+  - `I need help planning tomorrow.`
+  - `I need help with this meeting.`
+  - `I need help with my email.`
+- repo-truth result matched the Build Office report exactly:
+  - the full appointment-based planning family now lands on the concrete tomorrow-planning fork
+  - constraints-scheduling, meeting, inbox, and other nearby controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 124 approved
+  - the appointment-based planning first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 125 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the appointment-based planning repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
+
+- slice 125 `Post-Epic 9 Fresh Live-Use Weakness Reassessment` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke and seam checks around:
+  - tomorrow-mapping phrasing
+  - tomorrow-planning control seams
+  - adjacent generic practical and nearby preserved operational controls
+- repo-truth result matched the Build Office report on the key point:
+  - `map out tomorrow`, `mapping out tomorrow morning`, `mapping out tomorrow afternoon`, `sketching out tomorrow`, and `laying out tomorrow` still fall to the generic practical sorter
+  - nearby direct tomorrow-planning prompts like `help with tomorrow's plan` and `planning tomorrow` already land on the concrete tomorrow-planning fork
+  - `_is_tomorrow_planning_request` still lacks `map out tomorrow`-style variants in current repo truth
+  - focused tomorrow pytest recheck passed in current repo truth once the repo was placed on `PYTHONPATH`
+- Architect approval decision:
+  - slice 125 approved as a sound recommendation-only reassessment
+  - the strongest remaining first-turn chief-of-staff defect is the tomorrow-mapping family
+- next bounded Build Office lane:
+  - slice 126 `Post-Epic 9 Companion Tomorrow-Mapping Opener Hardening`
+  - stay only inside the smallest existing first-turn companion opener seam in `jarvis/companion_spine.py`
+  - harden `map out tomorrow` phrasing and only the smallest clearly-adjacent tomorrow-mapping variants so they land on the existing tomorrow-planning fork instead of the generic practical sorter
+  - keep appointment-based planning, constraints-scheduling, meeting, agenda, follow-up, inbox, drafting, presentation, decision, and hard-conversation seams unchanged
+  - add only focused opener tests for the tomorrow-mapping family and preserved nearby controls
+
+- slice 126 `Post-Epic 9 Companion Tomorrow-Mapping Opener Hardening` reviewed against fresh main-repo truth
+- Architect re-ran current repo smoke for:
+  - `I need help mapping out tomorrow.`
+  - `Help me map out tomorrow.`
+  - `I need help mapping out tomorrow morning.`
+  - `I need help mapping out tomorrow afternoon.`
+  - `I need help mapping out tomorrow evening.`
+  - `I need help sketching out tomorrow.`
+  - `I need help laying out tomorrow.`
+  - `I need help with tomorrow's plan.`
+  - `I need help planning tomorrow.`
+  - `I need help planning around two appointments.`
+  - `I need help planning around constraints.`
+  - `I need help with this meeting.`
+  - `I need help with my email.`
+- repo-truth result matched the Build Office report exactly:
+  - the targeted tomorrow-mapping family now lands on the concrete tomorrow-planning fork
+  - `mapping out tomorrow evening` also routes correctly via the same bounded matcher expansion
+  - intentionally out-of-scope nearby phrasing like `sketching out tomorrow` and `laying out tomorrow` still falls to the generic practical sorter
+  - appointment-based planning, constraints-scheduling, meeting, and inbox preserved controls remained correct
+  - focused pytest recheck passed in current repo truth
+- Architect approval decision:
+  - slice 126 approved
+  - the tomorrow-mapping first-turn usefulness defect is now closed in repo truth
+- next bounded Build Office lane:
+  - slice 127 `Post-Epic 9 Fresh Live-Use Weakness Reassessment`
+  - reassess fresh current repo truth after the tomorrow-mapping repair
+  - do not guess the next family from adjacency alone
+  - identify the single highest-value remaining first-turn chief-of-staff or companion usefulness defect
+  - recommend exactly one next bounded repair slice, or implement only if the defect is extremely concrete and still narrow
