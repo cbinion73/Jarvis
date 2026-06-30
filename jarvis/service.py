@@ -10911,6 +10911,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
         current_voice_settings = voice_settings.load().to_dict()
         requested_provider = str(current_voice_settings.get("tts_provider") or runtime.config.tts_provider or "auto").strip().lower() or "auto"
+        if not voice_settings.path.exists():
+            requested_provider = "auto"
+            current_voice_settings["tts_provider"] = "auto"
         pipeline = get_pipeline()
         friday = get_friday()
 
