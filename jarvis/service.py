@@ -40,8 +40,14 @@ except Exception:  # pragma: no cover
         return render_voice_shell(runtime, initial_packet=initial_packet)
 
 try:
-    from .jarvis_theme_glass import render_glass_shell as _render_glass_shell
+    from .jarvis_theme_glass import render_glass_shell as _render_glass_shell_full
     _GLASS_THEME_AVAILABLE = True
+
+    def _render_glass_shell(runtime, initial_packet=""):
+        # HTTP serving uses split assets: the shell references its CSS/JS via
+        # content-hashed /glass-assets/ URLs (cached immutably by the browser)
+        # instead of re-sending ~1.7 MB inline with every page load.
+        return _render_glass_shell_full(runtime, initial_packet=initial_packet, inline_assets=False)
 except Exception:  # pragma: no cover
     _GLASS_THEME_AVAILABLE = False
 
@@ -326,7 +332,73 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     location_settings = LocationSettingsStore(runtime.config)
     hub = EventHub()
     app = FastAPI(title="JARVIS Service", version="2.0")
+    # Compress every response over 1 KB. The Glass shell alone is ~2.2 MB of
+    # highly repetitive generated HTML/CSS/JS per page load — without this,
+    # every navigation on every device re-downloads it uncompressed.
+    # Guarded: unit tests run against a stubbed fastapi with no starlette.
+    try:
+        from starlette.middleware.gzip import GZipMiddleware
+        app.add_middleware(GZipMiddleware, minimum_size=1024)
+    except Exception:
+        pass
     shell_warmer_task: asyncio.Task | None = None
+
+    # Stale-while-revalidate for slow, review-style module pages. Several
+    # centers block first paint for seconds building their payloads
+    # (observed: briefing 9.6 s, navigation 3 s, agent-ops 2 s). Serving the
+    # last-built page instantly and refreshing in the background keeps them
+    # feeling immediate. Only applied to review dashboards — action surfaces
+    # (mission board, approval queue, settings) must always render live state.
+    _page_cache: dict[str, tuple[float, str]] = {}
+    _page_cache_refreshing: set[str] = set()
+
+    @app.get("/glass-assets/{filename}")
+    async def glass_assets(filename: str) -> Response:
+        """Serve the Glass shell's CSS/JS as content-hashed immutable assets.
+
+        These were formerly ~1.7 MB of inline <style>/<script> re-sent with
+        every page load; now the browser caches them for a year and each
+        navigation only downloads the page's own HTML. The hash in the URL
+        changes whenever the content changes, so updates bust the cache
+        naturally.
+        """
+        from .glass_assets import GLASS_CSS, GLASS_CSS_HASH, GLASS_JS, GLASS_JS_HASH
+
+        if filename == f"glass-{GLASS_CSS_HASH}.css":
+            content, media = GLASS_CSS, "text/css; charset=utf-8"
+        elif filename == f"glass-{GLASS_JS_HASH}.js":
+            content, media = GLASS_JS, "application/javascript; charset=utf-8"
+        else:
+            raise HTTPException(status_code=404, detail="Unknown asset")
+        return Response(
+            content=content,
+            media_type=media,
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
+
+    async def _swr_page(key: str, builder, ttl: float = 180.0) -> str:
+        now = time.monotonic()
+        cached = _page_cache.get(key)
+        if cached and now - cached[0] < ttl:
+            return cached[1]
+        if cached:
+            if key not in _page_cache_refreshing:
+                _page_cache_refreshing.add(key)
+
+                async def _refresh() -> None:
+                    try:
+                        html = await builder()
+                        _page_cache[key] = (time.monotonic(), html)
+                    except Exception:
+                        pass  # keep serving the stale copy; next request retries
+                    finally:
+                        _page_cache_refreshing.discard(key)
+
+                asyncio.create_task(_refresh())
+            return cached[1]
+        html = await builder()
+        _page_cache[key] = (time.monotonic(), html)
+        return html
     # Initialise Epic 7 voice pipeline (non-fatal if unavailable)
     if _VOICE_PIPELINE_AVAILABLE:
         try:
@@ -493,6 +565,32 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if not enabled or shell_warmer_task is not None:
             return
         shell_warmer_task = asyncio.create_task(_shell_state_warmer(), name="jarvis-shell-state-warmer")
+
+    @app.on_event("startup")
+    async def _warm_slow_module_pages() -> None:
+        """Pre-build the slow review dashboards so even the first visit after
+        boot is instant (their payload builders take 1-6 s cold). Runs a few
+        seconds after startup so it never competes with boot itself."""
+
+        async def _warm() -> None:
+            await asyncio.sleep(5)
+            for path in (
+                "/briefing-center",
+                "/navigation-center",
+                "/agent-ops-center",
+                "/huddle-center",
+                "/chronicle-center",
+            ):
+                try:
+                    import urllib.request as _rq
+                    port = os.getenv("JARVIS_PORT", "8787")
+                    await asyncio.to_thread(
+                        lambda p=path: _rq.urlopen(f"http://127.0.0.1:{port}{p}", timeout=30).read(1)
+                    )
+                except Exception:
+                    pass  # warming is best-effort
+
+        asyncio.create_task(_warm(), name="jarvis-module-page-warmer")
 
     @app.on_event("shutdown")
     async def _stop_shell_state_warmer() -> None:
@@ -1176,11 +1274,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/chronicle-center", response_class=HTMLResponse)
     async def chronicle_center() -> HTMLResponse:
-        return HTMLResponse(render_chronicle_module_page(await _build_chronicle_module_payload()))
+        async def _build() -> str:
+            return render_chronicle_module_page(await _build_chronicle_module_payload())
+        return HTMLResponse(await _swr_page("chronicle-center", _build))
 
     @app.get("/navigation-center", response_class=HTMLResponse)
     async def navigation_center() -> HTMLResponse:
-        return HTMLResponse(render_navigation_module_page(await _build_navigation_module_payload()))
+        async def _build() -> str:
+            return render_navigation_module_page(await _build_navigation_module_payload())
+        return HTMLResponse(await _swr_page("navigation-center", _build))
 
     @app.get("/api/vision/module")
     async def api_vision_module(actor: str = "Chris") -> JSONResponse:
@@ -1188,11 +1290,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/huddle-center", response_class=HTMLResponse)
     async def huddle_center() -> HTMLResponse:
-        return HTMLResponse(render_huddle_module_page(await _build_huddle_module_payload()))
+        async def _build() -> str:
+            return render_huddle_module_page(await _build_huddle_module_payload())
+        return HTMLResponse(await _swr_page("huddle-center", _build))
 
     @app.get("/briefing-center", response_class=HTMLResponse)
     async def briefing_center(actor: str = "Chris") -> HTMLResponse:
-        return HTMLResponse(render_daily_brief_module_page(await _build_daily_brief_module_payload(actor)))
+        async def _build() -> str:
+            return render_daily_brief_module_page(await _build_daily_brief_module_payload(actor))
+        return HTMLResponse(await _swr_page(f"briefing-center:{actor}", _build))
 
     @app.get("/progress-center", response_class=HTMLResponse)
     async def progress_center() -> HTMLResponse:
@@ -1297,7 +1403,9 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
 
     @app.get("/agent-ops-center", response_class=HTMLResponse)
     async def agent_ops_center() -> HTMLResponse:
-        return HTMLResponse(render_agent_ops_module_page(await _build_agent_ops_module_payload()))
+        async def _build() -> str:
+            return render_agent_ops_module_page(await _build_agent_ops_module_payload())
+        return HTMLResponse(await _swr_page("agent-ops-center", _build))
 
     @app.get("/settings-center", response_class=HTMLResponse)
     async def settings_center() -> HTMLResponse:
@@ -5524,56 +5632,70 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         }
 
         # --- Morning Brief Pipeline (Magic Moment 1) ---
-        try:
-            brief_result = await asyncio.to_thread(generate_morning_brief, actor_display)
-            from dataclasses import asdict
-            payload["morning_brief"] = asdict(brief_result)
-            payload["headline"] = brief_result.greeting
-            payload["summary"] = f"Morning Brief generated for {actor_display} at {brief_result.generated_at[:16]} UTC."
-        except Exception as exc:
-            payload["errors"].append(f"morning_brief: {exc}")
-            payload["morning_brief"] = {
-                "greeting": f"Good morning, {actor_display}.",
-                "what_changed": ["Morning Brief pipeline encountered an error — check server logs."],
-                "what_matters": [],
-                "what_is_waiting": [],
-                "while_you_were_away": [],
-                "may_have_forgotten": [],
-                "jarvis_prepared": [],
-                "recommendation": "Check server logs for morning brief pipeline errors.",
-                "recommendation_action": {
-                    "action_kind": "narrative_only",
-                    "title": "No action surface staged",
-                    "detail": "Morning Brief generation failed, so JARVIS did not stage a next-action surface for this pass.",
-                    "truth_note": "Check the runtime error first rather than trusting a missing handoff.",
-                },
-                "truth_labels": {},
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-            }
+        # These builders are independent of each other (today_board consumes
+        # open_loops, so it runs after) — run them concurrently instead of
+        # serially. Observed serially: 9.6 s of blank page before first paint;
+        # concurrently the wall time is the slowest single builder.
+        async def _morning_brief_part() -> None:
+            try:
+                brief_result = await asyncio.wait_for(
+                    asyncio.to_thread(generate_morning_brief, actor_display), timeout=12.0
+                )
+                from dataclasses import asdict
+                payload["morning_brief"] = asdict(brief_result)
+                payload["headline"] = brief_result.greeting
+                payload["summary"] = f"Morning Brief generated for {actor_display} at {brief_result.generated_at[:16]} UTC."
+            except Exception as exc:
+                payload["errors"].append(f"morning_brief: {exc}")
+                payload["morning_brief"] = {
+                    "greeting": f"Good morning, {actor_display}.",
+                    "what_changed": ["Morning Brief pipeline encountered an error — check server logs."],
+                    "what_matters": [],
+                    "what_is_waiting": [],
+                    "while_you_were_away": [],
+                    "may_have_forgotten": [],
+                    "jarvis_prepared": [],
+                    "recommendation": "Check server logs for morning brief pipeline errors.",
+                    "recommendation_action": {
+                        "action_kind": "narrative_only",
+                        "title": "No action surface staged",
+                        "detail": "Morning Brief generation failed, so JARVIS did not stage a next-action surface for this pass.",
+                        "truth_note": "Check the runtime error first rather than trusting a missing handoff.",
+                    },
+                    "truth_labels": {},
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                }
 
-        open_loops: dict[str, Any] = {}
-        try:
-            open_loops = await asyncio.wait_for(asyncio.to_thread(runtime.unified_open_loops, actor_display, 18), timeout=12.0)
-            payload["open_loops"] = open_loops
-            payload["counts"]["waiting_on_you"] = int(((open_loops.get("summary") or {}).get("waiting_on_you", 0)) or 0)
-            payload["counts"]["needs_revisit"] = int(((open_loops.get("summary") or {}).get("needs_revisit", 0)) or 0)
-        except Exception as exc:
-            payload["errors"].append(f"open_loops: {exc}")
+        async def _loops_and_board_part() -> None:
+            open_loops: dict[str, Any] = {}
+            try:
+                open_loops = await asyncio.wait_for(asyncio.to_thread(runtime.unified_open_loops, actor_display, 18), timeout=12.0)
+                payload["open_loops"] = open_loops
+                payload["counts"]["waiting_on_you"] = int(((open_loops.get("summary") or {}).get("waiting_on_you", 0)) or 0)
+                payload["counts"]["needs_revisit"] = int(((open_loops.get("summary") or {}).get("needs_revisit", 0)) or 0)
+            except Exception as exc:
+                payload["errors"].append(f"open_loops: {exc}")
+            try:
+                today_board = await asyncio.wait_for(asyncio.to_thread(runtime.today_board, actor_display, open_loops=open_loops or None), timeout=12.0)
+                payload["today_board"] = today_board
+                payload["counts"]["priority_count"] = len(list(today_board.get("priorities") or []))
+                payload["counts"]["notification_count"] = len(list(today_board.get("assistant_notifications") or []))
+                payload["counts"]["calendar_count"] = len(list(today_board.get("calendar") or []))
+            except Exception as exc:
+                payload["errors"].append(f"today_board: {exc}")
 
-        try:
-            today_board = await asyncio.wait_for(asyncio.to_thread(runtime.today_board, actor_display, open_loops=open_loops or None), timeout=12.0)
-            payload["today_board"] = today_board
-            payload["counts"]["priority_count"] = len(list(today_board.get("priorities") or []))
-            payload["counts"]["notification_count"] = len(list(today_board.get("assistant_notifications") or []))
-            payload["counts"]["calendar_count"] = len(list(today_board.get("calendar") or []))
-        except Exception as exc:
-            payload["errors"].append(f"today_board: {exc}")
+        async def _briefing_text_part() -> None:
+            try:
+                briefing_text = await asyncio.wait_for(asyncio.to_thread(runtime.morning_brief, actor_display), timeout=12.0)
+                payload["briefing_text"] = briefing_text
+            except Exception as exc:
+                payload["errors"].append(f"briefing: {exc}")
 
-        try:
-            briefing_text = await asyncio.wait_for(asyncio.to_thread(runtime.morning_brief, actor_display), timeout=12.0)
-            payload["briefing_text"] = briefing_text
-        except Exception as exc:
-            payload["errors"].append(f"briefing: {exc}")
+        await asyncio.gather(
+            _morning_brief_part(),
+            _loops_and_board_part(),
+            _briefing_text_part(),
+        )
 
         mission_control_snapshot = getattr(runtime, "mission_control_snapshot", None)
         if callable(mission_control_snapshot):

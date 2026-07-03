@@ -69,6 +69,25 @@ _browser_lock   = threading.Lock()
 _browser: Any   = None
 _playwright: Any = None
 
+# Playwright's sync API starts an asyncio event loop and leaves it RUNNING in
+# whatever thread first touches it (greenlet-based). If that's the caller's
+# thread, every later asyncio.run() there raises "cannot be called from a
+# running event loop" — observed poisoning the whole test process and a real
+# hazard for reused threadpool threads in production. All Playwright work is
+# therefore confined to this single dedicated thread.
+_playwright_executor: Any = None
+
+
+def _browser_thread() -> Any:
+    global _playwright_executor
+    with _browser_lock:
+        if _playwright_executor is None:
+            from concurrent.futures import ThreadPoolExecutor
+            _playwright_executor = ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="jarvis-playwright"
+            )
+    return _playwright_executor
+
 
 def _get_browser() -> Any:
     global _browser, _playwright
@@ -94,17 +113,32 @@ def _get_browser() -> Any:
 
 def _close_browser() -> None:
     """Call this on JARVIS shutdown to clean up browser resources."""
-    global _browser, _playwright
-    with _browser_lock:
-        try:
-            if _browser:
-                _browser.close()
-            if _playwright:
-                _playwright.stop()
-        except Exception:
-            pass
-        _browser = None
-        _playwright = None
+    global _playwright_executor
+
+    def _do_close() -> None:
+        global _browser, _playwright
+        with _browser_lock:
+            try:
+                if _browser:
+                    _browser.close()
+                if _playwright:
+                    _playwright.stop()
+            except Exception:
+                pass
+            _browser = None
+            _playwright = None
+
+    executor = _playwright_executor
+    if executor is None:
+        _do_close()  # browser was never started; nothing thread-affine exists
+        return
+    try:
+        # Playwright objects are thread-affine — close them on their own thread.
+        executor.submit(_do_close).result(timeout=15)
+    except Exception:
+        pass
+    executor.shutdown(wait=False)
+    _playwright_executor = None
 
 
 # ---------------------------------------------------------------------------
@@ -351,10 +385,23 @@ def fetch_page_text(url: str, timeout_ms: int = 15000) -> str:
         if len(text) > 200:
             return _clean_text(text)
 
-    # 2. Fall back to Playwright for JS-rendered pages
+    # 2. Fall back to Playwright for JS-rendered pages. Runs on the dedicated
+    # Playwright thread — sync Playwright objects are thread-affine, and its
+    # running event loop must never live in a caller's thread.
+    try:
+        future = _browser_thread().submit(_fetch_with_playwright, url, timeout_ms)
+        return future.result(timeout=timeout_ms / 1000 + 30)
+    except Exception as exc:
+        logger.debug("fetch_page_text Playwright fallback(%s) failed: %s", url, exc)
+        return ""
+
+
+def _fetch_with_playwright(url: str, timeout_ms: int) -> str:
+    """Fetch a JS-rendered page. Must only run on the Playwright thread."""
     browser = _get_browser()
     if browser is None:
         return ""
+    ctx = None
     try:
         ctx = browser.new_context(
             user_agent=(
@@ -379,9 +426,10 @@ def fetch_page_text(url: str, timeout_ms: int = 15000) -> str:
         ctx.close()
         return _clean_text(text)
     except Exception as exc:
-        logger.debug("fetch_page_text Playwright fallback(%s) failed: %s", url, exc)
+        logger.debug("_fetch_with_playwright(%s) failed: %s", url, exc)
         try:
-            ctx.close()
+            if ctx is not None:
+                ctx.close()
         except Exception:
             pass
         return ""
