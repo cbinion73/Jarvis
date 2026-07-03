@@ -100,13 +100,16 @@ Along the way, two **genuine production bugs** (not just test artifacts) were fo
 - The Architect Office / governance scaffold (Chris Context Canon) — the layer that would let Jarvis take ownership of *ongoing* initiatives with proper approval/trust boundaries rather than just one-shot tasks — sits unmerged in `JARVIS-epic1-governance-review`, on branch `codex/epic-1-governance-isolated`. Unique unmerged content: `architect_office/canon_registry.py` (170 lines — Chris Context Canon registry, 7 phase-rules for architectural decisions) and `docs/CHRIS-CONTEXT-CANON.md` (252 lines). It also adds governance annotations to `runtime.py`'s object-tracking (`_annotate_created_object_payload()`, `_build_action_truth_summary()`) — real proof-of-work capture for the "never fake it" requirement.
 - `ghostwritr` exists only as a separate Docker service (content ops, Postgres+Redis) per the production deploy stack — useful as *one* concrete system to wire in once the general capability exists, and useful as a validation case if a book launch happens to be a real, live initiative — but not the architecture target itself.
 
-### Merging the unmerged slices — concrete guidance
+### Merging the unmerged slices — RESOLVED 2026-07-02 (Phase 1 complete)
 
-Three sibling clones on Desktop hold unmerged feature work (`JARVIS-obsidian-fence-review`, `JARVIS-companion-mind-review`, `JARVIS-epic1-governance-review`). Mapped in detail so this doesn't need rediscovery:
+On direct inspection, the sibling worktrees held far less unmerged content than the earlier mapping suggested — main had already absorbed most of it:
 
-- **`JARVIS-companion-mind-review` is redundant** — its companion-hardening content is a strict subset of what's already in `JARVIS-obsidian-fence-review` (which contains the same hardening *plus* the Obsidian retrieval work). Don't merge it separately; check it off once obsidian-fence lands.
-- **Merge order: governance first, then obsidian-fence.** `JARVIS-epic1-governance-review`'s changes are isolated to `architect_office/` and `runtime.py` object-tracking — lower conflict risk, and it's a linked worktree of this same repo (its head 458158c shares real ancestry with main). `JARVIS-obsidian-fence-review` is a separate clone that diverged further back (common ancestor `869624a`) and touches more surface area — expect real conflicts.
-- **Known high-conflict files** (touched both by the unmerged slices and by main's Jun 29 "Materialize JARVIS surfaces" commit): `render_pages.py`, `service.py`, `companion_spine.py`, `speech.py`, `morning_brief_pipeline.py`. Go into the merge expecting to reconcile these by hand, not expecting a clean auto-merge.
+- **Governance**: `architect_office/`, the Chris Context Canon, and all slice code were already in main (458158c is an ancestor of HEAD; the code files were byte-identical). The genuinely-missing pieces — two commits from `JARVIS-epic1-governance-clone` ("Stabilize Epic 1 CLI review test", "Reconcile Chris canon and Obsidian truth") plus one review artifact — were cherry-picked in (landed as 5cf6696 + 8fdc472; conflicts resolved in favor of main's newer canon docs, including the 685-line CHRIS-INTENT-CANON.md).
+- **Obsidian-fence**: fully superseded. The fence slice was the transitional "say honestly that Obsidian isn't wired yet" stage; main later landed the real LlamaIndex retrieval (6850c35) and the dynamic obsidian_grounding refactor (346e2fd) that replaced the fence's static constraints. Zero unique value remained — nothing merged.
+- **Companion-mind**: subset of obsidian-fence, superseded for the same reasons.
+- The sibling directories (`JARVIS-obsidian-fence-review`, `JARVIS-companion-mind-review`, `JARVIS-epic1-governance-review`, `JARVIS-epic1-governance-clone`, plus the broken `JARVIS-rejoin-operation` worktree and `JARVIS.git-backup-*`) are now safe to delete once Chris confirms — nothing unique remains in them.
+
+**Suite is fully green as of Phase 1 completion: 2129 passed, 0 failed, 3 skipped.** The last failure (canonical-operating-model doc) was resolved by restoring the agent-society (~60 agents: 53 life + 11 runtime — verified true) and household-operability passages dropped in the June 11 rescope.
 
 ### Synthesis
 
@@ -124,10 +127,10 @@ The two priorities and the engineering baseline are **not in tension** — they'
 
 Not a rigid checklist — a sequencing that avoids building Priority 2 on top of Priority 1 foundations that don't exist yet, and avoids doing risky merges after new work is already layered on top of the code they'll touch.
 
-**Phase 1 — Land the foundations (merge, don't build yet)**
-1. Merge `JARVIS-epic1-governance-review` (`architect_office/`, Chris Context Canon, runtime object-tracking annotations) into `phase-1-companion-spine`. Lower risk, do first.
-2. Merge `JARVIS-obsidian-fence-review` (Obsidian LlamaIndex retrieval + companion hardening — this already supersedes `JARVIS-companion-mind-review`, skip that one). Expect real conflicts in `render_pages.py`, `service.py`, `companion_spine.py`, `speech.py`, `morning_brief_pipeline.py` — resolve by hand.
-3. Re-run `pytest tests/` after each merge. Baseline to hold: 2127+ passed, only the known `jarvis-canonical-operating-model.md` gap outstanding. Fix or accept that gap now (it's a one-line judgment call, see above) so the suite is fully green before building on top of it.
+**Phase 1 — Land the foundations — ✅ DONE 2026-07-02**
+1. ~~Merge governance~~ — done (cherry-picked the two genuinely-missing clone commits; everything else was already in main).
+2. ~~Merge obsidian-fence~~ — resolved as superseded; main already carries the LlamaIndex retrieval and dynamic grounding that replaced the fence.
+3. ~~Test gate~~ — suite fully green: 2129 passed, 0 failed, 3 skipped (last doc-content failure fixed truthfully: the ~60-agent claim verified against the registries).
 
 **Phase 2 — Priority 1: make Jarvis actually think well, not just sound familiar**
 4. Fix the model-tier collapse in `jarvis/llm_gateway.py` — get `_SUBSTANTIVE_MODEL`/`_REASONING_MODEL` onto a genuinely strong reasoning model for real conversation instead of defaulting to `gpt-5-mini` via `cloud_light` mode. Understand why `cloud_light` collapses the tiers before changing it (cost tradeoffs may be intentional — if so, surface the tradeoff to Chris rather than silently overriding it).
