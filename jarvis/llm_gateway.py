@@ -215,7 +215,11 @@ TASK_MODEL_MAP: dict[str, str] = {
     "check":       "phi3.5",
     # qwen2.5:14b: substantive local work — planning, drafting, reasoning (9 GB, M4 local)
     "agent_work":  "substantive",
-    "converse":    "substantive",
+    # Conversation gets its own floor: in cloud_light mode the substantive
+    # tier collapses to the mini model, which is fine for internal work but
+    # too weak for thinking-partner conversation. converse-floor resolves to
+    # Groq's free 70B when available (JARVIS_CONVERSE_MODEL overrides).
+    "converse":    "converse-floor",
     "reason":      "substantive",
     "draft":       "substantive",
     "analyze":     "substantive",
@@ -831,6 +835,17 @@ class LLMGateway:
         raw = TASK_MODEL_MAP.get(task_type, "substantive")
         if raw == "phi3.5":
             return _FAST_MODEL()
+        if raw == "converse-floor":
+            override = os.getenv("JARVIS_CONVERSE_MODEL", "").strip()
+            if override:
+                return override
+            # cloud_light collapses the substantive tier to the mini model;
+            # conversation deserves better, and Groq's 70B is free. Fall back
+            # to the substantive tier when Groq has no key (preserves the
+            # pre-existing behavior), and everywhere outside cloud_light.
+            if _cloud_light_mode() and self._groq.is_available():
+                return _GROQ_MODEL()
+            return _SUBSTANTIVE_MODEL()
         if raw == "substantive":
             return _SUBSTANTIVE_MODEL()
         if raw == "background":
@@ -869,23 +884,33 @@ class LLMGateway:
     def _escalate_model(self, model: str) -> str | None:
         """Return the next-tier model, or None if already at the top.
 
-        Ladder: phi3.5 → qwen2.5:14b → Groq (free) → gpt-5.4-mini → gpt-5.4-thinking → gpt-5.5-thinking
-        Groq sits between local and paid OpenAI, acting as a free speed bump that
-        handles the majority of escalations without incurring cloud costs.
-        """
-        fast        = _FAST_MODEL()
-        substantive = _SUBSTANTIVE_MODEL()
-        background  = _BACKGROUND_MODEL()
-        groq_m      = _GROQ_MODEL()
-        openai_m    = _OPENAI_MODEL()
+        Ladder: local floor → Groq 70B (free) → Groq gpt-oss-120b (free) →
+        gpt-5.4-mini → gpt-5.4-thinking → gpt-5.5-thinking (approval-gated).
 
-        if model == fast:               return substantive   # phi3.5 → qwen2.5:14b
-        if model == background:         return substantive   # qwen2.5:7b → qwen2.5:14b
-        if model == substantive:        return groq_m        # qwen2.5:14b → Groq (free)
-        if model == groq_m:             return openai_m      # Groq → gpt-5.4-mini (paid)
-        if model == openai_m:           return "gpt-5.4-thinking"
-        if model == "gpt-5.4-thinking": return "gpt-5.5-thinking"
-        return None   # already at top
+        The two free Groq rungs absorb most escalations before any paid
+        OpenAI call. Rungs are deduplicated because cloud_light mode
+        collapses several tiers onto the same model — a naive next-rung
+        lookup would return the same model and dead-end escalation.
+        """
+        background = _BACKGROUND_MODEL()
+        substantive = _SUBSTANTIVE_MODEL()
+        if model == background and substantive != background:
+            return substantive   # qwen2.5:7b → qwen2.5:14b
+
+        ladder = [
+            _FAST_MODEL(),
+            substantive,
+            _GROQ_MODEL(),            # free
+            _GROQ_REASONING_MODEL(),  # free
+            _OPENAI_MODEL(),          # paid
+            "gpt-5.4-thinking",       # paid, extended thinking
+            "gpt-5.5-thinking",       # paid, requires Chris's approval
+        ]
+        rungs = list(dict.fromkeys(ladder))  # dedupe, preserve order
+        if model not in rungs:
+            return None
+        idx = rungs.index(model)
+        return rungs[idx + 1] if idx + 1 < len(rungs) else None
 
     def _check_tier5_approval(
         self, agent_id: str, task_type: str, messages: list[LLMMessage]
@@ -962,22 +987,6 @@ class LLMGateway:
             messages, model, temperature=temperature,
             max_tokens=max_tokens, stream=stream,
         )
-
-    def _escalate_model(self, model: str) -> str | None:
-        """Return the next-tier model, or None if already at the top."""
-        # Normalise to canonical names for lookup
-        fast = _FAST_MODEL()
-        reasoning = _REASONING_MODEL()
-        openai_m = _OPENAI_MODEL()
-
-        if model == fast:
-            return reasoning
-        if model == reasoning:
-            return openai_m
-        # Already at OpenAI tier or unknown — no escalation
-        if model == openai_m:
-            return None
-        return None
 
     def _log_call(self, entry: dict) -> None:
         with self._lock:
