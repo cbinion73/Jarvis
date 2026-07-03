@@ -152,7 +152,18 @@ def _gather_agent_health() -> dict:
     path = _DATA_ROOT / "agents" / "background_state.json"
     raw = _load_json(path, {})
     if not raw:
-        return {"available": False, "agents": {}, "degraded": [], "blocked": [], "active_mode": ""}
+        return {
+            "available": False,
+            "agents": {},
+            "degraded": [],
+            "blocked": [],
+            "active_mode": "",
+            "last_tick_at": "",
+            "total_agents": 0,
+            "running_count": 0,
+            "degraded_count": 0,
+            "quiet_hours_active": False,
+        }
     agents = raw.get("agents", {})
     degraded = [
         {"name": name, "state": info.get("state", ""), "health": info.get("health_status", ""), "attention": info.get("attention_required", False)}

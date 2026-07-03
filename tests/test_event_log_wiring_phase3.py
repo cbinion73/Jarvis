@@ -205,8 +205,9 @@ class TestNavigationRouteEvent(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
 
         self.event_log = self.root / "data" / "state" / "event_log.jsonl"
         (self.root / "data" / "state").mkdir(parents=True, exist_ok=True)

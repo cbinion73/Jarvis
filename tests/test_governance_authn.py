@@ -121,6 +121,7 @@ def _make_runtime():
     rt.get_actor.side_effect = _get_actor
     rt.memory_proposals.return_value = []
     rt.resolve_memory_proposal.return_value = {"ok": True}
+    rt.resolve_learning_proposal.return_value = {"ok": True}
     rt.config = MagicMock()
     rt.config.data_root = Path(tempfile.mkdtemp())
     return rt
@@ -216,7 +217,7 @@ class TestLearningProposalViewer(_ServiceTestBase):
 
     def test_known_viewer_resolves_proposal(self):
         self._decide("prop-1", {"viewer": "chris", "decision": "approved"})
-        self.runtime.resolve_memory_proposal.assert_called_once_with("prop-1", "approved")
+        self.runtime.resolve_learning_proposal.assert_called_once_with("prop-1", "approved")
 
     def test_empty_string_viewer_raises_422(self):
         with self.assertRaises(HTTPException) as ctx:

@@ -7,6 +7,7 @@ import sys
 import tempfile
 import types
 import unittest
+import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -1387,6 +1388,36 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
                 return route.endpoint
         raise AssertionError(f"Could not find route {method} {path}")
 
+    def _make_request(self, url: str):
+        """Build a request object compatible with whichever ``Request`` class
+        ``service_module`` currently has bound (the lightweight test stub
+        installed above when ``fastapi`` hadn't been imported yet by an
+        earlier test module, or the real ``starlette.requests.Request`` when
+        some other test module already imported real fastapi first).
+        """
+        try:
+            # Real Starlette's Request takes an ASGI scope, not a URL string.
+            from starlette.requests import Request as _StarletteRequest
+
+            if service_module.Request is _StarletteRequest:
+                parsed = urllib.parse.urlsplit(url)
+                host = parsed.hostname or "jarvis.teambinion.org"
+                port = parsed.port
+                scope = {
+                    "type": "http",
+                    "method": "GET",
+                    "path": parsed.path or "/",
+                    "headers": [(b"host", host.encode("utf-8"))],
+                    "scheme": parsed.scheme or "https",
+                    "server": (host, port or (443 if (parsed.scheme or "https") == "https" else 80)),
+                    "query_string": (parsed.query or "").encode("utf-8"),
+                }
+                return _StarletteRequest(scope)
+        except ImportError:
+            pass
+        # Fall back to the local test stub's simple constructor.
+        return service_module.Request(url)
+
     def _json_body(self, response) -> dict:
         return json.loads(response.body.decode("utf-8"))
 
@@ -2374,6 +2405,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
             self._route("/mission-board/delegation-report/{mission_id}/{report_id}", "GET")(
                 mission_id="mission-1",
                 report_id="report-1",
+                return_to="",
             )
         )
         review_html = self._text_body(review_response)
@@ -2453,6 +2485,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
             self._route("/mission-board/delegation-report/{mission_id}/{report_id}", "GET")(
                 mission_id="mission-1",
                 report_id="missing-report",
+                return_to="",
             )
         )
         review_html = self._text_body(review_response)
@@ -6255,7 +6288,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         current_endpoint = self._route("/api/health/dexcom/current", "GET")
         sync_endpoint = self._route("/api/health/dexcom/sync", "POST")
 
-        request = service_module.Request("https://jarvis.teambinion.org/")
+        request = self._make_request("https://jarvis.teambinion.org/")
 
         with patch.object(dexcom_sync, "get_connection_status", return_value={"connected": False, "configured": True, "message": "Not connected"}), patch.object(
             dexcom_sync,

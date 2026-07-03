@@ -17,19 +17,18 @@ class ToolExecutionOutcome:
     result: ToolResult
 
 
-_DEFAULT_AUDIT_SINK: AuditLog | None = None
-
-
 def _resolve_tool_registry(tool_registry: dict[str, Any] | None = None) -> dict[str, Any]:
     return tool_registry or TOOL_REGISTRY
 
 
 def _default_audit_sink() -> AuditLog:
-    global _DEFAULT_AUDIT_SINK
-    if _DEFAULT_AUDIT_SINK is None:
-        root = Path(os.environ.get("JARVIS_TOOL_AUDIT_ROOT", "data/logs"))
-        _DEFAULT_AUDIT_SINK = AuditLog(root)
-    return _DEFAULT_AUDIT_SINK
+    # Resolved fresh on every call (cheap: env lookup + mkdir) rather than cached
+    # in a module-level singleton. A cached singleton would pin the audit root to
+    # whatever process cwd was active on first use, which is unsafe across tests
+    # that temporarily chdir into a tempdir (the cached path would outlive the
+    # tempdir's lifetime and later calls would fail against a deleted directory).
+    root = Path(os.environ.get("JARVIS_TOOL_AUDIT_ROOT", "data/logs"))
+    return AuditLog(root)
 
 
 def _classify_sandbox(tool_name: str, tool_input: dict[str, Any]) -> tuple[str, bool]:

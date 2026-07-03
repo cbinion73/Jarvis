@@ -144,8 +144,9 @@ class TestRouteRegistration(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
         for d in ("data/apple", "data/state", "data/settings"):
             (self.root / d).mkdir(parents=True, exist_ok=True)
 
@@ -179,8 +180,9 @@ class TestNotificationEscalate(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
         for d in ("data/apple", "data/state", "data/settings"):
             (self.root / d).mkdir(parents=True, exist_ok=True)
 
@@ -247,8 +249,9 @@ class TestReminderDefer(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
         for d in ("data/apple", "data/state", "data/settings"):
             (self.root / d).mkdir(parents=True, exist_ok=True)
 
@@ -297,8 +300,9 @@ class TestReminderStage(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
         for d in ("data/apple", "data/state", "data/settings"):
             (self.root / d).mkdir(parents=True, exist_ok=True)
 
@@ -336,8 +340,9 @@ class TestAppleDeferReminder(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
 
         reminders_dir = self.root / "data" / "apple"
         reminders_dir.mkdir(parents=True)
@@ -393,8 +398,9 @@ class TestAppleStageReminder(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
 
         reminders_dir = self.root / "data" / "apple"
         reminders_dir.mkdir(parents=True)
@@ -463,8 +469,9 @@ class TestGovernedReminderMutationDispatch(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmpdir.cleanup)
         self.root = Path(self.tmpdir.name)
+        _orig_cwd = os.getcwd()
         os.chdir(self.root)
-        self.addCleanup(lambda: os.chdir("/"))
+        self.addCleanup(os.chdir, _orig_cwd)
 
         # Inject runtime mock at module level since _governed_reminder_mutation is module-level
         rt = MagicMock()

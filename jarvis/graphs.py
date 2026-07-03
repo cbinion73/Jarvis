@@ -53,8 +53,6 @@ from .models import RequestPlan
 from .openai_tasks import OpenAIResult
 from .companion_spine import run_companion_turn
 
-_COMPILED_GRAPHS: dict[str, Any] = {}
-
 
 class ResponseGraphState(TypedDict, total=False):
     runtime: Any
@@ -97,12 +95,14 @@ class BackgroundGraphState(TypedDict, total=False):
 
 
 def _compile_graph(name: str, builder: Any) -> Any:
-    compiled = _COMPILED_GRAPHS.get(name)
-    if compiled is None:
-        graph = builder()
-        compiled = graph.compile()
-        _COMPILED_GRAPHS[name] = compiled
-    return compiled
+    # Each call site builds node functions as closures over call-local state
+    # (e.g. a fresh `step_events` list per invocation). Caching the compiled
+    # graph across calls would pin those closures to whichever call first
+    # populated the cache, silently routing later calls' step events/results
+    # into the wrong place. Graph construction here is cheap (plain dict/
+    # closure setup), so rebuild on every call instead of memoizing.
+    graph = builder()
+    return graph.compile()
 
 
 def _build_linear_graph(state_type: Any, nodes: list[tuple[str, Any]]) -> Any:
