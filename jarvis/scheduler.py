@@ -2031,12 +2031,164 @@ class AgentScheduler:
         # real implementation progress instead of a dead end.
         self._advance_approved_work()
 
+        # Initiative ownership: review active missions and file the next
+        # concrete work item into the approval pipeline, so missions make
+        # progress between conversations instead of only when Chris talks.
+        self._review_active_initiatives()
+
     _mode_advance_tick_count: int = 0
     _proactive_tick_count: int = 0
     _PROACTIVE_TICK_INTERVAL: int = 5  # fire every ~5 minutes (5 × 60 s ticks)
     _work_advance_tick_count: int = 0
     _WORK_ADVANCE_TICK_INTERVAL: int = 10  # fire every ~10 minutes (10 × 60 s ticks)
     _WORK_IMPLEMENTATION_INCREMENTS: int = 3  # increments before an item moves to tracking
+    _initiative_tick_count: int = 0
+    _INITIATIVE_TICK_INTERVAL: int = 60  # fire every ~60 minutes (60 × 60 s ticks)
+    _INITIATIVE_OWNER_AGENT: str = "mission-owner"
+
+    def _review_active_initiatives(self) -> None:
+        """Own active missions: review state, file the next concrete work.
+
+        Missions previously only moved when Chris talked to Jarvis. This loop
+        gives each active mission an owner cadence: roughly once an hour, the
+        least-recently-touched active mission gets a review — Jarvis assesses
+        where it stands from the dossier and either files the single next work
+        item (as a PROPOSED item in the agent-work pipeline, so it lands on
+        Chris's approval surface and, once approved, is implemented by
+        _advance_approved_work) or records honestly that the mission is
+        waiting on Chris / external events / looks complete.
+
+        Trust boundary: nothing is auto-approved and mission status is never
+        changed autonomously — reviews leave evidence on the dossier, and all
+        substantive work still flows through Chris's approval queue.
+        """
+        self._initiative_tick_count = getattr(self, "_initiative_tick_count", 0) + 1
+        if self._initiative_tick_count < self._INITIATIVE_TICK_INTERVAL:
+            return
+        self._initiative_tick_count = 0
+        try:
+            mission_support = getattr(self._runtime, "mission_support", None)
+            gateway = _get_gateway()
+            if mission_support is None or gateway is None:
+                return
+            missions = [
+                m for m in mission_support.list_missions(include_completed=False, limit=20)
+                if str(m.get("status", "")).strip().lower() == "active"
+            ]
+            if not missions:
+                return
+            missions.sort(key=lambda m: str(m.get("updated_at", "")) or str(m.get("created_at", "")))
+            for mission in missions[:1]:
+                self._review_one_initiative(mission, mission_support, gateway)
+        except Exception:
+            logger.debug("_review_active_initiatives tick failed (non-fatal)", exc_info=True)
+
+    def _review_one_initiative(self, mission: dict, mission_support, gateway) -> None:
+        from .agent_work import get_work_store
+
+        mission_id = str(mission.get("mission_id", "")).strip()
+        if not mission_id:
+            return
+        store = get_work_store(self._INITIATIVE_OWNER_AGENT)
+        mission_tag = f"mission:{mission_id}"
+
+        # One open thread per mission: if a filed item is still moving through
+        # proposal/approval/implementation, don't stack another on top.
+        open_statuses = {"dreamed", "researching", "proposed", "approved", "implementing"}
+        open_items = [
+            i for i in store.all_items()
+            if mission_tag in (i.tags or []) and i.status in open_statuses
+        ]
+        if open_items:
+            logger.debug(
+                "[initiative] %s already has open work [%s] — skipping review",
+                mission_id, open_items[0].work_id[:8],
+            )
+            return
+
+        summary = self._initiative_summary(mission)
+        review_prompt = (
+            "You are JARVIS acting as the owner of one of Chris Binion's ongoing "
+            "missions. Your job is to keep it moving between conversations.\n\n"
+            f"{summary}\n\n"
+            "Assess where this mission actually stands, then reply with EXACTLY one "
+            "of these three forms:\n"
+            "NEXT: <title of the single next concrete work item> | <a specific proposal "
+            "for Chris to approve: what will be produced, why it advances the mission, "
+            "and the first step — 3-5 sentences>\n"
+            "WAITING: <one sentence saying precisely what or who this mission is "
+            "blocked on>\n"
+            "DONE: <one sentence explaining why this mission looks complete>\n\n"
+            "Only claim WAITING or DONE if the dossier genuinely supports it. "
+            "Never invent progress that has not happened."
+        )
+        reply = gateway.simple_complete(review_prompt, max_tokens=400, task_type="agent_work")
+        reply = str(reply or "").strip()
+        if not reply:
+            return
+
+        upper = reply.upper()
+        if upper.startswith("NEXT:"):
+            body = reply[len("NEXT:"):].strip()
+            title, _, proposal = body.partition("|")
+            title = title.strip() or f"Next step for {mission.get('title', mission_id)[:60]}"
+            proposal = proposal.strip() or body
+            item = store.dream_idea(
+                title=title[:140],
+                idea=f"Initiative review for mission {mission_id}: {proposal[:400]}",
+                domain="initiative",
+                tags=["initiative", mission_tag],
+                priority=2,
+            )
+            store.submit_proposal(item.work_id, proposal)
+            note = (
+                f"Initiative review: filed next work item [{item.work_id[:8]}] "
+                f"'{title[:80]}' into the approval queue."
+            )
+            logger.info("[initiative] %s: %s", mission_id, note)
+        elif upper.startswith("WAITING:"):
+            note = f"Initiative review: mission is waiting — {reply[len('WAITING:'):].strip()[:220]}"
+            logger.info("[initiative] %s: waiting — %s", mission_id, note[:120])
+        elif upper.startswith("DONE:"):
+            note = (
+                "Initiative review: this mission looks complete — "
+                f"{reply[len('DONE:'):].strip()[:200]} "
+                "(Flagging for Chris to confirm and close; not auto-closing.)"
+            )
+            logger.info("[initiative] %s: flagged as likely complete", mission_id)
+        else:
+            logger.debug("[initiative] %s: unparseable review reply — skipping", mission_id)
+            return
+        try:
+            mission_support.update_mission_details(mission_id, note=note)
+        except Exception:
+            logger.debug("[initiative] %s: could not record review note", mission_id, exc_info=True)
+
+    @staticmethod
+    def _initiative_summary(mission: dict) -> str:
+        lines = [
+            f"Mission: {str(mission.get('title', '')).strip()[:160]}",
+            f"Status: {str(mission.get('status', '')).strip()}",
+        ]
+        brief = str(mission.get("brief", "")).strip()
+        if brief:
+            lines.append(f"Brief: {brief[:400]}")
+        follow_ups = [
+            str(f.get("summary", f.get("title", ""))).strip()[:120]
+            for f in list(mission.get("follow_ups", []) or [])[-3:]
+            if isinstance(f, dict)
+        ]
+        if follow_ups:
+            lines.append("Open follow-ups: " + "; ".join(x for x in follow_ups if x))
+        evidence = [
+            f"{str(e.get('title', '')).strip()[:60]}: {str(e.get('summary', '')).strip()[:140]}"
+            for e in list(mission.get("evidence", []) or [])[-4:]
+            if isinstance(e, dict)
+        ]
+        if evidence:
+            lines.append("Recent activity:")
+            lines.extend(f"- {x}" for x in evidence if x.strip(": "))
+        return "\n".join(lines)
 
     def _advance_approved_work(self) -> None:
         """Advance approved agent work through implementation autonomously.
