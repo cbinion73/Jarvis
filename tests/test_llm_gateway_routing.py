@@ -8,11 +8,12 @@ free Groq rungs before paid OpenAI, tier-5 stays at the top).
 
 from __future__ import annotations
 
+import json
 import os
 import unittest
 from unittest import mock
 
-from jarvis.llm_gateway import LLMGateway
+from jarvis.llm_gateway import LLMGateway, LLMMessage, OpenAIBackend
 
 
 class _StubBackend:
@@ -140,6 +141,83 @@ class EscalationLadderTests(unittest.TestCase):
 
         source = inspect.getsource(gw_module.LLMGateway)
         self.assertEqual(source.count("def _escalate_model"), 1)
+
+
+def _captured_payload(model: str, temperature: float = 0.7) -> dict:
+    """Build the request payload OpenAIBackend.complete() would send, without
+    a network call, by capturing what's passed to urllib.request.Request."""
+    captured: dict = {}
+
+    class _FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return json.dumps(
+                {"choices": [{"message": {"content": "ok"}}], "usage": {}}
+            ).encode("utf-8")
+
+    def _fake_urlopen(req, timeout=60):
+        captured["body"] = json.loads(req.data.decode("utf-8"))
+        return _FakeResponse()
+
+    backend = OpenAIBackend(api_key="sk-test")
+    with mock.patch("urllib.request.urlopen", side_effect=_fake_urlopen):
+        backend.complete(
+            [LLMMessage(role="user", content="hi")],
+            model=model,
+            temperature=temperature,
+        )
+    return captured["body"]
+
+
+class OpenAIPayloadShapeTests(unittest.TestCase):
+    """Regression coverage for a real bug: gpt-5-family models were sent a
+    custom 'temperature', which OpenAI's API hard-rejects (400) for any model
+    using the new max_completion_tokens param family — silently breaking
+    every OpenAI gateway call in cloud_light mode, including conversation."""
+
+    def test_gpt5_full_model_omits_temperature(self) -> None:
+        body = _captured_payload("gpt-5")
+        self.assertNotIn("temperature", body)
+        self.assertIn("max_completion_tokens", body)
+        self.assertNotIn("max_tokens", body)
+
+    def test_gpt5_mini_omits_temperature(self) -> None:
+        body = _captured_payload("gpt-5-mini")
+        self.assertNotIn("temperature", body)
+        self.assertIn("max_completion_tokens", body)
+
+    def test_gpt5_budget_includes_reasoning_headroom(self) -> None:
+        # max_completion_tokens counts hidden reasoning tokens; without
+        # headroom the model can spend the whole budget reasoning and
+        # return an empty visible reply (observed live).
+        from jarvis.llm_gateway import _REASONING_TOKEN_HEADROOM
+
+        body = _captured_payload("gpt-5")
+        self.assertGreaterEqual(
+            body["max_completion_tokens"], 2048 + _REASONING_TOKEN_HEADROOM
+        )
+
+    def test_o_series_models_omit_temperature(self) -> None:
+        for model in ("o1", "o1-mini", "o3"):
+            with self.subTest(model=model):
+                body = _captured_payload(model)
+                self.assertNotIn("temperature", body)
+
+    def test_legacy_model_keeps_temperature_and_max_tokens(self) -> None:
+        body = _captured_payload("gpt-4o", temperature=0.4)
+        self.assertEqual(body.get("temperature"), 0.4)
+        self.assertIn("max_tokens", body)
+        self.assertNotIn("max_completion_tokens", body)
+
+    def test_thinking_model_uses_reasoning_effort_not_temperature(self) -> None:
+        body = _captured_payload("gpt-5.4-thinking")
+        self.assertNotIn("temperature", body)
+        self.assertEqual(body.get("reasoning_effort"), "high")
 
 
 if __name__ == "__main__":

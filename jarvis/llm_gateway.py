@@ -538,6 +538,12 @@ class OllamaBackend:
 # OpenAIBackend
 # ---------------------------------------------------------------------------
 
+# Reasoning models spend part of max_completion_tokens on hidden reasoning
+# before any visible text. This headroom keeps the caller's requested budget
+# available for the actual reply.
+_REASONING_TOKEN_HEADROOM = 2048
+
+
 class OpenAIBackend:
     """
     Connects to the OpenAI API using urllib.request — no SDK dependency.
@@ -588,7 +594,9 @@ class OpenAIBackend:
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "stream": False,
         }
-        # gpt-5.x models require max_completion_tokens; older models use max_tokens
+        # gpt-5.x/o1/o3 models require max_completion_tokens (not max_tokens) and
+        # only accept the default temperature (1) — passing any other value is a
+        # hard 400 from the API. Older models use max_tokens + a custom temperature.
         _NEW_API_MODELS = ("gpt-5", "o1", "o3")
         use_new_token_param = any(resolved.startswith(p) for p in _NEW_API_MODELS)
         if thinking:
@@ -596,14 +604,16 @@ class OpenAIBackend:
             payload["reasoning_effort"] = "high"
             payload["max_completion_tokens"] = max(max_tokens, 8192)
         elif use_new_token_param:
-            payload["max_completion_tokens"] = max_tokens
+            # max_completion_tokens counts hidden reasoning tokens too. Without
+            # headroom, the model can burn the whole budget reasoning and return
+            # an empty visible reply (observed live: 900/900 tokens spent, no
+            # text). Pad the budget AND cap reasoning effort — at the default
+            # effort some prompts reason past any fixed headroom.
+            payload["max_completion_tokens"] = max_tokens + _REASONING_TOKEN_HEADROOM
+            payload["reasoning_effort"] = os.getenv("JARVIS_REASONING_EFFORT", "low")
         else:
             payload["temperature"] = temperature
             payload["max_tokens"] = max_tokens
-        if not thinking and not use_new_token_param:
-            pass  # temperature already set above
-        elif not thinking:
-            payload["temperature"] = temperature
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             self.BASE_URL,
@@ -621,8 +631,16 @@ class OpenAIBackend:
             elapsed = int((time.monotonic() - t0) * 1000)
             data = json.loads(raw)
             choice = data["choices"][0]
-            text = choice["message"]["content"]
+            text = choice["message"]["content"] or ""
             usage = data.get("usage", {})
+            # A reasoning model that hits the token cap mid-reasoning returns
+            # empty visible text with finish_reason=length. That is a failed
+            # call, not a success — flag it so fallback/escalation engages
+            # instead of silently propagating an empty reply.
+            empty_by_cap = (
+                not text.strip()
+                and str(choice.get("finish_reason", "")).strip() == "length"
+            )
             return LLMResponse(
                 text=text,
                 model_used=model,
@@ -633,7 +651,11 @@ class OpenAIBackend:
                 completion_tokens=usage.get("completion_tokens", 0),
                 confidence=_estimate_confidence(text),
                 escalated=False,
-                error="",
+                error=(
+                    "empty_completion: token budget exhausted by reasoning before any visible output"
+                    if empty_by_cap
+                    else ""
+                ),
             )
         except urllib.error.HTTPError as exc:
             elapsed = int((time.monotonic() - t0) * 1000)
