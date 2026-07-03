@@ -210,6 +210,7 @@ _CREATED_OBJECT_RESULT_FIELDS = (
     "created_pros_cons",
     "created_constraint_map",
     "created_question_set",
+    "created_obsidian_note_proposal",
 )
 
 _LOCAL_OBJECT_BACKING_FILES = {
@@ -16950,6 +16951,7 @@ class JarvisRuntime:
             "created_pros_cons": dict(result.created_pros_cons) if isinstance(result.created_pros_cons, dict) and result.created_pros_cons else {},
             "created_constraint_map": dict(result.created_constraint_map) if isinstance(result.created_constraint_map, dict) and result.created_constraint_map else {},
             "created_question_set": dict(result.created_question_set) if isinstance(result.created_question_set, dict) and result.created_question_set else {},
+            "created_obsidian_note_proposal": dict(result.created_obsidian_note_proposal) if isinstance(result.created_obsidian_note_proposal, dict) and result.created_obsidian_note_proposal else {},
         }
 
     def _try_handle_conversation_intercepts(
@@ -16988,6 +16990,9 @@ class JarvisRuntime:
         source_set_result = self._with_creation_truth_proof(self._try_handle_source_set_creation(actor_name, room, request))
         if source_set_result is not None:
             return source_set_result
+        obsidian_note_result = self._with_creation_truth_proof(self._try_handle_obsidian_note_proposal(actor_name, room, request))
+        if obsidian_note_result is not None:
+            return obsidian_note_result
         structured_note_result = self._with_creation_truth_proof(self._try_handle_structured_note_creation(actor_name, room, request))
         if structured_note_result is not None:
             return structured_note_result
@@ -17233,6 +17238,16 @@ class JarvisRuntime:
                 output_text=source_set_result.output_text,
             )
             return source_set_result
+        obsidian_note_result = self._try_handle_obsidian_note_proposal(actor_name, room, request)
+        if obsidian_note_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=obsidian_note_result.provider,
+                model=obsidian_note_result.model,
+                active_nodes=["obsidian-writer"],
+                output_text=obsidian_note_result.output_text,
+            )
+            return obsidian_note_result
         structured_note_result = self._try_handle_structured_note_creation(actor_name, room, request)
         if structured_note_result is not None:
             self.audit_log.log_response(
@@ -17742,6 +17757,91 @@ class JarvisRuntime:
                 created_source_set=dict(payload.get("created_source_set", {}))
                 if isinstance(payload.get("created_source_set"), dict)
                 else {},
+            ),
+        )
+
+    def _try_handle_obsidian_note_proposal(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        from .obsidian_writer import (
+            extract_obsidian_save_topic,
+            is_direct_obsidian_save_request,
+            propose_note,
+        )
+
+        if not is_direct_obsidian_save_request(request):
+            return None
+        actor = self.get_actor(actor_name)
+        topic = extract_obsidian_save_topic(request)
+        seed = topic or request
+
+        try:
+            from .llm_gateway import get_gateway
+            gateway = get_gateway()
+        except Exception:
+            gateway = None
+
+        title = seed.strip().rstrip(".?!") or "Note from Jarvis"
+        title = title[0].upper() + title[1:] if title else title
+        body = ""
+        if gateway is not None:
+            try:
+                body = gateway.simple_complete(
+                    "Draft a clear, well-organized Obsidian note (markdown, no title heading, "
+                    f"just the body) about: {seed}\n\n"
+                    "Write it as something Chris would actually want in his vault: concrete, "
+                    "specific, useful later. A few short paragraphs or a tight list. "
+                    "Do not invent facts you were not given — if you are missing specifics, "
+                    "say what is still open rather than making it up.",
+                    max_tokens=700,
+                    # Chris is waiting on this synchronously in conversation —
+                    # this is a converse-tier call (cloud, fast), not
+                    # background work. agent_work would route to the slow
+                    # local model and (with the /api/respond blocking-call
+                    # bug also fixed) still make Chris wait a long time.
+                    task_type="converse",
+                )
+            except Exception:
+                body = ""
+        if not body.strip():
+            body = seed.strip()
+
+        from .approvals import get_approval_queue as _get_approval_queue
+
+        queue = _get_approval_queue()
+        if queue is None:
+            return _record_artifact_creation_result_if_possible(
+                self,
+                actor_name,
+                room,
+                request,
+                OpenAIResult(
+                    provider="obsidian-writer",
+                    model="obsidian-writer",
+                    output_text="I'd draft that as a note, but the approval queue isn't available right now, so I can't stage it safely.",
+                ),
+            )
+        proposal = propose_note(
+            queue,
+            actor_id=actor.user_id or actor.display_name,
+            agent_id="jarvis-companion",
+            title=title,
+            body=body,
+            tags=["from-conversation"],
+            source="conversation",
+            source_detail=f"a conversation with {actor.display_name} in {room}",
+        )
+        return _record_artifact_creation_result_if_possible(
+            self,
+            actor_name,
+            room,
+            request,
+            OpenAIResult(
+                provider="obsidian-writer",
+                model="obsidian-writer",
+                output_text=(
+                    f"Drafted “{title}” for your vault. I haven't written it yet — "
+                    "it's waiting in your approval queue so you can review it first."
+                ),
+                created_obsidian_note_proposal=proposal,
             ),
         )
 

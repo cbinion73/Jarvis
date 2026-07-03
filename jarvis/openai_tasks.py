@@ -38,6 +38,7 @@ class OpenAIResult:
     created_pros_cons: dict = field(default_factory=dict)
     created_constraint_map: dict = field(default_factory=dict)
     created_question_set: dict = field(default_factory=dict)
+    created_obsidian_note_proposal: dict = field(default_factory=dict)
 
 
 class JarvisOpenAIClient:

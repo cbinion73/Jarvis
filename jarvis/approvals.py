@@ -103,6 +103,9 @@ ACTION_RISK_MAP: dict[str, str] = {
     "deploy":           RiskTier.HIGH,
     "document_send":    RiskTier.MEDIUM,
     "document_review":  RiskTier.MEDIUM,
+    # Obsidian notes go into Chris's hand-curated personal vault — explicit
+    # approval always required, never auto-approved like generic file_write.
+    "obsidian_note":    RiskTier.MEDIUM,
     "external_api":     RiskTier.LOW,
     "file_write":       RiskTier.LOW,
     "other":            RiskTier.MEDIUM,

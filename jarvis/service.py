@@ -10552,7 +10552,15 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         attachment_context = _upload_prompt_fragment(attachment_records)
         if attachment_context:
             request_text = f"{request_text}\n\n{attachment_context}".strip()
-        result = runtime.converse(
+        # runtime.converse() makes synchronous network calls (LLM gateway,
+        # retrieval, etc.) several layers deep. Called directly inside this
+        # async route, any slow call blocks uvicorn's single-threaded event
+        # loop entirely — freezing every other request on the server, not
+        # just this one (observed live: a slow local-model call made even
+        # GET / stop responding). Running it in a thread keeps one slow
+        # request from taking the whole server down with it.
+        result = await asyncio.to_thread(
+            runtime.converse,
             str(payload.get("actor", "Chris")),
             str(payload.get("room", "office")),
             request_text,
@@ -11263,6 +11271,32 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         if guard is None:
             return _json({"pending": [], "error": "Approval system not initialised"})
         return _json({"pending": guard.get_pending_for_ui(actor_id=actor_id)})
+
+    @app.post("/api/obsidian/proposals/{request_id}/approve")
+    async def api_obsidian_proposal_approve(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:
+        """Approve an Obsidian note proposal and write it to the vault in one
+        step. Only writes when this machine actually carries the vault
+        (live-vault mode) — never on the production server, which only has
+        the synced retrieval index."""
+        from .obsidian_writer import write_approved_note
+
+        approved_by = str((payload or {}).get("approved_by", "chris"))
+        queue = get_approval_queue()
+        if queue is None:
+            raise HTTPException(status_code=503, detail="Approval queue not available")
+        request = queue.approve(request_id, approved_by=approved_by)
+        if request is None:
+            raise HTTPException(status_code=404, detail="Pending proposal not found")
+        if request.action_type != "obsidian_note":
+            raise HTTPException(status_code=400, detail="Not an Obsidian note proposal")
+
+        support = getattr(runtime, "obsidian_support", None)
+        if support is None:
+            return _json({"status": "approved", "written": False, "reason": "Obsidian support not configured on this runtime."})
+        result = await asyncio.to_thread(write_approved_note, support, request)
+        if result.get("written"):
+            queue.mark_executed(request_id)
+        return _json({"status": "approved", **result})
 
     @app.post("/api/approvals/{request_id}/approve")
     async def api_approvals_approve(request_id: str, payload: dict[str, Any] = {}) -> JSONResponse:

@@ -844,9 +844,58 @@ function renderArtifactBody(obj) {
 function summonArtifact(kind, obj) {
   $('holo-kind').textContent = kindLabel(kind);
   $('holo-title').textContent = String(obj.title || obj.topic || 'Untitled');
-  $('holo-body').innerHTML = renderArtifactBody(obj);
+  if (kind === 'created_obsidian_note_proposal') {
+    $('holo-body').innerHTML = renderObsidianProposalBody(obj);
+  } else {
+    $('holo-body').innerHTML = renderArtifactBody(obj);
+  }
   $('holo-foot-left').textContent = obj.created_at ? String(obj.created_at).slice(0, 16).replace('T', ' &middot; '.replace(/&middot;/, '·')) : '';
   veil.classList.add('open');
+}
+
+function renderObsidianProposalBody(obj) {
+  const preview = String(obj.body_preview || '').replace(/\n/g, '<br>');
+  const tags = (obj.tags || []).map(t => escapeHtml(String(t))).join(', ');
+  return (
+    '<div class="h-summary">' + escapeHtml(String(obj.summary || '')) + '</div>' +
+    '<div class="h-section">Draft</div>' +
+    '<div class="h-row"><span>' + preview + '</span></div>' +
+    (tags ? '<div class="h-row"><span class="h-note">tags: ' + tags + '</span></div>' : '') +
+    '<div class="act-btns" style="margin-top:14px">' +
+    '<button onclick="approveObsidianProposal(this, \'' + escapeHtml(String(obj.proposal_id || '')) + '\')">Approve &amp; Write to Vault</button>' +
+    '<button class="deny" onclick="rejectObsidianProposal(this, \'' + escapeHtml(String(obj.proposal_id || '')) + '\')">Discard</button>' +
+    '</div>'
+  );
+}
+
+async function approveObsidianProposal(btn, proposalId) {
+  btn.disabled = true; btn.textContent = 'Writing…';
+  try {
+    const r = await fetch('/api/obsidian/proposals/' + proposalId + '/approve', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    const d = await r.json();
+    if (d.written) {
+      btn.textContent = 'Written: ' + (d.path || 'vault');
+    } else {
+      btn.textContent = 'Approved (not written)';
+      const body = $('holo-body');
+      const note = document.createElement('div');
+      note.className = 'h-row';
+      note.innerHTML = '<span class="h-note">' + escapeHtml(String(d.reason || 'Could not write from this machine.')) + '</span>';
+      body.appendChild(note);
+    }
+  } catch (e) { btn.textContent = 'Failed'; }
+}
+
+async function rejectObsidianProposal(btn, proposalId) {
+  btn.disabled = true;
+  try {
+    await fetch('/api/approvals/' + proposalId + '/reject', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Discarded from HUD' })
+    });
+    dismissPanel();
+  } catch (e) { btn.textContent = 'Failed'; }
 }
 
 function summonDataPanel(kindLabelText, title, rowsHtml) {
