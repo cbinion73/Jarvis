@@ -1510,7 +1510,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Progress Dashboard", html)
         self.assertIn("Seam Tracker", html)
         self.assertIn("Today at a Glance", html)
-        self.assertIn("Last Home Action", html)
+        self.assertIn("Last Action", html)
         self.assertIn("Hosted Edge", html)
         self.assertIn("https://jarvis.teambinion.org", html)
         self.assertIn("deploy/deploy.sh", html)

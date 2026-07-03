@@ -4837,59 +4837,50 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
   <main class="shell">
     <header class="topbar">
       <div class="topbar-brand">
-        <strong>JARVIS Command Chamber</strong>
-        <span>Live operating shell for approvals, agents, health, activity continuity, and Level 3 proof surfaces.</span>
+        <strong>JARVIS Command Center</strong>
+        <span>Approvals, agents, health, and activity — all in one place.</span>
       </div>
       <div class="topbar-links">
-        <a href="{esc(payload['proof_paths']['command_center_json'])}">Index JSON <span>{esc(payload['proof_paths']['command_center_json'])}</span></a>
-        <a href="{esc(payload['proof_paths']['supervision_snapshot'])}">Supervision <span>{esc(payload['proof_paths']['supervision_snapshot'])}</span></a>
-        <a href="{esc(payload['proof_paths']['approval_queue'])}">Approvals <span>{esc(payload['proof_paths']['approval_queue'])}</span></a>
+        <a href="/chat">Talk to Jarvis</a>
+        <a href="{esc(payload['proof_paths']['supervision_snapshot'])}">Supervision</a>
+        <a href="{esc(payload['proof_paths']['approval_queue'])}">Approvals</a>
       </div>
     </header>
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">Level 3 Operating Surface</div>
-        <h1>JARVIS Command Center Index</h1>
-        <p>This is the live front door for the current app-facing product. It keeps the real approval queue, supervision state, health agents, continuity feeds, and proof routes visible in one chamber instead of flattening them into static mockups.</p>
+        <h1>Command Center</h1>
+        <p>Everything Jarvis is tracking on your behalf, in one place: what needs your decision, what your agents are doing, and how things actually stand.</p>
         <div class="stats">
           <div class="stat">
-            <span>Branch</span>
-            <strong>{esc(payload['branch'])}</strong>
-            <small>Canonical GitHub push source</small>
+            <span>Pending Approvals</span>
+            <strong>{esc(len(payload.get('pending_approvals') or []))}</strong>
+            <small>Waiting on your decision</small>
           </div>
           <div class="stat">
-            <span>Head</span>
-            <strong>{esc(payload['head'])}</strong>
-            <small>Current local truth</small>
+            <span>Active Agents</span>
+            <strong>{esc((payload.get('registry') or {{}}).get('agent_count', 0))}</strong>
+            <small>Working on your behalf</small>
           </div>
           <div class="stat">
-            <span>Served surfaces</span>
-            <strong>{esc(payload['surface_count'])}</strong>
-            <small>Live routes with payloads</small>
+            <span>Active Missions</span>
+            <strong>{esc(len([m for m in list((payload.get('mission_task_board') or {{}}).get('items') or []) if str(m.get('lane', '')).strip().lower() != 'completed']))}</strong>
+            <small>In progress</small>
           </div>
           <div class="stat">
-            <span>Needs me</span>
+            <span>Needs You</span>
             <strong>{esc(payload['needs_cockpit']['total'])}</strong>
-            <small>Immediate operator pull</small>
+            <small>Real decisions waiting</small>
           </div>
         </div>
       </div>
       <aside class="hero-side">
         <div class="hero-note">
-          <strong>Continuity is live</strong>
-          <p>Approvals, recovery motion, open loops, health, and agent operations all stay linked to the same product state instead of living as isolated screens.</p>
+          <strong>Jump to</strong>
           <ul>
-            <li><strong>Activity continuity</strong><span>Real mutations flow back into the shared activity stream.</span></li>
-            <li><strong>Health + agents</strong><span>Helen Cho, health agents, and roster surfaces remain directly reachable.</span></li>
+            <li><strong>Daily Brief</strong><span><a href="/briefing-center">This morning's briefing</a></span></li>
+            <li><strong>Missions</strong><span><a href="/mission-board">What's actively in motion</a></span></li>
+            <li><strong>Health</strong><span><a href="/health-center">Vitals and trends</a></span></li>
           </ul>
-        </div>
-        <div class="hero-note">
-          <div class="section-label">Command Dock</div>
-          <div class="command-dock">
-            <a href="{esc(payload['proof_paths']['briefing_json'])}"><strong>Daily Brief JSON</strong><span>{esc(payload['proof_paths']['briefing_json'])}</span></a>
-            <a href="{esc(payload['proof_paths']['missions_json'])}"><strong>Mission Board JSON</strong><span>{esc(payload['proof_paths']['missions_json'])}</span></a>
-            <a href="{esc(payload['proof_paths']['assistant_notifications_json'])}"><strong>Notification Feed JSON</strong><span>{esc(payload['proof_paths']['assistant_notifications_json'])}</span></a>
-          </div>
         </div>
       </aside>
     </section>
@@ -4898,14 +4889,14 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
         <div class="panel-head">
           <div>
             <h2>Today at a Glance</h2>
-            <p>Real home overview state, current checklist continuity, and the last action that changed the day plan.</p>
+            <p>Where things stand right now.</p>
           </div>
         </div>
         <ul id="home-overview">{home_overview_rows(payload['home_overview'], payload.get('level3_checklist', {}))}</ul>
         <div class="panel-head" style="margin-top: 18px;">
           <div>
-            <h2>Last Home Action</h2>
-            <p>Most recent stateful home mutation rendered straight from the current payload.</p>
+            <h2>Last Action</h2>
+            <p>The most recent thing Jarvis did at home.</p>
           </div>
         </div>
         <ul id="home-action-result">{home_action_result_rows(payload['home_overview'].get('action_result', {}))}</ul>

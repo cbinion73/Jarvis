@@ -2548,92 +2548,108 @@ def _module_surface_overrides(active_route: str) -> str:
     nav = "".join(
         f'<a class="module-chip{" active" if route == active_route else ""}" href="{route}">{label}</a>'
         for route, label in MODULE_SURFACE_LINKS
+        if route != active_route
     )
     return f"""
 <style>
-  body.module-surface {{
-    background:
-      radial-gradient(circle at top left, rgba(217, 178, 122, 0.11), transparent 30%),
-      radial-gradient(circle at top right, rgba(121, 216, 255, 0.08), transparent 28%),
-      linear-gradient(180deg, #040912 0%, #07111d 46%, #091522 100%) !important;
-    color: #edf7ff !important;
-    font-family: "SF Pro Display", "Segoe UI", sans-serif !important;
+  :root {{
+    --jv-bg: #070c14;
+    --jv-bg-2: #0a1220;
+    --jv-panel: rgba(15, 23, 36, 0.72);
+    --jv-panel-strong: rgba(15, 23, 36, 0.92);
+    --jv-line: rgba(148, 178, 214, 0.14);
+    --jv-line-strong: rgba(148, 178, 214, 0.26);
+    --jv-text: #eef4fb;
+    --jv-text-soft: #9fb2c8;
+    --jv-accent: #6fc6ff;
+    --jv-accent-soft: rgba(111, 198, 255, 0.14);
+    --jv-radius-lg: 18px;
+    --jv-radius-md: 14px;
+    --jv-radius-sm: 999px;
   }}
-  .module-surface::before {{
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(135deg, rgba(255,255,255,0.03), transparent 34%);
-    opacity: 0.9;
+  body.module-surface {{
+    background: linear-gradient(180deg, var(--jv-bg) 0%, var(--jv-bg-2) 60%, var(--jv-bg) 100%) !important;
+    color: var(--jv-text) !important;
+    font-family: "SF Pro Display", "Inter", "Segoe UI", sans-serif !important;
   }}
   .module-chrome {{
     position: sticky;
     top: 0;
     z-index: 50;
-    padding: 14px 18px 0;
-    backdrop-filter: blur(18px);
+    padding: 16px 20px 0;
   }}
   .module-rail {{
-    max-width: 1480px;
+    max-width: 1400px;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 18px;
-    padding: 14px 16px;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    background: rgba(7, 13, 21, 0.8);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+    gap: 20px;
+    padding: 12px 16px;
+    border: 1px solid var(--jv-line);
+    border-radius: var(--jv-radius-lg);
+    background: rgba(9, 14, 23, 0.86);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  }}
+  .module-rail-left {{
+    display: flex;
+    align-items: center;
+    gap: 14px;
   }}
   .module-brand {{
-    min-width: 180px;
-  }}
-  .module-brand strong {{
-    display: block;
-    color: #d9b27a;
-    font-size: 11px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-bottom: 3px;
-  }}
-  .module-brand span {{
-    display: block;
-    color: #9eb8cb;
     font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--jv-text);
+    text-decoration: none;
+  }}
+  .module-chat-link {{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--jv-radius-sm);
+    background: var(--jv-accent);
+    color: #071019 !important;
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none !important;
+    white-space: nowrap;
   }}
   .module-chip-row {{
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     justify-content: flex-end;
+    max-width: 760px;
   }}
   .module-chip {{
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 9px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-    color: #a7c5dc !important;
+    padding: 7px 12px;
+    border-radius: var(--jv-radius-sm);
+    border: 1px solid transparent;
+    background: rgba(255,255,255,0.04);
+    color: var(--jv-text-soft) !important;
     text-decoration: none;
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 500;
+  }}
+  .module-chip:hover {{
+    background: rgba(255,255,255,0.08);
+    color: var(--jv-text) !important;
   }}
   .module-chip.active {{
-    border-color: rgba(217,178,122,0.28);
-    background: rgba(217,178,122,0.12);
-    color: #f2e7d4 !important;
+    display: none;
   }}
   .module-surface .shell {{
     position: relative;
     z-index: 1;
-    max-width: 1480px !important;
+    max-width: 1400px !important;
     margin: 0 auto !important;
-    padding: 22px 24px 60px !important;
+    padding: 20px 24px 56px !important;
   }}
   .module-surface .hero,
   .module-surface .topbar,
@@ -2642,28 +2658,38 @@ def _module_surface_overrides(active_route: str) -> str:
   .module-surface .glance-card,
   .module-surface .storyboard-step,
   .module-surface .hero-note {{
-    border-color: rgba(255,255,255,0.08) !important;
-    background: linear-gradient(180deg, rgba(11, 20, 31, 0.94), rgba(8, 15, 24, 0.94)) !important;
-    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.24) !important;
-    backdrop-filter: blur(14px);
+    border: 1px solid var(--jv-line) !important;
+    background: var(--jv-panel) !important;
+    box-shadow: none !important;
+    backdrop-filter: blur(12px);
   }}
   .module-surface .hero,
   .module-surface .topbar {{
-    border-radius: 26px !important;
+    border-radius: var(--jv-radius-lg) !important;
+    padding: 24px !important;
   }}
   .module-surface .panel,
   .module-surface .stat,
   .module-surface .glance-card,
   .module-surface .storyboard-step,
   .module-surface .hero-note {{
-    border-radius: 20px !important;
+    border-radius: var(--jv-radius-md) !important;
+  }}
+  .module-surface .stat {{
+    background: var(--jv-panel-strong) !important;
+  }}
+  .module-surface .stat strong {{
+    color: var(--jv-accent) !important;
   }}
   .module-surface h1 {{
-    letter-spacing: -0.04em !important;
+    letter-spacing: -0.03em !important;
+    font-weight: 700 !important;
   }}
   .module-surface h2 {{
-    font-size: 18px !important;
-    letter-spacing: -0.03em !important;
+    font-size: 16px !important;
+    letter-spacing: -0.01em !important;
+    font-weight: 600 !important;
+    color: var(--jv-text) !important;
   }}
   .module-surface p,
   .module-surface li span,
@@ -2671,52 +2697,61 @@ def _module_surface_overrides(active_route: str) -> str:
   .module-surface .subtitle,
   .module-surface .status-note,
   .module-surface label {{
-    color: #9eb8cb !important;
+    color: var(--jv-text-soft) !important;
   }}
   .module-surface a,
   .module-surface button {{
-    border-radius: 999px !important;
+    border-radius: var(--jv-radius-sm) !important;
   }}
   .module-surface button,
   .module-surface .actions a,
   .module-surface .topbar a,
-  .module-surface .route-links a,
-  .module-surface a[href="/command-center"] {{
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    background: linear-gradient(135deg, rgba(217,178,122,0.16), rgba(121,216,255,0.10)) !important;
-    color: #edf7ff !important;
+  .module-surface .route-links a {{
+    border: 1px solid var(--jv-line-strong) !important;
+    background: rgba(255,255,255,0.04) !important;
+    color: var(--jv-text) !important;
     text-decoration: none !important;
+    font-weight: 500;
+  }}
+  .module-surface button:hover,
+  .module-surface .actions a:hover {{
+    background: var(--jv-accent-soft) !important;
+    border-color: var(--jv-accent) !important;
   }}
   .module-surface input,
   .module-surface select,
   .module-surface textarea,
   .module-surface pre {{
-    border-color: rgba(255,255,255,0.08) !important;
-    background: rgba(4, 12, 20, 0.92) !important;
-    color: #edf7ff !important;
+    border-color: var(--jv-line) !important;
+    background: rgba(5, 9, 16, 0.85) !important;
+    color: var(--jv-text) !important;
   }}
   .module-surface li {{
-    border-color: rgba(255,255,255,0.08) !important;
-    background: rgba(255,255,255,0.03) !important;
+    border-color: var(--jv-line) !important;
+    background: rgba(255,255,255,0.02) !important;
   }}
   @media (max-width: 980px) {{
     .module-rail {{
       flex-direction: column;
-      align-items: flex-start;
+      align-items: stretch;
+    }}
+    .module-rail-left {{
+      justify-content: space-between;
     }}
     .module-chip-row {{
       justify-content: flex-start;
+      max-width: none;
     }}
     .module-surface .shell {{
-      padding-top: 18px !important;
+      padding-top: 16px !important;
     }}
   }}
 </style>
 <div class="module-chrome">
   <div class="module-rail">
-    <div class="module-brand">
-      <strong>JARVIS Desktop Modules</strong>
-      <span>Unified standalone routes under one web design system</span>
+    <div class="module-rail-left">
+      <a class="module-brand" href="/command-center">JARVIS</a>
+      <a class="module-chat-link" href="/chat">&larr; Talk to Jarvis</a>
     </div>
     <div class="module-chip-row">
       {nav}
@@ -2910,9 +2945,8 @@ def render_agent_ops_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
       <h1>JARVIS Agent Operations</h1>
-      <p>A dedicated operations surface for the live agent roster, runtime posture, and queue-run controls. This turns Agent Operations into a real app module instead of leaving it split between command-center summaries and hierarchy pages.</p>
+      <p>Your agents, what they're doing right now, and what needs your attention.</p>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <a href="/agents/hierarchy">Open Agent Hierarchy</a>
@@ -3716,9 +3750,8 @@ def render_recovery_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Working Surface</div>
       <h1>JARVIS Failure &amp; Recovery</h1>
-      <p>A dedicated recovery workspace for current integration failures, approval-gated fixes, recent failure signals, and next recovery actions. This turns Failure &amp; Recovery into a real app module instead of leaving it inside progress and command-center summaries.</p>
+      <p>What's broken, what Jarvis wants to fix, and what's waiting on your approval.</p>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <a href="/supervision-snapshot">Open Supervision Snapshot</a>
@@ -4735,9 +4768,8 @@ def render_mission_board_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Working Surface</div>
       <h1>JARVIS Mission &amp; Task Board</h1>
-      <p>A dedicated mission workspace for live now/next/blocked/completed missions, selected-agent context, task-agent context, and mission lane changes. This turns the mission board into a real app module instead of leaving it only in the command center.</p>
+      <p>Your active missions and where each one actually stands.</p>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-mission-board">Refresh Mission Board</button>
@@ -6206,9 +6238,8 @@ def render_activity_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Working Surface</div>
       <h1>JARVIS Activity Feed</h1>
-      <p>A dedicated activity workspace for recent agent updates, failures, system notices, user actions, and journal context. This turns the activity stream into a navigable app surface instead of leaving it only inside the command center.</p>
+      <p>A running log of what Jarvis and your agents have been doing.</p>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-activity-feed">Refresh Activity Feed</button>
@@ -6751,9 +6782,8 @@ def render_approval_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Working Surface</div>
       <h1>JARVIS Approval Queue</h1>
-      <p>A dedicated approval workspace for pending requests, decision history, trust-zone context, and direct review actions. This keeps approvals visible and testable as a real app surface instead of leaving them in an older standalone proof lane.</p>
+      <p>What's waiting on your decision, and the record of what you've already decided.</p>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-approval-queue">Refresh Approval Queue</button>
@@ -7274,7 +7304,6 @@ def render_supervision_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Working Surface</div>
       <h1>JARVIS Supervision Snapshot</h1>
       <p>A dedicated supervision workspace for lane posture, active approvals, failing integrations, memory review cues, and registry state. This upgrades supervision from an older proof surface into the newer app-module family while preserving the same live substrate.</p>
       <div class="actions">
@@ -7786,9 +7815,8 @@ def render_progress_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
       <h1>JARVIS Progress</h1>
-      <p>A dedicated progress workspace inside JARVIS with live readiness rows, seam posture, lane status, failure signals, and concrete evidence for what became real versus what still needs another slice. This promotes Progress out of the command-center panel into a real module route.</p>
+      <p>What's actually working versus what still needs finishing, with the evidence behind each call.</p>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <a href="#level3-checklist">Open Remaining Level 3 Checklist</a>
@@ -9134,9 +9162,8 @@ def render_health_module_page(payload: dict) -> str:
     </section>
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">Level 3 Core Module</div>
         <h1>JARVIS Health</h1>
-        <p>A dedicated health workspace inside JARVIS with live drift posture, baseline deviation evidence, current objectives, recovery coaching context, and symptom triage. This is now a real module surface, not a storyboard-only placeholder.</p>
+        <p>Your vitals, trends, and what Jarvis is watching for.</p>
         <div class="actions">
           <a href="/command-center">Back to Command Center</a>
           <button type="button" id="refresh-health">Refresh Health State</button>
@@ -10401,9 +10428,8 @@ def render_chronicle_module_page(payload: dict) -> str:
     </section>
     <section class="hero">
       <div class="hero-copy">
-        <div class="eyebrow">Level 3 Core Module</div>
         <h1>JARVIS Chronicle</h1>
-        <p>A dedicated Chronicle workspace inside JARVIS with devotional generation, family-devotional prep, reflection capture, recurring theme visibility, morning formation context, and continuity status. This promotes Chronicle out of the shell packet into a real module surface.</p>
+        <p>Devotionals, reflections, and the threads Jarvis is keeping continuity on for your family.</p>
         <div class="actions">
           <a href="/command-center">Back to Command Center</a>
           <button type="button" id="refresh-chronicle">Refresh Chronicle State</button>
@@ -11043,9 +11069,8 @@ def render_settings_module_page(payload: dict) -> str:
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Level 3 Core Module</div>
       <h1>JARVIS Settings</h1>
-      <p>A dedicated settings and permissions workspace inside JARVIS with live voice controls, location posture, account connectivity, and governance signals. This promotes Settings out of the shell packet into a real module route.</p>
+      <p>Voice, location, connected accounts, and how much Jarvis is allowed to do on its own.</p>
       <div class="actions">
         <a href="/command-center">Back to Command Center</a>
         <button type="button" id="refresh-settings">Refresh Settings State</button>
