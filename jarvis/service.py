@@ -53,6 +53,14 @@ except Exception:  # pragma: no cover
 
     def _render_glass_shell(runtime, initial_packet=""):  # type: ignore[misc]
         return render_voice_shell(runtime, initial_packet=initial_packet)
+try:
+    from .jarvis_theme_hud import render_hud_shell as _render_hud_shell
+    _HUD_THEME_AVAILABLE = True
+except Exception:  # pragma: no cover
+    _HUD_THEME_AVAILABLE = False
+
+    def _render_hud_shell(runtime, initial_packet=""):  # type: ignore[misc]
+        return render_voice_shell(runtime, initial_packet=initial_packet)
 from .apple_api import _build_apple_calendar_state, _register_apple_api
 from .audit import ActivityReviewStore, AuditLog, ProgressFocusStore, ProgressSnapshotStore, RecoveryActionStore, SeamTrackerStore
 from .chronicle_reviews import ChronicleReviewStore
@@ -1108,19 +1116,29 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         packet: str = Query(default=""),
         theme: str = Query(default=""),
     ) -> str:
-        # The main web app should keep the full shell chrome. Default the shell
-        # to the Daily Briefing packet instead of sending root traffic to a
-        # standalone module page.
+        # The HUD is the flagship experience: one cinematic stage with
+        # conversation at the center and live mission/approval/agent panels
+        # around it. Prior shells stay reachable via ?theme= and their own
+        # routes (/glass, /nexus, /chat) for evaluation and fallback.
         if theme == "nexus" and _NEXUS_THEME_AVAILABLE:
             return _render_nexus_shell(runtime, initial_packet=packet)
         if theme == "glass" and _GLASS_THEME_AVAILABLE:
-            return _render_glass_shell(runtime, initial_packet=packet)
+            return _render_glass_shell(runtime, initial_packet=packet or "briefing")
         if theme == "voice":
             return render_voice_shell(runtime, initial_packet=packet)
+        if _HUD_THEME_AVAILABLE:
+            return _render_hud_shell(runtime, initial_packet=packet)
         default_packet = packet or "briefing"
         if _GLASS_THEME_AVAILABLE:
             return _render_glass_shell(runtime, initial_packet=default_packet)
         return render_voice_shell(runtime, initial_packet=default_packet)
+
+    @app.get("/hud", response_class=HTMLResponse)
+    async def hud_shortcut(packet: str = Query(default="")) -> str:
+        """Convenience shortcut — always loads the HUD experience."""
+        if _HUD_THEME_AVAILABLE:
+            return _render_hud_shell(runtime, initial_packet=packet)
+        return render_voice_shell(runtime, initial_packet=packet)
 
     @app.get("/nexus", response_class=HTMLResponse)
     async def nexus_shortcut(packet: str = Query(default="")) -> str:
