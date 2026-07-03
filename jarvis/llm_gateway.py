@@ -193,6 +193,17 @@ def _cloud_light_mode() -> bool:
 
 
 _OPENAI_MODEL            = lambda: os.getenv("JARVIS_OPENAI_MODEL",             "gpt-5.4-mini")
+
+
+def _openai_full_model() -> str:
+    """The full (non-mini) sibling of the configured OpenAI model.
+
+    'gpt-5-mini' -> 'gpt-5', 'gpt-5.4-mini' -> 'gpt-5.4'. Used as the
+    conversation floor: Chris wants everyday conversation on ChatGPT-grade
+    quality, while the mini tier keeps handling internal work.
+    """
+    model = _OPENAI_MODEL()
+    return model[: -len("-mini")] if model.endswith("-mini") else model
 _THINKING_MODEL          = lambda: os.getenv("JARVIS_THINKING_MODEL",           "gpt-5.4")
 _MAX_THINKING_MODEL      = lambda: os.getenv("JARVIS_MAX_THINKING_MODEL",       "gpt-5.5")
 _GROQ_MODEL              = lambda: os.getenv("JARVIS_GROQ_MODEL",               "llama-3.3-70b-versatile")
@@ -840,11 +851,12 @@ class LLMGateway:
             if override:
                 return override
             # cloud_light collapses the substantive tier to the mini model;
-            # conversation deserves better, and Groq's 70B is free. Fall back
-            # to the substantive tier when Groq has no key (preserves the
-            # pre-existing behavior), and everywhere outside cloud_light.
-            if _cloud_light_mode() and self._groq.is_available():
-                return _GROQ_MODEL()
+            # conversation deserves ChatGPT-grade quality (Chris's explicit
+            # call: OpenAI's full model, not Groq). Internal work stays on
+            # the mini tier for cost control; everywhere outside cloud_light
+            # the local substantive model keeps handling conversation.
+            if _cloud_light_mode() and self._openai.is_available():
+                return _openai_full_model()
             return _SUBSTANTIVE_MODEL()
         if raw == "substantive":
             return _SUBSTANTIVE_MODEL()
@@ -869,6 +881,10 @@ class LLMGateway:
             return "openai"
         openai_model = _OPENAI_MODEL()
         if model == openai_model:
+            return "openai"
+        # Any other gpt-* model (e.g. the full non-mini conversation floor)
+        # belongs to OpenAI — without this it would fall through to Ollama.
+        if model.startswith("gpt-"):
             return "openai"
         # Groq: voice alias, llama-* families, groq-* prefixed, openai/* OSS models on Groq
         if (model == "groq"
@@ -902,7 +918,8 @@ class LLMGateway:
             substantive,
             _GROQ_MODEL(),            # free
             _GROQ_REASONING_MODEL(),  # free
-            _OPENAI_MODEL(),          # paid
+            _OPENAI_MODEL(),          # paid, mini tier
+            _openai_full_model(),     # paid, full model (conversation floor)
             "gpt-5.4-thinking",       # paid, extended thinking
             "gpt-5.5-thinking",       # paid, requires Chris's approval
         ]

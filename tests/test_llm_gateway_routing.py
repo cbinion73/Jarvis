@@ -52,15 +52,32 @@ _LOCAL_ENV = {
 
 
 class ConverseFloorRoutingTests(unittest.TestCase):
-    def test_cloud_light_converse_routes_to_free_groq(self) -> None:
+    def test_cloud_light_converse_routes_to_full_openai_model(self) -> None:
+        # Chris's explicit call: everyday conversation runs on ChatGPT-grade
+        # quality — the full non-mini sibling of the configured OpenAI model.
         with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
             model = _gateway()._resolve_model("converse")
-        self.assertEqual(model, "llama-3.3-70b-versatile")
+        self.assertEqual(model, "gpt-5")
 
-    def test_cloud_light_converse_without_groq_keeps_prior_behavior(self) -> None:
+    def test_cloud_light_converse_without_openai_keeps_prior_behavior(self) -> None:
         with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
-            model = _gateway(groq_available=False)._resolve_model("converse")
+            gw = LLMGateway(
+                ollama=_StubBackend(),
+                openai=_StubBackend(available=False),
+                groq=_StubBackend(),
+            )
+            model = gw._resolve_model("converse")
         self.assertEqual(model, "gpt-5-mini")
+
+    def test_full_model_derivation_handles_versioned_names(self) -> None:
+        env = dict(_CLOUD_LIGHT_ENV, JARVIS_OPENAI_MODEL="gpt-5.4-mini")
+        with mock.patch.dict(os.environ, env):
+            model = _gateway()._resolve_model("converse")
+        self.assertEqual(model, "gpt-5.4")
+
+    def test_full_gpt_models_route_to_openai_backend(self) -> None:
+        with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
+            self.assertEqual(_gateway()._backend_for("gpt-5"), "openai")
 
     def test_local_mode_converse_unchanged(self) -> None:
         with mock.patch.dict(os.environ, _LOCAL_ENV):
@@ -95,7 +112,8 @@ class EscalationLadderTests(unittest.TestCase):
             gw = _gateway()
             self.assertEqual(gw._escalate_model("gpt-5-mini"), "llama-3.3-70b-versatile")
             self.assertEqual(gw._escalate_model("llama-3.3-70b-versatile"), "openai/gpt-oss-120b")
-            self.assertEqual(gw._escalate_model("openai/gpt-oss-120b"), "gpt-5.4-thinking")
+            self.assertEqual(gw._escalate_model("openai/gpt-oss-120b"), "gpt-5")
+            self.assertEqual(gw._escalate_model("gpt-5"), "gpt-5.4-thinking")
             self.assertEqual(gw._escalate_model("gpt-5.4-thinking"), "gpt-5.5-thinking")
             self.assertIsNone(gw._escalate_model("gpt-5.5-thinking"))
 
@@ -107,7 +125,8 @@ class EscalationLadderTests(unittest.TestCase):
             self.assertEqual(gw._escalate_model("qwen2.5:14b"), "llama-3.3-70b-versatile")
             self.assertEqual(gw._escalate_model("llama-3.3-70b-versatile"), "openai/gpt-oss-120b")
             self.assertEqual(gw._escalate_model("openai/gpt-oss-120b"), "gpt-5-mini")
-            self.assertEqual(gw._escalate_model("gpt-5-mini"), "gpt-5.4-thinking")
+            self.assertEqual(gw._escalate_model("gpt-5-mini"), "gpt-5")
+            self.assertEqual(gw._escalate_model("gpt-5"), "gpt-5.4-thinking")
 
     def test_unknown_model_does_not_escalate(self) -> None:
         with mock.patch.dict(os.environ, _LOCAL_ENV):
