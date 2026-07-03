@@ -13,6 +13,7 @@ from jarvis.apple_api import (
     _resolve_huddle_approval,
 )
 from jarvis.audit import AuditLog, ProgressFocusStore
+from jarvis import ideas as ideas_module
 
 
 class _StubWorkItem:
@@ -45,7 +46,23 @@ class AppleHuddleOpsTests(unittest.TestCase):
         self._tmpdir = tempfile.TemporaryDirectory()
         os.chdir(self._tmpdir.name)
 
+        # jarvis.ideas keys its storage off Path.home(), which os.chdir() does
+        # not affect. Without patching these module-level paths, tests here
+        # read/write the real ~/.jarvis/ideas*.json files on the machine,
+        # colliding with any other process (including other test runs)
+        # touching the same real user data.
+        self._ideas_path = ideas_module._IDEAS_PATH
+        self._ideas_log_path = ideas_module._IDEAS_LOG_PATH
+        self._ideas_state_log_path = ideas_module._IDEAS_STATE_LOG_PATH
+        ideas_root = Path(self._tmpdir.name) / "jarvis-ideas"
+        ideas_module._IDEAS_PATH = ideas_root / "ideas.json"
+        ideas_module._IDEAS_LOG_PATH = ideas_root / "ideas_log.jsonl"
+        ideas_module._IDEAS_STATE_LOG_PATH = ideas_root / "ideas_state_log.jsonl"
+
     def tearDown(self) -> None:
+        ideas_module._IDEAS_PATH = self._ideas_path
+        ideas_module._IDEAS_LOG_PATH = self._ideas_log_path
+        ideas_module._IDEAS_STATE_LOG_PATH = self._ideas_state_log_path
         os.chdir(self._cwd)
         self._tmpdir.cleanup()
 
