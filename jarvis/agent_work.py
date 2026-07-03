@@ -420,6 +420,22 @@ class AgentWorkStore:
         _catalyst_sync(item, "implementing")
         return item
 
+    def append_implementation(self, work_id: str, note: str) -> WorkItem | None:
+        """Append a progress increment to an item's implementation notes."""
+        note = str(note or "").strip()
+        if not note:
+            return self.get(work_id)
+        with self._lock:
+            item = self._find(work_id)
+            if item is None:
+                return None
+            existing = str(item.implementation or "").strip()
+            item.implementation = f"{existing}\n\n{note}".strip() if existing else note
+            self._touch(item)
+            self._save()
+        _catalyst_sync(item, "implementing")
+        return item
+
     def log_result(
         self,
         work_id: str,

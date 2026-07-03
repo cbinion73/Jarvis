@@ -2027,9 +2027,156 @@ class AgentScheduler:
         # are generated autonomously without requiring an HTTP poll.
         self._run_proactive_orchestrator()
 
+        # Epic 2 completion: consume APPROVED work items so an approval leads to
+        # real implementation progress instead of a dead end.
+        self._advance_approved_work()
+
     _mode_advance_tick_count: int = 0
     _proactive_tick_count: int = 0
     _PROACTIVE_TICK_INTERVAL: int = 5  # fire every ~5 minutes (5 × 60 s ticks)
+    _work_advance_tick_count: int = 0
+    _WORK_ADVANCE_TICK_INTERVAL: int = 10  # fire every ~10 minutes (10 × 60 s ticks)
+    _WORK_IMPLEMENTATION_INCREMENTS: int = 3  # increments before an item moves to tracking
+
+    def _advance_approved_work(self) -> None:
+        """Advance approved agent work through implementation autonomously.
+
+        The agent work lifecycle (DREAMED → RESEARCHING → PROPOSED → APPROVED →
+        IMPLEMENTING → TRACKING → CLOSED) used to stall at APPROVED: agents
+        dreamed, researched, and proposed autonomously, Chris approved via the
+        approval surface — and then nothing consumed the approval. This loop
+        closes that gap:
+
+        - APPROVED items get an implementation kickoff (concrete execution plan
+          with a first deliverable, drafted through the LLM gateway) and move
+          to IMPLEMENTING. One item per agent per cycle.
+        - IMPLEMENTING items receive one new deliverable increment per cycle.
+          After _WORK_IMPLEMENTATION_INCREMENTS increments the item moves to
+          TRACKING with an honest note that real-world metrics are pending.
+
+        Trust boundary: everything produced here is drafted text recorded on
+        the work item (visible at standup and on the mission surfaces) — no
+        external side effects. Actions that touch the outside world still go
+        through their own approval paths. Only items Chris explicitly approved
+        are ever consumed.
+        """
+        self._work_advance_tick_count = getattr(self, "_work_advance_tick_count", 0) + 1
+        if self._work_advance_tick_count < self._WORK_ADVANCE_TICK_INTERVAL:
+            return
+        self._work_advance_tick_count = 0
+        try:
+            from .agent_work import (
+                STATUS_APPROVED,
+                STATUS_IMPLEMENTING,
+                get_all_stores,
+            )
+
+            gateway = _get_gateway()
+            if gateway is None:
+                return
+            for agent_id, store in get_all_stores().items():
+                try:
+                    just_started = self._kickoff_one_approved_item(agent_id, store, gateway, STATUS_APPROVED)
+                    self._progress_one_implementing_item(
+                        agent_id, store, gateway, STATUS_IMPLEMENTING, skip_work_id=just_started
+                    )
+                except Exception:
+                    logger.warning(
+                        "[work-advance] advancing %s failed (non-fatal)", agent_id, exc_info=True
+                    )
+        except Exception:
+            logger.debug("_advance_approved_work tick failed (non-fatal)", exc_info=True)
+
+    def _kickoff_one_approved_item(self, agent_id: str, store, gateway, status_approved: str) -> str | None:
+        """Move at most one APPROVED item into IMPLEMENTING with a kickoff plan.
+
+        Returns the work_id that was kicked off (or None) so the caller can
+        avoid also progressing the same item in the same cycle — pacing is
+        one advancement per item per cycle.
+        """
+        approved = [i for i in store.get_by_status(status_approved)]
+        approved.sort(key=lambda i: (i.priority, i.approved_at or i.updated_at))
+        for item in approved[:1]:
+            kickoff_prompt = (
+                f"You are JARVIS working on Chris Binion's behalf. Chris approved this "
+                f"work item, and implementation starts now.\n\n"
+                f"Title: {item.title}\n"
+                f"Domain: {item.domain}\n"
+                f"Proposal Chris approved: {item.proposal[:900]}\n\n"
+                f"Produce the implementation kickoff:\n"
+                f"1. A concrete execution plan (3-6 ordered steps, each independently completable)\n"
+                f"2. The first deliverable, drafted in full now (not described — actually drafted). "
+                f"Pick whichever first step is a text artifact: an outline, copy, checklist, "
+                f"spec, or script skeleton.\n\n"
+                f"Anything requiring external accounts, spending, or publishing must be "
+                f"listed as 'Needs Chris' rather than claimed as done. Be specific."
+            )
+            kickoff = gateway.simple_complete(kickoff_prompt, max_tokens=900, task_type="agent_work")
+            if not kickoff or len(kickoff.strip()) < 80:
+                logger.info("[work-advance] kickoff draft too thin for %s — will retry next cycle", item.work_id[:8])
+                continue
+            store.start_implementing(
+                item.work_id,
+                implementation_notes=(
+                    f"### Implementation kickoff (auto-started {datetime.now(timezone.utc).isoformat()})\n"
+                    f"{kickoff.strip()}"
+                ),
+            )
+            logger.info(
+                "[work-advance] %s: approved item [%s] %s moved to implementing",
+                agent_id, item.work_id[:8], item.title[:48],
+            )
+            return item.work_id
+        return None
+
+    def _progress_one_implementing_item(
+        self, agent_id: str, store, gateway, status_implementing: str, *, skip_work_id: str | None = None
+    ) -> None:
+        """Produce one deliverable increment for at most one IMPLEMENTING item."""
+        implementing = [
+            i for i in store.get_by_status(status_implementing) if i.work_id != skip_work_id
+        ]
+        implementing.sort(key=lambda i: (i.priority, i.updated_at))
+        for item in implementing[:1]:
+            increments_done = item.implementation.count("### Increment")
+            if increments_done >= self._WORK_IMPLEMENTATION_INCREMENTS:
+                store.log_result(
+                    item.work_id,
+                    metrics=(
+                        "Implementation drafts complete "
+                        f"({increments_done} increments). Real-world effectiveness metrics "
+                        "not yet collected — tracking begins when the deliverables are put to use."
+                    ),
+                    effectiveness_score=0.0,
+                    move_to_tracking=True,
+                )
+                logger.info(
+                    "[work-advance] %s: [%s] %s moved to tracking after %d increments",
+                    agent_id, item.work_id[:8], item.title[:48], increments_done,
+                )
+                continue
+            increment_prompt = (
+                f"You are JARVIS continuing approved implementation work for Chris Binion.\n\n"
+                f"Title: {item.title}\n"
+                f"Domain: {item.domain}\n"
+                f"Work so far (most recent last):\n{item.implementation[-1800:]}\n\n"
+                f"Produce the next deliverable increment: pick the next unfinished step "
+                f"from the execution plan and complete it in full as a text artifact. "
+                f"Do not repeat prior increments. Anything requiring external accounts, "
+                f"spending, or publishing must be listed as 'Needs Chris'. Be specific."
+            )
+            increment = gateway.simple_complete(increment_prompt, max_tokens=900, task_type="agent_work")
+            if not increment or len(increment.strip()) < 80:
+                logger.info("[work-advance] increment draft too thin for %s — will retry next cycle", item.work_id[:8])
+                continue
+            store.append_implementation(
+                item.work_id,
+                f"### Increment {increments_done + 1} ({datetime.now(timezone.utc).isoformat()})\n{increment.strip()}",
+            )
+            logger.info(
+                "[work-advance] %s: [%s] %s — increment %d recorded",
+                agent_id, item.work_id[:8], item.title[:48], increments_done + 1,
+            )
 
     def _run_proactive_orchestrator(self) -> None:
         """L5.8: Run ProactiveOrchestrator on a 5-tick interval so proactive prompts
