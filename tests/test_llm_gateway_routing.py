@@ -96,13 +96,67 @@ class ConverseFloorRoutingTests(unittest.TestCase):
             model = _gateway()._resolve_model("converse", force_model="qwen2.5:14b")
         self.assertEqual(model, "qwen2.5:14b")
 
-    def test_other_substantive_tasks_keep_mini_floor_in_cloud_light(self) -> None:
-        # Cost control: only conversation gets the Groq floor; internal
-        # work (agent_work/draft/plan) stays on the collapsed mini tier.
+    def test_interactive_substantive_tasks_keep_mini_floor_in_cloud_light(self) -> None:
+        # Cost control: interactive module work (draft/plan/analyze/reason)
+        # stays on the collapsed mini tier. agent_work is background-class
+        # and prefers local — covered in BackgroundPreferLocalTests.
         with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
             gw = _gateway()
-            for task in ("agent_work", "draft", "plan", "analyze", "reason"):
+            for task in ("draft", "plan", "analyze", "reason"):
                 self.assertEqual(gw._resolve_model(task), "gpt-5-mini", task)
+
+
+class BackgroundPreferLocalTests(unittest.TestCase):
+    """Chris's cost policy: background/scheduled work runs on free local
+    Ollama models when available — even in cloud_light — and can take all
+    the time it wants. Cloud spend belongs to conversation and strategy."""
+
+    def test_background_tasks_route_local_when_ollama_up(self) -> None:
+        with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
+            gw = _gateway()
+            for task in ("summarize", "extract", "format", "briefing"):
+                self.assertEqual(gw._resolve_model(task), "qwen3:4b", task)
+            for task in ("classify", "route", "tag", "detect", "check"):
+                self.assertEqual(gw._resolve_model(task), "qwen3:4b", task)
+            self.assertEqual(gw._resolve_model("agent_work"), "qwen3:14b")
+
+    def test_conversation_and_strategy_stay_cloud(self) -> None:
+        with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
+            gw = _gateway()
+            self.assertEqual(gw._resolve_model("converse"), "gpt-5")
+            self.assertEqual(gw._resolve_model("strategy"), "gpt-5-mini")
+            # Unmapped/interactive substantive tasks also stay on the mini tier.
+            self.assertEqual(gw._resolve_model("reason"), "gpt-5-mini")
+
+    def test_ollama_down_falls_back_to_cloud(self) -> None:
+        with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
+            gw = LLMGateway(
+                ollama=_StubBackend(available=False),
+                openai=_StubBackend(),
+                groq=_StubBackend(),
+            )
+            self.assertEqual(gw._resolve_model("summarize"), "gpt-5-mini")
+            self.assertEqual(gw._resolve_model("agent_work"), "gpt-5-mini")
+
+    def test_kill_switch_forces_cloud(self) -> None:
+        env = dict(_CLOUD_LIGHT_ENV, JARVIS_BACKGROUND_PREFER_LOCAL="false")
+        with mock.patch.dict(os.environ, env):
+            gw = _gateway()
+            self.assertEqual(gw._resolve_model("summarize"), "gpt-5-mini")
+
+    def test_low_confidence_local_reply_escalates_to_free_groq(self) -> None:
+        with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
+            gw = _gateway()
+            self.assertEqual(gw._escalate_model("qwen3:14b"), "llama-3.3-70b-versatile")
+
+    def test_local_escalation_skips_groq_without_key(self) -> None:
+        with mock.patch.dict(os.environ, _CLOUD_LIGHT_ENV):
+            gw = LLMGateway(
+                ollama=_StubBackend(),
+                openai=_StubBackend(),
+                groq=_StubBackend(available=False),
+            )
+            self.assertEqual(gw._escalate_model("qwen3:14b"), "gpt-5-mini")
 
 
 class EscalationLadderTests(unittest.TestCase):
@@ -129,9 +183,20 @@ class EscalationLadderTests(unittest.TestCase):
             self.assertEqual(gw._escalate_model("gpt-5-mini"), "gpt-5")
             self.assertEqual(gw._escalate_model("gpt-5"), "gpt-5.4-thinking")
 
-    def test_unknown_model_does_not_escalate(self) -> None:
+    def test_unknown_openai_model_does_not_escalate(self) -> None:
+        # gpt-4o routes to the openai backend but is not a ladder rung.
         with mock.patch.dict(os.environ, _LOCAL_ENV):
-            self.assertIsNone(_gateway()._escalate_model("some-custom-model"))
+            self.assertIsNone(_gateway()._escalate_model("gpt-4o"))
+
+    def test_unknown_local_model_escalates_to_cloud(self) -> None:
+        # Anything ollama-backed that is not in the ladder (e.g. a custom
+        # local model from the background-prefer-local path) still escalates
+        # to free Groq so low-confidence local output improves.
+        with mock.patch.dict(os.environ, _LOCAL_ENV):
+            self.assertEqual(
+                _gateway()._escalate_model("some-custom-model"),
+                "llama-3.3-70b-versatile",
+            )
 
     def test_single_escalate_model_definition(self) -> None:
         # A second def used to shadow the real ladder, silently disabling

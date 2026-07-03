@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import time
 import urllib.error
@@ -208,10 +209,39 @@ _THINKING_MODEL          = lambda: os.getenv("JARVIS_THINKING_MODEL",           
 _MAX_THINKING_MODEL      = lambda: os.getenv("JARVIS_MAX_THINKING_MODEL",       "gpt-5.5")
 _GROQ_MODEL              = lambda: os.getenv("JARVIS_GROQ_MODEL",               "llama-3.3-70b-versatile")
 _GROQ_REASONING_MODEL    = lambda: os.getenv("JARVIS_GROQ_REASONING_MODEL",     "openai/gpt-oss-120b")
-_FAST_MODEL              = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "phi3.5")
-_SUBSTANTIVE_MODEL       = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_SUBSTANTIVE_MODEL", "qwen2.5:14b")
-_BACKGROUND_MODEL        = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL",  "qwen2.5:7b")
-_REASONING_MODEL         = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "qwen2.5:14b")
+# Local model names (defaults match what is actually installed in Ollama on
+# the M4 — the old phi3.5/qwen2.5 defaults referenced models not present).
+_OLLAMA_FAST             = lambda: os.getenv("JARVIS_OLLAMA_FAST_MODEL",        "qwen3:4b")
+_OLLAMA_SUBSTANTIVE      = lambda: os.getenv("JARVIS_OLLAMA_SUBSTANTIVE_MODEL", "qwen3:14b")
+_OLLAMA_BACKGROUND       = lambda: os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL",  "qwen3:4b")
+
+_FAST_MODEL              = lambda: _OPENAI_MODEL() if _cloud_light_mode() else _OLLAMA_FAST()
+_SUBSTANTIVE_MODEL       = lambda: _OPENAI_MODEL() if _cloud_light_mode() else _OLLAMA_SUBSTANTIVE()
+_BACKGROUND_MODEL        = lambda: _OPENAI_MODEL() if _cloud_light_mode() else _OLLAMA_BACKGROUND()
+_REASONING_MODEL         = lambda: _OPENAI_MODEL() if _cloud_light_mode() else os.getenv("JARVIS_OLLAMA_REASONING_MODEL",   "qwen3:14b")
+
+
+def _background_prefer_local() -> bool:
+    """Background/scheduled work prefers free local models when Ollama is up.
+
+    Chris's cost policy: cloud spend belongs to conversation and high-stakes
+    reasoning; background tasks can take all the time they want on local
+    models. Set JARVIS_BACKGROUND_PREFER_LOCAL=false to force cloud.
+    """
+    return os.getenv("JARVIS_BACKGROUND_PREFER_LOCAL", "true").strip().lower() not in (
+        "false", "0", "no", "off",
+    )
+
+
+# Task types that are background/scheduled in nature — safe to run slowly on
+# local models. Conversation, voice, strategy, and thinking tiers stay cloud.
+_PREFER_LOCAL_TASK_TYPES = frozenset(
+    {
+        "classify", "route", "tag", "detect", "check",       # instant classification
+        "summarize", "extract", "format", "briefing",        # background text work
+        "agent_work",                                        # scheduled agent drafting
+    }
+)
 
 # ---------------------------------------------------------------------------
 # Task routing tables
@@ -451,11 +481,17 @@ class OllamaBackend:
         elif model in ("qwen2.5", "qwen"):
             model = "qwen2.5:7b"
 
+        # Local reasoning-family models (qwen3 etc.) spend tokens on hidden
+        # reasoning before any visible text — without headroom they hit the
+        # cap mid-thought and return empty content with finish_reason=length
+        # (observed live). Same failure class and fix as the OpenAI backend.
+        budget = max_tokens + _REASONING_TOKEN_HEADROOM
+
         payload = {
             "model": model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens": budget,
             "stream": False,  # streaming not implemented over urllib
         }
         body = json.dumps(payload).encode("utf-8")
@@ -471,13 +507,38 @@ class OllamaBackend:
         )
         t0 = time.monotonic()
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            # Background work on local models is allowed to be slow — Chris's
+            # policy is that local inference can take all the time it wants.
+            timeout_s = int(os.getenv("JARVIS_OLLAMA_TIMEOUT_S", "300"))
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
                 raw = resp.read().decode("utf-8")
             elapsed = int((time.monotonic() - t0) * 1000)
             data = json.loads(raw)
             choice = data["choices"][0]
-            text = choice["message"]["content"]
+            text = choice["message"]["content"] or ""
+            # Reasoning-family local models (qwen3 etc.) may emit <think>
+            # blocks inline (older Ollama) — strip them so background
+            # summaries stay clean. Newer Ollama separates reasoning into
+            # its own message field, which we simply ignore.
+            text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+            empty_by_cap = (
+                not text
+                and str(choice.get("finish_reason", "")).strip() == "length"
+            )
             usage = data.get("usage", {})
+            if empty_by_cap:
+                return LLMResponse(
+                    text="",
+                    model_used=model,
+                    backend="ollama",
+                    task_type="",
+                    latency_ms=elapsed,
+                    prompt_tokens=usage.get("prompt_tokens", 0),
+                    completion_tokens=usage.get("completion_tokens", 0),
+                    confidence=0.0,
+                    escalated=False,
+                    error="empty_completion: token budget exhausted by reasoning before any visible output",
+                )
             return LLMResponse(
                 text=text,
                 model_used=model,
@@ -865,6 +926,21 @@ class LLMGateway:
         """Return the canonical model name for a given task type."""
         if force_model:
             return force_model
+        # Background-class tasks run on free local models whenever Ollama is
+        # actually up — even in cloud_light mode, where they would otherwise
+        # collapse to the paid mini tier. Local errors still fall back to
+        # cloud via the existing Ollama-error fallback in complete().
+        if (
+            task_type in _PREFER_LOCAL_TASK_TYPES
+            and _cloud_light_mode()
+            and _background_prefer_local()
+            and self._ollama.is_available()
+        ):
+            if task_type in ("classify", "route", "tag", "detect", "check"):
+                return _OLLAMA_FAST()
+            if task_type == "agent_work":
+                return _OLLAMA_SUBSTANTIVE()
+            return _OLLAMA_BACKGROUND()
         raw = TASK_MODEL_MAP.get(task_type, "substantive")
         if raw == "phi3.5":
             return _FAST_MODEL()
@@ -947,6 +1023,11 @@ class LLMGateway:
         ]
         rungs = list(dict.fromkeys(ladder))  # dedupe, preserve order
         if model not in rungs:
+            # Local models routed by the background-prefer-local path are not
+            # in the cloud_light ladder — a low-confidence local reply should
+            # still escalate: free Groq first, then the paid mini tier.
+            if self._backend_for(model) == "ollama":
+                return _GROQ_MODEL() if self._groq.is_available() else _OPENAI_MODEL()
             return None
         idx = rungs.index(model)
         return rungs[idx + 1] if idx + 1 < len(rungs) else None
