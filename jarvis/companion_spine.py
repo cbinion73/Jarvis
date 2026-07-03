@@ -226,7 +226,7 @@ def build_context_packet(
     effective_request = str((correction_context or {}).get("last_user_message") or request or "").strip()
     known_facts: list[str] = []
     try:
-        known_facts = list(runtime._relevant_profile_facts(actor, effective_request, limit=4))
+        known_facts = list(runtime._relevant_profile_facts(actor, effective_request, limit=8))
     except Exception:
         known_facts = []
 
@@ -615,14 +615,14 @@ def _personal_model_snapshot(
         if not text or _correction_feedback(text):
             continue
         recent_user_signals.append(text)
-        if len(recent_user_signals) >= 2:
+        if len(recent_user_signals) >= 3:
             break
     recent_user_signals.reverse()
 
     note_hits = list(obsidian_grounding.get("hits", []) or [])
     note_lines = [
         f"{str(hit.get('title', '')).strip() or 'Untitled note'} ({str(hit.get('rel_path', '')).strip()}): {str(hit.get('snippet', '')).strip()}"
-        for hit in note_hits[:2]
+        for hit in note_hits[:3]
         if str(hit.get("snippet", "")).strip()
     ]
 
@@ -631,7 +631,7 @@ def _personal_model_snapshot(
         working_set.append(
             "Current standing priorities: " + ", ".join(str(item).strip() for item in actor.priorities if str(item).strip())
         )
-    working_set.extend(str(item).strip() for item in known_facts[:4] if str(item).strip())
+    working_set.extend(str(item).strip() for item in known_facts[:8] if str(item).strip())
     working_set.extend(f"Recent user signal: {item}" for item in recent_user_signals if item)
     working_set.extend(f"Retrieved note context: {item}" for item in note_lines if item)
 
@@ -648,7 +648,7 @@ def _personal_model_snapshot(
     return {
         "status": status,
         "summary": summary,
-        "working_set": working_set[:8],
+        "working_set": working_set[:12],
         "recent_user_signals": recent_user_signals,
         "retrieved_note_context": note_lines,
     }

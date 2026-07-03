@@ -6066,17 +6066,17 @@ class JarvisRuntime:
         thread = dict(thread) if isinstance(thread, dict) else self.conversation_store.get(conversation_id)
         lines: list[str] = []
         if thread is not None:
-            turns = [dict(item) for item in thread.get("turns", []) if isinstance(item, dict)][-8:]
+            turns = [dict(item) for item in thread.get("turns", []) if isinstance(item, dict)][-14:]
             if turns:
                 lines.append(f"Active conversation with {actor.display_name} in {room or thread.get('room', 'office')}.")
                 lines.append("Continue naturally from the recent thread without making the user restate context.")
                 lines.append("Recent turns:")
                 for turn in turns:
                     speaker = actor.display_name if str(turn.get("role", "")).strip() == "user" else "JARVIS"
-                    snippet = " ".join(str(turn.get("text", "")).strip().split())[:260]
+                    snippet = " ".join(str(turn.get("text", "")).strip().split())[:400]
                     if snippet:
                         lines.append(f"{speaker}: {snippet}")
-        fact_lines = self._relevant_profile_facts(actor, request, limit=4)
+        fact_lines = self._relevant_profile_facts(actor, request, limit=6)
         if fact_lines:
             lines.append("Relevant durable memory:")
             lines.extend(f"- {item}" for item in fact_lines)

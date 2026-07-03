@@ -92,6 +92,23 @@ class JarvisOpenAIClient:
                 )
             except Exception:
                 pass
+
+        # Companion conversation turns (the only callers that set
+        # system_prompt_override) route through the LLM gateway so
+        # conversation gets the converse-floor model (free Groq 70B in
+        # cloud_light), confidence-based escalation, and the generic
+        # Groq -> OpenAI fallback — instead of being pinned to the mini
+        # model by a direct SDK call. Any gateway failure falls through
+        # to the existing OpenAI SDK path unchanged.
+        if system_prompt_override:
+            gateway_result = self._respond_via_gateway(
+                plan,
+                supplemental_context,
+                system_prompt_override=system_prompt_override,
+                execution_trace=execution_trace,
+            )
+            if gateway_result is not None:
+                return gateway_result
         try:
             if not self.config.openai_api_key:
                 raise RuntimeError("OPENAI_API_KEY is missing.")
@@ -136,6 +153,64 @@ class JarvisOpenAIClient:
                 output_text=self._manual_response_fallback(plan, exc),
                 execution_trace=[*execution_trace, self._fallback_trace_entry(exc)],
             )
+
+    def _respond_via_gateway(
+        self,
+        plan: RequestPlan,
+        supplemental_context: str,
+        *,
+        system_prompt_override: str,
+        execution_trace: list[dict],
+    ) -> OpenAIResult | None:
+        """Route a conversation turn through the LLM gateway.
+
+        Returns None when the gateway is unavailable or degraded, so the
+        caller can fall through to the direct OpenAI SDK path. Never raises.
+        """
+        try:
+            from .llm_gateway import LLMMessage, get_gateway
+
+            gateway = get_gateway()
+            if gateway is None:
+                return None
+            system_prompt = self._system_prompt_with_context(
+                plan,
+                supplemental_context,
+                system_prompt_override=system_prompt_override,
+            )
+            response = gateway.complete(
+                [
+                    LLMMessage(role="system", content=system_prompt),
+                    LLMMessage(role="user", content=plan.request),
+                ],
+                task_type="converse",
+                agent_id="jarvis-companion",
+                actor_id=str(plan.actor or "chris"),
+                max_tokens=2048,
+            )
+            text = self._normalize_response_text(response.text)
+            if response.error or not text.strip():
+                return None
+            execution_trace.append(
+                {
+                    "type": "llm",
+                    "status": "completed",
+                    "source": "llm_gateway",
+                    "detail": (
+                        f"Conversation turn answered by {response.model_used} "
+                        f"via {response.backend}"
+                        + (" (escalated)" if response.escalated else "")
+                    ),
+                }
+            )
+            return OpenAIResult(
+                provider=response.backend,
+                model=response.model_used,
+                output_text=text,
+                execution_trace=list(execution_trace),
+            )
+        except Exception:
+            return None
 
     def prompt_text(
         self,
