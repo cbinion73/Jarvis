@@ -7036,6 +7036,62 @@ const HOME_QUIET_START = {_home_quiet_start_js};
 const HOME_QUIET_END = {_home_quiet_end_js};
 </script>
 <script src="/glass-assets/glass-{_js_hash}.js"></script>
+
+<!-- ── KDP 2FA Modal ─────────────────────────────────────────── -->
+<div id="kdp-2fa-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:var(--surface,rgba(20,22,35,0.97));border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:36px 40px;max-width:420px;width:90%;box-shadow:0 24px 80px rgba(0,0,0,0.6);">
+    <div style="font-size:28px;margin-bottom:12px;">🔐</div>
+    <div style="font-size:16px;font-weight:600;color:var(--text-1,rgba(255,255,255,0.9));margin-bottom:8px;">Amazon Verification Required</div>
+    <div style="font-size:13px;color:var(--text-2,rgba(255,255,255,0.5));margin-bottom:24px;line-height:1.5;">
+      Amazon is asking for a one-time verification code. Check your email or authenticator app and enter it below.
+    </div>
+    <input id="kdp-2fa-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8"
+      placeholder="Enter code (e.g. 123456)"
+      style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:12px 16px;font-size:18px;letter-spacing:0.2em;color:var(--text-1,#fff);outline:none;margin-bottom:16px;text-align:center;"
+      onkeydown="if(event.key==='Enter') kdpSubmit2fa()">
+    <div style="display:flex;gap:10px;">
+      <button class="glass-btn" style="flex:1;padding:12px;" onclick="kdpSubmit2fa()">Submit Code</button>
+      <button class="glass-btn" style="padding:12px 18px;opacity:0.6;" onclick="kdpCancel2fa()">Cancel</button>
+    </div>
+    <div id="kdp-2fa-msg" style="margin-top:12px;font-size:12px;color:rgba(255,255,200,0.6);min-height:16px;"></div>
+  </div>
+</div>
+
+<!-- ═══ WHO ARE YOU — identity landing overlay ═══════════════════════ -->
+<div id="wau-overlay" class="hidden">
+  <div id="wau-box">
+    <div class="wau-logo">⬡</div>
+    <div class="wau-title">Welcome to JARVIS</div>
+    <div class="wau-subtitle" id="wau-subtitle">Who's using this device?</div>
+    <div class="wau-grid" id="wau-grid">
+      <div class="wau-card" onclick="wauSelect('chris')">
+        <div class="wau-card-avatar">👨</div>
+        <div class="wau-card-name">Chris</div>
+        <div class="wau-card-role">Director</div>
+        <div class="wau-card-badge">Admin</div>
+      </div>
+      <div class="wau-card" onclick="wauSelect('rebekah')">
+        <div class="wau-card-avatar">👩</div>
+        <div class="wau-card-name">Rebekah</div>
+        <div class="wau-card-role">Household</div>
+      </div>
+      <div class="wau-card" onclick="wauSelect('caleb')">
+        <div class="wau-card-avatar">👦</div>
+        <div class="wau-card-name">Caleb</div>
+        <div class="wau-card-role">6th Grade</div>
+      </div>
+      <div class="wau-card" onclick="wauSelect('anna')">
+        <div class="wau-card-avatar">👧</div>
+        <div class="wau-card-name">Anna</div>
+        <div class="wau-card-role">4th Grade</div>
+      </div>
+    </div>
+    <button class="wau-guest" onclick="wauGuest()">Just browsing — don't save</button>
+    <div class="wau-status" id="wau-status"></div>
+  </div>
+</div>
+
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
 </body>
 </html>"""
     if inline_assets:
