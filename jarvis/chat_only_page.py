@@ -26,21 +26,21 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {{
-      --bg: #0b1020;
-      --bg-soft: #11172a;
-      --panel: #141b31;
-      --panel-soft: #19213b;
+      --bg: #141414;
+      --bg-soft: #1b1b1b;
+      --panel: #212121;
+      --panel-soft: #2a2a2a;
       --border: rgba(255,255,255,0.08);
-      --border-strong: rgba(255,255,255,0.14);
-      --text: #f4f7fb;
-      --text-soft: #a7b4ca;
-      --accent: #10a7ff;
-      --accent-soft: rgba(16,167,255,0.16);
-      --user: #1f6feb;
+      --border-strong: rgba(255,255,255,0.16);
+      --text: #ececec;
+      --text-soft: #a6a6a6;
+      --accent: #19c37d;
+      --accent-soft: rgba(25,195,125,0.14);
+      --user: #2f6fed;
       --shadow: 0 20px 48px rgba(0,0,0,0.28);
       --radius: 18px;
-      --sidebar-w: 280px;
-      --content-w: 860px;
+      --sidebar-w: 268px;
+      --content-w: 880px;
     }}
 
     * {{ box-sizing: border-box; }}
@@ -48,8 +48,8 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     body {{
       font-family: 'Inter', system-ui, sans-serif;
       background:
-        radial-gradient(circle at top, rgba(16,167,255,0.08), transparent 32%),
-        linear-gradient(180deg, #0a0f1d 0%, #0b1020 100%);
+        radial-gradient(circle at top, rgba(255,255,255,0.04), transparent 28%),
+        linear-gradient(180deg, #111111 0%, #141414 100%);
       color: var(--text);
     }}
 
@@ -61,7 +61,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
 
     .chat-sidebar {{
       border-right: 1px solid var(--border);
-      background: rgba(10, 15, 29, 0.9);
+      background: rgba(23, 23, 23, 0.92);
       backdrop-filter: blur(24px);
       padding: 18px 14px;
       display: flex;
@@ -79,8 +79,8 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
 
     .chat-brand strong {{
       display: block;
-      font-size: 22px;
-      letter-spacing: 0.03em;
+      font-size: 20px;
+      letter-spacing: -0.02em;
     }}
 
     .chat-brand span {{
@@ -97,8 +97,9 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
       display: grid;
       place-items: center;
       color: var(--accent);
-      background: rgba(255,255,255,0.03);
+      background: rgba(255,255,255,0.02);
       border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
     }}
 
     .chat-sidebar-actions {{
@@ -125,8 +126,8 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     }}
 
     .chat-button.primary {{
-      background: linear-gradient(180deg, rgba(16,167,255,0.24), rgba(16,167,255,0.16));
-      border-color: rgba(16,167,255,0.32);
+      background: linear-gradient(180deg, rgba(25,195,125,0.26), rgba(25,195,125,0.16));
+      border-color: rgba(25,195,125,0.3);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
     }}
 
@@ -220,9 +221,9 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 18px 28px;
+      padding: 18px 28px 14px;
       border-bottom: 1px solid var(--border);
-      background: rgba(11,16,32,0.72);
+      background: rgba(20,20,20,0.78);
       backdrop-filter: blur(20px);
     }}
 
@@ -246,7 +247,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     .chat-main-scroll {{
       flex: 1;
       overflow-y: auto;
-      padding: 24px 24px 180px;
+      padding: 20px 24px 180px;
     }}
 
     .chat-main-inner {{
@@ -258,7 +259,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     }}
 
     .chat-hero {{
-      padding: 10vh 8px 0;
+      padding: 11vh 8px 0;
       text-align: center;
     }}
 
@@ -269,11 +270,11 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     }}
 
     .chat-hero p {{
-      max-width: 620px;
+      max-width: 660px;
       margin: 0 auto;
       color: var(--text-soft);
       font-size: 15px;
-      line-height: 1.7;
+      line-height: 1.65;
     }}
 
     .chat-suggestions {{
@@ -365,7 +366,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     .chat-bubble {{
       padding: 15px 17px;
       border-radius: 20px;
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.035);
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
       line-height: 1.72;
@@ -375,7 +376,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     }}
 
     .chat-row.user .chat-bubble {{
-      background: linear-gradient(180deg, rgba(31,111,235,0.24), rgba(31,111,235,0.14));
+      background: linear-gradient(180deg, rgba(47,111,237,0.28), rgba(47,111,237,0.16));
       border-color: rgba(31,111,235,0.28);
     }}
 
@@ -459,7 +460,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     .chat-composer {{
       border: 1px solid var(--border);
       border-radius: 26px;
-      background: rgba(20, 27, 49, 0.95);
+      background: rgba(33, 33, 33, 0.95);
       backdrop-filter: blur(18px);
       box-shadow: var(--shadow);
       padding: 12px;
@@ -517,7 +518,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
       border: none;
       border-radius: 999px;
       background: var(--accent);
-      color: #fff;
+      color: #08140e;
       padding: 10px 16px;
       font: inherit;
       font-weight: 700;
@@ -582,58 +583,58 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
       <div class="chat-brand">
         <div>
           <strong>JARVIS</strong>
-          <span>Chat-only surface</span>
+          <span>Direct conversation</span>
         </div>
         <div class="chat-brand-mark">✦</div>
       </div>
 
       <div class="chat-sidebar-actions">
         <button class="chat-button primary" id="new-chat-button" type="button">＋ New chat</button>
-        <button class="chat-link-button" id="open-command-button" type="button">Open command center</button>
+        <button class="chat-link-button" id="open-command-button" type="button">Open workspace</button>
       </div>
 
       <div class="chat-sidebar-section">
-        <div class="chat-sidebar-label">Recent chats</div>
+        <div class="chat-sidebar-label">Recent</div>
         <div class="chat-thread-list" id="thread-list"></div>
       </div>
 
       <div class="chat-sidebar-foot">
-        Chat-only mode keeps the experience conversational. The broader command, mission, health, and navigation interfaces stay separate.
+        This is the chat-first surface. Use the workspace only when you need a module, queue, or review screen.
       </div>
     </aside>
 
     <main class="chat-main">
       <div class="chat-topbar">
         <div class="chat-topbar-copy">
-          <strong id="chat-title">Chat with JARVIS</strong>
-          <span id="chat-subtitle">An ongoing conversation surface for {actor_name}.</span>
+          <strong id="chat-title">JARVIS</strong>
+          <span id="chat-subtitle">A direct conversation interface for {actor_name}.</span>
         </div>
         <div class="chat-topbar-actions">
-          <div class="chat-status" id="chat-status">Loading conversation…</div>
+          <div class="chat-status" id="chat-status">Loading…</div>
         </div>
       </div>
 
       <div class="chat-main-scroll" id="chat-scroll">
         <div class="chat-main-inner">
           <section class="chat-hero" id="chat-hero">
-            <h1>How can JARVIS help?</h1>
-            <p>Use this page when you just want to talk. It keeps the shell out of the way and stays focused on the conversation.</p>
+            <h1>What do you want to work through?</h1>
+            <p>Use JARVIS like a real chat interface. Stay in one thread, think out loud, draft something, or sort a decision without dropping into the broader shell.</p>
             <div class="chat-suggestions">
-              <button class="chat-suggestion" type="button" data-prompt="Help me think through the most important thing I should focus on today.">
-                <strong>Clarify my focus</strong>
-                <span>Sort priorities, tension, and the one thing that matters most right now.</span>
+              <button class="chat-suggestion" type="button" data-prompt="Help me get clear on the one thing I should focus on first.">
+                <strong>Clarify the priority</strong>
+                <span>Get to the main point fast instead of opening a larger planning surface.</span>
               </button>
-              <button class="chat-suggestion" type="button" data-prompt="Talk me through a decision I am stuck on and help me see the tradeoffs clearly.">
+              <button class="chat-suggestion" type="button" data-prompt="Talk me through a decision I am stuck on and make the tradeoffs concrete.">
                 <strong>Work through a decision</strong>
-                <span>Use JARVIS as a thought partner instead of opening a full workflow surface.</span>
+                <span>Keep the conversation focused until the real fork is obvious.</span>
               </button>
-              <button class="chat-suggestion" type="button" data-prompt="Draft a message with me and keep it natural, direct, and warm.">
-                <strong>Draft with me</strong>
-                <span>Stay in a conversational loop while shaping a note, email, or text.</span>
+              <button class="chat-suggestion" type="button" data-prompt="Help me draft a message that sounds direct, natural, and human.">
+                <strong>Draft a message</strong>
+                <span>Use the chat like a working draft loop, not a separate editor.</span>
               </button>
-              <button class="chat-suggestion" type="button" data-prompt="Give me a quick sense of what is waiting for me and where I should start.">
+              <button class="chat-suggestion" type="button" data-prompt="Give me a quick read on what matters and where I should start.">
                 <strong>Get oriented</strong>
-                <span>Ask for a compact read of what matters without switching into the command center.</span>
+                <span>Ask for a compact read of the current situation without leaving chat.</span>
               </button>
             </div>
           </section>
@@ -646,7 +647,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
         <div class="chat-composer-inner">
           <div class="chat-upload-strip" id="upload-strip"></div>
           <div class="chat-composer">
-            <textarea id="chat-input" placeholder="Message JARVIS… Use /correct when a reply misses, /teach to make it stick, or /learn to turn it into a reusable skill." rows="1"></textarea>
+            <textarea id="chat-input" placeholder="Message JARVIS" rows="1"></textarea>
             <div class="chat-composer-actions">
               <div class="chat-composer-left">
                 <input id="chat-file-input" type="file" multiple hidden>
@@ -659,7 +660,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
               </div>
             </div>
           </div>
-          <div class="chat-footer-note">Enter sends. Shift+Enter adds a line break.</div>
+          <div class="chat-footer-note">Enter sends. Shift+Enter adds a line break. Use `/correct`, `/teach`, and `/learn` when needed.</div>
         </div>
       </div>
     </main>
@@ -785,7 +786,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
 
     function renderThreads() {{
       if (!state.recentConversations.length) {{
-        threadListEl.innerHTML = '<div class="chat-thread-empty">Your recent conversations will appear here once you start using the chat-only surface.</div>';
+        threadListEl.innerHTML = '<div class="chat-thread-empty">Your recent conversations will show up here after the first message.</div>';
         return;
       }}
       threadListEl.innerHTML = state.recentConversations.map((item) => {{
@@ -840,8 +841,8 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
       heroEl.hidden = hasTurns;
       conversationEl.hidden = !hasTurns;
       if (!hasTurns) {{
-        chatTitleEl.textContent = "Chat with JARVIS";
-        chatSubtitleEl.textContent = `An ongoing conversation surface for ${{state.actor}}.`;
+        chatTitleEl.textContent = "JARVIS";
+        chatSubtitleEl.textContent = `A direct conversation interface for ${{state.actor}}.`;
         conversationEl.innerHTML = "";
         return;
       }}

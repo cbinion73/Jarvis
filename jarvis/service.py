@@ -1042,6 +1042,14 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
     async def chat_shortcut() -> HTMLResponse:
         return HTMLResponse(render_chat_only_shell(runtime))
 
+    @app.get("/app", response_class=HTMLResponse)
+    async def app_shortcut() -> HTMLResponse:
+        return HTMLResponse(render_chat_only_shell(runtime))
+
+    @app.get("/assistant", response_class=HTMLResponse)
+    async def assistant_shortcut() -> HTMLResponse:
+        return HTMLResponse(render_chat_only_shell(runtime))
+
     @app.get("/storm-dashboard")
     async def storm_dashboard() -> Response:
         storm_path = Path.cwd() / "artifacts" / "mockups" / "storm-weather-widget.html"

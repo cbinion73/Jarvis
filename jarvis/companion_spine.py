@@ -192,9 +192,8 @@ GENERIC_TAXONOMY_OPENERS = (
     "give me the short version",
 )
 
-TRUTH_CONSTRAINTS = [
+BASE_TRUTH_CONSTRAINTS = [
     "Do not claim you searched, opened, saved, remembered, created, emailed, scheduled, retrieved, or completed anything unless that action actually happened in this turn.",
-    "Do not imply Obsidian retrieval, indexing, or citation exists in this conversation path.",
     "Distinguish what you know from the current message, persisted conversation, durable profile facts, and live context.",
     "If context or a tool is unavailable, say so plainly instead of bluffing.",
 ]
@@ -207,11 +206,6 @@ FORBIDDEN_PATTERNS = [
     "over-explaining",
     "pretending ordinary conversation is a module handoff",
 ]
-
-OBSIDIAN_STATUS = (
-    "Obsidian is a local external source reserved for a later grounding phase. "
-    "In the default conversation path, say plainly that live Obsidian retrieval is not wired into this conversation yet."
-)
 
 _DOCS_ROOT = Path(__file__).resolve().parents[1] / "docs"
 _CHRIS_CONTEXT_CANON_PATH = _DOCS_ROOT / "CHRIS-CONTEXT-CANON.md"
@@ -236,6 +230,7 @@ def build_context_packet(
     except Exception:
         known_facts = []
 
+    obsidian_grounding = _obsidian_grounding(runtime, effective_request)
     active_context_blocks: list[str] = []
     if _should_include_live_context(effective_request):
         live_context = _compact_live_context(runtime)
@@ -245,12 +240,18 @@ def build_context_packet(
         status_lines = _live_status_lines(runtime, actor.display_name)
         if status_lines:
             active_context_blocks.append("\n".join(status_lines))
-    obsidian_context = _obsidian_context(runtime, effective_request)
+    obsidian_context = str(obsidian_grounding.get("context_text", "") or "").strip()
     if obsidian_context:
         active_context_blocks.append(obsidian_context)
     active_context = "\n\n".join(block for block in active_context_blocks if str(block).strip()) or None
     topic_brief = _topic_brief(effective_request)
     canon_brief = _canon_brief_for_request(effective_request)
+    personal_model = _personal_model_snapshot(
+        actor=actor,
+        known_facts=known_facts,
+        conversation_excerpt=conversation_excerpt,
+        obsidian_grounding=obsidian_grounding,
+    )
     response_contract = _response_contract_for_request(
         request,
         effective_request=effective_request,
@@ -270,12 +271,14 @@ def build_context_packet(
         },
         "active_context": active_context,
         "relationship_model": "smart, loyal friend with tools",
+        "personal_model": personal_model,
+        "obsidian_grounding": obsidian_grounding,
         "correction_context": correction_context,
         "topic_brief": topic_brief,
         "canon_brief": canon_brief,
         "response_contract": response_contract,
         "available_capabilities": _available_capabilities(runtime),
-        "truth_constraints": list(TRUTH_CONSTRAINTS),
+        "truth_constraints": _truth_constraints(obsidian_grounding),
         "voice_standard": VOICE_STANDARD,
         "forbidden_patterns": list(FORBIDDEN_PATTERNS),
     }
@@ -286,6 +289,13 @@ def build_companion_system_prompt(packet: dict[str, Any]) -> str:
     capabilities_text = "; ".join(str(item) for item in capabilities if str(item).strip())
     truth_text = "\n".join(f"- {item}" for item in packet.get("truth_constraints", []))
     forbidden_text = "\n".join(f"- {item}" for item in packet.get("forbidden_patterns", []))
+    personal_model = dict(packet.get("personal_model") or {})
+    personal_model_lines = [str(item).strip() for item in personal_model.get("working_set", []) if str(item).strip()]
+    personal_model_text = "\n".join(f"- {item}" for item in personal_model_lines)
+    obsidian_grounding = dict(packet.get("obsidian_grounding") or {})
+    obsidian_status_line = str(obsidian_grounding.get("status_line", "")).strip() or (
+        "Obsidian local retrieval is unavailable in this conversation path."
+    )
     return (
         "You are Jarvis, Chris's private AI companion. "
         "Your default posture is one smart, loyal friend with tools.\n\n"
@@ -309,12 +319,15 @@ def build_companion_system_prompt(packet: dict[str, Any]) -> str:
         f"{truth_text}\n\n"
         "Forbidden patterns:\n"
         f"{forbidden_text}\n\n"
+        "Personal model for this turn:\n"
+        f"{personal_model_text}\n\n"
         "Grounded capabilities for this path:\n"
         f"- {capabilities_text}\n\n"
         "Obsidian status:\n"
-        f"- {OBSIDIAN_STATUS}\n\n"
+        f"- {obsidian_status_line}\n\n"
         "Source distinction:\n"
         "- If active context contains retrieved Obsidian notes, describe them as retrieved note context, not as memory or certainty beyond the note.\n"
+        "- Use the personal model to sound informed about Chris, but do not pretend the model is omniscient or complete.\n"
         "Keep answers concise by default. Prefer short natural prose over lists unless a list is clearly useful."
     ).strip()
 
@@ -560,9 +573,125 @@ def _packet_to_context(packet: dict[str, Any]) -> str:
     if response_contract:
         lines.append("Response contract for this turn:")
         lines.extend(f"- {item}" for item in response_contract)
+    personal_model = dict(packet.get("personal_model") or {})
+    if personal_model:
+        lines.append("Personal model for this turn:")
+        summary = str(personal_model.get("summary", "")).strip()
+        if summary:
+            lines.append(summary)
+        lines.extend(f"- {item}" for item in personal_model.get("working_set", []) if str(item).strip())
     lines.append("Machine-readable packet:")
     lines.append(json.dumps(packet, indent=2, ensure_ascii=True))
     return "\n".join(lines)
+
+
+def _truth_constraints(obsidian_grounding: dict[str, Any]) -> list[str]:
+    constraints = list(BASE_TRUTH_CONSTRAINTS)
+    if obsidian_grounding.get("active"):
+        constraints.insert(
+            1,
+            "If you use Obsidian in this turn, describe it as retrieved note context with quoted snippets or cited titles, not as perfect memory or certainty.",
+        )
+    else:
+        constraints.insert(
+            1,
+            "Do not imply Obsidian retrieval, indexing, or citation exists in this conversation path.",
+        )
+    return constraints
+
+
+def _personal_model_snapshot(
+    *,
+    actor: UserProfile,
+    known_facts: list[str],
+    conversation_excerpt: str,
+    obsidian_grounding: dict[str, Any],
+) -> dict[str, Any]:
+    recent_user_signals: list[str] = []
+    for turn in reversed(_recent_turns_from_excerpt(conversation_excerpt)):
+        if str(turn.get("speaker", "")).strip().lower() == "jarvis":
+            continue
+        text = str(turn.get("text", "")).strip()
+        if not text or _correction_feedback(text):
+            continue
+        recent_user_signals.append(text)
+        if len(recent_user_signals) >= 2:
+            break
+    recent_user_signals.reverse()
+
+    note_hits = list(obsidian_grounding.get("hits", []) or [])
+    note_lines = [
+        f"{str(hit.get('title', '')).strip() or 'Untitled note'} ({str(hit.get('rel_path', '')).strip()}): {str(hit.get('snippet', '')).strip()}"
+        for hit in note_hits[:2]
+        if str(hit.get("snippet", "")).strip()
+    ]
+
+    working_set: list[str] = []
+    if actor.priorities:
+        working_set.append(
+            "Current standing priorities: " + ", ".join(str(item).strip() for item in actor.priorities if str(item).strip())
+        )
+    working_set.extend(str(item).strip() for item in known_facts[:4] if str(item).strip())
+    working_set.extend(f"Recent user signal: {item}" for item in recent_user_signals if item)
+    working_set.extend(f"Retrieved note context: {item}" for item in note_lines if item)
+
+    if note_lines:
+        status = "grounded"
+        summary = "Using stable profile facts plus retrieved Obsidian note context for this turn."
+    elif known_facts or recent_user_signals:
+        status = "profile-only"
+        summary = "Using stable local profile facts and recent conversation continuity for this turn."
+    else:
+        status = "thin"
+        summary = "No durable personal grounding is loaded beyond the current message."
+
+    return {
+        "status": status,
+        "summary": summary,
+        "working_set": working_set[:8],
+        "recent_user_signals": recent_user_signals,
+        "retrieved_note_context": note_lines,
+    }
+
+
+def _obsidian_grounding(runtime: Any, request: str) -> dict[str, Any]:
+    support = getattr(runtime, "obsidian_support", None)
+    status = _obsidian_status(runtime)
+    active = (
+        support is not None
+        and bool(getattr(support, "enabled", False))
+        and _obsidian_conversation_enabled(runtime)
+        and bool(status.get("enabled"))
+    )
+    hits: list[dict[str, Any]] = []
+    context_text = ""
+    if active:
+        try:
+            hits = list(support.retrieve(request, limit=3))
+        except Exception:
+            hits = []
+        try:
+            context_text = str(support.conversation_context(request, limit=3) or "").strip()
+        except Exception:
+            context_text = ""
+    if active and hits:
+        status_line = f"Obsidian local retrieval is active in this conversation path and retrieved {len(hits)} relevant note(s) for this turn."
+    elif active:
+        status_line = "Obsidian local retrieval is active in this conversation path, but no relevant notes matched this turn."
+    elif status.get("enabled"):
+        status_line = "Obsidian vault is available locally, but conversation grounding from it is disabled in this runtime."
+    else:
+        status_line = str(status.get("detail") or "Obsidian local retrieval is unavailable in this runtime.").strip()
+    return {
+        "active": bool(active),
+        "enabled": bool(status.get("enabled")),
+        "conversation_enabled": _obsidian_conversation_enabled(runtime),
+        "status_line": status_line,
+        "hit_count": len(hits),
+        "hits": hits,
+        "context_text": context_text,
+        "detail": str(status.get("detail", "")).strip(),
+    }
 
 
 def _available_capabilities(runtime: Any) -> list[str]:
@@ -580,7 +709,7 @@ def _available_capabilities(runtime: Any) -> list[str]:
         capabilities.append("live weather summary when available")
     obsidian_status = _obsidian_status(runtime)
     if _obsidian_conversation_enabled(runtime) and obsidian_status.get("enabled"):
-        capabilities.append("local Obsidian vault retrieval with quoted snippets when notes match")
+        capabilities.append("local Obsidian retrieval is active in default conversation when notes match")
     else:
         capabilities.append("live Obsidian retrieval not active in the default conversation path")
     return capabilities
@@ -629,6 +758,8 @@ def _contextual_thesis_first_reply(request: str, packet: dict[str, Any]) -> str:
         return _future_health_reply(cleaned)
     if _is_trip_day_request(lowered):
         return _trip_day_reply(cleaned)
+    if _is_ordinary_companion_checkin_request(lowered):
+        return _ordinary_companion_checkin_reply(lowered)
     return ""
 
 
@@ -719,6 +850,47 @@ def _trip_day_reply(request: str) -> str:
         f"{destination} tomorrow is a real trip day, so the job is to make it smooth rather than improvise it.\n\n"
         "The pressure points I would want locked down tonight are timing, tickets or entry rules, where you are starting from, who is coming, and any walking or stairs that could make the day harder than it needs to be.\n\n"
         "If you already have the booking side handled, the next move is building the day around the real friction points instead of treating it like a casual stop."
+    )
+
+
+def _is_ordinary_companion_checkin_request(lowered_request: str) -> bool:
+    direct_phrases = (
+        "weird day",
+        "rough day",
+        "bad day",
+        "off today",
+        "kind of off today",
+        "feel off today",
+        "feeling off today",
+        "feel weird and stuck",
+        "stuck today",
+        "not sure what to do next",
+        "what matters today",
+        "matter today",
+    )
+    if any(phrase in lowered_request for phrase in direct_phrases):
+        return True
+    if "off" in lowered_request and "today" in lowered_request:
+        return True
+    if "stuck" in lowered_request and any(term in lowered_request for term in ("weird", "today", "next")):
+        return True
+    return False
+
+
+def _ordinary_companion_checkin_reply(lowered_request: str) -> str:
+    if "what matters today" in lowered_request or "matter today" in lowered_request:
+        return (
+            "This sounds less like a motivation problem and more like too many loose threads competing for today.\n\n"
+            "Give me the two or three things tugging at you, and I'll tell you what actually deserves the day."
+        )
+    if "stuck" in lowered_request or "not sure what to do next" in lowered_request:
+        return (
+            "My read is you do not need a grand plan right now. You need one thing to stop spinning on.\n\n"
+            "Give me the few things in front of you, and I'll tell you what I would move first."
+        )
+    return (
+        "Sounds like the day knocked you a little sideways.\n\n"
+        "We do not need to solve everything first. Do you want to tell me what happened, or do you want help salvaging tonight and setting up tomorrow?"
     )
 
 
@@ -1671,6 +1843,8 @@ def _grounded_capability_reply(packet: dict[str, Any]) -> str:
     ]
     if any("durable profile facts" in item for item in capabilities):
         pieces.append("I can also use the profile context I already have locally when it's relevant.")
+    if any("local obsidian retrieval is active in default conversation" in item.lower() for item in capabilities):
+        pieces.append("I can ground a reply in local Obsidian notes when the request actually matches something relevant there, and I'll describe that as retrieved note context rather than pretending I just know it.")
     if any("web search for current info" in item for item in capabilities):
         pieces.append("For current web info, I can use a web-search path when the request actually needs it, and I'll be explicit about whether I really searched or I'm reasoning from local context.")
     if any("family calendar summary" in item for item in capabilities) or any("live weather summary" in item for item in capabilities):

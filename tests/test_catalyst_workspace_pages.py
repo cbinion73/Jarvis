@@ -162,6 +162,15 @@ class CatalystWorkspacePageTests(unittest.TestCase):
         self.assertIn("Roadmap drift risk", html)
         self.assertIn("Approval request", html)
 
+    def test_workspace_pages_include_persistent_page_chat_overlay(self) -> None:
+        html = render_catalyst_workspace_page(_StubRuntime(), "home")
+
+        self.assertIn('id="page-chat-root"', html)
+        self.assertIn('id="page-chat-launcher"', html)
+        self.assertIn("Ask JARVIS about this page", html)
+        self.assertIn("/catalyst/view/home", html)
+        self.assertIn("/api/respond", html)
+
 
 if __name__ == "__main__":
     unittest.main()

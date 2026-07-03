@@ -124,6 +124,417 @@ def _inject_catalyst_theme(html: str) -> str:
     return _catalyst_theme_overrides() + html
 
 
+def _persistent_page_chat_overlay(context_route: str) -> str:
+    route_json = json.dumps(context_route)
+    return """
+<style>
+  .page-chat-root {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 2140;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  .page-chat-launcher {
+    border: 1px solid rgba(111, 229, 255, 0.24);
+    background: linear-gradient(135deg, rgba(10, 25, 41, 0.96), rgba(13, 34, 56, 0.98));
+    color: #e9f7ff;
+    border-radius: 999px;
+    padding: 12px 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+    cursor: pointer;
+    font: inherit;
+  }
+  .page-chat-launcher strong {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .page-chat-launcher span {
+    color: #91c0df;
+    font-size: 12px;
+  }
+  .page-chat-panel {
+    width: min(420px, calc(100vw - 28px));
+    max-height: min(72vh, 680px);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 20px;
+    border: 1px solid rgba(111, 229, 255, 0.18);
+    background: rgba(5, 12, 21, 0.96);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 28px 58px rgba(0, 0, 0, 0.4);
+  }
+  .page-chat-root.open .page-chat-panel {
+    display: flex;
+  }
+  .page-chat-root.open .page-chat-launcher {
+    display: none;
+  }
+  .page-chat-head {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .page-chat-head strong {
+    display: block;
+    color: #ebf7ff;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .page-chat-head p {
+    margin: 6px 0 0;
+    color: #96b7cf;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .page-chat-head-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-chat-chip {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #cae7fb;
+    border-radius: 999px;
+    padding: 7px 11px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+  }
+  .page-chat-chip.active {
+    border-color: rgba(111, 229, 255, 0.26);
+    color: #79d8ff;
+    background: rgba(111, 229, 255, 0.12);
+  }
+  .page-chat-body {
+    padding: 14px 16px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 180px;
+  }
+  .page-chat-empty {
+    color: #91b2ca;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 8px 2px;
+  }
+  .page-chat-message {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .page-chat-message.user {
+    align-items: flex-end;
+  }
+  .page-chat-message.assistant {
+    align-items: flex-start;
+  }
+  .page-chat-label {
+    color: #86aec9;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .page-chat-bubble {
+    max-width: 92%;
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: #ecf8ff;
+  }
+  .page-chat-message.user .page-chat-bubble {
+    background: rgba(111, 229, 255, 0.14);
+    border-color: rgba(111, 229, 255, 0.2);
+  }
+  .page-chat-status {
+    padding: 0 16px 10px;
+    color: #86aec9;
+    font-size: 12px;
+    min-height: 16px;
+  }
+  .page-chat-form {
+    padding: 0 16px 16px;
+    display: grid;
+    gap: 10px;
+  }
+  .page-chat-form textarea {
+    width: 100%;
+    min-height: 88px;
+    resize: vertical;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #edf8ff;
+    padding: 12px 14px;
+    font: inherit;
+    line-height: 1.5;
+  }
+  .page-chat-form textarea::placeholder {
+    color: #80a4bf;
+  }
+  .page-chat-form button[type="submit"] {
+    justify-self: flex-end;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #59cfff, #78e3ff);
+    color: #04111d;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  @media (max-width: 720px) {
+    .page-chat-root {
+      right: 14px;
+      left: 14px;
+      bottom: 14px;
+      align-items: stretch;
+    }
+    .page-chat-panel {
+      width: 100%;
+    }
+    .page-chat-launcher {
+      justify-content: center;
+    }
+  }
+</style>
+<div class="page-chat-root" id="page-chat-root" data-route=""" + escape(context_route, quote=True) + """">
+  <button class="page-chat-launcher" id="page-chat-launcher" type="button" aria-expanded="false">
+    <strong>AI Chat</strong>
+    <span>Ask JARVIS about this page</span>
+  </button>
+  <section class="page-chat-panel" id="page-chat-panel" aria-label="Page chat">
+    <div class="page-chat-head">
+      <div>
+        <strong>AI Chat</strong>
+        <p>Chat with the current page or feature using visible route and page context.</p>
+      </div>
+      <div class="page-chat-head-actions">
+        <button class="page-chat-chip" id="page-chat-pin" type="button">Pin</button>
+        <button class="page-chat-chip" id="page-chat-hide" type="button">Hide</button>
+      </div>
+    </div>
+    <div class="page-chat-body" id="page-chat-body">
+      <div class="page-chat-empty" id="page-chat-empty">
+        Ask about the page you are on, what this feature does, or what matters next.
+      </div>
+    </div>
+    <div class="page-chat-status" id="page-chat-status"></div>
+    <form class="page-chat-form" id="page-chat-form">
+      <textarea id="page-chat-input" placeholder="Ask about this page or feature…"></textarea>
+      <button type="submit">Send</button>
+    </form>
+  </section>
+</div>
+<script>
+  (() => {
+    if (window.__jarvisPageChatMounted) return;
+    window.__jarvisPageChatMounted = true;
+
+    const route = """ + route_json + """;
+    const modeKey = `jarvis:page-chat:mode:${route}`;
+    const pinKey = `jarvis:page-chat:pinned:${route}`;
+    const conversationKey = `jarvis:page-chat:conversation:${route}`;
+    const root = document.getElementById("page-chat-root");
+    const launcher = document.getElementById("page-chat-launcher");
+    const panel = document.getElementById("page-chat-panel");
+    const pinButton = document.getElementById("page-chat-pin");
+    const hideButton = document.getElementById("page-chat-hide");
+    const body = document.getElementById("page-chat-body");
+    const empty = document.getElementById("page-chat-empty");
+    const status = document.getElementById("page-chat-status");
+    const form = document.getElementById("page-chat-form");
+    const input = document.getElementById("page-chat-input");
+
+    const state = {
+      open: localStorage.getItem(modeKey) === "open",
+      pinned: localStorage.getItem(pinKey) === "true",
+      conversationId: localStorage.getItem(conversationKey) || "",
+      loading: false,
+      turns: [],
+    };
+
+    function esc(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function setStatus(text) {
+      status.textContent = text || "";
+    }
+
+    function pageContext() {
+      const titleEl =
+        document.querySelector(".hero h1") ||
+        document.querySelector(".topbar strong") ||
+        document.querySelector("h1");
+      const subtitleEl =
+        document.querySelector(".subtitle") ||
+        document.querySelector(".hero p") ||
+        document.querySelector(".topbar span");
+      const title = (titleEl?.textContent || document.title || "Current page").trim();
+      const subtitle = (subtitleEl?.textContent || "").trim();
+      return { title, subtitle };
+    }
+
+    function syncChrome() {
+      root.classList.toggle("open", state.open);
+      launcher.setAttribute("aria-expanded", state.open ? "true" : "false");
+      pinButton.classList.toggle("active", state.pinned);
+      pinButton.textContent = state.pinned ? "Pinned" : "Pin";
+      if (state.open) {
+        localStorage.setItem(modeKey, "open");
+      } else {
+        localStorage.setItem(modeKey, "hidden");
+      }
+      localStorage.setItem(pinKey, state.pinned ? "true" : "false");
+    }
+
+    function renderTurns() {
+      if (!state.turns.length) {
+        empty.hidden = false;
+        body.innerHTML = "";
+        body.appendChild(empty);
+        return;
+      }
+      empty.hidden = true;
+      body.innerHTML = state.turns.map((turn) => {
+        const role = String(turn.role || "").toLowerCase() === "assistant" ? "assistant" : "user";
+        const label = role === "assistant" ? "JARVIS" : "You";
+        const text = esc(turn.text || turn.content || "");
+        return `
+          <div class="page-chat-message ${role}">
+            <div class="page-chat-label">${label}</div>
+            <div class="page-chat-bubble">${text}</div>
+          </div>
+        `;
+      }).join("");
+      body.scrollTop = body.scrollHeight;
+    }
+
+    async function loadConversation() {
+      if (!state.conversationId) return;
+      try {
+        const response = await fetch(`/api/conversations/${encodeURIComponent(state.conversationId)}?limit=18`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Conversation load failed (${response.status})`);
+        const payload = await response.json();
+        state.turns = Array.isArray(payload.turns) ? payload.turns : [];
+        renderTurns();
+      } catch (error) {
+        setStatus(error.message || "Could not load page chat.");
+      }
+    }
+
+    launcher.addEventListener("click", async () => {
+      state.open = true;
+      syncChrome();
+      if (!state.turns.length && state.conversationId) {
+        await loadConversation();
+      }
+      input.focus();
+    });
+
+    hideButton.addEventListener("click", () => {
+      state.open = false;
+      syncChrome();
+    });
+
+    pinButton.addEventListener("click", () => {
+      state.pinned = !state.pinned;
+      state.open = true;
+      syncChrome();
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const raw = input.value.trim();
+      if (!raw || state.loading) return;
+      const context = pageContext();
+      state.open = true;
+      state.loading = true;
+      state.turns.push({ role: "user", text: raw });
+      renderTurns();
+      input.value = "";
+      setStatus("JARVIS is responding…");
+      syncChrome();
+      try {
+        const request = [
+          "Page context:",
+          `Route: ${route}`,
+          `Page: ${context.title}`,
+          context.subtitle ? `Feature summary: ${context.subtitle}` : "",
+          "",
+          `User request: ${raw}`,
+        ].filter(Boolean).join("\\n");
+        const response = await fetch("/api/respond", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actor: "Chris",
+            room: "office",
+            source: "page-chat-overlay",
+            conversation_id: state.conversationId || "",
+            request,
+          }),
+        });
+        if (!response.ok) throw new Error(`Page chat failed (${response.status})`);
+        const payload = await response.json();
+        state.conversationId = String(payload.conversation_id || state.conversationId || "");
+        if (state.conversationId) {
+          localStorage.setItem(conversationKey, state.conversationId);
+        }
+        state.turns.push({ role: "assistant", text: String(payload.response || payload.text || "No response returned.") });
+        renderTurns();
+        setStatus(`Context linked to ${context.title}.`);
+        if (!state.pinned) {
+          setTimeout(() => {
+            if (!state.pinned) {
+              state.open = false;
+              syncChrome();
+            }
+          }, 2500);
+        }
+      } catch (error) {
+        setStatus(error.message || "Could not send page chat.");
+      } finally {
+        state.loading = false;
+      }
+    });
+
+    syncChrome();
+    if (state.open && state.conversationId) {
+      loadConversation();
+    }
+  })();
+</script>
+"""
+
+
 def _render_catalyst_workspace_chrome(title: str, subtitle: str, body_html: str, active_page: str) -> str:
     nav = "".join(
         f'<a class="nav-pill{" active" if page == active_page else ""}" href="/catalyst/view/{page}">{label}</a>'
@@ -694,6 +1105,7 @@ def _render_catalyst_workspace_chrome(title: str, subtitle: str, body_html: str,
       return {{ closeDialog, openApprovalDialog, postJson, escapeHtml }};
     }})();
   </script>
+  {_persistent_page_chat_overlay(f"/catalyst/view/{active_page}")}
 </body>
 </html>"""
 
@@ -2317,6 +2729,8 @@ def _module_surface_overrides(active_route: str) -> str:
 def _apply_module_surface_chrome(html: str, active_route: str) -> str:
     if "<body>" in html:
         html = html.replace("<body>", "<body class=\"module-surface\">" + _module_surface_overrides(active_route), 1)
+    if "</body>" in html:
+        html = html.replace("</body>", _persistent_page_chat_overlay(active_route) + "\n</body>", 1)
     return html
 
 
