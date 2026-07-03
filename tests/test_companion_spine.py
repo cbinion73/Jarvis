@@ -258,6 +258,23 @@ class CompanionSpineTests(unittest.TestCase):
         self.assertIn("do not ask taxonomy questions", prompt)
         self.assertIn("rewrite the answer directly", prompt)
 
+    def test_system_prompt_includes_thinking_partner_rules(self) -> None:
+        packet = {
+            "available_capabilities": [],
+            "truth_constraints": [],
+            "voice_standard": "Direct, warm, practical.",
+            "forbidden_patterns": [],
+            "personal_model": {"working_set": []},
+            "obsidian_grounding": {"status_line": ""},
+        }
+        prompt = build_companion_system_prompt(packet)
+        self.assertIn("Thinking-partner rules:", prompt)
+        self.assertIn("Meet Chris mid-thought", prompt)
+        self.assertIn("Read what this turn needs before you answer", prompt)
+        self.assertIn("never like a database report", prompt)
+        self.assertIn("Disagree like a friend who wants him to win", prompt)
+        self.assertIn("Carry momentum", prompt)
+
     def test_run_companion_turn_uses_override_prompt_and_packet(self) -> None:
         runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Nice. Let's map it."))
         result = run_companion_turn(
