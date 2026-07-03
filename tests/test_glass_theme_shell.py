@@ -24,13 +24,14 @@ class GlassThemeShellTests(unittest.TestCase):
     def test_render_chat_only_shell_uses_existing_conversation_apis(self) -> None:
         html = render_chat_only_shell(self.runtime)
 
-        self.assertIn("Chat with JARVIS", html)
+        self.assertIn("A direct conversation interface for Chris.", html)
         self.assertIn("/api/respond", html)
         self.assertIn("/api/chat-state", html)
         self.assertIn("/api/conversations/", html)
         self.assertIn("/api/chat-uploads", html)
-        self.assertIn("Open command center", html)
-        self.assertIn("Chat-only mode keeps the experience conversational.", html)
+        self.assertIn("Open workspace", html)
+        self.assertIn("This is the chat-first surface.", html)
+        self.assertIn("What do you want to work through?", html)
 
     def test_render_glass_shell_exposes_health_desktop_launcher(self) -> None:
         html = render_glass_shell(self.runtime)

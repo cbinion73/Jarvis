@@ -309,7 +309,7 @@ class AppConfig:
             ).strip().lower() or "llamaindex",
             obsidian_chunk_size=_int_env("JARVIS_OBSIDIAN_CHUNK_SIZE", 768, minimum=128),
             obsidian_chunk_overlap=_int_env("JARVIS_OBSIDIAN_CHUNK_OVERLAP", 80, minimum=0),
-            obsidian_conversation_enabled=_bool_env("JARVIS_ENABLE_OBSIDIAN_CONVERSATION", False),
+            obsidian_conversation_enabled=_bool_env("JARVIS_ENABLE_OBSIDIAN_CONVERSATION", True),
             read_only_smoke_mode=_bool_env("JARVIS_READ_ONLY_SMOKE_MODE", False),
             autonomous_workstreams_enabled=_bool_env("JARVIS_AUTONOMOUS_WORKSTREAMS_ENABLED", True),
             autonomous_workstream_lanes=_csv_env("JARVIS_AUTONOMOUS_WORKSTREAM_LANES", ("passive-income", "market-intelligence")),

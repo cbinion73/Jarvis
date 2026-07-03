@@ -10,6 +10,7 @@ from .audit import AuditLog, ProgressSnapshotStore, SeamTrackerStore
 from .agent_registry_contract import load_contract_bundle
 from .approval_queue_surface import build_approval_queue_snapshot
 from .recovery_cases import RecoveryCaseStore
+from .render_pages import _persistent_page_chat_overlay
 from .supervision_snapshot import build_supervision_snapshot
 
 
@@ -12811,6 +12812,7 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
     attachActionHandlers();
     hydratePanels();
   </script>
+{_persistent_page_chat_overlay("/")}
 </body>
 </html>
 """

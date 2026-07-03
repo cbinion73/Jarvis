@@ -1487,11 +1487,13 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("homeOverview.innerHTML = homeOverviewHtml", html)
         self.assertIn("homeActionResult.innerHTML = homeActionResultHtml", html)
         self.assertIn("buildVisibleActivityEntries", html)
+        self.assertIn('id="page-chat-root"', html)
+        self.assertIn("Ask JARVIS about this page", html)
         self.assertGreaterEqual(snapshot["surface_count"], 4)
-        self.assertIn("Chat with JARVIS", chat_html)
+        self.assertIn("A direct conversation interface for Chris.", chat_html)
         self.assertIn("/api/respond", chat_html)
         self.assertIn("/api/chat-state", chat_html)
-        self.assertIn("Chat-only mode keeps the experience conversational.", chat_html)
+        self.assertIn("This is the chat-first surface.", chat_html)
         self.assertNotIn("Executive control, life operating posture", chat_html)
         self.assertIn("home_overview", snapshot)
         self.assertIn("actions", snapshot["home_overview"])
@@ -1531,6 +1533,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Refresh Supervision State", supervision_html)
         self.assertIn("Inspect Supervision Item", supervision_html)
         self.assertIn("Integration Recovery Lane", supervision_html)
+
         self.assertIn("Supervision Recovery Cases", supervision_html)
         self.assertIn("Stage Recovery Case", supervision_html)
         self.assertIn("Recovery Continuity", supervision_html)
@@ -1581,6 +1584,7 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Hosted Readiness", progress_html)
         self.assertIn("Durable Progress History", progress_html)
         self.assertIn("Seam History:", progress_html)
+
         self.assertIn("Save Next Focus", progress_html)
         self.assertIn("Save Seam State", progress_html)
         self.assertIn("deploy/deploy.sh", progress_html)
@@ -1814,6 +1818,9 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Resume Route History", navigation_html)
         self.assertIn("Recent Route Continuity", navigation_html)
         self.assertIn("/api/activity/operator-action", navigation_html)
+        self.assertIn('id="page-chat-root"', navigation_html)
+        self.assertIn("Ask JARVIS about this page", navigation_html)
+        self.assertIn("/navigation-center", navigation_html)
         self.assertIn("status", navigation_snapshot)
         self.assertIn("navigation_state", navigation_snapshot)
         self.assertIn("route_history", navigation_snapshot)
@@ -1910,6 +1917,8 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertIn("Adjust Protocol", health_html)
         self.assertIn("Recent Health Continuity", health_html)
         self.assertIn("/api/activity/operator-action", health_html)
+        self.assertIn('id="page-chat-root"', health_html)
+        self.assertIn("/health-center", health_html)
         self.assertIn("status", health_snapshot)
         self.assertIn("current_signals", health_snapshot)
         self.assertIn("recent_activity", health_snapshot)
@@ -1966,6 +1975,18 @@ class CommandCenterServiceSurfaceTests(unittest.TestCase):
         self.assertTrue(intel_snapshot["counts"]["signals"] >= len(intel_snapshot["signal_sources"]))
         self.assertEqual(health_snapshot["proof_paths"]["checkins_api"], "/api/health/checkins")
         self.assertEqual(health_snapshot["proof_paths"]["checkin_review_api"], "/api/health/checkins/{checkin_id}/review")
+
+    def test_chat_alias_routes_render_chat_first_surface(self) -> None:
+        app_response = asyncio.run(self._route("/app", "GET")())
+        assistant_response = asyncio.run(self._route("/assistant", "GET")())
+
+        app_html = self._text_body(app_response)
+        assistant_html = self._text_body(assistant_response)
+
+        self.assertIn("What do you want to work through?", app_html)
+        self.assertIn("/api/respond", app_html)
+        self.assertIn("What do you want to work through?", assistant_html)
+        self.assertIn("/api/chat-state", assistant_html)
 
     def test_briefing_center_renders_google_calendar_count_level_planning_signal(self) -> None:
         from jarvis.morning_brief_pipeline import MorningBriefResult

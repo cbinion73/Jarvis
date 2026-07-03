@@ -147,6 +147,8 @@ class CompanionSpineTests(unittest.TestCase):
                 "known_user_profile",
                 "active_context",
                 "relationship_model",
+                "personal_model",
+                "obsidian_grounding",
                 "correction_context",
                 "topic_brief",
                 "canon_brief",
@@ -164,6 +166,8 @@ class CompanionSpineTests(unittest.TestCase):
         self.assertIsNone(packet["correction_context"])
         self.assertTrue(packet["topic_brief"])
         self.assertTrue(packet["response_contract"])
+        self.assertEqual(packet["personal_model"]["status"], "profile-only")
+        self.assertIn("Chris is building Jarvis carefully.", " ".join(packet["personal_model"]["working_set"]))
         self.assertIn("live Obsidian retrieval not active in the default conversation path", packet["available_capabilities"])
 
     def test_context_packet_captures_correction_command_against_last_reply(self) -> None:
@@ -241,11 +245,14 @@ class CompanionSpineTests(unittest.TestCase):
             "truth_constraints": ["Do not fake actions."],
             "voice_standard": "Direct, warm, practical.",
             "forbidden_patterns": ["therapy language", "corporate dashboard language"],
+            "personal_model": {"working_set": ["Current standing priorities: build, family"]},
+            "obsidian_grounding": {"status_line": "Obsidian local retrieval is unavailable in this conversation path."},
         }
         prompt = build_companion_system_prompt(packet)
         self.assertIn("smart, loyal friend with tools", prompt)
         self.assertIn("Do not fake actions.", prompt)
-        self.assertIn("live Obsidian retrieval is not wired into this conversation yet", prompt)
+        self.assertIn("Obsidian local retrieval is unavailable in this conversation path.", prompt)
+        self.assertIn("Current standing priorities: build, family", prompt)
         self.assertIn("Stay in normal conversation unless the user explicitly asks", prompt)
         self.assertIn("Start with your read of the situation", prompt)
         self.assertIn("do not ask taxonomy questions", prompt)
@@ -1890,17 +1897,32 @@ class CompanionSpineTests(unittest.TestCase):
     def test_unmatched_non_practical_prompt_gets_human_handle(self) -> None:
         packet = {"available_capabilities": ["ongoing conversation in this shell", "conversation turn persistence"]}
         reply = generate_companion_fallback("I've had a weird day", packet)
-        self.assertIn("i'm here", reply.lower())
+        self.assertIn("knocked you a little sideways", reply.lower())
         self.assertIn("what happened", reply.lower())
-        self.assertIn("rest of the day", reply.lower())
+        self.assertIn("setting up tomorrow", reply.lower())
         self.assertNotIn("the model path is down right now", reply.lower())
 
     def test_unmatched_ambiguous_prompt_gets_simple_handle(self) -> None:
         packet = {"available_capabilities": ["ongoing conversation in this shell", "conversation turn persistence"]}
         reply = generate_companion_fallback("I'm kind of off today", packet)
-        self.assertIn("i'm here", reply.lower())
+        self.assertIn("knocked you a little sideways", reply.lower())
         self.assertIn("what happened", reply.lower())
         self.assertNotIn("the model path is down right now", reply.lower())
+
+    def test_stuck_prompt_gets_thesis_first_human_handle(self) -> None:
+        packet = {"available_capabilities": ["ongoing conversation in this shell", "conversation turn persistence"]}
+        reply = generate_companion_fallback("I feel weird and stuck.", packet)
+        self.assertIn("do not need a grand plan", reply.lower())
+        self.assertIn("stop spinning", reply.lower())
+        self.assertIn("what i would move first", reply.lower())
+        self.assertNotIn("decision, a conversation, or a plan", reply.lower())
+
+    def test_what_matters_today_prompt_gets_human_priority_handle(self) -> None:
+        packet = {"available_capabilities": ["ongoing conversation in this shell", "conversation turn persistence"]}
+        reply = generate_companion_fallback("I need help figuring out what matters today.", packet)
+        self.assertIn("too many loose threads", reply.lower())
+        self.assertIn("actually deserves the day", reply.lower())
+        self.assertNotIn("week back under control", reply.lower())
 
     def test_retirement_follow_up_money_first_gets_concrete_continuation(self) -> None:
         packet = {
@@ -2720,6 +2742,10 @@ class CompanionSpineTests(unittest.TestCase):
         )
         self.assertIn("Retrieved Obsidian notes:", packet["active_context"])
         self.assertIn("Retirement Vision", packet["active_context"])
+        self.assertEqual(packet["obsidian_grounding"]["hit_count"], 1)
+        self.assertTrue(packet["obsidian_grounding"]["active"])
+        self.assertEqual(packet["personal_model"]["status"], "grounded")
+        self.assertIn("Retrieved note context:", " ".join(packet["personal_model"]["working_set"]))
 
     def test_default_context_packet_does_not_include_obsidian_context(self) -> None:
         runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Ready."))
@@ -2732,6 +2758,25 @@ class CompanionSpineTests(unittest.TestCase):
             conversation_excerpt="Chris: What does Obsidian say about retirement?",
         )
         self.assertNotIn("Retrieved Obsidian notes:", packet["active_context"] or "")
+
+    def test_enabled_obsidian_updates_capabilities_and_truth_constraints(self) -> None:
+        runtime = _StubRuntime(
+            OpenAIResult(provider="openai", model="gpt", output_text="Ready."),
+            obsidian_conversation_enabled=True,
+        )
+        packet = build_context_packet(
+            runtime,
+            self.actor,
+            "office",
+            "What does Obsidian say about retirement?",
+            plan=_plan("What does Obsidian say about retirement?"),
+            conversation_excerpt="Chris: What does Obsidian say about retirement?",
+        )
+        self.assertIn(
+            "local Obsidian retrieval is active in default conversation when notes match",
+            packet["available_capabilities"],
+        )
+        self.assertIn("retrieved note context", " ".join(packet["truth_constraints"]).lower())
 
     def test_therapist_language_reply_is_repaired(self) -> None:
         packet = {"available_capabilities": ["planning and drafting in chat"]}
