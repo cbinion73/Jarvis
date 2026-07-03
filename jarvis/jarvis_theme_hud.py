@@ -308,6 +308,72 @@ _HUD_TEMPLATE = r"""<!DOCTYPE html>
   .c-btn.mic.listening { color: var(--red); border-color: rgba(251, 113, 133, 0.5); animation: micPulse 1.2s ease-in-out infinite; }
   @keyframes micPulse { 50% { box-shadow: 0 0 14px rgba(251, 113, 133, 0.5); } }
 
+  /* ── Holographic panels (summoned data / artifacts) ─────────────── */
+  .veil {
+    position: fixed; inset: 0; z-index: 80;
+    background: rgba(2, 6, 12, 0.62); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 4vh 18px;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+  }
+  .veil.open { opacity: 1; pointer-events: auto; }
+  .holo {
+    position: relative; width: min(680px, 100%); max-height: 86vh;
+    display: flex; flex-direction: column;
+    background: var(--panel-solid); border: 1px solid var(--stroke-bright);
+    border-radius: 6px; box-shadow: 0 0 60px rgba(34, 211, 238, 0.14), 0 30px 80px rgba(0,0,0,0.6);
+    transform: scale(0.94) translateY(12px); filter: blur(4px); opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2), filter 0.3s ease, opacity 0.3s ease;
+  }
+  .veil.open .holo { transform: none; filter: none; opacity: 1; }
+  .holo::before, .holo::after {
+    content: ""; position: absolute; width: 22px; height: 22px; pointer-events: none;
+    border-color: var(--cyan); border-style: solid;
+  }
+  .holo::before { top: -2px; left: -2px; border-width: 2px 0 0 2px; }
+  .holo::after { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+  .holo-head {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 18px 20px 14px; border-bottom: 1px solid var(--stroke); flex: none;
+  }
+  .holo-head .hk {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.32em;
+    color: var(--cyan); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .holo-head .ht { font-size: 17px; font-weight: 600; line-height: 1.35; }
+  .holo-head .hx {
+    margin-left: auto; flex: none; width: 30px; height: 30px; cursor: pointer;
+    border: 1px solid var(--stroke); border-radius: 4px; background: transparent;
+    color: var(--text-dim); font-size: 13px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+  }
+  .holo-head .hx:hover { color: var(--red); border-color: rgba(251, 113, 133, 0.5); }
+  .holo-body { overflow-y: auto; padding: 16px 20px 20px; scrollbar-width: thin; }
+  .holo-body .h-summary { font-size: 13.5px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px; }
+  .holo-body .h-section {
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.28em;
+    color: var(--text-mono); text-transform: uppercase; margin: 16px 0 8px;
+  }
+  .holo-body .h-row {
+    display: flex; gap: 10px; align-items: baseline;
+    padding: 9px 12px; margin-bottom: 6px; font-size: 13.5px; line-height: 1.5;
+    border: 1px solid var(--stroke); border-radius: 4px; background: rgba(255,255,255,0.02);
+  }
+  .holo-body .h-row .h-mark { font-family: var(--mono); color: var(--cyan); flex: none; font-size: 11px; }
+  .holo-body .h-row .h-note { color: var(--text-dim); font-size: 12px; }
+  .holo-foot {
+    flex: none; padding: 10px 20px; border-top: 1px solid var(--stroke);
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.18em; color: var(--text-dim);
+    display: flex; justify-content: space-between;
+  }
+  .artifact-chips { max-width: 720px; margin: -12px auto 22px; padding-left: 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .artifact-chips button {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 7px 13px; border-radius: 3px; cursor: pointer;
+    border: 1px solid var(--stroke-bright); background: rgba(34, 211, 238, 0.07); color: var(--cyan-soft);
+    transition: all 0.2s;
+  }
+  .artifact-chips button:hover { background: rgba(34, 211, 238, 0.18); box-shadow: 0 0 14px rgba(34, 211, 238, 0.15); }
+
   /* ── Responsive ──────────────────────────────────────────────────── */
   @media (max-width: 1180px) {
     .hud { grid-template-columns: 280px minmax(0, 1fr); grid-template-areas: "top top" "left stage"; }
@@ -423,6 +489,17 @@ _HUD_TEMPLATE = r"""<!DOCTYPE html>
       </div>
     </div>
   </aside>
+</div>
+
+<div class="veil" id="veil" aria-modal="true" role="dialog">
+  <div class="holo">
+    <div class="holo-head">
+      <div><div class="hk" id="holo-kind"></div><div class="ht" id="holo-title"></div></div>
+      <button class="hx" id="holo-close" title="Dismiss (Esc)">&#10005;</button>
+    </div>
+    <div class="holo-body" id="holo-body"></div>
+    <div class="holo-foot"><span id="holo-foot-left"></span><span>ESC TO DISMISS</span></div>
+  </div>
 </div>
 
 <script>
@@ -672,10 +749,39 @@ async function send() {
     $('tm-model').textContent = model ? model.toUpperCase().slice(0, 18) : '—';
     $('tm-latency').textContent = (ms / 1000).toFixed(1) + 's';
     addMsg('jarvis', String(d.output_text || '(no reply)'), model ? model + ' · ' + (ms / 1000).toFixed(1) + 's' : '');
+    presentArtifacts(d);
     loadOps();
   } catch (e) {
     hideThinking();
     addMsg('jarvis', 'I lost the link mid-thought. Try that again in a moment.');
+  }
+}
+
+function presentArtifacts(d) {
+  const found = [];
+  for (const [key, val] of Object.entries(d)) {
+    if (key.startsWith('created_') && val && typeof val === 'object' && Object.keys(val).length) {
+      found.push([key, val]);
+    }
+  }
+  if (found.length) {
+    const wrap = document.createElement('div');
+    wrap.className = 'artifact-chips';
+    for (const [kind, obj] of found) {
+      const id = 'art-' + (++artifactSeq);
+      artifactStore[id] = { kind, obj };
+      const btn = document.createElement('button');
+      btn.innerHTML = '&#9670; ' + kindLabel(kind);
+      btn.addEventListener('click', () => summonArtifact(kind, obj));
+      wrap.appendChild(btn);
+    }
+    stream.appendChild(wrap);
+    stream.scrollTop = stream.scrollHeight;
+    // materialize the first artifact — it appears because it was just made
+    const [k0, o0] = found[0];
+    setTimeout(() => summonArtifact(k0, o0), 550);
+  } else if (d.requested_packet) {
+    summonPacket(String(d.requested_packet));
   }
 }
 
@@ -693,6 +799,99 @@ $('send-btn').addEventListener('click', send);
 document.addEventListener('keydown', (e) => {
   if (e.key === '/' && document.activeElement !== input) { e.preventDefault(); input.focus(); }
 });
+
+/* ── Holographic panels: artifacts & data sets, summoned on demand ── */
+const veil = $('veil');
+const artifactStore = {};   // chip-id -> {kind, obj}
+let artifactSeq = 0;
+
+const META_KEYS = new Set(['actor', 'room', 'status', 'source_request', 'creation_proof',
+  'object_kind', 'created_at', 'updated_at', 'truth_mode', 'live_retrieval_used',
+  'title', 'topic', 'item_count']);
+
+function kindLabel(kind) {
+  return kind.replace(/^created_/, '').replace(/_/g, ' ').toUpperCase();
+}
+
+function renderArtifactBody(obj) {
+  let html = '';
+  const summary = obj.summary || obj.recommendation_note || obj.note || '';
+  if (summary) html += '<div class="h-summary">' + escapeHtml(String(summary)) + '</div>';
+  for (const [key, val] of Object.entries(obj)) {
+    if (META_KEYS.has(key) || /_id$/.test(key)) continue;
+    if (key === 'summary' || key === 'recommendation_note') continue;
+    if (Array.isArray(val) && val.length) {
+      html += '<div class="h-section">' + escapeHtml(key.replace(/_/g, ' ')) + '</div>';
+      for (const entry of val.slice(0, 40)) {
+        if (entry && typeof entry === 'object') {
+          const mark = ('completed' in entry) ? (entry.completed ? '&#9745;' : '&#9744;') : '&#9656;';
+          const main = entry.text || entry.label || entry.title || entry.name || entry.question || entry.step || JSON.stringify(entry).slice(0, 120);
+          const note = entry.notes || entry.detail || entry.why || entry.reason || '';
+          html += '<div class="h-row"><span class="h-mark">' + mark + '</span><span>' + escapeHtml(String(main)) +
+            (note ? ' <span class="h-note">&mdash; ' + escapeHtml(String(note)) + '</span>' : '') + '</span></div>';
+        } else {
+          html += '<div class="h-row"><span class="h-mark">&#9656;</span><span>' + escapeHtml(String(entry)) + '</span></div>';
+        }
+      }
+    } else if (typeof val === 'string' && val.trim() && val.length > 1) {
+      html += '<div class="h-section">' + escapeHtml(key.replace(/_/g, ' ')) + '</div>';
+      html += '<div class="h-row"><span>' + escapeHtml(val).slice(0, 4000) + '</span></div>';
+    }
+  }
+  return html || '<div class="h-summary">Created. No detail fields to display.</div>';
+}
+
+function summonArtifact(kind, obj) {
+  $('holo-kind').textContent = kindLabel(kind);
+  $('holo-title').textContent = String(obj.title || obj.topic || 'Untitled');
+  $('holo-body').innerHTML = renderArtifactBody(obj);
+  $('holo-foot-left').textContent = obj.created_at ? String(obj.created_at).slice(0, 16).replace('T', ' &middot; '.replace(/&middot;/, '·')) : '';
+  veil.classList.add('open');
+}
+
+function summonDataPanel(kindLabelText, title, rowsHtml) {
+  $('holo-kind').textContent = kindLabelText;
+  $('holo-title').textContent = title;
+  $('holo-body').innerHTML = rowsHtml || '<div class="h-summary">Nothing to show right now.</div>';
+  $('holo-foot-left').textContent = 'LIVE';
+  veil.classList.add('open');
+}
+
+function dismissPanel() { veil.classList.remove('open'); }
+$('holo-close').addEventListener('click', dismissPanel);
+veil.addEventListener('click', (e) => { if (e.target === veil) dismissPanel(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && veil.classList.contains('open')) dismissPanel(); });
+
+/* Data-set summons for packets Jarvis requests during conversation */
+async function summonPacket(packet) {
+  try {
+    if (packet === 'mission-control' || packet === 'missions') {
+      const d = await (await fetch('/api/command-center')).json();
+      const items = ((d.mission_task_board || {}).items || []);
+      summonDataPanel('MISSIONS', 'Active Missions', items.map(m =>
+        '<div class="h-row"><span class="h-mark lane-' + escapeHtml(String(m.lane || 'next')) + '">' + escapeHtml(String(m.lane || 'next').toUpperCase()) + '</span><span>' + escapeHtml(String(m.title || '')) + '</span></div>'
+      ).join(''));
+    } else if (packet === 'approvals' || packet === 'approval-queue') {
+      const d = await (await fetch('/api/command-center')).json();
+      const items = ((d.needs_cockpit || {}).items || []);
+      summonDataPanel('NEEDS YOU', 'Waiting on your decision', items.map(i =>
+        '<div class="h-row"><span class="h-mark">&#9650;</span><span>' + escapeHtml(String(i.title || '')) +
+        ' <span class="h-note">&mdash; ' + escapeHtml(String(i.urgency || '')) + '</span></span></div>'
+      ).join(''));
+    } else if (packet === 'briefing' || packet === 'daily-brief') {
+      const d = await (await fetch('/api/briefing/module?actor=' + encodeURIComponent(USER_NAME))).json();
+      const mb = d.morning_brief || {};
+      let rows = '';
+      for (const sec of ['what_changed', 'what_matters', 'what_is_waiting', 'jarvis_prepared']) {
+        const list = mb[sec] || [];
+        if (!list.length) continue;
+        rows += '<div class="h-section">' + sec.replace(/_/g, ' ') + '</div>';
+        rows += list.slice(0, 6).map(t => '<div class="h-row"><span class="h-mark">&#9656;</span><span>' + escapeHtml(String(t)) + '</span></div>').join('');
+      }
+      summonDataPanel('DAILY BRIEF', String(mb.greeting || 'Your day'), rows);
+    }
+  } catch (e) { /* panel just doesn't appear; conversation already has the answer */ }
+}
 
 /* ── Voice input (browser speech recognition, if available) ───────── */
 (function initMic() {
