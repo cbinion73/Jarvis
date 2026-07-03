@@ -1284,6 +1284,41 @@ class LLMGateway:
                     fallback.escalated = True
                     response = fallback
 
+        # Reasoning-budget exhaustion (empty visible output) gets one retry
+        # with a much larger budget — some prompts reason far past the normal
+        # headroom even at low effort. If that still fails, climb one ladder
+        # rung. Without this, OpenAI-backend errors had no recovery path at
+        # all (observed live: the work consumer's kickoff dead-ended).
+        if (
+            response.error.startswith("empty_completion")
+            and allow_escalation
+        ):
+            _log.warning(
+                "Empty completion for %s/%s — retrying with expanded budget",
+                task_type, model,
+            )
+            retry = self._call_backend(
+                messages, model, temperature, max_tokens + 8192, stream,
+            )
+            if not retry.error and retry.text.strip():
+                retry.task_type = task_type
+                retry.escalated = True
+                response = retry
+            else:
+                next_model = self._escalate_model(model)
+                if next_model and next_model != model and next_model not in APPROVAL_REQUIRED_MODELS:
+                    _log.warning(
+                        "Expanded budget still empty for %s/%s — escalating to %s",
+                        task_type, model, next_model,
+                    )
+                    esc = self._call_backend(
+                        messages, next_model, temperature, max_tokens + 8192, stream,
+                    )
+                    if not esc.error and esc.text.strip():
+                        esc.task_type = task_type
+                        esc.escalated = True
+                        response = esc
+
         total_ms = int((time.monotonic() - t_start) * 1000)
 
         entry = {
