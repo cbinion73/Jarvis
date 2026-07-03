@@ -55,16 +55,44 @@ class ObsidianVaultSupport:
     chunk_overlap: int = 80
 
     @property
-    def enabled(self) -> bool:
+    def _vault_readable(self) -> bool:
         return self.vault_path.exists() and os.access(self.vault_path, os.R_OK)
+
+    @property
+    def _synced_index_usable(self) -> bool:
+        """A previously built index can serve retrieval on machines that do
+        not carry the vault itself (e.g. the production server, which gets
+        the index synced from the Mac). Freshness cannot be validated
+        without the vault — status() says so honestly."""
+        if not self.index_path.exists():
+            return False
+        try:
+            payload = json.loads(self.index_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return False
+        return bool(payload.get("files"))
+
+    @property
+    def mode(self) -> str:
+        if self._vault_readable:
+            return "live-vault"
+        if self._synced_index_usable:
+            return "synced-index"
+        return "unavailable"
+
+    @property
+    def enabled(self) -> bool:
+        return self.mode != "unavailable"
 
     def status(self) -> dict[str, Any]:
         exists = self.vault_path.exists()
         readable = exists and os.access(self.vault_path, os.R_OK)
         markdown_files = self._markdown_files() if readable else []
         index_exists = self.index_path.exists()
+        mode = self.mode
         payload = {
-            "enabled": bool(exists and readable),
+            "enabled": mode != "unavailable",
+            "mode": mode,
             "vault_exists": exists,
             "vault_readable": readable,
             "vault_path": str(self.vault_path),
@@ -75,21 +103,28 @@ class ObsidianVaultSupport:
             "active_retriever_backend": self._active_retriever_backend(),
             "llamaindex_available": _llamaindex_components() is not None,
         }
-        if not exists:
-            payload["detail"] = "Configured Obsidian vault path does not exist."
-            return payload
-        if not readable:
-            payload["detail"] = "Configured Obsidian vault path is not readable."
-            return payload
-        payload["detail"] = "Obsidian vault is available for local retrieval."
         if index_exists:
             try:
                 index_payload = json.loads(self.index_path.read_text(encoding="utf-8"))
                 payload["indexed_at"] = str(index_payload.get("generated_at", "")).strip()
                 payload["indexed_backend"] = str(index_payload.get("backend", "")).strip()
                 payload["chunk_count"] = int(index_payload.get("chunk_count", 0) or 0)
+                payload["indexed_file_count"] = len(list(index_payload.get("files") or []))
             except (OSError, json.JSONDecodeError):
                 pass
+        if mode == "live-vault":
+            payload["detail"] = "Obsidian vault is available for local retrieval."
+        elif mode == "synced-index":
+            indexed_at = str(payload.get("indexed_at", "")).strip()
+            payload["detail"] = (
+                "Obsidian retrieval is serving from a synced index"
+                + (" built " + indexed_at[:16] if indexed_at else "")
+                + "; the vault itself is not on this machine, so notes reflect the last sync."
+            )
+        elif not exists:
+            payload["detail"] = "Configured Obsidian vault path does not exist."
+        else:
+            payload["detail"] = "Configured Obsidian vault path is not readable."
         return payload
 
     def retrieve(self, query: str, *, limit: int = 3) -> list[dict[str, Any]]:
@@ -190,6 +225,10 @@ class ObsidianVaultSupport:
     def ensure_index(self) -> dict[str, Any]:
         if not self.enabled:
             return {"vault_path": str(self.vault_path), "files": [], "file_count": 0}
+        if self.mode == "synced-index":
+            # The vault is not on this machine — serve the synced index as-is.
+            # Freshness cannot be validated here; the Mac rebuilds and ships it.
+            return self._load_index()
         cached = self._load_index()
         current_files = self._markdown_files()
         if self._index_matches(cached, current_files):

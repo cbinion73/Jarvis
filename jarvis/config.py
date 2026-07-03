@@ -298,9 +298,14 @@ class AppConfig:
                 )
             ),
             obsidian_index_path=Path(
-                os.getenv(
-                    "JARVIS_OBSIDIAN_INDEX_PATH",
-                    "/Volumes/Monday/JARVIS/indexes/obsidian/index.json",
+                os.getenv("JARVIS_OBSIDIAN_INDEX_PATH", "")
+                or (
+                    # Mac: the live index next to the vault. Elsewhere (e.g.
+                    # the production server): the synced copy shipped in the
+                    # repo by scripts/sync_obsidian_index.sh.
+                    "/Volumes/Monday/JARVIS/indexes/obsidian/index.json"
+                    if Path("/Volumes/Monday").exists()
+                    else "data/obsidian/index.json"
                 )
             ),
             obsidian_retriever_backend=os.getenv(

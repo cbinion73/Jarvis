@@ -685,10 +685,16 @@ def _obsidian_grounding(runtime: Any, request: str) -> dict[str, Any]:
             context_text = str(support.conversation_context(request, limit=3) or "").strip()
         except Exception:
             context_text = ""
+    mode = str(status.get("mode", "")).strip()
+    synced_note = (
+        " Notes come from a synced index of the vault (the vault itself lives on the Mac), so they reflect the last sync."
+        if mode == "synced-index"
+        else ""
+    )
     if active and hits:
-        status_line = f"Obsidian local retrieval is active in this conversation path and retrieved {len(hits)} relevant note(s) for this turn."
+        status_line = f"Obsidian retrieval is active in this conversation path and retrieved {len(hits)} relevant note(s) for this turn.{synced_note}"
     elif active:
-        status_line = "Obsidian local retrieval is active in this conversation path, but no relevant notes matched this turn."
+        status_line = f"Obsidian retrieval is active in this conversation path, but no relevant notes matched this turn.{synced_note}"
     elif status.get("enabled"):
         status_line = "Obsidian vault is available locally, but conversation grounding from it is disabled in this runtime."
     else:
@@ -696,6 +702,7 @@ def _obsidian_grounding(runtime: Any, request: str) -> dict[str, Any]:
     return {
         "active": bool(active),
         "enabled": bool(status.get("enabled")),
+        "mode": mode,
         "conversation_enabled": _obsidian_conversation_enabled(runtime),
         "status_line": status_line,
         "hit_count": len(hits),
