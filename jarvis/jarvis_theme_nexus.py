@@ -2188,7 +2188,7 @@ async function loadBriefing() {{
 function parseBriefingSections(text) {{
   if (typeof text !== 'string') text = JSON.stringify(text, null, 2);
   // Try to split on markdown headers
-  const lines = text.split('\n');
+  const lines = text.split('\\n');
   const sections = [];
   let current = null;
   const sectionIcons = {{
@@ -2203,10 +2203,10 @@ function parseBriefingSections(text) {{
       const iconKey = Object.keys(sectionIcons).find(k => title.toLowerCase().includes(k)) || 'default';
       current = {{ title, icon: sectionIcons[iconKey], content: '' }};
     }} else if (current) {{
-      current.content += line + '\n';
+      current.content += line + '\\n';
     }} else {{
       if (!current) current = {{ title: 'Your Morning', icon: '☀', content: '' }};
-      current.content += line + '\n';
+      current.content += line + '\\n';
     }}
   }}
   if (current) sections.push(current);
@@ -2346,7 +2346,7 @@ async function sendMessage() {{
       showResponse('I received your message: "' + text + '". Let me look into that for you.');
     }}
   }} catch(e) {{
-    showResponse('Connected — but I couldn\'t process that request right now. Try again in a moment.');
+    showResponse("Connected — but I couldn't process that request right now. Try again in a moment.");
   }}
 }}
 

@@ -247,7 +247,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
     .chat-main-scroll {{
       flex: 1;
       overflow-y: auto;
-      padding: 20px 24px 180px;
+      padding: 20px 24px 224px;
     }}
 
     .chat-main-inner {{
@@ -568,7 +568,7 @@ def render_chat_only_shell(runtime: "JarvisRuntime") -> str:
       }}
 
       .chat-main-scroll {{
-        padding: 18px 14px 210px;
+        padding: 18px 14px 248px;
       }}
 
       .chat-topbar {{

@@ -1566,7 +1566,7 @@ class CommandCenterIndexTests(unittest.TestCase):
         self.assertIn('.history-chip-first-seen {', html)
         self.assertIn('detail.change_summary = "Focused a recent localized artifact action from the in-pane history strip.";', html)
         self.assertIn('timeline_event_index: Number.isInteger(currentTimelineEventIndex) ? currentTimelineEventIndex : null,', html)
-        self.assertIn('timeline_event_title: String((((detail || {}).selected_timeline_event || {}).title || "").trim(),', html)
+        self.assertIn('timeline_event_title: String((((detail || {}).selected_timeline_event || {}).title || "").trim()),', html)
         self.assertIn('currentTimelineEventIndex = Number.isInteger(entry.timeline_event_index) ? entry.timeline_event_index : currentTimelineEventIndex;', html)
         self.assertIn('for timeline event ${String(entry.timeline_event_title || "").trim()}', html)
         self.assertIn('Approval Payload Resolution', html)

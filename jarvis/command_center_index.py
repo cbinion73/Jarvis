@@ -4516,6 +4516,10 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
         )
 
     raw_json = esc(json.dumps(payload, indent=2))
+    # Inside <script>, the payload must be real JSON — HTML-escaping it there
+    # produced `&quot;` tokens that killed the whole script block (the page's
+    # JS never ran). </ is escaped to prevent premature script termination.
+    raw_json_js = json.dumps(payload, indent=2).replace("</", "<\\/")
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -5038,7 +5042,7 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
     </section>
   </main>
   <script>
-    const initialCommandCenterPayload = {raw_json};
+    const initialCommandCenterPayload = {raw_json_js};
     const statusNote = document.getElementById("status-note");
     const homeOverview = document.getElementById("home-overview");
     const homeActionResult = document.getElementById("home-action-result");
@@ -8516,10 +8520,8 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
         const resumedReturnActiveButtons = motionArtifactSnapshotReasonResumedReturnActiveButtons(detail);
         const resumedReturnReturn = motionArtifactSnapshotReasonResumedReturnReturnMeta(detail, resumedReturnSelectionLabel);
         const resumedReturnReturnButtonLabel = motionArtifactSnapshotReasonResumedReturnReturnButtonLabel(detail);
-        const resumedReturnReturnActive = motionArtifactSnapshotReasonResumedReturnReturnActiveMeta(detail);
         const resumedReturnReturnActiveButtons = motionArtifactSnapshotReasonResumedReturnReturnActiveButtons(detail);
         const resumedReturnReturnReturn = motionArtifactSnapshotReasonResumedReturnReturnReturnMeta(detail, resumedReturnReturnSelectionLabel);
-        const resumedReturnReturnReturnActive = motionArtifactSnapshotReasonResumedReturnReturnReturnActiveMeta(detail);
         const resumedReturnReturnReturnActiveButtons = motionArtifactSnapshotReasonResumedReturnReturnReturnActiveButtons(detail);
         const resumedReturnReturnReturnReturn = motionArtifactSnapshotReasonResumedReturnReturnReturnReturnMeta(detail, resumedReturnReturnReturnSelectionLabel);
         const resumedReturnReturnReturnReturnReturn = motionArtifactSnapshotReasonResumedReturnReturnReturnReturnReturnMeta(detail, resumedReturnReturnReturnSelectionLabel, resumedReturnReturnReturnReturnActiveLabel);
@@ -9190,11 +9192,6 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
       const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
       const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
       const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_active_label) || "").trim());
-      const resumedReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_active_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_label) || "").trim());
       const reasonTarget = currentDetail && currentDetail.motion_artifact_focus_posture_snapshot_reason_target && typeof currentDetail.motion_artifact_focus_posture_snapshot_reason_target === "object"
         ? Object.assign({{}}, currentDetail.motion_artifact_focus_posture_snapshot_reason_target)
         : null;
@@ -9675,7 +9672,7 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
         action_result_summary: String(detail.action_result_summary || actionResultSummary(context || {{}})).trim(),
         change_evidence_summary: String(detail.change_evidence_summary || "").trim(),
         timeline_event_index: Number.isInteger(currentTimelineEventIndex) ? currentTimelineEventIndex : null,
-        timeline_event_title: String((((detail || {{}}).selected_timeline_event || {{}}).title || "").trim(),
+        timeline_event_title: String((((detail || {{}}).selected_timeline_event || {{}}).title || "").trim()),
         motion_artifact_focus_excerpts: Array.isArray(detail.motion_artifact_focus_excerpts) ? detail.motion_artifact_focus_excerpts.slice(0, 8) : [],
         motion_artifact_focus_proof_compare_summary: String(detail.motion_artifact_focus_proof_compare_summary || "").trim(),
         motion_artifact_focus_proof_compare_rows: Array.isArray(detail.motion_artifact_focus_proof_compare_rows) ? detail.motion_artifact_focus_proof_compare_rows.slice(0, 8) : [],
@@ -9759,20 +9756,6 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
       const currentFocus = currentDetail && currentDetail.motion_artifact_focus_posture_snapshot_reason_focus && typeof currentDetail.motion_artifact_focus_posture_snapshot_reason_focus === "object"
         ? currentDetail.motion_artifact_focus_posture_snapshot_reason_focus
         : null;
-      const restoredActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_active_label) || "").trim());
-      const resumedReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_active_label) || "").trim());
-      const resumedReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_active_label) || "").trim());
-      const resumedReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_active_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
-      const resumedReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnReturnActive = Boolean(String((currentFocus && currentFocus.return_history_reason_resumed_return_return_return_return_return_return_return_return_return_return_return_return_return_return_return_return_label) || "").trim());
       const reasonTarget = currentDetail && currentDetail.motion_artifact_focus_posture_snapshot_reason_target && typeof currentDetail.motion_artifact_focus_posture_snapshot_reason_target === "object"
         ? Object.assign({{}}, currentDetail.motion_artifact_focus_posture_snapshot_reason_target)
         : null;
@@ -10566,6 +10549,7 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
       const motionArtifactFocusSnapshotReturnButton = motionArtifactFocusPostureSnapshotReasonTarget ? `<button type="button" data-motion-artifact-snapshot-return="1">Return to Reopened Proof</button>` : "";
       const motionArtifactFocusSnapshotReasonButton = motionArtifactFocusPostureSnapshotReasonTarget ? `<button type="button" data-motion-artifact-snapshot-reason="1">Inspect Why</button>` : "";
       const motionArtifactFocusSnapshotReasonFocusDisplay = motionArtifactFocusPostureSnapshotReasonFocus
+        ? `<div class="preview-subsection"><strong>Reopened Proof Focus</strong><span>${{esc(String((motionArtifactFocusPostureSnapshotReasonFocus || {{}}).summary || ""))}}</span></div>`
         : `<div class="preview-subsection"><span>No reopened proof focus selected yet.</span></div>`;
       const motionArtifactFocusDisplay = `<div class="preview-subsection"><strong>${{esc(motionArtifactFocusTitle)}}</strong><span>${{esc(motionArtifactFocusSummary)}}</span><div class="preview-row"><strong>Current Posture</strong>${{motionArtifactFocusPostureBadgeLabel ? `<code class="history-chip history-chip-${{esc(motionArtifactFocusPostureBadgeClass)}}">${{esc(motionArtifactFocusPostureBadgeLabel)}}</code>` : ""}}${{motionArtifactFocusPostureStateLabel ? `<code class="history-chip history-chip-${{esc(motionArtifactFocusPostureStateClass)}}">${{esc(motionArtifactFocusPostureStateLabel)}}</code>` : ""}}<code>${{esc(motionArtifactFocusPostureSummary)}}</code><span>${{esc(motionArtifactFocusPostureHint)}}</span><span>${{esc(motionArtifactFocusPostureOutcomeLine)}}</span>${{motionArtifactFocusPostureSnapshotCue ? `<span>${{esc(motionArtifactFocusPostureSnapshotCue)}}</span>` : ""}}${{motionArtifactFocusPostureSuggestedAction ? `<span>Suggested next: ${{esc(String(motionArtifactFocusPostureSuggestedAction.label || motionArtifactFocusPostureSuggestedAction.summary || "No direct next move suggested."))}}</span>` : ""}}${{motionArtifactFocusSuggestedActionButton}}${{motionArtifactFocusPostureSnapshotAction ? `<span>Reopened next: ${{esc(String(motionArtifactFocusPostureSnapshotAction.label || motionArtifactFocusPostureSnapshotAction.summary || "No reopened next move suggested."))}}</span>` : ""}}${{motionArtifactFocusPostureSnapshotReason ? `<span>Why reopened next: ${{esc(motionArtifactFocusPostureSnapshotReason)}}</span>` : ""}}${{motionArtifactFocusSnapshotReturnButton}}${{motionArtifactFocusSnapshotReasonButton}}${{motionArtifactFocusSnapshotActionButton}}${{Number.isInteger(motionArtifactFocusPostureOutcomeIndex) ? `<button type="button" data-motion-artifact-history-index="${{esc(String(motionArtifactFocusPostureOutcomeIndex))}}">Inspect Last Action</button>` : ""}}</div>${{motionArtifactFocusSnapshotReasonFocusDisplay}}${{motionArtifactFocusSections.length ? previewRows(motionArtifactFocusSections, "Artifact Detail") : "<span>No localized artifact detail captured yet.</span>"}}<div class="preview-subsection"><strong>Artifact Mutation</strong><span>${{esc(motionArtifactFocusDeltaSummary)}}</span>${{motionArtifactFocusDeltaSections.length ? previewRows(motionArtifactFocusDeltaSections, "Artifact Mutation") : "<span>No localized artifact mutation rows captured yet.</span>"}}</div><div class="preview-subsection"><strong>Artifact Proof Excerpts</strong>${{motionArtifactFocusExcerpts.length ? motionArtifactFocusExcerpts.map((item) => `<div class="preview-row"><strong>Excerpt</strong><code>${{esc(String(item || ""))}}</code></div>`).join("") : "<span>No localized artifact proof excerpts captured yet.</span>"}}</div><div class="preview-subsection"><strong>Artifact Proof Compare</strong><span>${{esc(motionArtifactFocusProofCompareSummary)}}</span>${{motionArtifactFocusProofCompareRows.length ? previewRows(motionArtifactFocusProofCompareRows, "Artifact Proof Compare") : "<span>No localized artifact proof comparison rows captured yet.</span>"}}</div><div class="preview-subsection"><strong>Artifact Recent Actions</strong><span>${{esc(motionArtifactFocusHistorySummary)}}</span>${{motionArtifactFocusHistoryMeta ? `<span>${{esc(motionArtifactFocusHistoryMeta)}}</span>` : ""}}${{motionArtifactFocusHistoryRows.length ? motionArtifactFocusHistoryRows.map((item, index) => `<div class="preview-row"><strong>${{esc(item.label || "Artifact Action History")}}</strong>${{item.badge ? `<code class="history-chip history-chip-${{esc(String(item.badge_class || "artifact"))}}">${{esc(String(item.badge || ""))}}</code>` : ""}}${{item.trend ? `<code class="history-chip history-chip-${{esc(String(item.trend_class || "steady"))}}">${{esc(String(item.trend || ""))}}</code>` : ""}}${{item.last_revisited_lane_label ? `<code class="history-chip history-chip-${{esc(String(item.last_revisited_lane_class || "steady"))}}">${{esc(String(item.last_revisited_lane_label || ""))}}</code>` : ""}}<span>${{esc(item.value || "")}}</span>${{item.last_revisited_lane_summary ? `<span>${{esc(String(item.last_revisited_lane_summary || ""))}}</span>` : ""}}${{item.jumpable ? `<button type="button" data-motion-artifact-history-index="${{esc(String(index))}}">Inspect Action</button>` : ""}}${{Array.isArray(item.history_buttons) && item.history_buttons.length ? item.history_buttons.map((button) => button && button.kind === "artifact" ? `<button type="button" data-motion-artifact-snapshot-history-target-artifact-index="${{esc(String(button.motion_artifact_index || ""))}}" data-motion-artifact-snapshot-history-origin-index="${{esc(String(index))}}">Reopen Round-Trip Artifact</button>` : button && button.kind === "timeline" ? `<button type="button" data-motion-artifact-snapshot-history-target-timeline-index="${{esc(String(button.timeline_event_index || ""))}}" data-motion-artifact-snapshot-history-origin-index="${{esc(String(index))}}">Reopen Round-Trip Timeline</button>` : "").join("") : ""}}</div>`).join("") : "<span>No localized artifact action history rows captured yet.</span>"}}${{motionArtifactFocusHistoryNote ? `<span>${{esc(motionArtifactFocusHistoryNote)}}</span>` : ""}}${{motionArtifactFocusRoundTripHistoryIndex !== null ? `<div class="action-row"><button type="button" data-motion-artifact-round-trip-history-return-index="${{esc(String(motionArtifactFocusRoundTripHistoryIndex))}}">Return to Round-Trip History</button></div>` : ""}}</div>${{motionArtifactFocusActionButtons ? `<div class="action-row">${{motionArtifactFocusActionButtons}}</div>` : ""}}</div>`;
       return [
@@ -12148,7 +12132,7 @@ def render_command_center_index_html(payload: dict[str, Any]) -> str:
         if (briefPreview) {{
           const briefingText = String(briefingPayload.briefing || "").trim();
           const segments = briefingText
-            ? briefingText.split(/\n+/).map((line) => line.trim()).filter(Boolean)
+            ? briefingText.split(/\\n+/).map((line) => line.trim()).filter(Boolean)
             : [];
           briefPreview.innerHTML = briefPreviewHtml({{
             actor: briefingPayload.actor || "Chris",

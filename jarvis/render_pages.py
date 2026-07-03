@@ -2898,6 +2898,13 @@ def render_agent_ops_module_page(payload: dict) -> str:
     @media (max-width: 1080px) {{
       .span-4, .span-5, .span-7, .span-8 {{ grid-column: span 12; }}
     }}
+    /* Mobile safety net: grid/flex children default to min-width:auto,
+       letting unbreakable content (URLs, wide inputs, long labels) force
+       tracks past the viewport */
+    .layout > *, .panel, .panel * {{ min-width: 0; }}
+    input, select, textarea {{ max-width: 100%; }}
+    .panel li, .panel code, .panel span, .panel strong, .panel h2 {{ overflow-wrap: anywhere; }}
+
   </style>
 </head>
 <body>
@@ -3697,6 +3704,13 @@ def render_recovery_module_page(payload: dict) -> str:
     @media (max-width: 1080px) {{
       .span-4, .span-5, .span-7, .span-8 {{ grid-column: span 12; }}
     }}
+    /* Mobile safety net: grid/flex children default to min-width:auto,
+       letting unbreakable content (URLs, wide inputs, long labels) force
+       tracks past the viewport */
+    .layout > *, .panel, .panel * {{ min-width: 0; }}
+    input, select, textarea {{ max-width: 100%; }}
+    .panel li, .panel code, .panel span, .panel strong, .panel h2 {{ overflow-wrap: anywhere; }}
+
   </style>
 </head>
 <body>
@@ -6180,6 +6194,13 @@ def render_activity_module_page(payload: dict) -> str:
     @media (max-width: 980px) {{
       .span-4, .span-5, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
+    /* Mobile safety net: grid/flex children default to min-width:auto,
+       letting unbreakable content (URLs, wide inputs, long labels) force
+       tracks past the viewport */
+    .layout > *, .panel, .panel * {{ min-width: 0; }}
+    input, select, textarea {{ max-width: 100%; }}
+    .panel li, .panel code, .panel span, .panel strong, .panel h2 {{ overflow-wrap: anywhere; }}
+
   </style>
 </head>
 <body>
@@ -6718,6 +6739,13 @@ def render_approval_module_page(payload: dict) -> str:
     @media (max-width: 980px) {{
       .span-4, .span-5, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
+    /* Mobile safety net: grid/flex children default to min-width:auto,
+       letting unbreakable content (URLs, wide inputs, long labels) force
+       tracks past the viewport */
+    .layout > *, .panel, .panel * {{ min-width: 0; }}
+    input, select, textarea {{ max-width: 100%; }}
+    .panel li, .panel code, .panel span, .panel strong, .panel h2 {{ overflow-wrap: anywhere; }}
+
   </style>
 </head>
 <body>
@@ -7234,6 +7262,13 @@ def render_supervision_module_page(payload: dict) -> str:
     @media (max-width: 980px) {{
       .span-4, .span-5, .span-7, .span-8, .span-12 {{ grid-column: span 12; }}
     }}
+    /* Mobile safety net: grid/flex children default to min-width:auto,
+       letting unbreakable content (URLs, wide inputs, long labels) force
+       tracks past the viewport */
+    .layout > *, .panel, .panel * {{ min-width: 0; }}
+    input, select, textarea {{ max-width: 100%; }}
+    .panel li, .panel code, .panel span, .panel strong, .panel h2 {{ overflow-wrap: anywhere; }}
+
   </style>
 </head>
 <body>
@@ -7739,6 +7774,13 @@ def render_progress_module_page(payload: dict) -> str:
       .span-4, .span-6, .span-8, .span-12 {{ grid-column: span 12; }}
       .controls {{ flex-direction: column; align-items: stretch; }}
     }}
+    /* Mobile safety net: grid/flex children default to min-width:auto,
+       letting unbreakable content (URLs, wide inputs, long labels) force
+       tracks past the viewport */
+    .layout > *, .panel, .panel * {{ min-width: 0; }}
+    input, select, textarea {{ max-width: 100%; }}
+    .panel li, .panel code, .panel span, .panel strong, .panel h2 {{ overflow-wrap: anywhere; }}
+
   </style>
 </head>
 <body>
@@ -8502,6 +8544,8 @@ def render_daily_brief_module_page(payload: dict) -> str:
       border: 1px solid var(--line); background: var(--dim);
       min-height: 36px;
     }}
+    /* No stray empty box when there is no status to show */
+    .status-bar:empty {{ display: none; }}
 
     @media (max-width: 600px) {{
       .shell {{ padding: 20px 14px 60px; }}
@@ -8525,11 +8569,11 @@ def render_daily_brief_module_page(payload: dict) -> str:
 
     <div id="status-bar" class="status-bar"></div>
 
-    <!-- Greeting -->
+    <!-- Greeting (the pipeline's greeting already carries the voice line —
+         repeating it as a static subtitle read like a glitch) -->
     <div class="greeting" id="greeting-block">
       <div class="eyebrow">JARVIS Daily Brief</div>
       <h1 id="greeting-text">{greeting}</h1>
-      <p class="sub">I've been paying attention.</p>
     </div>
 
     <!-- What Changed Since Yesterday -->
