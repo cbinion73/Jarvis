@@ -1145,6 +1145,7 @@ def render_glass_shell(runtime, initial_packet: str = "", *, inline_assets: bool
                       <button class="forge-viewer-btn" onclick="forgeCameraFront()">Front</button>
                       <button class="forge-viewer-btn" onclick="forgeCameraLayFlat()">Lay Flat</button>
                       <button class="forge-viewer-btn" onclick="forgeScreenshot()">Screenshot</button>
+                      <button class="forge-viewer-btn" id="forge-holo-toggle-btn" onclick="forgeToggleHolo()">Hologram</button>
                       <button class="forge-viewer-btn" onclick="forgeDownloadSTL()" id="forge-dl-stl-btn" style="display:none;">Download STL</button>
                     </div>
                     <div class="forge-upload-zone" id="forge-upload-zone"
