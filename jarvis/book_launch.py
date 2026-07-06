@@ -548,3 +548,77 @@ def generate_launch_assets(
     }
     save_assets(brief.slug, result)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Approval staging — the other half of the loop. Jarvis drafts; nothing goes
+# out the door until Chris approves, and even then there is no live social/
+# press API, so approving only marks the draft ready to hand-post.
+# ---------------------------------------------------------------------------
+
+def propose_launch_assets(
+    queue: Any,
+    *,
+    actor_id: str,
+    agent_id: str,
+    brief: BookBrief,
+    assets: dict[str, Any],
+    trigger: str = "pre_launch",
+) -> dict[str, Any]:
+    """Stage generated launch assets for approval. Submits one ApprovalRequest
+    (action_type="social_post", MEDIUM tier — never auto-approves) covering
+    every platform generated this round."""
+    from .approvals import ApprovalRequest, RiskTier
+
+    request_id = str(uuid.uuid4())
+    now = _now_iso()
+    platforms = [
+        key for key in ("twitter", "linkedin", "press_release", "emails", "amazon_copy")
+        if assets.get(key)
+    ]
+    payload = {
+        "book_slug": brief.slug,
+        "book_title": brief.title,
+        "trigger": trigger,
+        "assets": assets,
+    }
+    request = ApprovalRequest(
+        request_id=request_id,
+        agent_id=agent_id,
+        agent_label="Jarvis",
+        action_type="social_post",
+        title=f"Launch assets: {brief.title}",
+        description=(
+            f"Jarvis drafted launch assets for “{brief.title}” "
+            f"({', '.join(platforms) or 'multiple platforms'}). Jarvis cannot publish "
+            "these — no social/press API is connected. Approving marks them ready; "
+            "you'll still need to hand-post them yourself."
+        ),
+        payload=payload,
+        risk_tier=RiskTier.MEDIUM,
+        actor_id=actor_id,
+        requested_at=now,
+        expires_at=now,
+        status="pending",
+        priority=5,
+        tags=["marketing", "book-launch", brief.slug],
+    )
+    queue.submit(request)
+    twitter_posts = assets.get("twitter")
+    twitter_preview = ""
+    if isinstance(twitter_posts, list) and twitter_posts:
+        first = twitter_posts[0]
+        twitter_preview = first.get("text", "") if isinstance(first, dict) else first
+    return {
+        "proposal_id": request_id,
+        "object_kind": "marketing_assets_proposal",
+        "title": f"Launch assets: {brief.title}",
+        "book_slug": brief.slug,
+        "book_title": brief.title,
+        "platforms": platforms,
+        "twitter_preview": str(twitter_preview)[:280],
+        "press_release_preview": str(assets.get("press_release", ""))[:400],
+        "status": "pending_approval",
+        "created_at": now,
+        "reject_endpoint": f"/api/approvals/{request_id}/reject",
+    }

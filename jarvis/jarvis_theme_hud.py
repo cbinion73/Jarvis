@@ -846,6 +846,8 @@ function summonArtifact(kind, obj) {
   $('holo-title').textContent = String(obj.title || obj.topic || 'Untitled');
   if (kind === 'created_obsidian_note_proposal') {
     $('holo-body').innerHTML = renderObsidianProposalBody(obj);
+  } else if (kind === 'created_marketing_assets') {
+    $('holo-body').innerHTML = renderMarketingAssetsBody(obj);
   } else {
     $('holo-body').innerHTML = renderArtifactBody(obj);
   }
@@ -889,6 +891,44 @@ async function approveObsidianProposal(btn, proposalId) {
 }
 
 async function rejectObsidianProposal(btn, proposalId) {
+  btn.disabled = true;
+  try {
+    await fetch('/api/approvals/' + proposalId + '/reject', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Discarded from HUD' })
+    });
+    dismissPanel();
+  } catch (e) { btn.textContent = 'Failed'; }
+}
+
+function renderMarketingAssetsBody(obj) {
+  const platforms = (obj.platforms || []).map(p => escapeHtml(String(p))).join(', ');
+  const twitter = String(obj.twitter_preview || '').replace(/\n/g, '<br>');
+  const press = String(obj.press_release_preview || '').replace(/\n/g, '<br>');
+  return (
+    '<div class="h-summary">Drafted for &ldquo;' + escapeHtml(String(obj.book_title || '')) + '&rdquo; &mdash; ' +
+    escapeHtml(platforms || 'multiple platforms') +
+    '. Jarvis cannot publish these &mdash; no social/press API is connected. Approve to mark them ready, then hand-post them yourself.</div>' +
+    (twitter ? '<div class="h-section">Twitter (first post)</div><div class="h-row"><span>' + twitter + '</span></div>' : '') +
+    (press ? '<div class="h-section">Press release (preview)</div><div class="h-row"><span>' + press + '</span></div>' : '') +
+    '<div class="act-btns" style="margin-top:14px">' +
+    '<button onclick="approveMarketingAssets(this, \'' + escapeHtml(String(obj.proposal_id || '')) + '\')">Approve (ready to hand-post)</button>' +
+    '<button class="deny" onclick="rejectMarketingAssets(this, \'' + escapeHtml(String(obj.proposal_id || '')) + '\')">Discard</button>' +
+    '</div>'
+  );
+}
+
+async function approveMarketingAssets(btn, proposalId) {
+  btn.disabled = true; btn.textContent = 'Approving…';
+  try {
+    const r = await fetch('/api/approvals/' + proposalId + '/approve', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}'
+    });
+    const d = await r.json();
+    btn.textContent = (d.status === 'approved') ? 'Approved — ready to hand-post' : 'Failed';
+  } catch (e) { btn.textContent = 'Failed'; }
+}
+
+async function rejectMarketingAssets(btn, proposalId) {
   btn.disabled = true;
   try {
     await fetch('/api/approvals/' + proposalId + '/reject', {

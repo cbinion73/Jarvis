@@ -211,6 +211,7 @@ _CREATED_OBJECT_RESULT_FIELDS = (
     "created_constraint_map",
     "created_question_set",
     "created_obsidian_note_proposal",
+    "created_marketing_assets",
 )
 
 _LOCAL_OBJECT_BACKING_FILES = {
@@ -16952,6 +16953,7 @@ class JarvisRuntime:
             "created_constraint_map": dict(result.created_constraint_map) if isinstance(result.created_constraint_map, dict) and result.created_constraint_map else {},
             "created_question_set": dict(result.created_question_set) if isinstance(result.created_question_set, dict) and result.created_question_set else {},
             "created_obsidian_note_proposal": dict(result.created_obsidian_note_proposal) if isinstance(result.created_obsidian_note_proposal, dict) and result.created_obsidian_note_proposal else {},
+            "created_marketing_assets": dict(result.created_marketing_assets) if isinstance(result.created_marketing_assets, dict) and result.created_marketing_assets else {},
         }
 
     def _try_handle_conversation_intercepts(
@@ -17014,6 +17016,15 @@ class JarvisRuntime:
         question_set_result = self._with_creation_truth_proof(self._try_handle_question_set_creation(actor_name, room, request))
         if question_set_result is not None:
             return question_set_result
+        book_launch_status_result = self._with_creation_truth_proof(self._try_handle_book_launch_status(actor_name, room, request))
+        if book_launch_status_result is not None:
+            return book_launch_status_result
+        marketing_asset_result = self._with_creation_truth_proof(self._try_handle_marketing_asset_request(actor_name, room, request))
+        if marketing_asset_result is not None:
+            return marketing_asset_result
+        book_launch_mission_result = self._with_creation_truth_proof(self._try_handle_book_launch_mission_creation(actor_name, room, request))
+        if book_launch_mission_result is not None:
+            return book_launch_mission_result
         if self._should_allow_conversation_mission_intercept(request):
             mission_result = self._try_handle_mission_creation(actor_name, room, request)
             if mission_result is not None:
@@ -17033,19 +17044,20 @@ class JarvisRuntime:
         lowered = str(request or "").strip().lower()
         if not lowered:
             return False
+        # Deliberately narrow: every pattern here names "mission" or "goal"
+        # explicitly. Looser phrases like "build a plan for" or "track this"
+        # used to qualify too — they fire on completely ordinary conversation
+        # ("can you help me build a plan for this week?") and hijack it into
+        # a templated mission-creation reply instead of a real answer.
         explicit_patterns = (
             "create a mission",
             "start a mission",
-            "track this",
             "turn this into a mission",
-            "add this to mission control",
-            "build a plan for",
-            "create a plan for",
-            "plan for ",
+            "mission control",
+            "track this as a mission",
             "make this a goal",
             "make it a goal",
             "turn this into a goal",
-            "open mission control",
         )
         return any(pattern in lowered for pattern in explicit_patterns)
 
@@ -17318,6 +17330,36 @@ class JarvisRuntime:
                 output_text=question_set_result.output_text,
             )
             return question_set_result
+        book_launch_status_result = self._try_handle_book_launch_status(actor_name, room, request)
+        if book_launch_status_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=book_launch_status_result.provider,
+                model=book_launch_status_result.model,
+                active_nodes=["mission-engine"],
+                output_text=book_launch_status_result.output_text,
+            )
+            return book_launch_status_result
+        marketing_asset_result = self._try_handle_marketing_asset_request(actor_name, room, request)
+        if marketing_asset_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=marketing_asset_result.provider,
+                model=marketing_asset_result.model,
+                active_nodes=["book-launch-marketing"],
+                output_text=marketing_asset_result.output_text,
+            )
+            return marketing_asset_result
+        book_launch_mission_result = self._try_handle_book_launch_mission_creation(actor_name, room, request)
+        if book_launch_mission_result is not None:
+            self.audit_log.log_response(
+                plan,
+                provider=book_launch_mission_result.provider,
+                model=book_launch_mission_result.model,
+                active_nodes=["mission-engine"],
+                output_text=book_launch_mission_result.output_text,
+            )
+            return book_launch_mission_result
         mission_result = self._try_handle_mission_creation(actor_name, room, request)
         if mission_result is not None:
             self.audit_log.log_response(
@@ -17845,6 +17887,352 @@ class JarvisRuntime:
             ),
         )
 
+    # ── Ghostwritr book-launch mission bridge ───────────────────────────────
+    # Jarvis manages the business side of a book (project tracking, marketing
+    # drafts); Ghostwritr stays purely the writing tool. These intercepts link
+    # the existing domain-agnostic Mission system (jarvis/missions.py) to a
+    # Ghostwritr book via MissionDossier.memory_snapshot["ghostwritr"] — no
+    # new project/initiative model, no new autonomy loop.
+
+    _BOOK_LAUNCH_KEYWORD_RE = re.compile(
+        r"\b(book|launch|publish(?:ing)?|manuscript|marketing)\b",
+        re.IGNORECASE,
+    )
+    _BOOK_LAUNCH_STATUS_RE = re.compile(
+        r"\b(?:how'?s|how\s+is|status\s+(?:of|on)|what'?s\s+the\s+status\s+(?:of|on)|"
+        r"update\s+(?:me\s+)?on|what'?s\s+happening\s+with)\b",
+        re.IGNORECASE,
+    )
+    _MARKETING_ASSET_RE = re.compile(
+        r"\b(?:draft|generate|create|write)\b.{0,40}\b(?:social\s+posts?|launch\s+assets?|"
+        r"press\s+release|marketing\s+(?:assets?|copy|package)|launch\s+(?:copy|package|kit))\b",
+        re.IGNORECASE,
+    )
+
+    def _resolve_ghostwritr_book_match(self, request: str) -> tuple[Any, Any] | None:
+        """Return (bridge, BookProject) for a Ghostwritr book named in *request*.
+
+        Never fabricates a match: returns None if Ghostwritr isn't reachable
+        from this process, or no real book title appears in the text.
+        """
+        try:
+            from .ghostwritr_bridge import get_ghostwritr_bridge
+            bridge = get_ghostwritr_bridge()
+        except Exception:
+            bridge = None
+        if bridge is None:
+            return None
+        try:
+            books = bridge.get_active_books()
+        except Exception:
+            books = []
+        if not books:
+            return None
+        lowered = str(request or "").lower()
+        best = None
+        for book in books:
+            title = str(getattr(book, "title", "") or "").strip()
+            if title and title.lower() in lowered:
+                if best is None or len(title) > len(str(getattr(best, "title", ""))):
+                    best = book
+        if best is None:
+            return None
+        return bridge, best
+
+    def _get_or_create_book_launch_mission(
+        self,
+        actor_name: str,
+        room: str,
+        request: str,
+        bridge: Any,
+        book: Any,
+    ) -> tuple[dict[str, Any], bool]:
+        """Return (mission_dossier, created) for the mission linked to *book*."""
+        existing = self.mission_support.find_mission_by_ghostwritr_slug(book.slug)
+        if existing is not None:
+            return existing, False
+
+        mission = self.create_mission(actor_name, request, room)
+        mission_id = str(mission.get("mission_id", "")).strip()
+        dossier = self.mission_support.get_mission(mission_id) if mission_id else None
+        if dossier is None:
+            return mission, True
+
+        try:
+            from .book_launch import get_book_brief
+            brief = get_book_brief(bridge, book.slug)
+            # get_book_brief only pulls title from the direct-DB path; when
+            # only the HTTP API is reachable (as in production over Docker),
+            # brief.title falls back to the slug. book.title came from
+            # get_active_books(), which is HTTP-first, so prefer it.
+            if brief is not None and getattr(book, "title", ""):
+                brief.title = book.title
+        except Exception:
+            brief = None
+
+        now = datetime.now(timezone.utc).isoformat()
+        snapshot = dict(dossier.get("memory_snapshot") or {})
+        snapshot["ghostwritr"] = {
+            "system": "ghostwritr",
+            "slug": book.slug,
+            "last_known_stage": getattr(book, "current_stage", "") or "",
+        }
+        dossier["memory_snapshot"] = snapshot
+        dossier["mission_type"] = "book_launch"
+        if brief is not None:
+            promise = str(getattr(brief, "promise", "") or "").strip()
+            dossier["title"] = f"{brief.title}: book launch"
+            dossier["brief"] = f"Manage the launch of “{brief.title}”" + (f" — {promise}" if promise else ".")
+            dossier["objective"] = (
+                f"Successfully launch “{brief.title}” "
+                f"({getattr(book, 'current_stage', '') or 'in progress'})."
+            )
+        dossier["updated_at"] = now
+        self.mission_support.save_mission(dossier)
+        self.mission_support.add_mission_evidence(
+            mission_id,
+            {
+                "evidence_id": str(uuid.uuid4()),
+                "source_agent": "jarvis-orchestrator",
+                "source_system": "ghostwritr",
+                "kind": "ghostwritr-link",
+                "title": "Linked to Ghostwritr book",
+                "summary": f"Tracking “{book.title}” (slug={book.slug}) from Ghostwritr.",
+                "detail": f"Current stage: {getattr(book, 'current_stage', '') or 'unknown'}.",
+                "timestamp": now,
+            },
+        )
+        refreshed = self.mission_support.get_mission(mission_id)
+        return (refreshed if refreshed is not None else dossier), True
+
+    def _try_handle_book_launch_mission_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        cleaned = str(request or "").strip()
+        if not cleaned or len(cleaned.split()) < 4:
+            return None
+        if not self._MISSION_CREATE_RE.search(cleaned):
+            return None
+        if not self._BOOK_LAUNCH_KEYWORD_RE.search(cleaned):
+            return None
+        match = self._resolve_ghostwritr_book_match(cleaned)
+        if match is None:
+            return None
+        bridge, book = match
+
+        mission, created = self._get_or_create_book_launch_mission(actor_name, room, cleaned, bridge, book)
+        route = str(mission.get("workspace_route") or "/mission-board").strip()
+        title = str(mission.get("title", "")).strip() or f"{book.title}: book launch"
+        next_step = str(mission.get("next_step", "")).strip()
+
+        if not created:
+            response = (
+                f"I'm already tracking “{book.title}” as \"{title}\".\n\n"
+                + (f"Next up: {next_step}\n\n" if next_step else "")
+                + f"Open Mission Board: {route}"
+            )
+        else:
+            response = (
+                f"Understood — I'll run point on the launch of “{book.title}”.\n\n"
+                f"I created the mission \"{title}\" and linked it to Ghostwritr.\n\n"
+                + (f"Next up: {next_step}\n\n" if next_step else "")
+                + f"Open Mission Board: {route}"
+            )
+        return OpenAIResult(
+            provider="mission-engine",
+            model="mission-engine",
+            output_text=response,
+        )
+
+    def _try_handle_book_launch_status(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        cleaned = str(request or "").strip()
+        if not cleaned:
+            return None
+        if not self._BOOK_LAUNCH_STATUS_RE.search(cleaned):
+            return None
+        if not self._BOOK_LAUNCH_KEYWORD_RE.search(cleaned):
+            return None
+        match = self._resolve_ghostwritr_book_match(cleaned)
+        if match is None:
+            return None
+        bridge, book = match
+
+        mission = self.mission_support.find_mission_by_ghostwritr_slug(book.slug)
+        if mission is None:
+            return OpenAIResult(
+                provider="mission-engine",
+                model="mission-engine",
+                output_text=(
+                    f"I don't have a project tracked for “{book.title}” yet. "
+                    "Want me to start one?"
+                ),
+            )
+
+        mission_id = str(mission.get("mission_id", "")).strip()
+        snapshot = dict(mission.get("memory_snapshot") or {})
+        ghostwritr_link = dict(snapshot.get("ghostwritr") or {})
+        last_known_stage = str(ghostwritr_link.get("last_known_stage", "")).strip()
+        current_stage = str(getattr(book, "current_stage", "") or "").strip()
+        if current_stage and current_stage != last_known_stage and mission_id:
+            now = datetime.now(timezone.utc).isoformat()
+            self.mission_support.add_mission_evidence(
+                mission_id,
+                {
+                    "evidence_id": str(uuid.uuid4()),
+                    "source_agent": "jarvis-orchestrator",
+                    "source_system": "ghostwritr",
+                    "kind": "ghostwritr-stage-update",
+                    "title": "Ghostwritr stage changed",
+                    "summary": f"“{book.title}” moved from {last_known_stage or 'unknown'} to {current_stage}.",
+                    "detail": (
+                        f"Stages complete: {getattr(book, 'stages_complete', 0)}/"
+                        f"{getattr(book, 'total_stages', 0)}."
+                    ),
+                    "timestamp": now,
+                },
+            )
+            ghostwritr_link["last_known_stage"] = current_stage
+            snapshot["ghostwritr"] = ghostwritr_link
+            refreshed_dossier = self.mission_support.get_mission(mission_id) or mission
+            refreshed_dossier["memory_snapshot"] = snapshot
+            refreshed_dossier["updated_at"] = now
+            mission = self.mission_support.save_mission(refreshed_dossier)
+
+        title = str(mission.get("title", "")).strip() or f"{book.title}: book launch"
+        next_step = str(mission.get("next_step", "")).strip()
+        momentum = str(mission.get("momentum", "")).strip()
+        milestones = mission.get("milestones") or []
+
+        lines = [f"Status on \"{title}\":"]
+        if current_stage:
+            lines.append(
+                f"Ghostwritr stage: {current_stage} "
+                f"({getattr(book, 'stages_complete', 0)}/{getattr(book, 'total_stages', 0)} stages complete)."
+            )
+        if momentum:
+            lines.append(f"Momentum: {momentum}")
+        if next_step:
+            lines.append(f"Next up: {next_step}")
+        if milestones:
+            lines.append(f"{len(milestones)} milestone(s) tracked.")
+        route = str(mission.get("workspace_route") or "/mission-board").strip()
+        lines.append(f"Open Mission Board: {route}")
+
+        return OpenAIResult(
+            provider="mission-engine",
+            model="mission-engine",
+            output_text="\n\n".join(lines),
+        )
+
+    def _try_handle_marketing_asset_request(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
+        cleaned = str(request or "").strip()
+        if not cleaned:
+            return None
+        if not self._MARKETING_ASSET_RE.search(cleaned):
+            return None
+        match = self._resolve_ghostwritr_book_match(cleaned)
+        if match is None:
+            return None
+        bridge, book = match
+        actor = self.get_actor(actor_name)
+
+        mission, _created = self._get_or_create_book_launch_mission(actor_name, room, cleaned, bridge, book)
+        mission_id = str(mission.get("mission_id", "")).strip()
+
+        try:
+            from .book_launch import get_book_brief, generate_launch_assets, propose_launch_assets
+        except Exception:
+            return _record_artifact_creation_result_if_possible(
+                self, actor_name, room, request,
+                OpenAIResult(
+                    provider="book-launch-marketing",
+                    model="book-launch-marketing",
+                    output_text="I couldn't load the launch-asset generator right now, so I didn't draft anything.",
+                ),
+            )
+
+        try:
+            from .llm_gateway import get_gateway
+            gateway = get_gateway()
+        except Exception:
+            gateway = None
+        if gateway is None:
+            return _record_artifact_creation_result_if_possible(
+                self, actor_name, room, request,
+                OpenAIResult(
+                    provider="book-launch-marketing",
+                    model="book-launch-marketing",
+                    output_text="I can't draft launch assets right now — the language model gateway isn't available.",
+                ),
+            )
+
+        try:
+            brief = get_book_brief(bridge, book.slug)
+            if getattr(book, "title", ""):
+                brief.title = book.title
+            result = generate_launch_assets(brief, gateway, trigger="pre_launch")
+        except Exception as exc:
+            return _record_artifact_creation_result_if_possible(
+                self, actor_name, room, request,
+                OpenAIResult(
+                    provider="book-launch-marketing",
+                    model="book-launch-marketing",
+                    output_text=f"I ran into a problem drafting launch assets for “{book.title}”: {exc}",
+                ),
+            )
+
+        from .approvals import get_approval_queue as _get_approval_queue
+        queue = _get_approval_queue()
+        if queue is None:
+            return _record_artifact_creation_result_if_possible(
+                self, actor_name, room, request,
+                OpenAIResult(
+                    provider="book-launch-marketing",
+                    model="book-launch-marketing",
+                    output_text=(
+                        "I drafted the launch assets, but the approval queue isn't available "
+                        "right now, so I can't stage them safely."
+                    ),
+                ),
+            )
+
+        proposal = propose_launch_assets(
+            queue,
+            actor_id=actor.user_id or actor.display_name,
+            agent_id="jarvis-companion",
+            brief=brief,
+            assets=result.get("assets", {}),
+            trigger="pre_launch",
+        )
+        if mission_id:
+            self.mission_support.add_mission_output(
+                mission_id,
+                {
+                    "output_id": str(uuid.uuid4()),
+                    "kind": "marketing_assets",
+                    "title": f"Launch assets drafted ({result.get('status', 'complete')})",
+                    "summary": f"Drafted {', '.join(proposal.get('platforms', [])) or 'launch assets'} for “{book.title}”.",
+                    "status": "pending-approval",
+                    "timestamp": proposal.get("created_at", ""),
+                    "payload_ref": proposal.get("proposal_id", ""),
+                },
+            )
+
+        platforms = ", ".join(proposal.get("platforms", [])) or "several platforms"
+        response = (
+            f"Drafted launch assets for “{book.title}” ({platforms}).\n\n"
+            "I can't publish any of this myself — there's no social/press API connected. "
+            "It's waiting in your approval queue; once you approve it, you'll have "
+            "copy-paste-ready text to post yourself."
+        )
+        return _record_artifact_creation_result_if_possible(
+            self, actor_name, room, request,
+            OpenAIResult(
+                provider="book-launch-marketing",
+                model="book-launch-marketing",
+                output_text=response,
+                created_marketing_assets=proposal,
+            ),
+        )
+
     def _try_handle_structured_note_creation(self, actor_name: str, room: str, request: str) -> OpenAIResult | None:
         actor = self.get_actor(actor_name)
         try:
@@ -18170,9 +18558,14 @@ class JarvisRuntime:
 
     # ── Reminder helper ───────────────────────────────────────────────────────
 
+    # Deliberately narrow: bare "remind(er)" or "note" used to match anywhere
+    # in a sentence (the "note" branch's "to self/me" suffix was optional,
+    # so the single word "note" — as in "note that the weather looks bad" —
+    # silently created a reminder object instead of getting a real reply.
+    # Every branch here now requires Jarvis to be addressed directly.
     _REMINDER_SET_RE = re.compile(
-        r"\b(remind(?:er)?|set\s+(?:a\s+)?reminder|add\s+(?:a\s+)?reminder|"
-        r"don'?t\s+let\s+me\s+forget|remember\s+to|note\s+(?:to\s+(?:self|me))?)\b",
+        r"\b(remind\s+me|set\s+(?:a\s+)?reminder|add\s+(?:a\s+)?reminder|"
+        r"don'?t\s+let\s+me\s+forget|note\s+to\s+(?:self|me))\b",
         re.IGNORECASE,
     )
     _TOMORROW_RE = re.compile(r"\btomorrow\b", re.IGNORECASE)

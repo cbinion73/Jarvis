@@ -2721,7 +2721,13 @@ class CompanionSpineTests(unittest.TestCase):
 
     def test_runtime_conversation_mission_intercept_is_narrowed_to_explicit_planning_language(self) -> None:
         self.assertTrue(JarvisRuntime._should_allow_conversation_mission_intercept(None, "Track this in mission control."))
-        self.assertTrue(JarvisRuntime._should_allow_conversation_mission_intercept(None, "Build a plan for retirement."))
+        # "Build a plan for X" used to qualify, but that phrase fires on
+        # completely ordinary conversation ("can you help me build a plan
+        # for tackling this week?") and hijacks it into a broken templated
+        # reply instead of a real answer — live-verified 2026-07-06 against
+        # a running server. Only unambiguous mission/goal language should
+        # trigger this now.
+        self.assertFalse(JarvisRuntime._should_allow_conversation_mission_intercept(None, "Build a plan for retirement."))
         self.assertFalse(JarvisRuntime._should_allow_conversation_mission_intercept(None, "I need to work on my latest book."))
 
     def test_runtime_explicit_packet_request_only_opens_on_explicit_surface_language(self) -> None:

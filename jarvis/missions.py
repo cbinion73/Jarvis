@@ -551,6 +551,18 @@ class MissionSupport:
     def get_mission(self, mission_id: str) -> dict[str, Any] | None:
         return self._load_mission(mission_id)
 
+    def find_mission_by_ghostwritr_slug(self, slug: str) -> dict[str, Any] | None:
+        """Return the mission linked to a Ghostwritr book slug via memory_snapshot, if any."""
+        target = str(slug or "").strip()
+        if not target:
+            return None
+        for item in self.list_missions(include_completed=True, limit=500):
+            snapshot = item.get("memory_snapshot") or {}
+            gw = snapshot.get("ghostwritr") or {}
+            if str(gw.get("slug", "")).strip() == target:
+                return item
+        return None
+
     def save_mission(self, payload: dict[str, Any]) -> dict[str, Any]:
         records = self.store.list_dossiers()
         payload = self._normalize_work_states(dict(payload))
