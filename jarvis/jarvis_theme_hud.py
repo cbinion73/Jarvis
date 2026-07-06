@@ -146,6 +146,7 @@ _HUD_TEMPLATE = r"""<!DOCTYPE html>
   .topstrip .readouts { display: flex; align-items: center; gap: 22px; }
   .topstrip .readouts a { color: var(--text-dim); text-decoration: none; transition: color 0.2s; }
   .topstrip .readouts a:hover { color: var(--cyan-soft); }
+  .topnav { display: flex; align-items: center; gap: 16px; padding-left: 16px; border-left: 1px solid rgba(94, 234, 212, 0.14); }
   .badge-attn { color: var(--amber); }
   .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 6px; vertical-align: 1px; box-shadow: 0 0 6px var(--green); }
 
@@ -411,7 +412,13 @@ _HUD_TEMPLATE = r"""<!DOCTYPE html>
       <span id="ro-clock">--:--</span>
       <span class="hide-sm" id="ro-agents"><span class="dot"></span>&mdash; agents</span>
       <span id="ro-needs">&mdash;</span>
-      <a href="/command-center" class="hide-sm">OPS</a>
+      <nav class="topnav">
+        <a href="/health">HEALTH</a>
+        <a href="/forge">FORGE</a>
+        <a href="/mission-board" class="hide-sm">MISSIONS</a>
+        <a href="/command-center" class="hide-sm">OPS</a>
+        <a href="/settings-center" class="hide-sm">SETTINGS</a>
+      </nav>
       <a href="/glass" class="hide-sm">CLASSIC</a>
     </div>
   </div>
