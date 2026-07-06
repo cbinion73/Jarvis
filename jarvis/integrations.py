@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from urllib import error, request
 
 from .config import AppConfig
 
@@ -18,35 +17,6 @@ def check_openclaw(config: AppConfig) -> IntegrationStatus:
         name="openclaw",
         ok=bool(config.openclaw_gateway_url),
         detail=f"configured gateway {config.openclaw_gateway_url}",
-    )
-
-
-def check_home_assistant(config: AppConfig) -> IntegrationStatus:
-    if not config.home_assistant_url or not config.home_assistant_token:
-        return IntegrationStatus(
-            name="home-assistant",
-            ok=False,
-            detail="HOME_ASSISTANT_URL or HOME_ASSISTANT_TOKEN is missing",
-        )
-
-    try:
-        req = request.Request(
-            f"{config.home_assistant_url}/api/",
-            headers={"Authorization": f"Bearer {config.home_assistant_token}"},
-        )
-        with request.urlopen(req, timeout=5) as response:
-            status_code = response.status
-    except error.URLError as exc:
-        return IntegrationStatus(
-            name="home-assistant",
-            ok=False,
-            detail=str(exc),
-        )
-
-    return IntegrationStatus(
-        name="home-assistant",
-        ok=200 <= status_code < 300,
-        detail=f"http {status_code}",
     )
 
 
@@ -89,35 +59,6 @@ def check_memory_profile(config: AppConfig) -> IntegrationStatus:
         name="memory-profile",
         ok=True,
         detail=f"loaded profile {config.memory_profile_path}",
-    )
-
-
-def check_openviking(config: AppConfig) -> IntegrationStatus:
-    if not config.openviking_enabled:
-        return IntegrationStatus(
-            name="openviking",
-            ok=False,
-            detail="JARVIS_OPENVIKING_ENABLED is false",
-        )
-    if not config.openviking_base_url:
-        return IntegrationStatus(
-            name="openviking",
-            ok=False,
-            detail="OPENVIKING_BASE_URL is missing",
-        )
-    try:
-        with request.urlopen(f"{config.openviking_base_url}/health", timeout=5) as response:
-            status_code = response.status
-    except error.URLError as exc:
-        return IntegrationStatus(
-            name="openviking",
-            ok=False,
-            detail=str(exc),
-        )
-    return IntegrationStatus(
-        name="openviking",
-        ok=200 <= status_code < 300,
-        detail=f"http {status_code} at {config.openviking_base_url}",
     )
 
 
