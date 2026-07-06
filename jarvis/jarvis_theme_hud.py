@@ -413,7 +413,7 @@ _HUD_TEMPLATE = r"""<!DOCTYPE html>
       <span class="hide-sm" id="ro-agents"><span class="dot"></span>&mdash; agents</span>
       <span id="ro-needs">&mdash;</span>
       <nav class="topnav">
-        <a href="/health">HEALTH</a>
+        <a href="/health-center">HEALTH</a>
         <a href="/forge">FORGE</a>
         <a href="/mission-board" class="hide-sm">MISSIONS</a>
         <a href="/command-center" class="hide-sm">OPS</a>

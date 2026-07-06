@@ -2769,6 +2769,110 @@ def _apply_module_surface_chrome(html: str, active_route: str) -> str:
     return html
 
 
+# ---------------------------------------------------------------------------
+# HUD-aligned module chrome — reskins a page's shared module-surface nav bar
+# to match jarvis_theme_hud.py's exact tokens (void/cyan palette, mono
+# uppercase labels, corner-bracket panels). Opt-in per page via
+# _apply_hud_aligned_module_chrome() instead of _apply_module_surface_chrome()
+# directly, so the other ~16 module-surface pages are untouched.
+# ---------------------------------------------------------------------------
+
+_HUD_ALIGNED_CHROME_OVERRIDES = """
+<style>
+  body.module-surface.hud-aligned {
+    --jv-bg: #030810;
+    --jv-bg-2: #060d1a;
+    --jv-panel: rgba(10, 20, 35, 0.55);
+    --jv-panel-strong: rgba(8, 16, 28, 0.92);
+    --jv-line: rgba(94, 234, 212, 0.16);
+    --jv-line-strong: rgba(94, 234, 212, 0.45);
+    --jv-text: #e6f5f8;
+    --jv-text-soft: #7d99ad;
+    --jv-accent: #22d3ee;
+    --jv-accent-soft: rgba(34, 211, 238, 0.12);
+    font-family: "SF Pro Display", "Inter", "Segoe UI", system-ui, sans-serif !important;
+  }
+  .hud-aligned .module-brand,
+  .hud-aligned .module-chip {
+    font-family: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase;
+  }
+  .hud-aligned .module-chat-link {
+    color: #04222b !important;
+    font-family: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase;
+  }
+</style>
+"""
+
+# Shared HUD signature: mono-uppercase labels, corner-bracket panels, and
+# cyan-bordered buttons — appended into a page's own <style> block so it
+# layers on top of that page's local CSS variables/selectors.
+_HUD_ALIGNED_MODULE_EXTRA_CSS = """
+<style>
+  .hero, .panel, .stat, .glance-card, .storyboard-step, .hero-note,
+  .lane, .mission-card {
+    position: relative;
+  }
+  .hero::before, .panel::before, .stat::before, .glance-card::before,
+  .storyboard-step::before, .hero-note::before, .lane::before, .mission-card::before {
+    content: ""; position: absolute; top: -1px; left: -1px; width: 14px; height: 14px;
+    border-style: solid; border-color: var(--line-strong, rgba(94, 234, 212, 0.45));
+    border-width: 1.5px 0 0 1.5px; pointer-events: none;
+  }
+  .hero::after, .panel::after, .stat::after, .glance-card::after,
+  .storyboard-step::after, .hero-note::after, .lane::after, .mission-card::after {
+    content: ""; position: absolute; bottom: -1px; right: -1px; width: 14px; height: 14px;
+    border-style: solid; border-color: var(--line-strong, rgba(94, 234, 212, 0.45));
+    border-width: 0 1.5px 1.5px 0; pointer-events: none;
+  }
+  .eyebrow, .section-label, .topbar strong, .stat span, .glance-card strong,
+  .storyboard-step strong, .lane h3, .meta label {
+    font-family: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace !important;
+  }
+  a, button {
+    font-family: "SF Mono", "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 11px;
+    border-radius: 3px !important;
+    border-color: var(--line-strong, rgba(94, 234, 212, 0.45)) !important;
+    background: rgba(34, 211, 238, 0.08) !important;
+    color: #67e8f9 !important;
+  }
+  a:hover, button:hover {
+    background: rgba(34, 211, 238, 0.2) !important;
+  }
+  button[type="submit"], .primary-action, #create-mission-button, #refresh-health {
+    background: #22d3ee !important;
+    color: #04222b !important;
+    font-weight: 700;
+  }
+  button[type="submit"]:hover, .primary-action:hover, #create-mission-button:hover, #refresh-health:hover {
+    background: #67e8f9 !important;
+  }
+</style>
+"""
+
+
+def _apply_hud_aligned_module_chrome(html: str, active_route: str) -> str:
+    html = _apply_module_surface_chrome(html, active_route)
+    html = html.replace(
+        'class="module-surface"',
+        'class="module-surface hud-aligned"',
+        1,
+    )
+    html = html.replace(
+        "</style>\n</head>",
+        "</style>\n" + _HUD_ALIGNED_MODULE_EXTRA_CSS + "</head>",
+        1,
+    )
+    html = html.replace("</body>", _HUD_ALIGNED_CHROME_OVERRIDES + "\n</body>", 1)
+    return html
+
+
 def render_agent_ops_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
     return _apply_module_surface_chrome(f"""<!doctype html>
@@ -4577,7 +4681,7 @@ def render_recovery_module_page(payload: dict) -> str:
 
 def render_mission_board_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return _apply_module_surface_chrome(f"""<!doctype html>
+    return _apply_hud_aligned_module_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -4586,24 +4690,25 @@ def render_mission_board_module_page(payload: dict) -> str:
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #071019;
-      --bg-2: #0a1624;
-      --panel: rgba(10, 21, 34, 0.9);
-      --line: rgba(121, 216, 255, 0.14);
-      --text: #edf8ff;
-      --muted: #97b5cb;
-      --accent: #79d8ff;
-      --ok: #94f0bf;
-      --warn: #ffd48a;
-      --risk: #ffb0b0;
+      --bg: #030810;
+      --bg-2: #060d1a;
+      --panel: rgba(10, 20, 35, 0.55);
+      --line: rgba(94, 234, 212, 0.16);
+      --line-strong: rgba(94, 234, 212, 0.45);
+      --text: #e6f5f8;
+      --muted: #7d99ad;
+      --accent: #22d3ee;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --risk: #fb7185;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
       font-family: "SF Pro Display", "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top, rgba(121, 216, 255, 0.14), transparent 36%),
-        linear-gradient(180deg, #040b12 0%, var(--bg) 44%, var(--bg-2) 100%);
+        radial-gradient(circle at top, rgba(34, 211, 238, 0.14), transparent 36%),
+        linear-gradient(180deg, #020509 0%, var(--bg) 44%, var(--bg-2) 100%);
       color: var(--text);
     }}
     .shell {{ max-width: 1480px; margin: 0 auto; padding: 36px 24px 60px; }}
@@ -4626,7 +4731,7 @@ def render_mission_board_module_page(payload: dict) -> str:
       padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(121, 216, 255, 0.12);
+      background: rgba(34, 211, 238, 0.12);
       color: var(--text);
       text-decoration: none;
       font: inherit;
@@ -4704,9 +4809,9 @@ def render_mission_board_module_page(payload: dict) -> str:
       color: var(--muted);
       background: rgba(255,255,255,0.04);
     }}
-    .chip.accepted {{ color: var(--ok); border-color: rgba(148,240,191,0.28); }}
-    .chip.regressed {{ color: var(--risk); border-color: rgba(255,176,176,0.28); }}
-    .chip.steady {{ color: var(--warn); border-color: rgba(255,212,138,0.28); }}
+    .chip.accepted {{ color: var(--ok); border-color: rgba(74,222,128,0.28); }}
+    .chip.regressed {{ color: var(--risk); border-color: rgba(251,113,133,0.28); }}
+    .chip.steady {{ color: var(--warn); border-color: rgba(251,191,36,0.28); }}
     .action-row {{
       display: flex;
       flex-wrap: wrap;
@@ -4750,6 +4855,8 @@ def render_mission_board_module_page(payload: dict) -> str:
       background: rgba(3, 10, 18, 0.9);
       color: #d7e8f4;
       overflow-x: auto;
+      max-height: 420px;
+      overflow-y: auto;
     }}
     .status-note {{
       min-height: 1.3em;
@@ -8859,7 +8966,7 @@ def render_daily_brief_module_page(payload: dict) -> str:
 
 def render_health_module_page(payload: dict) -> str:
     raw_json = json.dumps(payload, indent=2)
-    return _apply_module_surface_chrome(f"""<!doctype html>
+    return _apply_hud_aligned_module_chrome(f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -8868,29 +8975,29 @@ def render_health_module_page(payload: dict) -> str:
   <style>
     :root {{
       color-scheme: dark;
-      --bg: #050d14;
-      --bg-2: #09131d;
-      --panel: rgba(8, 18, 29, 0.92);
-      --panel-2: rgba(13, 27, 39, 0.9);
-      --line: rgba(133, 224, 187, 0.12);
-      --line-strong: rgba(133, 224, 187, 0.24);
-      --text: #ecf7ff;
-      --muted: #9db7cc;
-      --good: #9ce7bf;
-      --warn: #ffd37d;
-      --alert: #ff9d9d;
-      --accent: #79e0ab;
-      --accent-2: #8ee2ff;
+      --bg: #030810;
+      --bg-2: #060d1a;
+      --panel: rgba(10, 20, 35, 0.55);
+      --panel-2: rgba(8, 16, 28, 0.92);
+      --line: rgba(94, 234, 212, 0.16);
+      --line-strong: rgba(94, 234, 212, 0.45);
+      --text: #e6f5f8;
+      --muted: #7d99ad;
+      --good: #4ade80;
+      --warn: #fbbf24;
+      --alert: #fb7185;
+      --accent: #22d3ee;
+      --accent-2: #67e8f9;
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
       font-family: "SF Pro Display", "Segoe UI", sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(133, 224, 187, 0.18), transparent 22%),
-        radial-gradient(circle at top right, rgba(142, 226, 255, 0.12), transparent 20%),
-        radial-gradient(circle at 50% 100%, rgba(255, 211, 125, 0.08), transparent 24%),
-        linear-gradient(180deg, #030910 0%, var(--bg) 42%, var(--bg-2) 100%);
+        radial-gradient(circle at top left, rgba(94, 234, 212, 0.16), transparent 22%),
+        radial-gradient(circle at top right, rgba(34, 211, 238, 0.12), transparent 20%),
+        radial-gradient(circle at 50% 100%, rgba(251, 191, 36, 0.06), transparent 24%),
+        linear-gradient(180deg, #020509 0%, var(--bg) 42%, var(--bg-2) 100%);
       color: var(--text);
     }}
     body::before {{
@@ -8955,8 +9062,8 @@ def render_health_module_page(payload: dict) -> str:
       font-size: 12px;
       padding: 8px 12px;
       border-radius: 999px;
-      border: 1px solid rgba(133, 224, 187, 0.22);
-      background: rgba(133, 224, 187, 0.07);
+      border: 1px solid rgba(94, 234, 212, 0.28);
+      background: rgba(94, 234, 212, 0.08);
     }}
     .eyebrow::before {{
       content: "";
@@ -8982,8 +9089,8 @@ def render_health_module_page(payload: dict) -> str:
     }}
     .stat {{
       background:
-        linear-gradient(180deg, rgba(13, 27, 39, 0.92), rgba(8, 18, 29, 0.98)),
-        radial-gradient(circle at top right, rgba(142, 226, 255, 0.14), transparent 35%);
+        linear-gradient(180deg, rgba(10, 20, 35, 0.92), rgba(8, 16, 28, 0.98)),
+        radial-gradient(circle at top right, rgba(34, 211, 238, 0.14), transparent 35%);
     }}
     .stat span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }}
     .stat strong {{ display: block; margin-top: 6px; font-size: 24px; }}
@@ -9096,7 +9203,7 @@ def render_health_module_page(payload: dict) -> str:
       padding: 10px 14px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: linear-gradient(135deg, rgba(133, 224, 187, 0.16), rgba(142, 226, 255, 0.12));
+      background: linear-gradient(135deg, rgba(94, 234, 212, 0.16), rgba(34, 211, 238, 0.12));
       color: var(--text);
       text-decoration: none;
       font: inherit;
@@ -9128,6 +9235,8 @@ def render_health_module_page(payload: dict) -> str:
       background: rgba(3, 10, 18, 0.9);
       color: #d7e8f4;
       overflow-x: auto;
+      max-height: 420px;
+      overflow-y: auto;
     }}
     .status-note {{ min-height: 1.3em; color: var(--muted); margin-top: 10px; }}
     @media (max-width: 980px) {{
