@@ -117,6 +117,46 @@ class SupervisionSnapshotTests(unittest.TestCase):
             self.assertEqual(snapshot["memory"]["proposal_count"], 1)
             self.assertEqual(snapshot["memory"]["pending_proposals"][0], "Queue posture update")
 
+    def test_approved_proposal_never_shows_as_pending(self) -> None:
+        # memory.py sets status "pending" -> "approved" | "rejected"
+        # (memory.py:951,980). The needs-me filter used to check for
+        # "accepted"/"archived", which the store never actually sets, so an
+        # approved proposal kept surfacing as "needs your review" forever —
+        # live-verified 2026-07-08 with a real 2-month-old approved proposal
+        # ("Emergency allergy note for household") still showing as a
+        # "NEEDS YOU" notification.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            memory_root = tmp_path / "memory"
+            memory_store = MemoryStore(memory_root)
+            memory_store.add_proposal(
+                MemoryProposal(
+                    proposal_id="prop-approved",
+                    actor="Chris",
+                    memory_type="safety",
+                    scope="safety",
+                    owner="Chris",
+                    project="",
+                    title="Emergency allergy note for household",
+                    summary="Emergency allergy note for household",
+                    tags=["safety"],
+                    sensitivity="sensitive",
+                    payload={},
+                    status="approved",
+                    rationale="Memory type 'safety' requires approval before storage.",
+                    created_at="2026-05-06T13:24:03+00:00",
+                )
+            )
+            snapshot = build_supervision_snapshot(
+                memory_root=memory_root,
+                approvals_root=tmp_path / "approvals",
+                integration_statuses=[],
+            )
+            self.assertEqual(snapshot["memory"]["pending_proposals"], [])
+            self.assertFalse(
+                any(item["kind"] == "memory" for item in snapshot["what_needs_me"])
+            )
+
     def test_render_and_write_snapshot_outputs_openable_report(self) -> None:
         snapshot = {
             "generated_at": "2026-06-02T12:00:00+00:00",

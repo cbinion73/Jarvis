@@ -123,10 +123,15 @@ def _memory_summary(store: MemoryStore) -> dict[str, Any]:
         "proposal_count": len(proposals),
         "fact_count": len(facts),
         "latest_entry_titles": [item.get("title", "") for item in entries[-3:]][::-1],
+        # MemoryStore actually sets "pending" -> "approved" | "rejected"
+        # (memory.py:951,980) — this used to check for "accepted"/"archived",
+        # neither of which the store ever sets, so every approved proposal
+        # kept surfacing as "needs your review" forever, no matter how long
+        # ago it was actually resolved.
         "pending_proposals": [
             item.get("title", "")
             for item in proposals
-            if str(item.get("status", "")).lower() not in {"accepted", "rejected", "archived"}
+            if str(item.get("status", "")).lower() == "pending"
         ][:5],
     }
 
