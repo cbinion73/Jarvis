@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from .config import AppConfig
@@ -69,16 +70,45 @@ def check_google_workspace(config: AppConfig) -> IntegrationStatus:
             ok=False,
             detail="Google client secret is missing",
         )
-    if not config.google_token_path.exists():
+
+    # The real connect flow (jarvis.google_workspace) is per-account: each
+    # connected account's token lives at data/google/{account_id}.json, not
+    # at the single legacy config.google_token_path this check used to look
+    # at exclusively. That mismatch meant a successfully connected account
+    # still reported "not connected" here forever. Check both: the legacy
+    # path (older single-account setups) and every registered google
+    # account's real per-account token file.
+    if config.google_token_path.exists():
         return IntegrationStatus(
             name="google-workspace",
-            ok=False,
-            detail="Google account is not connected yet",
+            ok=True,
+            detail=f"token loaded from {config.google_token_path}",
         )
+
+    from .accounts import ACCOUNTS_PATH
+
+    try:
+        accounts = json.loads(ACCOUNTS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        accounts = []
+
+    token_dir = config.google_token_path.parent
+    for account in accounts if isinstance(accounts, list) else []:
+        if not isinstance(account, dict) or account.get("provider") != "google":
+            continue
+        account_id = str(account.get("account_id", "")).strip()
+        if account_id and (token_dir / f"{account_id}.json").exists():
+            label = str(account.get("label", "")).strip() or account_id
+            return IntegrationStatus(
+                name="google-workspace",
+                ok=True,
+                detail=f"{label} connected",
+            )
+
     return IntegrationStatus(
         name="google-workspace",
-        ok=True,
-        detail=f"token loaded from {config.google_token_path}",
+        ok=False,
+        detail="Google account is not connected yet",
     )
 
 
