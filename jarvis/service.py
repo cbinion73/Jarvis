@@ -16027,14 +16027,20 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
                 "error": "Scheduler not initialised",
             })
         status = scheduler.get_status()
+        paused = status.get("paused_by_config", False)
         healthy = (
-            status.get("running", False)
-            and len(status.get("stale_jobs", [])) == 0
-            and len(status.get("unhealthy_agents", [])) == 0
+            paused
+            or (
+                status.get("running", False)
+                and len(status.get("stale_jobs", [])) == 0
+                and len(status.get("unhealthy_agents", [])) == 0
+            )
         )
         return _json({
             "healthy": healthy,
             "source": "live",
+            "paused_by_config": paused,
+            "note": status.get("note", ""),
             "scheduler_running": status.get("running", False),
             "last_tick_at": status.get("last_tick_at", ""),
             "tick_count": status.get("tick_count", 0),
