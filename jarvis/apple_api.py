@@ -6770,6 +6770,62 @@ _notification_center = _NotificationCenterStore(_NOTIFICATION_CENTER_PATH, _even
 _notification_store = _NotificationStore()
 _health_store = HealthSampleStore()
 
+# Maps the "Health Exporter & Shortcuts" app's native JSON keys to the
+# canonical `type` values HealthSampleStore.get_summary() understands.
+# Keys not listed here pass through as their own (still-useful) sample type.
+_EXPORTER_METRIC_MAP = {
+    "stepCount": "steps",
+    "activeCalories": "active_energy",
+    "restingHeartRate": "resting_heart_rate",
+    "sleepTime": "sleep",
+    "heartRateVariability": "hrv",
+}
+_EXPORTER_SKIP_KEYS = {"exportInfo", "actor_id"}
+
+
+def _exporter_payload_to_samples(payload: dict, source: str = "health_exporter") -> list[dict]:
+    """
+    Normalize a raw export from a third-party Health export app into
+    HealthSampleStore sample dicts. Handles two shapes:
+      - health metrics: {"stepCount": [{date, value, unit}, ...], ...}
+      - workouts: {"workouts": [{...}, ...]} (fields vary by exporter)
+    Unknown top-level keys are passed through with their own key as `type`
+    so nothing is silently dropped, just not aggregated into the headline
+    summary fields.
+    """
+    samples: list[dict] = []
+    for key, entries in payload.items():
+        if key in _EXPORTER_SKIP_KEYS or not isinstance(entries, list):
+            continue
+        if key == "workouts":
+            for w in entries:
+                if not isinstance(w, dict):
+                    continue
+                sample = dict(w)
+                sample["type"] = "workout"
+                sample.setdefault("date", w.get("date") or w.get("startDate") or w.get("start"))
+                sample.setdefault("value", w.get("duration") or w.get("calories") or w.get("activeEnergy") or 0)
+                sample["source"] = source
+                samples.append(sample)
+            continue
+        mapped_type = _EXPORTER_METRIC_MAP.get(key, key)
+        for entry in entries:
+            if not isinstance(entry, dict) or entry.get("value") is None:
+                continue
+            value = float(entry["value"])
+            if key == "sleepTime":
+                value = value / 60.0  # exporter reports minutes; store expects hours
+            samples.append(
+                {
+                    "type": mapped_type,
+                    "value": value,
+                    "date": entry.get("date"),
+                    "unit": entry.get("unit"),
+                    "source": source,
+                }
+            )
+    return samples
+
 
 # ---------------------------------------------------------------------------
 # Greeting helpers
@@ -10053,6 +10109,23 @@ def _register_apple_api(app: FastAPI, runtime: Any) -> None:  # noqa: C901
 
         logged = _health_store.log_samples(actor_id, samples)
         return _ok({"logged": logged})
+
+    # ------------------------------------------------------------------
+    # POST /api/apple/health/import
+    # ------------------------------------------------------------------
+    @app.post("/api/apple/health/import")
+    async def apple_health_import(payload: dict):
+        """
+        Receive a raw export from a third-party Health export app (e.g. the
+        "Health Exporter & Shortcuts" iOS app) and normalize it into
+        HealthSampleStore samples. Accepts the exporter's native shape as-is
+        -- no client-side reshaping required. Optional "actor_id" field
+        alongside the metric keys; defaults to "chris".
+        """
+        actor_id = str(payload.get("actor_id") or "chris").strip()
+        samples = _exporter_payload_to_samples(payload)
+        logged = _health_store.log_samples(actor_id, samples)
+        return _ok({"logged": logged, "samples": len(samples)})
 
     @app.get("/api/apple/health/checkins")
     async def apple_health_checkins(actor: str = "chris"):
