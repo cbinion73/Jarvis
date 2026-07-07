@@ -9185,6 +9185,7 @@ def render_health_module_page(payload: dict) -> str:
     .span-6 {{ grid-column: span 6; }}
     .span-7 {{ grid-column: span 7; }}
     .span-8 {{ grid-column: span 8; }}
+    .span-12 {{ grid-column: span 12; }}
     h2 {{ margin: 0 0 12px; font-size: 1.2rem; letter-spacing: -0.03em; }}
     ul {{ list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }}
     li {{
@@ -9330,6 +9331,13 @@ def render_health_module_page(payload: dict) -> str:
       </div>
     </section>
     <div class="layout">
+      <section class="panel span-12">
+        <h2>Lab Trends</h2>
+        <p style="margin:0 0 12px;font-size:12px;color:var(--muted);">Real values from your lab history — not sample data.</p>
+        <div id="lab-trends-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:14px;">
+          <div class="glance-card"><span>Loading lab trends…</span></div>
+        </div>
+      </section>
       <section class="panel span-8">
         <h2>Drift Overview</h2>
         <ul id="drift-overview-list"></ul>
@@ -9572,6 +9580,71 @@ def render_health_module_page(payload: dict) -> str:
       payloadPreview.textContent = JSON.stringify(payload, null, 2);
     }}
 
+    // Real lab-trend sparklines — adapted from health_dashboard.py's
+    // buildSparkline(), but fed by /api/health/labs/trends (real
+    // test_results history) instead of hardcoded sample points.
+    function buildSparkline(points, color) {{
+      if (!points || points.length < 2) {{
+        return `<svg viewBox="0 0 200 50" style="width:100%;height:50px;"><circle cx="100" cy="25" r="4" fill="${{color}}"/></svg>`;
+      }}
+      const vals = points.map(p => p.y);
+      const min = Math.min(...vals);
+      const max = Math.max(...vals);
+      const range = max - min || 1;
+      const W = 200, H = 50, PAD = 6;
+      const coords = points.map((p, i) => {{
+        const x = PAD + (i / (points.length - 1)) * (W - PAD * 2);
+        const y = H - PAD - ((p.y - min) / range) * (H - PAD * 2);
+        return [x, y];
+      }});
+      const path = coords.map((c, i) => (i === 0 ? `M${{c[0]}},${{c[1]}}` : `L${{c[0]}},${{c[1]}}`)).join(" ");
+      const area = `${{path}} L${{coords[coords.length - 1][0]}},${{H}} L${{coords[0][0]}},${{H}} Z`;
+      const gid = "sg" + color.replace("#", "");
+      const labels = points.map((p, i) => {{
+        const [x, y] = coords[i];
+        return `<text x="${{x}}" y="${{H + 8}}" text-anchor="middle" font-size="7" fill="var(--muted)">${{esc(p.x)}}</text>`;
+      }}).join("");
+      const lastDot = coords[coords.length - 1];
+      return `<svg viewBox="0 0 ${{W}} ${{H + 12}}" style="width:100%;height:62px;">
+        <defs><linearGradient id="${{gid}}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${{color}}" stop-opacity=".3"/>
+          <stop offset="100%" stop-color="${{color}}" stop-opacity=".02"/>
+        </linearGradient></defs>
+        <path d="${{area}}" fill="url(#${{gid}})"/>
+        <path d="${{path}}" fill="none" stroke="${{color}}" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="${{lastDot[0]}}" cy="${{lastDot[1]}}" r="3.5" fill="${{color}}"/>
+        ${{labels}}
+      </svg>`;
+    }}
+
+    async function loadLabTrends() {{
+      const grid = document.getElementById("lab-trends-grid");
+      try {{
+        const response = await fetch("/api/health/labs/trends");
+        const payload = await response.json();
+        const trends = payload.trends || {{}};
+        const names = Object.keys(trends);
+        if (!names.length) {{
+          grid.innerHTML = '<div class="glance-card"><span>No lab history on file yet.</span></div>';
+          return;
+        }}
+        grid.innerHTML = names.map((name) => {{
+          const t = trends[name];
+          const points = t.dates.map((d, i) => ({{ x: d.slice(0, 7), y: t.nums[i] }}))
+            .filter((p) => typeof p.y === "number")
+            .reverse();
+          const color = t.at_goal === false ? "#fb7185" : (t.at_goal === true ? "#4ade80" : "#22d3ee");
+          return `<div class="glance-card">
+            <strong>${{esc(t.label)}} <span style="float:right;color:${{color}};">${{esc(t.trend)}}</span></strong>
+            ${{buildSparkline(points, color)}}
+            <span>Latest: ${{esc(t.latest)}} ${{esc(t.unit)}} · Goal ${{esc(t.goal)}}</span>
+          </div>`;
+        }}).join("");
+      }} catch (error) {{
+        grid.innerHTML = `<div class="glance-card"><span>Lab trends unavailable: ${{esc(String(error))}}</span></div>`;
+      }}
+    }}
+
     async function refreshHealthState() {{
       statusNote.textContent = "Refreshing health module state…";
       try {{
@@ -9744,6 +9817,7 @@ def render_health_module_page(payload: dict) -> str:
     document.getElementById("objective-form").addEventListener("submit", saveObjective);
     document.getElementById("checkin-form").addEventListener("submit", saveCheckin);
     render(initialPayload);
+    loadLabTrends();
   </script>
 </body>
 </html>

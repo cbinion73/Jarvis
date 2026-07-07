@@ -21912,6 +21912,28 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except Exception as exc:
             return _json({"ok": False, "error": str(exc), "today": {}, "history": []})
 
+    @app.get("/api/health/labs/trends")
+    async def api_health_labs_trends() -> JSONResponse:
+        """Real historical lab trends for sparklines — no sample/mock data.
+
+        Reuses health_intelligence._build_lab_trends(), which already queries
+        the real test_results table (health.db) that Helen Cho's own LLM
+        context is grounded in. Surfaces the tests most relevant to Chris's
+        actual tracked conditions (diabetes, lipids, CKD/potassium restriction)
+        rather than all ~20 tracked panels.
+        """
+        try:
+            from . import health_intelligence as _hi
+        except ImportError:
+            import health_intelligence as _hi  # type: ignore[no-redef]
+        key_tests = ["HGB A1C", "LDL CALCULATED", "POTASSIUM", "EGFR (CKD-EPICR 2021)"]
+        try:
+            all_trends = await _hi._build_lab_trends()
+            trends = {name: all_trends[name] for name in key_tests if name in all_trends}
+            return _json({"ok": True, "trends": trends})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "trends": {}})
+
     @app.get("/api/health/bp")
     async def api_health_bp() -> JSONResponse:
         """Blood pressure readings from health_bridge."""
