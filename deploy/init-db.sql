@@ -5,3 +5,6 @@ GRANT ALL PRIVILEGES ON DATABASE chronicle TO current_user;
 
 CREATE DATABASE jarvis_catalyst;
 GRANT ALL PRIVILEGES ON DATABASE jarvis_catalyst TO current_user;
+
+CREATE DATABASE jarvis_home;
+GRANT ALL PRIVILEGES ON DATABASE jarvis_home TO current_user;

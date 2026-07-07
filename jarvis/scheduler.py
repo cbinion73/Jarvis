@@ -1720,6 +1720,7 @@ class AgentScheduler:
         self._max_workers = 3
         self._event_hooks: dict[str, list[Callable]] = {}
         self._morning_fired_date: str = ""  # YYYY-MM-DD — prevents double-firing
+        self._paused_by_config: bool = False  # set by init_scheduler() when disabled via env
         self._last_tick_at: str = ""        # ISO timestamp of most recent _tick() start
         self._tick_count: int = 0           # total ticks since start
 
@@ -1781,6 +1782,9 @@ class AgentScheduler:
         Fire a named event, queuing all agents that have this event in their
         triggers.  Returns number of agents queued.
         """
+        if self._paused_by_config:
+            logger.debug("fire_event(%s): scheduler paused by config, ignoring", event_type)
+            return 0
         payload = payload or {}
         queued = 0
         try:
@@ -1810,6 +1814,9 @@ class AgentScheduler:
 
     def force_run(self, agent_id: str, payload: dict | None = None) -> AgentWorkItem | None:
         """Manually trigger a specific agent immediately."""
+        if self._paused_by_config:
+            logger.debug("force_run(%s): scheduler paused by config, ignoring", agent_id)
+            return None
         payload = payload or {}
         try:
             agent_def = self._runtime.agent_registry.by_id().get(agent_id)
@@ -1838,6 +1845,28 @@ class AgentScheduler:
     def get_status(self) -> dict:
         """Return scheduler health snapshot for UI display and /api/scheduler/health."""
         now_str = _now_iso()
+        if self._paused_by_config:
+            return {
+                "running": False,
+                "paused_by_config": True,
+                "quiet_hours": self._is_quiet_hours(),
+                "queue_depth": 0,
+                "running_count": 0,
+                "dead_letter_count": 0,
+                "stale_jobs": [],
+                "last_tick_at": self._last_tick_at,
+                "tick_count": self._tick_count,
+                "next_due_work": [],
+                "unhealthy_agents": [],
+                "recent_work": [],
+                "dead_letter": [],
+                "workers_active": 0,
+                "generated_at": now_str,
+                "note": (
+                    "Background agent execution is paused (JARVIS_BACKGROUND_AGENTS_ENABLED=false) "
+                    "pending redesign of the work-queue/agent-assignment model."
+                ),
+            }
         queued = self._queue.get_queued()
         running = self._queue.get_running()
         dead_letter = self._queue.get_dead_letter()
@@ -1889,6 +1918,7 @@ class AgentScheduler:
 
         return {
             "running": self._running,
+            "paused_by_config": False,
             "quiet_hours": self._is_quiet_hours(),
             "queue_depth": len(queued),
             "running_count": len(running),
@@ -2989,11 +3019,24 @@ def init_scheduler(runtime: Any) -> tuple[AgentScheduler, BriefingBuilder]:
     scheduler = AgentScheduler(runtime, queue, state_store)
     briefing = BriefingBuilder(queue, scheduler)
 
-    scheduler.start()
+    import os as _os
+    agents_enabled = _os.environ.get(
+        "JARVIS_BACKGROUND_AGENTS_ENABLED", "true"
+    ).strip().lower() not in ("0", "false", "no", "off")
+
+    if agents_enabled:
+        scheduler.start()
+        logger.info("AgentScheduler singleton initialised and started")
+    else:
+        scheduler._paused_by_config = True
+        logger.warning(
+            "AgentScheduler NOT started: JARVIS_BACKGROUND_AGENTS_ENABLED is disabled — "
+            "all background agent execution is paused pending redesign of the "
+            "work-queue/agent-assignment model"
+        )
 
     _scheduler_singleton = scheduler
     _briefing_singleton = briefing
-    logger.info("AgentScheduler singleton initialised and started")
     return scheduler, briefing
 
 

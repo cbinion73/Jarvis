@@ -17,6 +17,13 @@ services:
       CHRONICLE_API_URL: http://chronicle:5174
       GHOSTWRITR_BASE_URL: http://ghostwritr:3000
       CATALYST_DB_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/jarvis_catalyst
+      JARVIS_HOME_DB_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/jarvis_home
+      # Background agent scheduler intentionally paused pending redesign of the
+      # work-queue/agent-assignment model (2026-07-07). Flip to "true" to resume.
+      JARVIS_BACKGROUND_AGENTS_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - internal
 
