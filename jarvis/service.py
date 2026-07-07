@@ -22060,39 +22060,169 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         except Exception as exc:
             return _json({"ok": False, "error": str(exc), "summary": "", "epic": {}})
 
-    @app.get("/api/health/sam/evaluate")
-    @app.get("/api/health/sam/daily")
-    @app.get("/api/health/sam/checkin")
-    @app.get("/api/health/sam/evening-checkin")
-    @app.get("/api/health/sam/diet-interview")
-    async def api_health_sam_evaluate() -> JSONResponse:
-        """Sam Wilson evaluation / daily / check-in endpoint."""
+    # ── Sam Wilson — real coaching routes ─────────────────────────────────
+    # These previously returned canned placeholder text and never touched
+    # jarvis/sam_wilson.py; the health dashboard's Sam card (chat, diet
+    # interview, food log, daily journal, evening check-in) was a UI wired
+    # to stubs. Every route below now calls the real module.
+
+    def _sam_llm_client():
+        client = getattr(runtime, "openai_client", None)
+        if client is not None and callable(getattr(client, "prompt_text", None)):
+            return client
+        return None
+
+    def _sam_metrics() -> dict:
         try:
             from . import health_agent as _ha
         except ImportError:
             import health_agent as _ha  # type: ignore[no-redef]
         try:
+            return _ha.get_health_metrics() or {}
+        except Exception:
+            return {}
+
+    @app.get("/api/health/sam/evaluate")
+    @app.get("/api/health/sam/checkin")
+    async def api_health_sam_evaluate() -> JSONResponse:
+        """Sam Wilson dashboard state + adherence streak."""
+        try:
+            from . import health_agent as _ha, sam_wilson
+        except ImportError:
+            import health_agent as _ha, sam_wilson  # type: ignore[no-redef]
+        try:
             dashboard = _ha.get_dashboard_data()
-            return _json({"ok": True, "dashboard": dashboard})
+            return _json({"ok": True, "dashboard": dashboard, "streak": sam_wilson.get_streak()})
         except Exception as exc:
-            return _json({"ok": False, "error": str(exc), "dashboard": {}})
+            return _json({"ok": False, "error": str(exc), "dashboard": {}, "streak": {}})
+
+    @app.get("/api/health/sam/daily")
+    async def api_health_sam_daily() -> JSONResponse:
+        """Sam's real daily protocol (cached per day) + streak."""
+        try:
+            from . import sam_wilson
+        except ImportError:
+            import sam_wilson  # type: ignore[no-redef]
+        try:
+            protocol = sam_wilson.get_cached_protocol()
+            if not protocol:
+                protocol = await sam_wilson.generate_daily_protocol(_sam_llm_client(), _sam_metrics())
+            return _json({"ok": True, "protocol": protocol or {}, "streak": sam_wilson.get_streak()})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "protocol": {}, "streak": {}})
 
     @app.post("/api/health/sam/chat")
     async def api_health_sam_chat(request: Request) -> JSONResponse:
-        """Sam Wilson health coaching chat."""
+        """Sam Wilson coaching chat — the real module, not a placeholder."""
+        try:
+            from . import sam_wilson
+        except ImportError:
+            import sam_wilson  # type: ignore[no-redef]
         try:
             body = await request.json()
         except Exception:
             return JSONResponse({"error": "Invalid JSON"}, status_code=400)
         message = str(body.get("message") or body.get("text") or "").strip()
-        if not message:
+        mode = str(body.get("mode") or "chat")
+        if not message and mode != "interview":
             return _json({"ok": False, "reply": "No message provided.", "available": False})
-        return _json({
-            "ok": True,
-            "reply": "Sam Wilson coaching is available through the health module. Use the health check-in to log symptoms and get coaching guidance.",
-            "available": True,
-            "source": "shell",
-        })
+        history = body.get("history")
+        try:
+            result = await sam_wilson.chat_with_sam(
+                message,
+                history if isinstance(history, list) else [],
+                metrics=_sam_metrics(),
+                llm_client=_sam_llm_client(),
+                mode=mode,
+                interview_step=int(body.get("interview_step") or 0),
+                food_date=body.get("food_date") or None,
+            )
+            return _json({"ok": True, "available": True, **result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "reply": "Sam hit a snag — try that again.", "available": True})
+
+    @app.post("/api/health/sam/diet-interview")
+    async def api_health_sam_diet_interview(request: Request) -> JSONResponse:
+        """Structured diet interview — builds Sam's food-preference playbook."""
+        try:
+            from . import sam_wilson
+        except ImportError:
+            import sam_wilson  # type: ignore[no-redef]
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        try:
+            result = await sam_wilson.run_diet_interview(
+                int(body.get("step") or 0),
+                str(body.get("answer") or "").strip() or None,
+                _sam_llm_client(),
+            )
+            return _json({"ok": True, **result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "reply": "Interview hit a snag — try that again.", "done": False})
+
+    @app.get("/api/health/sam/food-log")
+    async def api_health_sam_food_log() -> JSONResponse:
+        """Today's real food log from the nutrition engine."""
+        try:
+            from . import sam_wilson
+        except ImportError:
+            import sam_wilson  # type: ignore[no-redef]
+        try:
+            return _json({"ok": True, **sam_wilson.get_today_food_log()})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "meals": [], "protein_g": 0})
+
+    @app.post("/api/health/sam/journal")
+    async def api_health_sam_journal_post(request: Request) -> JSONResponse:
+        """Free-text daily journal → Sam extracts, logs, and coaches."""
+        try:
+            from . import sam_wilson
+        except ImportError:
+            import sam_wilson  # type: ignore[no-redef]
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        narrative = str(body.get("message") or body.get("narrative") or "").strip()
+        if not narrative:
+            return _json({"ok": False, "reply": "Nothing to log yet — tell me about your day."})
+        history = body.get("history")
+        try:
+            result = await sam_wilson.process_journal_entry(
+                narrative,
+                history if isinstance(history, list) else [],
+                body.get("date") or None,
+                _sam_metrics(),
+                _sam_llm_client(),
+            )
+            return _json({"ok": True, **result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "reply": "Journal hit a snag — try that again."})
+
+    @app.post("/api/health/sam/evening-checkin")
+    async def api_health_sam_evening_checkin(request: Request) -> JSONResponse:
+        """Evening adherence check-in → real logging + Sam's end-of-day read."""
+        try:
+            from . import sam_wilson
+        except ImportError:
+            import sam_wilson  # type: ignore[no-redef]
+        try:
+            body = await request.json()
+        except Exception:
+            return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+        completed = body.get("completed")
+        try:
+            result = await sam_wilson.submit_evening_checkin(
+                [str(item) for item in completed] if isinstance(completed, list) else [],
+                str(body.get("notes") or ""),
+                metrics=_sam_metrics(),
+                llm_client=_sam_llm_client(),
+            )
+            return _json({"ok": True, **result})
+        except Exception as exc:
+            return _json({"ok": False, "error": str(exc), "reply": "Check-in hit a snag — try that again."})
 
     @app.get("/api/health/helen/analysis")
     async def api_health_helen_analysis() -> JSONResponse:

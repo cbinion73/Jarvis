@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from dataclasses import dataclass, field
@@ -231,6 +232,18 @@ class JarvisOpenAIClient:
             except Exception:
                 pass
 
+        # gpt-5/o-series reasoning models spend hidden reasoning tokens out of
+        # the same max_output_tokens budget. A small cap (e.g. Sam's 300) gets
+        # entirely consumed by reasoning and the visible reply comes back
+        # EMPTY — the same failure llm_gateway patched, observed live again
+        # 2026-07-07 through Sam's coaching chat. Pad the budget and cap the
+        # reasoning effort for those models; callers' max_output_tokens keeps
+        # meaning "visible output budget".
+        reasoning_kwargs: dict = {}
+        if any(chosen_model.startswith(prefix) for prefix in ("gpt-5", "o1", "o3")):
+            max_output_tokens = max_output_tokens + 2048
+            reasoning_kwargs = {"reasoning": {"effort": os.getenv("JARVIS_REASONING_EFFORT", "low")}}
+
         try:
             if not self.config.openai_api_key:
                 raise RuntimeError("OPENAI_API_KEY is missing.")
@@ -245,6 +258,7 @@ class JarvisOpenAIClient:
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt},
                         ],
+                        **reasoning_kwargs,
                     }
                 ).encode("utf-8")
                 body = self._respond_via_curl(payload)
@@ -263,6 +277,7 @@ class JarvisOpenAIClient:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
+                **reasoning_kwargs,
             )
             return response.output_text.strip()
         except Exception as exc:
