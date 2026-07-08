@@ -888,31 +888,38 @@ class TestChronicleNarrativeRoutes(unittest.TestCase):
     """Verify the chronicle narrative helper functions work stand-alone."""
 
     def _make_chronicle_payload(self) -> dict:
+        from datetime import datetime, timedelta
+
+        today = datetime.now()
+
+        def days_ago(n: int) -> str:
+            return (today - timedelta(days=n)).strftime("%Y-%m-%d")
+
         return {
             "entries": [
                 {
-                    "date": "2026-06-10",
+                    "date": days_ago(0),
                     "title": "Morning Prayer",
                     "body": "Prayed for the family",
                     "type": "prayer",
                     "themes": ["prayer", "family"],
                 },
                 {
-                    "date": "2026-06-09",
+                    "date": days_ago(1),
                     "title": "Scripture Study",
                     "body": "Read Psalm 23",
                     "type": "note",
                     "themes": ["scripture", "devotional"],
                 },
                 {
-                    "date": "2026-06-08",
+                    "date": days_ago(2),
                     "title": "Reached first savings milestone",
                     "body": "Hit 10k savings goal",
                     "type": "milestone",
                     "themes": ["finance", "milestone"],
                 },
                 {
-                    "date": "2026-06-07",
+                    "date": days_ago(3),
                     "title": "Morning Prayer",
                     "body": "Morning session",
                     "type": "prayer",
