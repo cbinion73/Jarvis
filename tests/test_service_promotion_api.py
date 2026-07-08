@@ -211,7 +211,6 @@ class _StubRuntime:
             elevenlabs_voice="",
             piper_model_path=None,
             piper_speaker="0",
-            second_brain_enabled=False,
         )
         self.supervision_support = _StubSupervisionSupport()
         self.promotion_calls: list[tuple[str, dict]] = []

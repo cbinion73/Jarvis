@@ -27,15 +27,6 @@ class OptionalIntegrationPostureVisibilityTests(unittest.TestCase):
             openai_api_key="",
             google_client_secret_path=Path("config/google_client_secret.json"),
         )
-        runtime.openai_client = SimpleNamespace(
-            second_brain_status=lambda: {
-                "enabled": False,
-                "healthy": False,
-                "model_available": False,
-                "provider": "ollama",
-                "model": "qwen2.5:7b",
-            }
-        )
         runtime.home_support = SimpleNamespace(adapter=SimpleNamespace(live=False))
         return runtime
 

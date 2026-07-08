@@ -1073,7 +1073,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
         guardian = runtime.guardian_status_snapshot()
         openviking_enabled = bool(getattr(runtime.openviking_support, "enabled", False))
         openviking_base_url = str(getattr(runtime.openviking_support, "base_url", "")).strip() if openviking_enabled else ""
-        second_brain_enabled = bool(getattr(runtime.config, "second_brain_enabled", False))
         obsidian = runtime.obsidian_status()
         return {
             "ok": True,
@@ -1098,7 +1097,6 @@ def build_app(runtime: JarvisRuntime) -> FastAPI:
             },
             "brain_graph": {
                 "probe": "skipped",
-                "second_brain_enabled": second_brain_enabled,
             },
             "obsidian": {
                 "enabled": bool(obsidian.get("enabled")),

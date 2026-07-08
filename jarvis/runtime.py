@@ -5545,21 +5545,6 @@ class JarvisRuntime:
             }
         )
 
-        second_brain = self.openai_client.second_brain_status()
-        second_ok = bool(second_brain.get("enabled") and second_brain.get("healthy") and second_brain.get("model_available"))
-        items.append(
-            {
-                "name": "local-brain",
-                "ok": second_ok,
-                "state": "connected" if second_ok else ("configured" if second_brain.get("enabled") else "disabled"),
-                "detail": (
-                    f"{second_brain.get('provider', 'local')} · {second_brain.get('model', '--')} ready"
-                    if second_ok
-                    else f"{second_brain.get('provider', 'local')} · {second_brain.get('model', '--')} not ready"
-                ),
-            }
-        )
-
         google_posture = self._google_workspace_posture()
         connected_google = list(google_posture.get("usable_connected_accounts") or [])
         items.append(
@@ -6748,19 +6733,19 @@ class JarvisRuntime:
         tiers = [
             {
                 "tier": RoutingTier.BACKGROUND_DETECTION.value,
-                "default_provider": "ollama",
-                "default_model": self.config.ollama_background_model,
+                "default_provider": "openai",
+                "default_model": self.config.openai_model,
                 "privacy_level": PrivacyLevel.LOCAL_ONLY.value,
-                "summary": "Always-on triage, ranking, classification, and low-stakes background loops stay cheap and local.",
+                "summary": "Always-on triage, ranking, classification, and low-stakes background loops use the cheapest OpenAI tier.",
                 "used_for": ["background monitoring", "signal triage", "low-risk escalation checks"],
             },
             {
                 "tier": RoutingTier.LOCAL_SYNTHESIS.value,
-                "default_provider": "ollama",
-                "default_model": self.config.ollama_summarize_model,
+                "default_provider": "openai",
+                "default_model": self.config.openai_model,
                 "privacy_level": PrivacyLevel.PREFER_LOCAL.value,
-                "summary": "Family, ambient, and workshop synthesis prefer local models when the task does not need current external data.",
-                "used_for": ["family planning", "ambient conversation", "local summaries"],
+                "summary": "Family, ambient, and workshop synthesis use a lightweight OpenAI model when the task does not need current external data.",
+                "used_for": ["family planning", "ambient conversation", "quick summaries"],
             },
             {
                 "tier": RoutingTier.HIGH_QUALITY_REASONING.value,
@@ -6783,9 +6768,8 @@ class JarvisRuntime:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "tiers": tiers,
             "defaults": {
-                "background_model": self.config.ollama_background_model,
-                "summarize_model": self.config.ollama_summarize_model,
-                "second_brain_model": self.config.second_brain_model,
+                "background_model": self.config.openai_model,
+                "summarize_model": self.config.openai_model,
                 "openai_router_model": self.config.openai_router_model,
                 "openai_text_model": self.config.openai_text_model,
             },
@@ -14115,7 +14099,6 @@ class JarvisRuntime:
         ]
         google_connected = any(item.get("name") == "google-workspace" and item.get("ok") for item in integration_status)
         home_connected = any(item.get("name") == "home-assistant" and item.get("ok") for item in integration_status)
-        local_brain_ready = any(item.get("name") == "local-brain" and item.get("ok") for item in integration_status)
         tracked_growth_signals = int((growth.get("summary") or {}).get("tracked_signal_count", 0) or 0)
         growth_domains = {str(item.get("id", "")).strip().lower() for item in list(growth.get("domains", []))}
         domain_confidence = {
@@ -14159,14 +14142,6 @@ class JarvisRuntime:
                     "id": "home-assistant-disconnected",
                     "severity": "medium",
                     "summary": "Home Assistant is unavailable, so live home state and actions are blocked.",
-                }
-            )
-        if not local_brain_ready:
-            known_failure_modes.append(
-                {
-                    "id": "local-brain-not-ready",
-                    "severity": "medium",
-                    "summary": "The local brain is not fully ready, which weakens local synthesis and fallback reasoning.",
                 }
             )
         for item in recent_failed_actions[:3]:
@@ -14519,33 +14494,7 @@ class JarvisRuntime:
         }
 
     def _recommended_self_improvement_models(self) -> list[dict[str, Any]]:
-        configured = {
-            str(self.config.second_brain_model).strip(),
-            str(self.config.ollama_summarize_model).strip(),
-            str(self.config.ollama_background_model).strip(),
-        }
-        configured = {item for item in configured if item}
-        recommendations: list[dict[str, Any]] = []
-        for model_name in sorted(configured):
-            recommendations.append(
-                {
-                    "model": model_name,
-                    "reason": "This model is already part of the configured local routing stack and should stay synced locally.",
-                    "auto_allowed": True,
-                    "heavy": False,
-                    "source": "configured-runtime",
-                }
-            )
-        recommendations.append(
-            {
-                "model": "gpt-oss:20b",
-                "reason": "A stronger local reasoner is useful for second-brain work, but it is heavier and should remain reviewable.",
-                "auto_allowed": False,
-                "heavy": True,
-                "source": "recommended-upgrade",
-            }
-        )
-        return recommendations
+        return []
 
     def _tool_inventory(self) -> list[dict[str, Any]]:
         inventory = [
@@ -18963,7 +18912,6 @@ class JarvisRuntime:
     # ─────────────────────────────────────────────────────────────────────────
 
     def brain_graph_snapshot(self) -> dict:
-        second_brain = self.openai_client.second_brain_status()
         recent = self.audit_log.list_recent(limit=1, entry_type="response")
         latest = recent[0] if recent else {}
         active_nodes = latest.get("active_nodes", []) if isinstance(latest, dict) else []
@@ -18973,15 +18921,9 @@ class JarvisRuntime:
             "last_module": latest.get("module", "") if isinstance(latest, dict) else "",
             "last_timestamp": latest.get("timestamp", "") if isinstance(latest, dict) else "",
             "active_nodes": active_nodes,
-            "secondary_brain": second_brain,
             "nodes": [
                 {"id": "router", "label": "Router", "status": "ready"},
                 {"id": "primary-brain", "label": "Primary", "status": "ready" if self.config.openai_api_key else "offline"},
-                {
-                    "id": "second-brain",
-                    "label": "Second",
-                    "status": "ready" if second_brain.get("model_available") else ("configured" if second_brain.get("healthy") or second_brain.get("enabled") else "disabled"),
-                },
                 {"id": "memory-core", "label": "Memory", "status": "ready"},
                 {"id": "catalyst-personal", "label": "Catalyst", "status": "ready"},
                 {"id": "household-associate", "label": "Ambient", "status": "ready"},

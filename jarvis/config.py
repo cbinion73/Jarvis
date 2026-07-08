@@ -56,12 +56,6 @@ class AppConfig:
     livekit_url: str
     livekit_api_key: str
     livekit_api_secret: str
-    second_brain_provider: str
-    second_brain_model: str
-    second_brain_enabled: bool
-    ollama_base_url: str
-    ollama_summarize_model: str
-    ollama_background_model: str
     home_assistant_url: str
     home_assistant_token: str
     openclaw_gateway_url: str
@@ -113,8 +107,6 @@ class AppConfig:
     def from_env(cls) -> "AppConfig":
         load_env_file(Path(".env"))
         load_env_file(Path.home() / ".openclaw" / ".env")
-        model_mode = os.getenv("JARVIS_MODEL_MODE", "standard").strip().lower() or "standard"
-        cloud_light_mode = model_mode == "cloud_light"
         household_path = Path(
             os.getenv(
                 "JARVIS_HOUSEHOLD_CONFIG",
@@ -155,12 +147,6 @@ class AppConfig:
             livekit_url=os.getenv("LIVEKIT_URL", ""),
             livekit_api_key=os.getenv("LIVEKIT_API_KEY", ""),
             livekit_api_secret=os.getenv("LIVEKIT_API_SECRET", ""),
-            second_brain_provider=os.getenv("JARVIS_SECOND_BRAIN_PROVIDER", "ollama").strip().lower(),
-            second_brain_model=os.getenv("JARVIS_SECOND_BRAIN_MODEL", "qwen2.5:7b"),
-            second_brain_enabled=_bool_env("JARVIS_SECOND_BRAIN_ENABLED", not cloud_light_mode),
-            ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
-            ollama_summarize_model=os.getenv("JARVIS_OLLAMA_SUMMARIZE_MODEL", "qwen2.5:7b"),
-            ollama_background_model=os.getenv("JARVIS_OLLAMA_BACKGROUND_MODEL", "qwen2.5:7b"),
             home_assistant_url=os.getenv("HOME_ASSISTANT_URL", ""),
             home_assistant_token=os.getenv("HOME_ASSISTANT_TOKEN", ""),
             openclaw_gateway_url=os.getenv(

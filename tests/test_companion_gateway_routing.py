@@ -53,8 +53,7 @@ def _plan(request: str = "What should I focus on this week?") -> RequestPlan:
 def _client() -> JarvisOpenAIClient:
     config = mock.Mock()
     config.openai_api_key = "sk-test"
-    with mock.patch("jarvis.openai_tasks.OllamaBrainClient"):
-        return JarvisOpenAIClient(config)
+    return JarvisOpenAIClient(config)
 
 
 def _gateway_response(text: str = "Here's my read.", error: str = "") -> LLMResponse:

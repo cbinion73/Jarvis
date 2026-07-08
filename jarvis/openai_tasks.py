@@ -11,7 +11,6 @@ from urllib import error, request
 from .config import AppConfig
 from .models import RequestPlan
 from .persona import build_system_prompt
-from .second_brain import OllamaBrainClient
 from .speech import transcribe_speech
 
 
@@ -46,7 +45,6 @@ class OpenAIResult:
 class JarvisOpenAIClient:
     def __init__(self, config: AppConfig) -> None:
         self.config = config
-        self.second_brain = OllamaBrainClient(config)
 
     def respond(
         self,
@@ -76,33 +74,12 @@ class JarvisOpenAIClient:
             except Exception:
                 pass  # Fall through — OpenAI tool will be used as fallback
 
-        if self._should_use_second_brain_for_plan(plan):
-            try:
-                result = self.second_brain.chat(
-                    system_prompt=self._system_prompt_with_context(
-                        plan,
-                        supplemental_context,
-                        system_prompt_override=system_prompt_override,
-                    ),
-                    user_prompt=plan.request,
-                    model=plan.model,
-                )
-                return OpenAIResult(
-                    provider=result.provider,
-                    model=result.model,
-                    output_text=self._normalize_response_text(result.output_text),
-                    execution_trace=list(execution_trace),
-                )
-            except Exception:
-                pass
-
         # Companion conversation turns (the only callers that set
         # system_prompt_override) route through the LLM gateway so
-        # conversation gets the converse-floor model (free Groq 70B in
-        # cloud_light), confidence-based escalation, and the generic
-        # Groq -> OpenAI fallback — instead of being pinned to the mini
-        # model by a direct SDK call. Any gateway failure falls through
-        # to the existing OpenAI SDK path unchanged.
+        # conversation gets the converse-floor model (the full non-mini
+        # OpenAI model) and confidence-based escalation — instead of being
+        # pinned to the mini model by a direct SDK call. Any gateway
+        # failure falls through to the existing OpenAI SDK path unchanged.
         if system_prompt_override:
             gateway_result = self._respond_via_gateway(
                 plan,
@@ -223,14 +200,6 @@ class JarvisOpenAIClient:
         max_output_tokens: int = 500,
     ) -> str:
         chosen_model = model or self.config.openai_text_model
-        if self._should_use_second_brain_for_prompt(system_prompt, user_prompt, chosen_model):
-            try:
-                return self.second_brain.chat(
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                ).output_text
-            except Exception:
-                pass
 
         # gpt-5/o-series reasoning models spend hidden reasoning tokens out of
         # the same max_output_tokens budget. A small cap (e.g. Sam's 300) gets
@@ -570,18 +539,6 @@ class JarvisOpenAIClient:
             execution_trace=list(execution_trace or []),
         )
 
-    def second_brain_status(self) -> dict:
-        return {
-            "enabled": self.second_brain.enabled(),
-            "healthy": self.second_brain.healthy(),
-            "model_available": self.second_brain.model_available(),
-            "provider": self.config.second_brain_provider,
-            "model": self.config.second_brain_model,
-            "summarize_model": self.config.ollama_summarize_model,
-            "background_model": self.config.ollama_background_model,
-            "base_url": self.config.ollama_base_url,
-        }
-
     def _extract_output_text(self, body: dict) -> str:
         if body.get("output_text"):
             return body["output_text"].strip()
@@ -852,28 +809,3 @@ class JarvisOpenAIClient:
 
         return cleaned.strip()
 
-    def _should_use_second_brain_for_plan(self, plan: RequestPlan) -> bool:
-        if not self.second_brain.enabled() or not self.second_brain.healthy() or not self.second_brain.model_available():
-            return False
-        if plan.preferred_provider != "ollama":
-            return False
-        if self._should_enable_web_search(plan):
-            return False
-        if plan.action_class.value >= 4:
-            return False
-        return True
-
-    def _should_use_second_brain_for_prompt(self, system_prompt: str, user_prompt: str, model: str) -> bool:
-        if not self.second_brain.enabled() or not self.second_brain.healthy() or not self.second_brain.model_available():
-            return False
-        lowered_system = system_prompt.lower()
-        lowered_user = user_prompt.lower()
-        if any(keyword in lowered_user for keyword in ("latest", "current", "today", "web", "source", "citation", "search")):
-            return False
-        if "executive" in lowered_system or "confidential" in lowered_system or "thermo" in lowered_system:
-            return False
-        if "child-safe tutoring" in lowered_system or "scripture" in lowered_system:
-            return False
-        if "family logistics" in lowered_system or "command center mode" in lowered_system or "household" in lowered_system:
-            return True
-        return model == self.config.openai_router_model

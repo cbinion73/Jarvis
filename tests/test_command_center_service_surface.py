@@ -237,7 +237,6 @@ class _StubRuntime:
             piper_binary="piper",
             piper_model_path=None,
             piper_speaker="0",
-            second_brain_enabled=False,
         )
         self.config.load_household = lambda: SimpleNamespace(location_label="Home")
         self.supervision_support = _StubSupervisionSupport()

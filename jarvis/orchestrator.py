@@ -139,16 +139,7 @@ class JarvisOrchestrator:
         return mapping.get(module, TaskClass.AMBIENT)
 
     def _select_provider(self, task_class: TaskClass, module: str, workstream: str, request: str) -> str:
-        if self._is_operating_status_request(request):
-            return "openai"
-        if task_class in {TaskClass.SENSITIVE_DRAFTING, TaskClass.BACKGROUND}:
-            return "ollama"
-        if task_class in {TaskClass.FAMILY, TaskClass.AMBIENT} and not any(
-            keyword in request for keyword in ("latest", "current", "today", "search", "source", "citation", "weather")
-        ):
-            return "ollama"
-        if module == "workshop-copilot" and "prototype" not in request and "research" not in request:
-            return "ollama"
+        # OpenAI only — no local/Ollama provider option anymore.
         return "openai"
 
     def _select_context_lane(self, task_class: TaskClass, module: str, workstream: str, request: str) -> str:
@@ -173,12 +164,6 @@ class JarvisOrchestrator:
     def _select_model(self, task_class: TaskClass, provider: str, request: str) -> str:
         if provider == "openai" and self._is_operating_status_request(request):
             return self.config.openai_text_model
-        if provider == "ollama":
-            if task_class == TaskClass.BACKGROUND:
-                return self.config.ollama_background_model
-            if task_class in {TaskClass.FAMILY, TaskClass.AMBIENT}:
-                return self.config.ollama_summarize_model
-            return self.config.second_brain_model
         lowered = request.lower()
         if any(
             phrase in lowered
@@ -209,8 +194,6 @@ class JarvisOrchestrator:
             return RoutingTier.BACKGROUND_DETECTION
         if self._is_operating_status_request(request):
             return RoutingTier.HIGH_QUALITY_REASONING
-        if provider == "ollama":
-            return RoutingTier.LOCAL_SYNTHESIS
         lowered = request.lower()
         if any(keyword in lowered for keyword in ("draft", "write", "respond", "message", "brief", "plan")):
             return RoutingTier.USER_FACING_DELIVERY
