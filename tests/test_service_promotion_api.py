@@ -489,7 +489,6 @@ class MainApprovalInitializationTests(unittest.TestCase):
             self._patch(main_module, name, value)
 
         self._patch(main_module, "_init_approvals", fake_init_approvals)
-        self._patch(main_module, "_ensure_ollama_running", lambda *args, **kwargs: None)
         self._patch(service_module, "serve", fake_serve)
 
         runtime = SimpleNamespace(
@@ -541,7 +540,6 @@ class MainApprovalInitializationTests(unittest.TestCase):
         self._patch(main_module, "_init_memory", _mark("memory"))
         self._patch(main_module, "_init_connectors", _mark("connectors"))
         self._patch(main_module, "_init_approvals", _mark("approvals"))
-        self._patch(main_module, "_ensure_ollama_running", _mark("ollama"))
         self._patch(main_module, "_init_gateway", _mark("gateway"))
         self._patch(main_module, "_init_scheduler", _mark("scheduler"))
         self._patch(main_module, "_init_chronicle_bridge", _mark("chronicle"))

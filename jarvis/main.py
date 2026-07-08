@@ -769,74 +769,6 @@ def command_fresh_start(runtime: JarvisRuntime, *, execute: bool, no_backup: boo
     return 0
 
 
-def _ensure_ollama_running(config: AppConfig) -> None:
-    """
-    Check whether Ollama is reachable at the configured base URL.
-    If not, attempt to start it via `ollama serve` as a detached background process.
-    Logs outcome but never raises — JARVIS degrades gracefully if Ollama can't start.
-    """
-    import logging
-    import os
-    import shutil
-    import subprocess
-    import time
-    import urllib.request
-
-    _log = logging.getLogger("jarvis.ollama-bootstrap")
-
-    if not getattr(config, "ollama_enabled", True):
-        _log.info(
-            "Skipping Ollama auto-start because model mode '%s' has local models disabled.",
-            getattr(config, "model_mode", "standard"),
-        )
-        return
-
-    ollama_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/v1").rstrip("/")
-    health_url = f"{ollama_url}/api/tags"
-
-    # 1 — Already running?
-    try:
-        with urllib.request.urlopen(health_url, timeout=2):
-            _log.info("Ollama already running at %s", ollama_url)
-            return
-    except Exception:
-        pass
-
-    # 2 — Find the binary
-    ollama_bin = shutil.which("ollama") or os.path.expanduser("~/.local/bin/ollama")
-    if not ollama_bin or not os.path.isfile(ollama_bin):
-        _log.warning("Ollama binary not found — skipping auto-start. Install from https://ollama.com")
-        return
-
-    # 3 — Launch detached
-    try:
-        log_path = os.path.expanduser("~/.jarvis/logs/ollama.log")
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
-        with open(log_path, "a") as log_fh:
-            proc = subprocess.Popen(
-                [ollama_bin, "serve"],
-                stdout=log_fh,
-                stderr=log_fh,
-                start_new_session=True,   # detach from JARVIS process group
-            )
-        _log.info("Ollama started (PID %d) — waiting for readiness…", proc.pid)
-    except Exception as exc:
-        _log.warning("Could not start Ollama: %s", exc)
-        return
-
-    # 4 — Wait up to 12 s for Ollama to be ready
-    deadline = time.monotonic() + 12
-    while time.monotonic() < deadline:
-        try:
-            with urllib.request.urlopen(health_url, timeout=2):
-                _log.info("Ollama ready after %.1f s", 12 - (deadline - time.monotonic()))
-                return
-        except Exception:
-            time.sleep(1)
-
-    _log.warning("Ollama did not become ready within 12 s — gateway will fall back to OpenAI")
-
-
 def command_serve(runtime: JarvisRuntime, host: str, port: int, *, read_only_smoke: bool = False) -> int:
     from .service import serve
 
@@ -871,8 +803,6 @@ def command_serve(runtime: JarvisRuntime, host: str, port: int, *, read_only_smo
             logging.getLogger("jarvis.main").warning(
                 "Could not initialise approval layer: %s", exc
             )
-    # Ensure Ollama is running (local inference backend)
-    _ensure_ollama_running(runtime.config)
     # Initialise the LLM Gateway before the scheduler (agents need it)
     if _LLM_GATEWAY_IMPORT_OK:
         try:

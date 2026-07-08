@@ -815,42 +815,6 @@ class LLMGateway:
 
         return response
 
-    def classify(self, text: str, categories: list[str], context: str = "") -> str:
-        """
-        Fast classification using phi3.5.
-        Returns the best matching category from the list.
-        """
-        cats_str = ", ".join(categories)
-        system_msg = (
-            "You are a fast classifier. Given a text and a list of categories, "
-            "respond with ONLY the single best matching category name from the list. "
-            "No explanation. No punctuation. Just the category name exactly as given."
-        )
-        user_content = f"Categories: {cats_str}\n\nText: {text}"
-        if context:
-            user_content = f"Context: {context}\n\n{user_content}"
-
-        response = self.complete(
-            messages=[
-                LLMMessage("system", system_msg),
-                LLMMessage("user", user_content),
-            ],
-            task_type="classify",
-            allow_escalation=False,
-        )
-        result = response.text.strip().strip(".,;:\"'").strip()
-        # Validate against known categories (case-insensitive)
-        for cat in categories:
-            if cat.lower() == result.lower():
-                return cat
-        # Fuzzy fallback: return first category that appears in the response
-        result_lower = result.lower()
-        for cat in categories:
-            if cat.lower() in result_lower:
-                return cat
-        # Default to first category if nothing matched
-        return categories[0] if categories else result
-
     def agent_think(
         self,
         agent_id: str,

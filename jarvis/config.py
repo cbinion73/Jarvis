@@ -54,9 +54,6 @@ class AppConfig:
     piper_model_path: Path | None
     piper_speaker: str
     livekit_url: str
-    model_mode: str
-    ollama_enabled: bool
-    skip_model_warmup: bool
     livekit_api_key: str
     livekit_api_secret: str
     second_brain_provider: str
@@ -157,9 +154,6 @@ class AppConfig:
             piper_speaker=os.getenv("PIPER_SPEAKER", ""),
             livekit_url=os.getenv("LIVEKIT_URL", ""),
             livekit_api_key=os.getenv("LIVEKIT_API_KEY", ""),
-            model_mode=model_mode,
-            ollama_enabled=_bool_env("JARVIS_ENABLE_OLLAMA", not cloud_light_mode),
-            skip_model_warmup=_bool_env("JARVIS_SKIP_MODEL_WARMUP", cloud_light_mode),
             livekit_api_secret=os.getenv("LIVEKIT_API_SECRET", ""),
             second_brain_provider=os.getenv("JARVIS_SECOND_BRAIN_PROVIDER", "ollama").strip().lower(),
             second_brain_model=os.getenv("JARVIS_SECOND_BRAIN_MODEL", "qwen2.5:7b"),
