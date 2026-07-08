@@ -1,6 +1,8 @@
 # JARVIS
 
-JARVIS is a private intelligence chamber for the household — not a chatbot, not a smart speaker. It runs on a dedicated M4 Mac Mini, knows your home, your family, your rhythms, and your work, and it operates with clear trust boundaries between people and the things it's allowed to do on your behalf. Every action is either pre-approved, proposable, or held until a human says go. The goal is a system that makes the household feel cared for without surrendering control or privacy to a cloud platform.
+JARVIS is Chris's personal AI companion — not a chatbot, not a smart speaker, not a household system. It runs in production on a Hetzner VPS via Docker, knows Chris's notes, memory, and daily rhythms, and operates with clear trust boundaries around what it's allowed to do on his behalf. Every action is either pre-approved, proposable, or held until a human says go.
+
+See [`docs/README.md`](docs/README.md) for current architecture, product direction, and open work — this file covers setup and command reference.
 
 ---
 
@@ -37,16 +39,15 @@ JARVIS is a private intelligence chamber for the household — not a chatbot, no
 
 ## Architecture
 
-- **Python backend (FastAPI, port 8787)** — household orchestrator, permission engine, family-mode runtime, agent dispatch, memory core, and all subsystem integrations
-- **Local models via Ollama** — `phi3.5` for fast routing/classification (~200ms), `gpt-oss-20b` (or `qwen2.5:14b` as stand-in) for local reasoning; no cloud dependency for sensitive household data
-- **Apple clients** — `JarvisPhone` and `JarvisWatch` connect via `JarvisKit`; health, location, and watch context flow through a typed API contract and do not leave the local network
+- **Python backend (FastAPI, port 8787)** — orchestrator, permission engine, agent dispatch, memory core, and all subsystem integrations, deployed on Hetzner
+- **LLM routing (`jarvis/llm_gateway.py`)** — a local-Ollama mode exists (`JARVIS_MODEL_MODE=standard`) but production runs `JARVIS_MODEL_MODE=cloud_light` (the `.env.example` default): everything routes through OpenAI/Groq. Cheap-tier inference costs about the same either way, so there's no local-only component in the deployed system
+- **Apple clients** — `JarvisPhone` and `JarvisWatch` connect via `JarvisKit`; health, location, and watch context flow through a typed API contract
 
 ---
 
 ## Docs
 
-- [`docs/OLLAMA-SETUP.md`](docs/OLLAMA-SETUP.md) — install Ollama, pull models, verify the local model stack, RAM usage, troubleshooting
-- [`docs/JARVIS-APPLE-HANDOFF-PACK.md`](docs/JARVIS-APPLE-HANDOFF-PACK.md) — Apple platform integration details, JarvisKit design, handoff protocol
+- [`docs/archive/2026-07-doc-consolidation/JARVIS-APPLE-HANDOFF-PACK.md`](docs/archive/2026-07-doc-consolidation/JARVIS-APPLE-HANDOFF-PACK.md) — Apple platform integration details, JarvisKit design, handoff protocol (status unclear — see `docs/README.md`)
 - [`docs/agent-runtime-kernel.md`](docs/agent-runtime-kernel.md) — durable lifecycle, heartbeat, and supervision model for always-on agents
 - [`JarvisApple/HEALTH-API-CONTRACT.md`](JarvisApple/HEALTH-API-CONTRACT.md) — typed contract for health and watch data flowing from Apple devices to the JARVIS backend
 

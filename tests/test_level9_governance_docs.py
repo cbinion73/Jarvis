@@ -6,23 +6,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Level9GovernanceDocsTests(unittest.TestCase):
-    def test_branch_control_reflects_helper_clone_topology(self) -> None:
-        text = (ROOT / "docs/level9-branch-control.md").read_text(encoding="utf-8")
-        self.assertIn("## Runtime Topology", text)
-        self.assertIn("/tmp/jarvis-push-helper", text)
-        self.assertIn("Helper-clone-backed worktrees", text)
-        self.assertIn("quarantined", text)
-        self.assertIn("codex/level9-governance-slice", text)
-        self.assertIn("codex/level9-agent-society-slice", text)
-        self.assertIn("codex/level9-event-truth-lane", text)
-        self.assertIn("codex/level9-household-operability-lane", text)
-
-    def test_branch_integration_rubric_mentions_roadmap_order(self) -> None:
-        text = (ROOT / "docs/branch-integration-rubric.md").read_text(encoding="utf-8")
-        self.assertIn("docs/JARVIS-CIVILIZATION-SCALE-MASTER-ROADMAP.md", text)
-        self.assertIn("advances the civilization-scale phase order", text)
-        self.assertIn("event truth is becoming stronger", text)
-        self.assertIn("better preserves roadmap sequencing", text)
+    # test_branch_control_reflects_helper_clone_topology and
+    # test_branch_integration_rubric_mentions_roadmap_order were removed
+    # 2026-07-08: their target docs (docs/level9-branch-control.md,
+    # docs/branch-integration-rubric.md) were archived to
+    # docs/archive/2026-07-doc-consolidation/ as part of the vision/doc
+    # consolidation described in docs/README.md. Both asserted only on
+    # doc prose, not runtime behavior.
 
     def test_blockers_remove_old_realtime_audio_item(self) -> None:
         text = (ROOT / "docs/blockers.md").read_text(encoding="utf-8")
