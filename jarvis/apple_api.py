@@ -2522,21 +2522,14 @@ def _apple_voice_local_llm(runtime: Any, *, actor_id: str, text: str) -> tuple[s
     except Exception as exc:
         logger.warning("apple_voice_local_llm import failed: %s", exc)
         return (
-            "The local reasoning system is not ready right now. If you want, I can escalate to a non-local model after you approve it.",
+            "The reasoning system is not ready right now.",
             "JARVIS",
         )
 
     gateway = get_gateway() or init_gateway()
     if gateway is None:
         return (
-            "The local reasoning system is not initialized right now. If you want, I can escalate to a non-local model after you approve it.",
-            "JARVIS",
-        )
-
-    gateway_status = gateway.get_status()
-    if not gateway_status.get("ollama_available"):
-        return (
-            "My local models are unavailable right now. I can use a non-local model if you approve it.",
+            "The reasoning system is not initialized right now.",
             "JARVIS",
         )
 
@@ -2553,30 +2546,18 @@ def _apple_voice_local_llm(runtime: Any, *, actor_id: str, text: str) -> tuple[s
         task_type="converse",
         agent_id="jarvis-apple-voice",
         actor_id=actor_id,
-        allow_escalation=False,
     )
 
-    if response.backend != "ollama":
-        logger.warning(
-            "apple_voice_local_llm blocked non-local backend=%s model=%s",
-            response.backend,
-            response.model_used,
-        )
-        return (
-            "This request would need a non-local model. I can do that after you approve it.",
-            "JARVIS",
-        )
-
     if response.error:
-        logger.warning("apple_voice_local_llm local error: %s", response.error)
+        logger.warning("apple_voice_local_llm error: %s", response.error)
         return (
-            "My local models could not finish that request right now. I can use a non-local model if you approve it.",
+            "I couldn't finish that request right now.",
             "JARVIS",
         )
 
     response_text = str(response.text or "").strip()
     if not response_text:
-        return ("I don't have a local answer for that yet.", "JARVIS")
+        return ("I don't have an answer for that yet.", "JARVIS")
     return response_text, "JARVIS"
 
 

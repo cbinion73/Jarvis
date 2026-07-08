@@ -106,50 +106,6 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 7. Ollama
-# -----------------------------------------------------------------------------
-info "Checking Ollama..."
-if ! command -v ollama &>/dev/null; then
-  info "Ollama not found — installing via Homebrew..."
-  brew install ollama
-else
-  info "Ollama already installed: $(ollama --version 2>/dev/null || echo 'version unknown')"
-fi
-
-# Ensure Ollama server is running for model pulls
-if ! pgrep -x ollama &>/dev/null; then
-  info "Starting Ollama server in background for model pulls..."
-  ollama serve &>/dev/null &
-  OLLAMA_PID=$!
-  sleep 3
-  STARTED_OLLAMA=true
-else
-  STARTED_OLLAMA=false
-fi
-
-# Pull models
-info "Pulling ollama model: phi3.5 (fast classifier)..."
-ollama pull phi3.5 || warn "Failed to pull phi3.5 — pull manually with: ollama pull phi3.5"
-
-# NOTE: 'gpt-oss-20b' is not a standard Ollama model name as of this writing.
-# It is used here as the configured reasoning model ID (JARVIS_OLLAMA_REASONING_MODEL).
-# If the model is not available in the Ollama registry under that name, the pull
-# will fail gracefully and 'openhermes' is offered as a capable open-source substitute.
-# To use openhermes instead, run: ollama pull openhermes
-info "Pulling ollama model: gpt-oss-20b (reasoning model)..."
-if ! ollama pull gpt-oss-20b 2>/dev/null; then
-  warn "gpt-oss-20b not found in Ollama registry."
-  warn "Pulling openhermes as a placeholder reasoning model instead."
-  warn "Update JARVIS_OLLAMA_REASONING_MODEL in ~/.jarvis/.env when the correct model is available."
-  ollama pull openhermes || warn "Failed to pull openhermes — pull manually with: ollama pull openhermes"
-fi
-
-# Stop the temporary Ollama process if we started it
-if [[ "$STARTED_OLLAMA" == "true" ]]; then
-  kill "$OLLAMA_PID" 2>/dev/null || true
-fi
-
-# -----------------------------------------------------------------------------
 # 8. Friday's Piper voice — en_US-hfc_female-medium
 # -----------------------------------------------------------------------------
 VOICE_DIR="$JARVIS_DIR/voices"

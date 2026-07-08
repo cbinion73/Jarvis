@@ -80,23 +80,9 @@
     <key>GOOGLE_CLIENT_SECRET</key>
     <string>your-google-client-secret-here</string>
 
-    <!-- Ollama model selection -->
-    <key>JARVIS_OLLAMA_FAST_MODEL</key>
-    <string>phi3.5</string>
-
-    <!-- NOTE: gpt-oss-20b may not be a published Ollama model name.       -->
-    <!-- Update this value once the correct model ID is confirmed.          -->
-    <!-- setup.sh will fall back to 'openhermes' if unavailable.            -->
-    <key>JARVIS_OLLAMA_REASONING_MODEL</key>
-    <string>gpt-oss-20b</string>
-
     <!-- OpenAI escalation model -->
     <key>JARVIS_OPENAI_MODEL</key>
     <string>gpt-5.4-mini</string>
-
-    <!-- Ollama server endpoint -->
-    <key>OLLAMA_BASE_URL</key>
-    <string>http://localhost:11434/v1</string>
 
     <!-- PATH — ensure venv and Homebrew binaries are reachable -->
     <key>PATH</key>
