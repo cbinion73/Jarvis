@@ -1480,7 +1480,6 @@ def _level3_checklist(
             or "Health and related modules still surface warning-driven hydration gaps in local verification.",
             "exact_files": [
                 "jarvis/service.py",
-                "jarvis/health_dashboard.py",
                 "jarvis/command_center_index.py",
                 "tests/test_command_center_service_surface.py",
             ],

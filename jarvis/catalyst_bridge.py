@@ -4,7 +4,6 @@ catalyst_bridge.py — RETIRED (external Catalyst app integration)
 The external Catalyst app has been consolidated into JARVIS.
 Work intelligence is now native:  jarvis/work_intelligence.py
 Persistent storage is now native: jarvis/catalyst_db.py (PostgreSQL)
-Background workers:               jarvis/wi_workers.py
 
 What remains active in this file
 ---------------------------------
