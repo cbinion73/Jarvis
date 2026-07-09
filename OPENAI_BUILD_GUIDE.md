@@ -68,15 +68,7 @@ No quotes around keys. No spaces around `=`.
 
 ## 5. Run The First Script
 
-```bash
-python apex_hello.py
-```
-
-Expected result:
-
-- The OpenAI API generates a short greeting.
-- The greeting prints as `APEX: ...`.
-- ElevenLabs speaks the greeting.
+The original `apex_hello.py` first-win script has been retired now that JARVIS itself is the running system. Use the OpenAI/ElevenLabs snippet below as the starting point for a new standalone script if you need to re-derive one.
 
 ## Claude To OpenAI Code Swap
 
