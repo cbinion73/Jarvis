@@ -11,6 +11,10 @@ __pycache__/
 *.db-wal
 *.db-shm
 
+# ── Claude Code local state (personal, not shared) ───────────────────────────
+.claude/settings.local.json
+.claude/worktrees/
+
 # ── Credentials & secrets ────────────────────────────────────────────────────
 config/google_client_secret.json
 config/openviking/

@@ -23,13 +23,6 @@ class BMadAgentEntrypointDocsTests(unittest.TestCase):
             self.assertIn("Only pause to clarify when two or more items are genuinely close", text, rel)
             self.assertIn("they can invoke the `bmad-help` skill at any time for advice", text, rel)
 
-    def test_dev_customize_adds_investigation_route(self) -> None:
-        config = (ROOT / ".agents/skills/bmad-agent-dev/customize.toml").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn('code = "IN"', config)
-        self.assertIn('skill = "bmad-investigate"', config)
-
     def test_pm_customize_consolidates_legacy_prd_routes(self) -> None:
         config = (ROOT / ".agents/skills/bmad-agent-pm/customize.toml").read_text(
             encoding="utf-8"

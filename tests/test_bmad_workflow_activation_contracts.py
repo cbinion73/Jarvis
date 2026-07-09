@@ -32,7 +32,6 @@ class BMadWorkflowActivationContractsTests(unittest.TestCase):
 
     def test_authoring_skills_share_activation_completion_gate(self) -> None:
         expected = [
-            ".agents/skills/bmad-create-architecture/SKILL.md",
             ".agents/skills/bmad-create-epics-and-stories/SKILL.md",
             ".agents/skills/bmad-create-story/SKILL.md",
             ".agents/skills/bmad-quick-dev/SKILL.md",

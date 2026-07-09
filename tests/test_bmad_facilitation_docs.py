@@ -31,20 +31,20 @@ class BMadFacilitationDocsTests(unittest.TestCase):
         self.assertEqual(by_name["Boundary & Edge Case Sweep"]["category"], "technical")
 
     def test_brainstorming_contract_requires_collaborative_not_batch_ideation(self) -> None:
-        workflow = (ROOT / ".agents/skills/bmad-brainstorming/workflow.md").read_text(
+        skill = (ROOT / ".agents/skills/bmad-brainstorming/SKILL.md").read_text(
             encoding="utf-8"
         )
-        step = (
-            ROOT / ".agents/skills/bmad-brainstorming/steps/step-03-technique-execution.md"
+        facilitator = (
+            ROOT / ".agents/skills/bmad-brainstorming/references/mode-facilitator.md"
+        ).read_text(encoding="utf-8")
+        partner = (
+            ROOT / ".agents/skills/bmad-brainstorming/references/mode-partner.md"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("100+ collaboratively developed ideas", workflow)
-        self.assertIn("This is a session goal, not a request to generate a large list.", workflow)
-        self.assertIn("AIM FOR 100+ COLLABORATIVE IDEAS", step)
-        self.assertIn("do not batch-generate ideas to satisfy the count", step)
-        self.assertIn("Present at most one new idea, provocation, or angle before asking for user input", step)
-        self.assertIn("The goal is quantity through collaboration, not a generated list.", step)
-        self.assertIn("Batch-generating idea lists instead of facilitating dialogue", step)
+        self.assertIn("Aim past 100 ideas; resist concluding.", skill)
+        self.assertIn("You do not supply ideas.", facilitator)
+        self.assertIn("never a source of ideas", facilitator)
+        self.assertIn("collaborative, not extractive", partner)
 
 
 if __name__ == "__main__":
