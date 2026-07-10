@@ -245,6 +245,9 @@ _HUD_TEMPLATE = r"""<!DOCTYPE html>
     background: rgba(251, 191, 36, 0.05); font-size: 13.5px; line-height: 1.55;
   }
   .hello .h-priority .p-label { font-family: var(--mono); font-size: 9px; letter-spacing: 0.3em; color: var(--amber); display: block; margin-bottom: 5px; }
+  .hello .h-priority.clickable { cursor: pointer; transition: background 0.15s ease, border-left-color 0.15s ease; }
+  .hello .h-priority.clickable:hover { background: rgba(251, 191, 36, 0.12); border-left-color: var(--cyan-soft); }
+  .hello .h-priority .p-route { display: block; margin-top: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; color: var(--cyan-soft); }
   .chips { display: flex; gap: 10px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
   .chips button {
     font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
@@ -453,6 +456,7 @@ _HUD_TEMPLATE = r"""<!DOCTYPE html>
         <div class="h-priority" id="hello-priority" style="display:none">
           <span class="p-label">Priority</span>
           <span id="hello-priority-text"></span>
+          <span class="p-route" id="hello-priority-route" style="display:none"></span>
         </div>
         <div class="chips">
           <button onclick="quickSend('Give me my morning brief')">Morning brief</button>
@@ -568,6 +572,19 @@ async function loadBrief() {
     if (mb.recommendation) {
       $('hello-priority-text').textContent = mb.recommendation;
       $('hello-priority').style.display = '';
+      const action = mb.recommendation_action || {};
+      const priorityEl = $('hello-priority');
+      const routeEl = $('hello-priority-route');
+      if (action.route) {
+        priorityEl.classList.add('clickable');
+        priorityEl.onclick = () => { location.href = action.route; };
+        routeEl.textContent = '→ ' + (action.route_label || 'Open');
+        routeEl.style.display = '';
+      } else {
+        priorityEl.classList.remove('clickable');
+        priorityEl.onclick = null;
+        routeEl.style.display = 'none';
+      }
     }
     const today = $('today-list');
     const items = [];

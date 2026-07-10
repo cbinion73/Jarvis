@@ -581,7 +581,13 @@ class AgentRuntimeKernel:
         blocked_dependencies = [
             dep for dep in definition.dependencies if not integration_map.get(dep, False)
         ]
-        heartbeat_status = self._heartbeat_status(now, heartbeat)
+        if definition.agent_id == "ambient-router":
+            # ambient-router is a stateless, on-demand front-door router (see agentic.py),
+            # not a persistent process — nothing ever calls record_heartbeat() for it, so it
+            # must not be judged by heartbeat freshness or it degrades permanently by design.
+            heartbeat_status = "fresh"
+        else:
+            heartbeat_status = self._heartbeat_status(now, heartbeat)
         lifecycle_reason = self._state_reason(
             current_state=current_state,
             lifecycle=lifecycle,
