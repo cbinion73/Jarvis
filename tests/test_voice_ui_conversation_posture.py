@@ -59,6 +59,27 @@ class VoiceUiConversationPostureTests(unittest.TestCase):
         self.assertIn("Configured voice source saved. Running preview through the current voice route", text)
         self.assertIn("Preview failed:", text)
 
+    def test_browser_voice_listening_collects_conversational_turns(self) -> None:
+        text = (ROOT / "jarvis" / "voice_ui.py").read_text(encoding="utf-8")
+        self.assertIn("recognitionCommitTimer: null", text)
+        self.assertIn("function conversationalPauseMs({{ wakeGuardMode = false, spoken = \"\" }} = {{}}) {{", text)
+        self.assertIn("function scheduleSpeechTurnCommit(recognizer, options = {{}}) {{", text)
+        self.assertIn("recognizer.continuous = true;", text)
+        self.assertIn("for (let index = 0; index < event.results.length; index += 1) {{", text)
+        self.assertIn("scheduleSpeechTurnCommit(recognizer, {{ wakeGuardMode, spoken }});", text)
+        self.assertIn("clearRecognitionCommitTimer();", text)
+
+    def test_ios_speech_recognition_uses_conversation_friendly_hints(self) -> None:
+        text = (
+            ROOT
+            / "JarvisApple/apps/ios/JarvisPhone/JarvisPhone/Speech/SpeechRecognitionManager.swift"
+        ).read_text(encoding="utf-8")
+        self.assertIn("req.taskHint                       = .dictation", text)
+        self.assertIn("req.contextualStrings              = [", text)
+        self.assertIn('"Hey Jarvis"', text)
+        self.assertIn("func transcribe(duration: TimeInterval = 8) async -> String", text)
+        self.assertIn("try? await Task.sleep(for: .seconds(1.8))", text)
+
 
 if __name__ == "__main__":
     unittest.main()

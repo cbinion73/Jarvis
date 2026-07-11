@@ -5211,6 +5211,8 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       recognizing: false,
       alwaysOnMicEnabled: true,
       recognitionMode: "idle",
+      recognitionCommitTimer: null,
+      recognitionLastHeardAt: 0,
       wakeWord: "hey jarvis",
       followUpWindowMs: 120000,
       followUpUntil: 0,
@@ -8000,6 +8002,38 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         clearTimeout(state.recognitionRestartTimer);
         state.recognitionRestartTimer = null;
       }}
+    }}
+
+    function clearRecognitionCommitTimer() {{
+      if (state.recognitionCommitTimer) {{
+        clearTimeout(state.recognitionCommitTimer);
+        state.recognitionCommitTimer = null;
+      }}
+    }}
+
+    function conversationalPauseMs({{ wakeGuardMode = false, spoken = "" }} = {{}}) {{
+      const text = String(spoken || "").trim();
+      if (!text) {{
+        return wakeGuardMode ? 1400 : 2400;
+      }}
+      if (wakeGuardMode && wakeWordPattern().test(text)) {{
+        return 650;
+      }}
+      if (/[?!.]\\s*$/.test(text)) {{
+        return 850;
+      }}
+      return conversationWindowActive() ? 1700 : 1350;
+    }}
+
+    function scheduleSpeechTurnCommit(recognizer, options = {{}}) {{
+      clearRecognitionCommitTimer();
+      const pauseMs = conversationalPauseMs(options);
+      state.recognitionCommitTimer = window.setTimeout(() => {{
+        state.recognitionCommitTimer = null;
+        if (state.recognizer === recognizer && state.recognizing) {{
+          recognizer.stop();
+        }}
+      }}, pauseMs);
     }}
 
     function refreshMicButton() {{
@@ -16828,6 +16862,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
 
     function stopRecognition() {{
       clearRecognitionRestartTimer();
+      clearRecognitionCommitTimer();
       if (state.recognizer && state.recognizing) {{
         state.recognizer.stop();
       }}
@@ -16875,14 +16910,17 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       stopSpeaking();
       const recognizer = new Recognition();
       clearRecognitionRestartTimer();
+      clearRecognitionCommitTimer();
       state.recognizer = recognizer;
       state.recognitionMode = mode;
+      state.recognitionLastHeardAt = 0;
       recognizer.lang = "en-US";
       recognizer.interimResults = true;
-      recognizer.continuous = false;
+      recognizer.continuous = true;
       recognizer.maxAlternatives = 1;
       let transcript = "";
       let finalTranscript = "";
+      let heardSpeech = false;
 
       recognizer.onstart = () => {{
         state.recognizing = true;
@@ -16898,14 +16936,19 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
       recognizer.onresult = (event) => {{
         transcript = "";
         finalTranscript = "";
-        for (let index = event.resultIndex; index < event.results.length; index += 1) {{
+        for (let index = 0; index < event.results.length; index += 1) {{
           const chunk = event.results[index][0]?.transcript || "";
-          transcript += chunk;
+          transcript += `${{chunk}} `;
           if (event.results[index].isFinal) {{
-            finalTranscript += chunk;
+            finalTranscript += `${{chunk}} `;
           }}
         }}
         const spoken = (finalTranscript || transcript).trim();
+        if (spoken) {{
+          heardSpeech = true;
+          state.recognitionLastHeardAt = Date.now();
+          scheduleSpeechTurnCommit(recognizer, {{ wakeGuardMode, spoken }});
+        }}
         if (spoken && !wakeGuardMode) {{
           document.getElementById("last-user-text").textContent = spoken;
           document.getElementById("command-input").value = spoken;
@@ -16919,6 +16962,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         state.recognizing = false;
         state.recognizer = null;
         state.recognitionMode = "idle";
+        clearRecognitionCommitTimer();
         refreshMicButton();
         const code = event?.error || "unknown";
         if (code === "not-allowed" || code === "service-not-allowed") {{
@@ -16933,6 +16977,9 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
           queueAlwaysOnListening();
           return;
         }}
+        if (code === "aborted" && heardSpeech) {{
+          return;
+        }}
         document.getElementById("last-jarvis-text").textContent = `Voice recognition error: ${{code}}`;
         syncTranscriptRail();
         setVoiceState("idle", "Voice recognition failed.");
@@ -16944,6 +16991,7 @@ def render_voice_shell(runtime: JarvisRuntime, initial_packet: str = "") -> str:
         state.recognizing = false;
         state.recognizer = null;
         state.recognitionMode = "idle";
+        clearRecognitionCommitTimer();
         refreshMicButton();
         if (spoken) {{
           handleRecognizedSpeech(spoken).catch((error) => {{

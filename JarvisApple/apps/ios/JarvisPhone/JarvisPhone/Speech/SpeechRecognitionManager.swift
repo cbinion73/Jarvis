@@ -123,6 +123,16 @@ final class SpeechRecognitionManager: ObservableObject {
 
         let req = SFSpeechAudioBufferRecognitionRequest()
         req.shouldReportPartialResults     = true
+        req.taskHint                       = .dictation
+        req.contextualStrings              = [
+            "Jarvis",
+            "Hey Jarvis",
+            "JARVIS",
+            "Chris",
+            "Rebekah",
+            "Caleb",
+            "Anna"
+        ]
         req.requiresOnDeviceRecognition    = false  // allow server for better accuracy
         request = req
 
@@ -221,7 +231,7 @@ final class SpeechRecognitionManager: ObservableObject {
     }
 
     /// One-shot: record for `duration` seconds then return transcript.
-    func transcribe(duration: TimeInterval = 5) async -> String {
+    func transcribe(duration: TimeInterval = 8) async -> String {
         return await withCheckedContinuation { continuation in
             startListening { text in continuation.resume(returning: text) }
             Task {
@@ -269,7 +279,7 @@ final class SpeechRecognitionManager: ObservableObject {
         guard currentTranscript.isEmpty == false else { return }
         autoStopTask?.cancel()
         autoStopTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.2))
+            try? await Task.sleep(for: .seconds(1.8))
             await MainActor.run {
                 guard let self else { return }
                 guard self.isListening else { return }
