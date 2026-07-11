@@ -53,10 +53,12 @@ def _run(
     cwd: Path,
     timeout: int = 30,
     check: bool = True,
+    input_text: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         list(args),
         cwd=str(cwd),
+        input=input_text,
         text=True,
         capture_output=True,
         timeout=timeout,
@@ -1330,7 +1332,7 @@ class BuildOffice:
                     target["commit"],
                     "--title",
                     f"{mission['mission_id']} immutable review",
-                    prompt,
+                    "-",
                 ]
             else:
                 command = [
@@ -1369,9 +1371,19 @@ class BuildOffice:
         assignment = self.acquire_lease(mission_id, assignment_id)
         mission = self.load_mission(mission_id)
         command = self.adapter_command(mission, assignment)
+        stdin = (
+            self.build_prompt(mission, assignment)
+            if assignment.get("provider") == "codex" and assignment.get("duty") == "review"
+            else None
+        )
         if dry_run:
             self.release_lease(mission_id, assignment_id, status="provisioned" if assignment["writable"] else "planned")
-            return {"dry_run": True, "command": command, "display_command": shlex.join(command)}
+            return {
+                "dry_run": True,
+                "command": command,
+                "display_command": shlex.join(command),
+                "stdin": "[prompt via stdin]" if stdin else "",
+            }
         started = _now_iso()
         timeout = int(mission["timeout_seconds"])
         if assignment["provider"] == "codex":
@@ -1382,7 +1394,7 @@ class BuildOffice:
             assignment["status"] = "running"
             self.save_mission(mission, event="assignment-started", assignment_id=assignment_id)
         try:
-            completed = _run(command, cwd=cwd, timeout=timeout, check=False)
+            completed = _run(command, cwd=cwd, timeout=timeout, check=False, input_text=stdin)
             evidence = self.capture_evidence(
                 cwd,
                 completed.returncode,

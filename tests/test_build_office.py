@@ -354,6 +354,8 @@ class BuildOfficeTests(unittest.TestCase):
             command[command.index("--commit") + 1],
             implementation["evidence"]["commit"],
         )
+        self.assertEqual(command[-1], "-")
+        self.assertEqual(review["stdin"], "[prompt via stdin]")
         self.assertNotIn("-a", command)
         self.assertNotIn("--ask-for-approval", command)
 
@@ -418,8 +420,10 @@ class BuildOfficeTests(unittest.TestCase):
         target = Path(implementation["worktree"]) / "jarvis" / "example.py"
         original_run = build_office_module._run
 
-        def fake_run(args, *, cwd, timeout=30, check=True):
+        def fake_run(args, *, cwd, timeout=30, check=True, input_text=None):
             if list(args[:2]) == ["codex", "exec"]:
+                self.assertEqual(args[-1], "-")
+                self.assertIn("Frozen Architect contract", input_text or "")
                 target.write_text("VALUE = 99\n", encoding="utf-8")
                 return subprocess.CompletedProcess(
                     args=list(args),
@@ -427,7 +431,7 @@ class BuildOfficeTests(unittest.TestCase):
                     stdout="reviewed",
                     stderr="",
                 )
-            return original_run(args, cwd=cwd, timeout=timeout, check=check)
+            return original_run(args, cwd=cwd, timeout=timeout, check=check, input_text=input_text)
 
         with patch("jarvis.build_office._run", side_effect=fake_run):
             result = self.office.dispatch(mission["mission_id"], "codex-review")
