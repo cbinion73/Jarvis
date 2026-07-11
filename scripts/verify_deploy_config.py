@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 from typing import Any
 
@@ -9,9 +10,11 @@ import yaml
 
 
 EXPECTED_DB_USER = "your-jarvis-db-user-here"
-EXPECTED_DB_PASSWORD = "your-jarvis-db-password-here"
+EXPECTED_DB_PASSWORD = "your-jarvis-db-password-url-safe-here"
 EXPOSED_PASSWORD = "JarvisFamily2026!"
 REQUIRED_DB_INTERPOLATION = "${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}"
+URL_RESERVED_PASSWORD_CHARS = set(":/@?#[]@!$&'()*+,;=%")
+PRODUCTIONISH_PASSWORDS = {EXPOSED_PASSWORD, "change_me_strong_password"}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -34,6 +37,17 @@ def _failure(messages: list[str]) -> int:
     for message in messages:
         print(f"ERROR: {message}")
     return 1
+
+
+def _load_example_values(example_path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in example_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        values[key.strip()] = value.strip()
+    return values
 
 
 def _check_chronicle(compose: dict[str, Any], messages: list[str]) -> None:
@@ -121,26 +135,36 @@ def _check_shared_db_urls(compose: dict[str, Any], messages: list[str]) -> None:
 
 
 def _check_example(example_path: Path, messages: list[str]) -> None:
-    values: dict[str, str] = {}
-    for line in example_path.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or "=" not in stripped:
-            continue
-        key, value = stripped.split("=", 1)
-        values[key.strip()] = value.strip()
+    values = _load_example_values(example_path)
+    relative = example_path.relative_to(example_path.parents[1]).as_posix()
 
     if values.get("DB_USER") != EXPECTED_DB_USER:
-        messages.append(".env.example DB_USER must use a non-secret placeholder")
-    if values.get("DB_PASSWORD") != EXPECTED_DB_PASSWORD:
-        messages.append(".env.example DB_PASSWORD must use a non-secret placeholder")
-    if values.get("DB_PASSWORD") == EXPOSED_PASSWORD:
-        messages.append(".env.example still contains the exposed Chronicle credential")
+        messages.append(f"{relative} DB_USER must use a non-secret placeholder")
+
+    password = values.get("DB_PASSWORD", "")
+    if password != EXPECTED_DB_PASSWORD:
+        messages.append(f"{relative} DB_PASSWORD must use a non-secret placeholder")
+    if password == EXPOSED_PASSWORD:
+        messages.append(f"{relative} still contains the exposed Chronicle credential")
+    if password in PRODUCTIONISH_PASSWORDS:
+        messages.append(f"{relative} contains a production-looking database password")
+    if any(char in URL_RESERVED_PASSWORD_CHARS for char in password) and password != EXPECTED_DB_PASSWORD:
+        messages.append(
+            f"{relative} DB_PASSWORD must stay URL-safe for docker-compose database URLs"
+        )
+
+    database_url = values.get("DATABASE_URL", "")
+    if relative == "deploy/.env.example" and database_url:
+        messages.append("deploy/.env.example must not define DATABASE_URL")
+    if EXPOSED_PASSWORD in database_url or "postgresql://jarvis:" in database_url:
+        messages.append(f"{relative} must not commit a literal credential-bearing database URL")
 
 
 def verify(repo_root: Path) -> list[str]:
     messages: list[str] = []
     compose_path = repo_root / "deploy" / "docker-compose.yml"
     example_path = repo_root / ".env.example"
+    deploy_example_path = repo_root / "deploy" / ".env.example"
     compose = _load_yaml(compose_path)
     _check_chronicle(compose, messages)
     _check_shared_db_urls(compose, messages)
@@ -148,6 +172,10 @@ def verify(repo_root: Path) -> list[str]:
         _check_example(example_path, messages)
     except FileNotFoundError:
         messages.append("missing required file: .env.example")
+    try:
+        _check_example(deploy_example_path, messages)
+    except FileNotFoundError:
+        messages.append("missing required file: deploy/.env.example")
     return messages
 
 

@@ -16,6 +16,8 @@ services:
       CHRONICLE_SNAPSHOT_DIR: /chronicle-snapshots
       CHRONICLE_API_URL: http://chronicle:5174
       GHOSTWRITR_BASE_URL: http://ghostwritr:3000
+      # DB_PASSWORD feeds a literal postgresql:// URL here, so deployment
+      # inputs must keep that value URL-safe unless this topology changes.
       CATALYST_DB_URL: postgresql://${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/jarvis_catalyst
       JARVIS_HOME_DB_URL: postgresql://${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/jarvis_home
       # Background agent scheduler intentionally paused pending redesign of the
@@ -37,6 +39,8 @@ services:
     volumes:
       - chronicle_snapshots:/app/chronicle-data
     environment:
+      # DB_PASSWORD is interpolated directly into this URL and must remain
+      # URL-safe for the tracked compose form.
       CHRONICLE_DATABASE_URL: postgresql://${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/chronicle
     depends_on:
       postgres:

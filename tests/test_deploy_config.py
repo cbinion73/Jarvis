@@ -117,15 +117,29 @@ GOOD_COMPOSE = textwrap.dedent(
 GOOD_ENV = textwrap.dedent(
     """
     DB_USER=your-jarvis-db-user-here
-    DB_PASSWORD=your-jarvis-db-password-here
+    DB_PASSWORD=your-jarvis-db-password-url-safe-here
     """
 ).strip()
 
 
-def write_repo(root: Path, compose: str = GOOD_COMPOSE, env: str = GOOD_ENV) -> None:
+GOOD_DEPLOY_ENV = textwrap.dedent(
+    """
+    DB_USER=your-jarvis-db-user-here
+    DB_PASSWORD=your-jarvis-db-password-url-safe-here
+    """
+).strip()
+
+
+def write_repo(
+    root: Path,
+    compose: str = GOOD_COMPOSE,
+    env: str = GOOD_ENV,
+    deploy_env: str = GOOD_DEPLOY_ENV,
+) -> None:
     (root / "deploy").mkdir(parents=True, exist_ok=True)
     (root / "deploy" / "docker-compose.yml").write_text(compose + "\n", encoding="utf-8")
     (root / ".env.example").write_text(env + "\n", encoding="utf-8")
+    (root / "deploy" / ".env.example").write_text(deploy_env + "\n", encoding="utf-8")
 
 
 def run_verifier(root: Path) -> subprocess.CompletedProcess[str]:
@@ -181,6 +195,44 @@ class DeployConfigVerifierTests(unittest.TestCase):
             result = run_verifier(repo)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("placeholder", result.stdout)
+
+    def test_reserved_characters_in_example_password_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            write_repo(
+                repo,
+                env="DB_USER=your-jarvis-db-user-here\nDB_PASSWORD=unsafe:p@ssword",
+            )
+            result = run_verifier(repo)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("URL-safe", result.stdout)
+            self.assertNotIn("unsafe:p@ssword", result.stdout)
+
+    def test_deploy_example_must_not_commit_literal_database_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            write_repo(
+                repo,
+                deploy_env=(
+                    "DB_USER=your-jarvis-db-user-here\n"
+                    "DB_PASSWORD=your-jarvis-db-password-url-safe-here\n"
+                    "DATABASE_URL=postgresql://jarvis:change_me_strong_password@postgres:5432/ghostwritr"
+                ),
+            )
+            result = run_verifier(repo)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("deploy/.env.example must not define DATABASE_URL", result.stdout)
+
+    def test_deploy_example_rejects_production_looking_password(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            write_repo(
+                repo,
+                deploy_env="DB_USER=jarvis\nDB_PASSWORD=change_me_strong_password",
+            )
+            result = run_verifier(repo)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("deploy/.env.example DB_PASSWORD must use a non-secret placeholder", result.stdout)
 
 
 if __name__ == "__main__":
