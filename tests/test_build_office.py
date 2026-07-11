@@ -123,6 +123,20 @@ class BuildOfficeTests(unittest.TestCase):
         duties = [item["duty"] for item in mission["assignments"]]
         self.assertEqual(duties, ["analysis", "implementation", "review"])
 
+    def test_no_claude_route_omits_analysis_and_uses_codex_quality_lane(self) -> None:
+        mission = self._init_mission(
+            request="Plan a risky migration without Claude",
+            risk="high",
+            mission_id="bo-no-claude",
+            route_mode="no-claude",
+            provision=False,
+        )
+        assignments = {item["assignment_id"]: item for item in mission["assignments"]}
+        self.assertEqual(set(assignments), {"codex-implementation", "codex-review"})
+        self.assertNotIn("analysis", [item["duty"] for item in mission["assignments"]])
+        self.assertEqual(mission["route_mode"], "no-claude")
+        self.assertEqual(mission["routing"], {"implementer": "codex", "reviewer": "codex"})
+
     def test_mission_and_assignments_record_office_charter(self) -> None:
         mission = self._init_mission(
             request="Bind assignments to office charters",
@@ -393,6 +407,30 @@ class BuildOfficeTests(unittest.TestCase):
         self.office.save_mission(state, event="test-partial")
         plan = self.office.release_plan(mission["mission_id"])
         self.assertIn("required analysis incomplete", plan["reasons"])
+
+    def test_no_claude_route_can_skip_analysis_gate_while_retaining_review_gate(self) -> None:
+        mission = self._init_mission(
+            request="Risky change without Claude",
+            risk="high",
+            mission_id="bo-no-claude-release",
+            route_mode="no-claude",
+            provision=False,
+        )
+        state = self.office.load_mission(mission["mission_id"])
+        for assignment in state["assignments"]:
+            if assignment["duty"] == "implementation":
+                assignment["status"] = "completed"
+                assignment["evidence"] = {
+                    "exit_code": 0,
+                    "commit": "different",
+                    "changed_files": ["jarvis/example.py"],
+                }
+            elif assignment["duty"] == "review":
+                assignment["status"] = "planned"
+        self.office.save_mission(state, event="test-no-claude-partial")
+        plan = self.office.release_plan(mission["mission_id"])
+        self.assertNotIn("required analysis incomplete", plan["reasons"])
+        self.assertIn("independent review incomplete", plan["reasons"])
 
     def test_release_rejects_noop_implementation_and_scope_violation(self) -> None:
         mission = self._init_mission(

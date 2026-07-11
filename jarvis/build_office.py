@@ -186,6 +186,8 @@ class BuildOffice:
         risk: str,
         *,
         implementer: str = "codex",
+        review_provider: str | None = None,
+        include_analysis: bool = True,
         owned_paths: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         worktree_root = self.repo_root.parent
@@ -193,13 +195,15 @@ class BuildOffice:
         implementer = implementer.strip().lower()
         if implementer not in {"claude", "codex"}:
             raise ValueError("implementer must be claude or codex")
-        reviewer = "claude" if implementer == "codex" else "codex"
+        reviewer = (review_provider or ("claude" if implementer == "codex" else "codex")).strip().lower()
+        if reviewer not in {"claude", "codex"}:
+            raise ValueError("review_provider must be claude or codex")
         scopes = [item.strip() for item in list(owned_paths or ["**"]) if item.strip()]
         if not scopes:
             raise ValueError("at least one owned path is required")
         assignments: list[dict[str, Any]] = []
         implementation_worktree = worktree_root / f"{self.repo_root.name}-{implementer}-{slug}"
-        if risk in {"high", "critical"}:
+        if include_analysis and risk in {"high", "critical"}:
             assignments.append(
                 self._assignment(
                     mission_id,
@@ -276,6 +280,7 @@ class BuildOffice:
         timeout_seconds: int = 1800,
         mission_id: str = "",
         implementer: str = "codex",
+        route_mode: str = "default",
         contract_ref: str = "",
         owned_paths: list[str] | None = None,
         provision: bool = True,
@@ -290,6 +295,9 @@ class BuildOffice:
             raise ValueError(f"risk must be one of: {', '.join(sorted(RISK_LEVELS))}")
         if budget_usd <= 0:
             raise ValueError("budget_usd must be positive")
+        route_mode = route_mode.strip().lower()
+        if route_mode not in {"default", "no-claude"}:
+            raise ValueError("route_mode must be one of: default, no-claude")
         doctor = self.doctor()
         if not doctor["repo_root"]:
             raise RuntimeError("Build Office requires a Git repository.")
@@ -301,10 +309,14 @@ class BuildOffice:
         baseline = self._git("rev-parse", "HEAD")
         architecture_contract = self._freeze_contract(contract_ref, baseline)
         self._validate_owned_paths(list(owned_paths or ["**"]))
+        include_analysis = route_mode != "no-claude"
+        review_provider = "codex" if route_mode == "no-claude" else None
         assignments = self._default_assignments(
             mission_id,
             risk,
             implementer=implementer,
+            review_provider=review_provider,
+            include_analysis=include_analysis,
             owned_paths=owned_paths,
         )
         if architecture_contract["status"] == "frozen":
@@ -325,12 +337,16 @@ class BuildOffice:
             "baseline_commit": baseline,
             "budget_usd": float(budget_usd),
             "timeout_seconds": int(timeout_seconds),
+            "route_mode": route_mode,
             "budget_enforcement": {
                 "claude": "hard-dollar-cap",
                 "codex": "time-proxy-only; CLI exposes no dollar-cap flag",
             },
             "requires_cross_review": risk in {"medium", "high", "critical"},
-            "routing": {"implementer": implementer, "reviewer": "claude" if implementer == "codex" else "codex"},
+            "routing": {
+                "implementer": implementer,
+                "reviewer": review_provider or ("claude" if implementer == "codex" else "codex"),
+            },
             "architecture_contract": architecture_contract,
             "approvals": {"dispatch": risk != "critical", "dispatch_approved_at": ""},
             "assignments": assignments,
@@ -1038,7 +1054,9 @@ class BuildOffice:
                 unchanged, reason = self._review_target_unchanged(mission, implementation[0])
                 if not unchanged:
                     reasons.append(reason)
-            if mission["risk"] in {"high", "critical"} and (not analyses or any(a["status"] != "completed" for a in analyses)):
+            if analyses and mission["risk"] in {"high", "critical"} and any(
+                a["status"] != "completed" for a in analyses
+            ):
                 reasons.append("required analysis incomplete")
             for assignment in mission["assignments"]:
                 if assignment["status"] in {"failed", "blocked", "running", "leased"}:

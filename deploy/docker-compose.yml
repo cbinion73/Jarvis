@@ -16,8 +16,8 @@ services:
       CHRONICLE_SNAPSHOT_DIR: /chronicle-snapshots
       CHRONICLE_API_URL: http://chronicle:5174
       GHOSTWRITR_BASE_URL: http://ghostwritr:3000
-      CATALYST_DB_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/jarvis_catalyst
-      JARVIS_HOME_DB_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/jarvis_home
+      CATALYST_DB_URL: postgresql://${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/jarvis_catalyst
+      JARVIS_HOME_DB_URL: postgresql://${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/jarvis_home
       # Background agent scheduler intentionally paused pending redesign of the
       # work-queue/agent-assignment model (2026-07-07). Flip to "true" to resume.
       JARVIS_BACKGROUND_AGENTS_ENABLED: "false"
@@ -37,7 +37,7 @@ services:
     volumes:
       - chronicle_snapshots:/app/chronicle-data
     environment:
-      CHRONICLE_DATABASE_URL: postgresql://jarvis:JarvisFamily2026!@postgres:5432/chronicle
+      CHRONICLE_DATABASE_URL: postgresql://${DB_USER:?DB_USER is required}:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/chronicle
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,14 +65,14 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       POSTGRES_DB: ghostwritr
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:?DB_USER is required}"]
       interval: 5s
       timeout: 5s
       retries: 10

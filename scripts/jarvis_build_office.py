@@ -36,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--timeout", type=int, default=1800)
     init.add_argument("--mission-id", default="")
     init.add_argument("--implementer", choices=["claude", "codex"], default="codex")
+    init.add_argument("--route-mode", choices=["default", "no-claude"], default="default")
     init.add_argument("--contract-ref", default="")
     init.add_argument("--scope", action="append", dest="owned_paths")
     init.add_argument("--dry-run", action="store_true")
@@ -112,6 +113,7 @@ def main() -> int:
                 timeout_seconds=args.timeout,
                 mission_id=args.mission_id,
                 implementer=args.implementer,
+                route_mode=args.route_mode,
                 contract_ref=args.contract_ref,
                 owned_paths=args.owned_paths,
                 dry_run=args.dry_run,
