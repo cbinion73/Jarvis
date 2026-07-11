@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import time
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +26,8 @@ class CatalystStore:
     def __init__(self, root: Path) -> None:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
+        self._legacy_proactive_path = self.root / "proactive_surfacing_runs.json"
+        self._runtime_root = self._resolve_runtime_root(self.root)
         self.signals_path = self.root / "signals.json"
         self.email_triage_path = self.root / "email_triage_runs.json"
         self.meeting_prep_path = self.root / "meeting_prep_runs.json"
@@ -33,10 +37,20 @@ class CatalystStore:
         self.project_briefs_path = self.root / "project_briefs.json"
         self.implementation_plans_path = self.root / "implementation_plans.json"
         self.hypotheses_path = self.root / "hypotheses.json"
-        self.proactive_path = self.root / "proactive_surfacing_runs.json"
+        # Keep proactive surfacing appends out of tracked source trees.
+        self.proactive_path = self._runtime_root / "proactive_surfacing_runs.json"
         self.pipeline_state_path = self.root / "pipeline_state.json"
         self.pipeline_review_path = self.root / "pipeline_reviews.json"
         self.work_lifecycle_path = self.root / "work_lifecycle.json"
+
+    @staticmethod
+    def _resolve_runtime_root(root: Path) -> Path:
+        if root.as_posix().rstrip("/") == "data/catalyst":
+            override = os.getenv("JARVIS_CATALYST_RUNTIME_ROOT", "").strip()
+            if override:
+                return Path(override)
+            return Path(tempfile.gettempdir()) / "jarvis" / "catalyst"
+        return root
 
     def _log_path(self, path: Path) -> Path:
         return path.with_name(f"{path.stem}_log.jsonl")
@@ -49,20 +63,32 @@ class CatalystStore:
             records = self._load_records_from_state_log(path)
             if records:
                 return records
-            return self._load_records_from_log(path)
+            records = self._load_records_from_log(path)
+            if records:
+                return records
+            if path == self.proactive_path and self._legacy_proactive_path != path:
+                return self._load_records(self._legacy_proactive_path)
+            return []
         try:
             records = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             replayed = self._load_records_from_state_log(path)
             if replayed:
                 return replayed
-            return self._load_records_from_log(path)
+            replayed = self._load_records_from_log(path)
+            if replayed:
+                return replayed
+            if path == self.proactive_path and self._legacy_proactive_path != path:
+                return self._load_records(self._legacy_proactive_path)
+            return []
         loaded = filter_records(records if isinstance(records, list) else [])
         if loaded:
             return loaded
         replayed = self._load_records_from_state_log(path)
         if replayed:
             return replayed
+        if path == self.proactive_path and self._legacy_proactive_path != path:
+            return self._load_records(self._legacy_proactive_path)
         return loaded
 
     def _load_records_from_log(self, path: Path) -> list[dict]:
