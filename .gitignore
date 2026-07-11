@@ -52,6 +52,7 @@ data/agents/*_state_log.jsonl
 
 # Operational queues and live workstream state
 data/workstreams/
+data/workflow_runs/
 
 # Live weather / security advisories fetched at runtime
 data/weather/
