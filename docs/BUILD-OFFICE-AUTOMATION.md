@@ -106,7 +106,7 @@ python3 scripts/jarvis_build_office.py cleanup-plan MISSION_ID
 
 ## Heartbeat pickup
 
-Heartbeat pickup is file-backed, not magical cross-vendor RPC. The Build Office exposes a shared inbox from mission state, and Orchestration runs a cheap Architect heartbeat on a timer.
+Heartbeat pickup is file-backed, not magical cross-vendor RPC. The Build Office exposes a shared inbox from mission state. While Orchestration is benched, the Architect Office runs the keeper heartbeat directly and owns routing decisions.
 
 The Architect heartbeat is the lightweight keeper loop for the office workflow. Run it every five minutes:
 
@@ -116,9 +116,9 @@ python3 scripts/jarvis_build_office.py heartbeat architect --cadence-seconds 300
 
 Each pass reads mission files, records an office heartbeat signature under ignored runtime state, and returns either an idle no-op or exact next actions after material changes. Repeated unchanged states set `changed_since_last` to `false`, so the loop can stay cheap until something changes. The heartbeat does not merge, push, repair code, reclaim leases, delete worktrees, or silently change contracts; it surfaces ready Architect assignments, Build-to-Quality review handoffs, failed or blocked assignments needing Architect disposition, expired leases, and dirty-main blockers.
 
-1. Orchestration or Build Office initializes the mission.
+1. Architect or Build Office initializes the mission while Orchestration is benched.
 2. Every five minutes, the keeper loop runs `python3 scripts/jarvis_build_office.py heartbeat architect --cadence-seconds 300 --watch`. The first pass after a material mission-state change records route actions; unchanged cycles record a tiny no-op heartbeat and suppress repeat routing.
-3. If Build finished, the heartbeat routes the immutable target to Quality. If Quality returns a failed or blocked result, the heartbeat routes disposition back to Architect. If a lease expires, main is dirty, a contract is missing, or an assignment is failed or blocked, the heartbeat records the exact recovery class instead of waiting indefinitely.
+3. If Build finished, Architect routes the immutable target to Quality. If Quality returns a failed or blocked result, Architect owns disposition. If a lease expires, main is dirty, a contract is missing, or an assignment is failed or blocked, the heartbeat records the exact recovery class instead of waiting indefinitely.
 4. `python3 scripts/jarvis_build_office.py heartbeat MISSION_ID --dispatch-ready` previews ready dispatch commands without running model processes. Add `--execute` only when the operator intentionally wants the heartbeat to launch ready assignments through the supported dispatcher.
 5. The Claude office can still poll `python3 scripts/jarvis_build_office.py inbox claude`; if a ready assignment appears, Claude claims it with `claim`, performs the read-only analysis or review, then records structured feedback with `submit-result`.
 6. The Codex side can use the same flow with `inbox codex` for manual office pickup, or continue to use `dispatch` for ephemeral CLI execution.

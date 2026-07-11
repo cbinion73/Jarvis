@@ -539,14 +539,13 @@ class BuildOffice:
                     }
                 )
             if status in {"failed", "blocked"}:
-                target_office = "architect" if duty == "review" else "orchestration"
                 actions.append(
                     {
                         "kind": "disposition-required" if duty == "review" else "repair-or-retry-required",
-                        "office": target_office,
+                        "office": "architect",
                         "assignment_id": assignment_id,
                         "provider": str(assignment.get("provider") or ""),
-                        "summary": f"{assignment_id} is {status}; route for supported disposition.",
+                        "summary": f"{assignment_id} is {status}; Architect must classify and route the supported next move.",
                     }
                 )
             expires_at = str((assignment.get("lease") or {}).get("expires_at", ""))
@@ -558,7 +557,7 @@ class BuildOffice:
                     actions.append(
                         {
                             "kind": "lease-recovery-required",
-                            "office": "orchestration",
+                            "office": "architect",
                             "assignment_id": assignment_id,
                             "summary": "Lease expiry is invalid; manual recovery required.",
                         }
@@ -567,7 +566,7 @@ class BuildOffice:
                     actions.append(
                         {
                             "kind": "lease-recovery-required",
-                            "office": "orchestration",
+                            "office": "architect",
                             "assignment_id": assignment_id,
                             "summary": "Lease expired; reclaim through the recorded recovery path.",
                         }
@@ -576,7 +575,7 @@ class BuildOffice:
             actions.append(
                 {
                     "kind": "main-dirty",
-                    "office": "orchestration",
+                    "office": "architect",
                     "summary": "Main checkout is dirty; intake and release gates remain blocked.",
                 }
             )
