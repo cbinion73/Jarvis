@@ -74,11 +74,14 @@ Run from the repository root:
 python3 scripts/jarvis_build_office.py doctor
 python3 scripts/jarvis_build_office.py init "Implement the bounded request" --risk medium --implementer codex --scope 'jarvis/**' --scope 'tests/**'
 python3 scripts/jarvis_build_office.py status MISSION_ID
+python3 scripts/jarvis_build_office.py inbox claude
+python3 scripts/jarvis_build_office.py claim MISSION_ID ASSIGNMENT_ID --by "Claude QA Office"
 python3 scripts/jarvis_build_office.py approve-dispatch MISSION_ID --by Chris
 python3 scripts/jarvis_build_office.py reclaim-lease MISSION_ID ASSIGNMENT_ID --by Chris
 python3 scripts/jarvis_build_office.py retry MISSION_ID ASSIGNMENT_ID --by Chris
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID codex-implementation --dry-run
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID claude-review --dry-run
+python3 scripts/jarvis_build_office.py submit-result MISSION_ID ASSIGNMENT_ID --by "Claude QA Office" --status completed --summary "No blocking findings." --finding "Optional improvement"
 python3 scripts/jarvis_build_office.py release-plan MISSION_ID
 python3 scripts/jarvis_build_office.py cleanup-plan MISSION_ID
 ```
@@ -94,6 +97,18 @@ python3 scripts/jarvis_build_office.py cleanup-plan MISSION_ID
 5. Medium or higher risk remains blocked until the other provider completes review.
 6. `release-plan` reports whether the mission is blocked or ready for human approval; it never merges or pushes.
 7. `cleanup-plan` distinguishes clean removable worktrees from dirty or active worktrees. Removal remains an explicit approved operation.
+
+## Heartbeat pickup
+
+Heartbeat pickup is file-backed, not magical cross-vendor RPC. The Build Office exposes a shared inbox from mission state, and each office polls it on a timer.
+
+1. Orchestration or Build Office initializes the mission.
+2. The Claude office heartbeat runs `python3 scripts/jarvis_build_office.py inbox claude`.
+3. If a ready assignment appears, Claude claims it with `claim`, performs the read-only analysis or review, then records structured feedback with `submit-result`.
+4. The Codex side can use the same flow with `inbox codex` for manual office pickup, or continue to use `dispatch` for ephemeral CLI execution.
+5. `release-plan` reads the resulting assignment state and evidence instead of relying on trusted chat summaries.
+
+This gives Claude a durable pickup signal and a durable return path without requiring shared writable branches or direct Codex-to-Claude messaging.
 
 ## Recovery
 

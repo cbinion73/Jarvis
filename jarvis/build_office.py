@@ -23,6 +23,7 @@ from .persistence import append_jsonl, atomic_write_json
 RISK_LEVELS = {"low", "medium", "high", "critical"}
 TERMINAL_ASSIGNMENT_STATES = {"completed", "failed", "cancelled", "released"}
 WRITE_ASSIGNMENT_STATES = {"leased", "running"}
+MANUAL_RESULT_STATES = {"completed", "failed", "blocked"}
 
 
 def _now_iso() -> str:
@@ -380,6 +381,33 @@ class BuildOffice:
                 return assignment
         raise KeyError(f"Unknown assignment: {assignment_id}")
 
+    @staticmethod
+    def _assignment_status(mission: dict[str, Any], duty: str) -> list[dict[str, Any]]:
+        return [item for item in mission.get("assignments", []) if item.get("duty") == duty]
+
+    def _assignment_ready(self, mission: dict[str, Any], assignment: dict[str, Any]) -> tuple[bool, str]:
+        status = str(assignment.get("status") or "")
+        if status not in {"planned", "provisioned"}:
+            return False, f"assignment status is {status or 'unknown'}"
+        duty = str(assignment.get("duty") or "")
+        if duty == "analysis":
+            return True, "analysis is ready"
+        if duty == "implementation":
+            if mission.get("risk") == "critical" and not bool((mission.get("approvals") or {}).get("dispatch")):
+                return False, "awaiting dispatch approval"
+            analyses = self._assignment_status(mission, "analysis")
+            if analyses and any(item.get("status") != "completed" for item in analyses):
+                return False, "awaiting required analysis"
+            if assignment.get("writable") and status != "provisioned":
+                return False, "writable worktree is not provisioned"
+            return True, "implementation is ready"
+        if duty == "review":
+            implementations = self._assignment_status(mission, "implementation")
+            if not implementations or any(item.get("status") != "completed" for item in implementations):
+                return False, "awaiting implementation evidence"
+            return True, "review is ready"
+        return False, f"unknown duty: {duty}"
+
     def provision_assignment(self, mission_id: str, assignment_id: str, *, dry_run: bool = False) -> dict[str, Any]:
         with self._locked():
             mission = self.load_mission(mission_id)
@@ -415,6 +443,65 @@ class BuildOffice:
             assignment["status"] = "provisioned" if not dry_run else "planned"
             self.save_mission(mission, event="assignment-provisioned", assignment_id=assignment_id, dry_run=dry_run)
             return dict(assignment)
+
+    def office_inbox(self, provider: str) -> dict[str, Any]:
+        provider = provider.strip().lower()
+        if provider not in {"claude", "codex"}:
+            raise ValueError("provider must be claude or codex")
+        items: list[dict[str, Any]] = []
+        if self.state_root.exists():
+            for path in sorted(self.state_root.glob("*/mission.json")):
+                try:
+                    mission = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if not isinstance(mission, dict) or not isinstance(mission.get("assignments"), list):
+                    continue
+                for assignment in mission["assignments"]:
+                    if not isinstance(assignment, dict) or assignment.get("provider") != provider:
+                        continue
+                    ready, reason = self._assignment_ready(mission, assignment)
+                    if not ready:
+                        continue
+                    payload = {
+                        "mission_id": str(mission.get("mission_id") or ""),
+                        "assignment_id": str(assignment.get("assignment_id") or ""),
+                        "duty": str(assignment.get("duty") or ""),
+                        "risk": str(mission.get("risk") or ""),
+                        "request": str(mission.get("request") or ""),
+                        "status": str(assignment.get("status") or ""),
+                        "writable": bool(assignment.get("writable")),
+                        "worktree": str(assignment.get("worktree") or ""),
+                        "branch": str(assignment.get("branch") or ""),
+                        "owned_paths": list(assignment.get("owned_paths") or []),
+                        "forbidden_paths": list(assignment.get("forbidden_paths") or []),
+                        "mission_file": str(path),
+                        "ready_reason": reason,
+                        "claim_command": (
+                            f"python3 scripts/jarvis_build_office.py claim {mission.get('mission_id')} "
+                            f"{assignment.get('assignment_id')} --by {provider}-office"
+                        ),
+                        "submit_command_hint": (
+                            f"python3 scripts/jarvis_build_office.py submit-result {mission.get('mission_id')} "
+                            f"{assignment.get('assignment_id')} --by {provider}-office --status completed "
+                            "--summary '...'"
+                        ),
+                        "prompt": self.build_prompt(mission, assignment),
+                    }
+                    if assignment.get("duty") == "review":
+                        implementation = next(
+                            (item for item in mission["assignments"] if item.get("duty") == "implementation"),
+                            {},
+                        )
+                        payload["review_target"] = {
+                            "provider": str(implementation.get("provider") or ""),
+                            "worktree": str(implementation.get("worktree") or ""),
+                            "branch": str(implementation.get("branch") or ""),
+                            "evidence": dict(implementation.get("evidence") or {}),
+                        }
+                    items.append(payload)
+        items.sort(key=lambda item: (item["risk"], item["mission_id"], item["assignment_id"]))
+        return {"provider": provider, "generated_at": _now_iso(), "items": items}
 
     def _active_write_assignments(self, *, exclude: tuple[str, str] | None = None) -> Iterator[tuple[str, dict[str, Any]]]:
         if not self.state_root.exists():
@@ -466,6 +553,17 @@ class BuildOffice:
             }
             self.save_mission(mission, event="lease-acquired", assignment_id=assignment_id)
             return dict(assignment)
+
+    def claim_assignment(self, mission_id: str, assignment_id: str, *, claimed_by: str) -> dict[str, Any]:
+        claimed_by = claimed_by.strip()
+        if not claimed_by:
+            raise ValueError("claimed_by is required")
+        mission = self.load_mission(mission_id)
+        assignment = self._find_assignment(mission, assignment_id)
+        ready, reason = self._assignment_ready(mission, assignment)
+        if not ready:
+            raise RuntimeError(f"Assignment is not ready: {reason}")
+        return self.acquire_lease(mission_id, assignment_id, holder=claimed_by)
 
     def release_lease(self, mission_id: str, assignment_id: str, *, status: str = "released") -> dict[str, Any]:
         with self._locked():
@@ -701,6 +799,80 @@ class BuildOffice:
             "stdout_tail": _redact_output(stdout[-8000:]),
             "stderr_tail": _redact_output(stderr[-4000:]),
         }
+
+    def submit_result(
+        self,
+        mission_id: str,
+        assignment_id: str,
+        *,
+        completed_by: str,
+        status: str,
+        summary: str,
+        findings: list[str] | None = None,
+        tests: list[str] | None = None,
+    ) -> dict[str, Any]:
+        completed_by = completed_by.strip()
+        status = status.strip().lower()
+        summary = summary.strip()
+        if not completed_by:
+            raise ValueError("completed_by is required")
+        if status not in MANUAL_RESULT_STATES:
+            raise ValueError(f"status must be one of: {', '.join(sorted(MANUAL_RESULT_STATES))}")
+        if not summary:
+            raise ValueError("summary is required")
+        with self._locked():
+            mission = self.load_mission(mission_id)
+            assignment = self._find_assignment(mission, assignment_id)
+            current_status = str(assignment.get("status") or "")
+            if current_status in TERMINAL_ASSIGNMENT_STATES:
+                raise RuntimeError("Assignment is already terminal.")
+            base_evidence: dict[str, Any]
+            if assignment.get("writable"):
+                worktree = Path(str(assignment.get("worktree") or ""))
+                if not worktree.is_dir() or worktree.resolve() == self.repo_root:
+                    raise RuntimeError("Writable submission requires the original isolated worktree.")
+                base_evidence = self.capture_evidence(
+                    worktree,
+                    0 if status == "completed" else 1,
+                    "",
+                    "",
+                    str((assignment.get("lease") or {}).get("acquired_at") or _now_iso()),
+                    baseline_commit=str(mission["baseline_commit"]),
+                )
+                violations = self._scope_violations(assignment, base_evidence["changed_files"])
+                if violations:
+                    base_evidence["scope_violations"] = violations
+                    status = "failed"
+            else:
+                base_evidence = {
+                    "exit_code": 0 if status == "completed" else 1,
+                    "started_at": str((assignment.get("lease") or {}).get("acquired_at") or _now_iso()),
+                    "completed_at": _now_iso(),
+                    "commit": "",
+                    "changed_files": [],
+                    "stdout_tail": "",
+                    "stderr_tail": "",
+                }
+            evidence = {
+                **base_evidence,
+                "summary": summary,
+                "findings": [item.strip() for item in (findings or []) if item.strip()],
+                "tests": [item.strip() for item in (tests or []) if item.strip()],
+                "completed_by": completed_by,
+                "manual_result": True,
+                "verdict": status,
+            }
+            assignment["evidence"] = evidence
+            assignment["status"] = status
+            assignment["lease"] = {**dict(assignment.get("lease") or {}), "released_at": _now_iso()}
+            self.save_mission(
+                mission,
+                event="assignment-finished",
+                assignment_id=assignment_id,
+                status=status,
+                completed_by=completed_by,
+            )
+            return {"status": status, "evidence": evidence}
 
     def release_plan(self, mission_id: str) -> dict[str, Any]:
         with self._locked():

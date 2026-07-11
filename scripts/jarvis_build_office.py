@@ -38,6 +38,14 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status")
     status.add_argument("mission_id")
 
+    inbox = sub.add_parser("inbox")
+    inbox.add_argument("provider", choices=["claude", "codex"])
+
+    claim = sub.add_parser("claim")
+    claim.add_argument("mission_id")
+    claim.add_argument("assignment_id")
+    claim.add_argument("--by", required=True, dest="claimed_by")
+
     dispatch = sub.add_parser("dispatch")
     dispatch.add_argument("mission_id")
     dispatch.add_argument("assignment_id")
@@ -63,6 +71,15 @@ def build_parser() -> argparse.ArgumentParser:
     cleanup = sub.add_parser("cleanup-plan")
     cleanup.add_argument("mission_id")
 
+    submit = sub.add_parser("submit-result")
+    submit.add_argument("mission_id")
+    submit.add_argument("assignment_id")
+    submit.add_argument("--by", required=True, dest="completed_by")
+    submit.add_argument("--status", choices=["completed", "failed", "blocked"], required=True)
+    submit.add_argument("--summary", required=True)
+    submit.add_argument("--finding", action="append", dest="findings")
+    submit.add_argument("--test", action="append", dest="tests")
+
     demo = sub.add_parser("demo")
     demo.add_argument("--dry-run", action="store_true", required=True)
     return parser
@@ -87,6 +104,12 @@ def main() -> int:
             )
         elif args.command == "status":
             payload = office.load_mission(args.mission_id)
+        elif args.command == "inbox":
+            payload = office.office_inbox(args.provider)
+        elif args.command == "claim":
+            payload = office.claim_assignment(
+                args.mission_id, args.assignment_id, claimed_by=args.claimed_by
+            )
         elif args.command == "dispatch":
             payload = office.dispatch(args.mission_id, args.assignment_id, dry_run=args.dry_run)
         elif args.command == "approve-dispatch":
@@ -103,6 +126,16 @@ def main() -> int:
             payload = office.release_plan(args.mission_id)
         elif args.command == "cleanup-plan":
             payload = office.cleanup_plan(args.mission_id)
+        elif args.command == "submit-result":
+            payload = office.submit_result(
+                args.mission_id,
+                args.assignment_id,
+                completed_by=args.completed_by,
+                status=args.status,
+                summary=args.summary,
+                findings=args.findings,
+                tests=args.tests,
+            )
         elif args.command == "demo":
             mission = office.init_mission(
                 request="Demonstrate collision-safe JARVIS build-office routing",

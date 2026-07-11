@@ -343,6 +343,104 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertGreater(after["revision"], before)
         self.assertEqual([item["event"] for item in events], ["mission-created", "lease-acquired"])
 
+    def test_inbox_shows_high_risk_analysis_before_implementation(self) -> None:
+        self.office.init_mission(
+            request="Audit a risky change",
+            risk="high",
+            mission_id="bo-heartbeat-analysis",
+            provision=False,
+        )
+        inbox = self.office.office_inbox("claude")
+        self.assertEqual(
+            [item["assignment_id"] for item in inbox["items"]],
+            ["claude-analysis"],
+        )
+
+    def test_critical_implementation_stays_out_of_inbox_until_approved(self) -> None:
+        mission = self.office.init_mission(
+            request="Critical implementation gate",
+            risk="critical",
+            mission_id="bo-heartbeat-critical",
+            provision=True,
+        )
+        codex_before = self.office.office_inbox("codex")
+        self.assertEqual(codex_before["items"], [])
+        self.office.approve_dispatch(mission["mission_id"], approved_by="Chris")
+        state = self.office.load_mission(mission["mission_id"])
+        analysis = self.office._find_assignment(state, "claude-analysis")
+        analysis["status"] = "completed"
+        analysis["evidence"] = {"summary": "Ready to implement"}
+        self.office.save_mission(state, event="test-analysis-complete")
+        codex_after = self.office.office_inbox("codex")
+        self.assertEqual(
+            [item["assignment_id"] for item in codex_after["items"]],
+            ["codex-implementation"],
+        )
+
+    def test_claim_and_submit_result_complete_review_lane(self) -> None:
+        mission = self.office.init_mission(
+            request="Heartbeat review flow",
+            mission_id="bo-heartbeat-review",
+            provision=False,
+        )
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        implementation["status"] = "completed"
+        implementation["evidence"] = {
+            "exit_code": 0,
+            "commit": "abc123",
+            "changed_files": ["jarvis/example.py"],
+        }
+        self.office.save_mission(state, event="test-implementation-complete")
+        inbox = self.office.office_inbox("claude")
+        self.assertEqual([item["assignment_id"] for item in inbox["items"]], ["claude-review"])
+        claimed = self.office.claim_assignment(
+            mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
+        )
+        self.assertEqual(claimed["status"], "leased")
+        submitted = self.office.submit_result(
+            mission["mission_id"],
+            "claude-review",
+            completed_by="Claude QA Office",
+            status="completed",
+            summary="No blocking findings.",
+            findings=["Optional naming cleanup only."],
+            tests=["Read-only contract review"],
+        )
+        self.assertEqual(submitted["status"], "completed")
+        plan = self.office.release_plan(mission["mission_id"])
+        self.assertEqual(plan["status"], "approval-required")
+
+    def test_failed_review_submission_blocks_release(self) -> None:
+        mission = self.office.init_mission(
+            request="Blocked review flow",
+            mission_id="bo-heartbeat-blocked",
+            provision=False,
+        )
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        implementation["status"] = "completed"
+        implementation["evidence"] = {
+            "exit_code": 0,
+            "commit": "abc123",
+            "changed_files": ["jarvis/example.py"],
+        }
+        self.office.save_mission(state, event="test-implementation-complete")
+        self.office.claim_assignment(
+            mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
+        )
+        self.office.submit_result(
+            mission["mission_id"],
+            "claude-review",
+            completed_by="Claude QA Office",
+            status="failed",
+            summary="Blocking contract mismatch.",
+            findings=["Release gate misses a required invariant."],
+        )
+        plan = self.office.release_plan(mission["mission_id"])
+        self.assertEqual(plan["status"], "blocked")
+        self.assertIn("claude-review is failed", plan["reasons"])
+
 
 if __name__ == "__main__":
     unittest.main()
