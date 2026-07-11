@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from jarvis.build_office import BuildOffice
+from jarvis.office_charters import all_office_briefs, office_charter, onboarding_brief
 
 
 def _print(payload: Any) -> None:
@@ -25,6 +26,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("doctor")
 
+    brief = sub.add_parser("office-brief")
+    brief.add_argument("office", choices=["orchestration", "architect", "build", "qa", "all"])
+
     init = sub.add_parser("init")
     init.add_argument("request")
     init.add_argument("--risk", choices=["low", "medium", "high", "critical"], default="medium")
@@ -32,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_argument("--timeout", type=int, default=1800)
     init.add_argument("--mission-id", default="")
     init.add_argument("--implementer", choices=["claude", "codex"], default="codex")
+    init.add_argument("--contract-ref", default="")
     init.add_argument("--scope", action="append", dest="owned_paths")
     init.add_argument("--dry-run", action="store_true")
 
@@ -91,6 +96,14 @@ def main() -> int:
     try:
         if args.command == "doctor":
             payload = office.doctor()
+        elif args.command == "office-brief":
+            if args.office == "all":
+                payload = all_office_briefs()
+            else:
+                payload = {
+                    "charter": office_charter(args.office),
+                    "onboarding_brief": onboarding_brief(args.office),
+                }
         elif args.command == "init":
             payload = office.init_mission(
                 request=args.request,
@@ -99,6 +112,7 @@ def main() -> int:
                 timeout_seconds=args.timeout,
                 mission_id=args.mission_id,
                 implementer=args.implementer,
+                contract_ref=args.contract_ref,
                 owned_paths=args.owned_paths,
                 dry_run=args.dry_run,
             )
@@ -142,13 +156,15 @@ def main() -> int:
                 risk="medium",
                 budget_usd=2.0,
                 timeout_seconds=300,
+                contract_ref="docs/BUILD-OFFICE-AUTOMATION.md",
                 mission_id=f"bo-demo-{__import__('uuid').uuid4().hex[:8]}",
                 dry_run=True,
             )
             dispatches = {
-                assignment["assignment_id"]: office.dispatch(
-                    mission["mission_id"], assignment["assignment_id"], dry_run=True
-                )
+                assignment["assignment_id"]: {
+                    "dry_run": True,
+                    "command": office.adapter_command(mission, assignment),
+                }
                 for assignment in mission["assignments"]
             }
             payload = {

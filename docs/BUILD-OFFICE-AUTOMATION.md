@@ -29,6 +29,8 @@ Every model process receives a timeout and declared dollar budget. Claude's CLI 
 
 ## Office duties
 
+The binding, versioned role definitions and separation-of-duty matrix live in [OFFICE-CHARTERS.md](OFFICE-CHARTERS.md). Teach a persistent office with `office-brief` when it is created and whenever the charter version changes. Every generated mission assignment also records and injects the applicable charter version.
+
 ### JARVIS control plane
 
 - Own mission state, revisions, assignments, leases, and release gates.
@@ -72,7 +74,8 @@ Run from the repository root:
 
 ```bash
 python3 scripts/jarvis_build_office.py doctor
-python3 scripts/jarvis_build_office.py init "Implement the bounded request" --risk medium --implementer codex --scope 'jarvis/**' --scope 'tests/**'
+python3 scripts/jarvis_build_office.py office-brief all
+python3 scripts/jarvis_build_office.py init "Implement the bounded request" --contract-ref '_bmad-output/implementation-artifacts/spec-example.md' --risk medium --implementer codex --scope 'jarvis/**' --scope 'tests/**'
 python3 scripts/jarvis_build_office.py status MISSION_ID
 python3 scripts/jarvis_build_office.py inbox claude
 python3 scripts/jarvis_build_office.py claim MISSION_ID ASSIGNMENT_ID --by "Claude QA Office"
@@ -91,7 +94,7 @@ python3 scripts/jarvis_build_office.py cleanup-plan MISSION_ID
 ## Lifecycle
 
 1. `doctor` verifies Git, both CLIs, and checkout cleanliness.
-2. `init` records a bounded mission and provisions writable worktrees.
+2. `init` records a bounded mission and its frozen Architect contract reference, then provisions writable worktrees. Implementation remains blocked when the contract reference is missing.
 3. `dispatch` atomically acquires a lease, checks all active leases, and only then launches a model.
 4. Completion records process and Git evidence and releases the lease.
 5. Medium or higher risk remains blocked until the other provider completes review.

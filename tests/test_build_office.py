@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from jarvis.build_office import BuildOffice, scopes_overlap
+from jarvis.office_charters import CHARTER_VERSION
 
 
 def _git(root: Path, *args: str) -> str:
@@ -26,12 +27,51 @@ class BuildOfficeTests(unittest.TestCase):
         _git(self.root, "config", "user.email", "build-office@example.test")
         _git(self.root, "config", "user.name", "Build Office Test")
         (self.root / "README.md").write_text("# Test\n", encoding="utf-8")
+        (self.root / "ARCHITECT-CONTRACT.md").write_text(
+            "# Frozen Architect Contract\n\nImplement the bounded test request.\n",
+            encoding="utf-8",
+        )
+        (self.root / "contracts").mkdir()
+        (self.root / "contracts" / "placeholder.txt").write_text("fixture\n", encoding="utf-8")
         _git(self.root, "add", "README.md")
+        _git(self.root, "add", "ARCHITECT-CONTRACT.md")
+        _git(self.root, "add", "contracts/placeholder.txt")
         _git(self.root, "commit", "-m", "baseline")
         self.office = BuildOffice(self.root)
 
     def tearDown(self) -> None:
         self.temp.cleanup()
+
+    def _init_mission(self, **kwargs):
+        kwargs.setdefault("contract_ref", "ARCHITECT-CONTRACT.md")
+        return self.office.init_mission(**kwargs)
+
+    def _complete_analysis(self, mission_id: str) -> None:
+        state = self.office.load_mission(mission_id)
+        analysis = next(item for item in state["assignments"] if item["duty"] == "analysis")
+        analysis["status"] = "completed"
+        analysis["evidence"] = {"summary": "Architect contract confirmed"}
+        self.office.save_mission(state, event="test-analysis-complete")
+
+    def _complete_implementation_for_review(self, mission_id: str) -> None:
+        state = self.office.load_mission(mission_id)
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        worktree = Path(implementation["worktree"])
+        target = worktree / "jarvis" / "example.py"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("VALUE = 1\n", encoding="utf-8")
+        _git(worktree, "add", "jarvis/example.py")
+        _git(worktree, "commit", "-m", "implement review fixture")
+        implementation["status"] = "completed"
+        implementation["evidence"] = self.office.capture_evidence(
+            worktree,
+            0,
+            "",
+            "",
+            datetime.now(timezone.utc).isoformat(),
+            baseline_commit=state["baseline_commit"],
+        )
+        self.office.save_mission(state, event="test-implementation-complete")
 
     def test_scope_overlap_is_conservative(self) -> None:
         self.assertTrue(scopes_overlap(["jarvis/**"], ["jarvis/runtime.py"]))
@@ -45,7 +85,7 @@ class BuildOfficeTests(unittest.TestCase):
         _git(self.root, "add", "vendor/link")
         _git(self.root, "commit", "-m", "add symlink fixture")
         with self.assertRaisesRegex(ValueError, "traverse a symlink"):
-            self.office.init_mission(
+            self._init_mission(
                 request="Reject aliased scope",
                 mission_id="bo-symlink",
                 owned_paths=["vendor/link/**"],
@@ -61,7 +101,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertEqual(Path(result["repo_root"]).resolve(), self.root.resolve())
 
     def test_medium_risk_mission_routes_codex_implementation_and_claude_review(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Implement a bounded feature",
             risk="medium",
             mission_id="bo-medium",
@@ -74,7 +114,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertTrue(mission["requires_cross_review"])
 
     def test_high_risk_adds_claude_analysis_before_implementation(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Plan a risky migration",
             risk="high",
             mission_id="bo-high",
@@ -83,8 +123,100 @@ class BuildOfficeTests(unittest.TestCase):
         duties = [item["duty"] for item in mission["assignments"]]
         self.assertEqual(duties, ["analysis", "implementation", "review"])
 
-    def test_implementer_is_configurable_and_reviewer_is_always_other_provider(self) -> None:
+    def test_mission_and_assignments_record_office_charter(self) -> None:
+        mission = self._init_mission(
+            request="Bind assignments to office charters",
+            risk="high",
+            mission_id="bo-charters",
+            provision=False,
+        )
+        self.assertEqual(mission["charter_version"], CHARTER_VERSION)
+        offices = {item["duty"]: item["office"] for item in mission["assignments"]}
+        self.assertEqual(
+            offices,
+            {"analysis": "architect", "implementation": "build", "review": "qa"},
+        )
+        self.assertTrue(
+            all(item["charter_version"] == CHARTER_VERSION for item in mission["assignments"])
+        )
+
+    def test_assignment_prompt_includes_copy_ready_charter(self) -> None:
+        mission = self._init_mission(
+            request="Teach the Build Office",
+            mission_id="bo-charter-prompt",
+            provision=False,
+        )
+        assignment = self.office._find_assignment(mission, "codex-implementation")
+        prompt = self.office.build_prompt(mission, assignment)
+        self.assertIn("JARVIS Build Office", prompt)
+        self.assertIn(f"recorded charter version: {CHARTER_VERSION}", prompt)
+        self.assertIn("You must not:", prompt)
+        self.assertIn("Mission: Teach the Build Office", prompt)
+        self.assertIn("Frozen Architect contract: ARCHITECT-CONTRACT.md", prompt)
+        self.assertIn(mission["architecture_contract"]["sha256"], prompt)
+        self.assertIn("Implement the bounded test request.", prompt)
+
+    def test_assignment_prompt_uses_recorded_charter_snapshot(self) -> None:
+        mission = self._init_mission(
+            request="Preserve the assigned rules",
+            mission_id="bo-charter-snapshot",
+            provision=False,
+        )
+        assignment = self.office._find_assignment(mission, "codex-implementation")
+        assignment["onboarding_brief"] = "RECORDED OFFICE RULES"
+        prompt = self.office.build_prompt(mission, assignment)
+        self.assertIn("RECORDED OFFICE RULES", prompt)
+
+    def test_assignment_office_mismatch_fails_closed(self) -> None:
+        mission = self._init_mission(
+            request="Reject conflicting identity",
+            mission_id="bo-office-mismatch",
+            provision=False,
+        )
+        assignment = dict(self.office._find_assignment(mission, "codex-implementation"))
+        assignment["office"] = "qa"
+        with self.assertRaisesRegex(ValueError, "conflicts with duty"):
+            self.office.build_prompt(mission, assignment)
+
+    def test_missing_architect_contract_blocks_build(self) -> None:
         mission = self.office.init_mission(
+            request="Do not make Build invent the contract",
+            mission_id="bo-missing-contract",
+            provision=True,
+        )
+        self.assertEqual(self.office.office_inbox("codex")["items"], [])
+        with self.assertRaisesRegex(RuntimeError, "awaiting frozen Architect contract"):
+            self.office.dispatch(mission["mission_id"], "codex-implementation", dry_run=True)
+
+    def test_uncommitted_or_missing_contract_reference_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "committed at the mission baseline"):
+            self.office.init_mission(
+                request="Reject a fake contract",
+                mission_id="bo-fake-contract",
+                contract_ref="does-not-exist.md",
+                provision=False,
+            )
+        with self.assertRaisesRegex(ValueError, "committed file blob"):
+            self.office.init_mission(
+                request="Reject a directory contract",
+                mission_id="bo-directory-contract",
+                contract_ref="contracts",
+                provision=False,
+            )
+
+    def test_unknown_assignment_duty_fails_closed_during_prompt_build(self) -> None:
+        mission = self._init_mission(
+            request="Reject an ungoverned duty",
+            mission_id="bo-unknown-duty",
+            provision=False,
+        )
+        assignment = dict(self.office._find_assignment(mission, "codex-implementation"))
+        assignment["duty"] = "merge"
+        with self.assertRaisesRegex(ValueError, "No office charter"):
+            self.office.build_prompt(mission, assignment)
+
+    def test_implementer_is_configurable_and_reviewer_is_always_other_provider(self) -> None:
+        mission = self._init_mission(
             request="Let Claude implement this bounded slice",
             risk="medium",
             mission_id="bo-claude-implements",
@@ -100,18 +232,19 @@ class BuildOfficeTests(unittest.TestCase):
     def test_dirty_main_blocks_mission_intake(self) -> None:
         (self.root / "dirty.txt").write_text("dirty", encoding="utf-8")
         with self.assertRaisesRegex(RuntimeError, "clean"):
-            self.office.init_mission(request="Do work", provision=False)
+            self._init_mission(request="Do work", provision=False)
 
     def test_critical_dispatch_requires_explicit_human_approval(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Perform critical migration",
             risk="critical",
             mission_id="bo-critical",
-            provision=False,
+            provision=True,
         )
         with self.assertRaisesRegex(RuntimeError, "dispatch approval"):
             self.office.dispatch(mission["mission_id"], "codex-implementation", dry_run=True)
         approval = self.office.approve_dispatch(mission["mission_id"], approved_by="Chris")
+        self._complete_analysis(mission["mission_id"])
         dispatched = self.office.dispatch(
             mission["mission_id"], "codex-implementation", dry_run=True
         )
@@ -120,7 +253,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertTrue(dispatched["dry_run"])
 
     def test_writable_assignment_never_targets_main_checkout(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Do work", mission_id="bo-main-target", provision=False
         )
         state = self.office.load_mission(mission["mission_id"])
@@ -131,7 +264,7 @@ class BuildOfficeTests(unittest.TestCase):
             self.office.provision_assignment(mission["mission_id"], "codex-implementation")
 
     def test_real_dispatch_refuses_missing_worktree_instead_of_falling_back_to_main(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Never fall back to main",
             mission_id="bo-no-fallback",
             provision=False,
@@ -140,7 +273,7 @@ class BuildOfficeTests(unittest.TestCase):
             self.office.dispatch(mission["mission_id"], "codex-implementation")
 
     def test_provision_creates_unique_branch_and_worktree_off_main(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Provision isolated work",
             mission_id="bo-provision",
             provision=True,
@@ -155,10 +288,10 @@ class BuildOfficeTests(unittest.TestCase):
         )
 
     def test_overlapping_active_leases_block_second_dispatch(self) -> None:
-        first = self.office.init_mission(
+        first = self._init_mission(
             request="First change", mission_id="bo-first", provision=False
         )
-        second = self.office.init_mission(
+        second = self._init_mission(
             request="Second change", mission_id="bo-second", provision=False
         )
         self.office.acquire_lease(first["mission_id"], "codex-implementation")
@@ -170,12 +303,13 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertIn("collision", assignment["evidence"])
 
     def test_dry_run_dispatch_returns_bounded_commands_without_running_models(self) -> None:
-        mission = self.office.init_mission(
-            request="Implement safely", mission_id="bo-dispatch", provision=False
+        mission = self._init_mission(
+            request="Implement safely", mission_id="bo-dispatch", provision=True
         )
         codex = self.office.dispatch(
             mission["mission_id"], "codex-implementation", dry_run=True
         )
+        self._complete_implementation_for_review(mission["mission_id"])
         claude = self.office.dispatch(
             mission["mission_id"], "claude-review", dry_run=True
         )
@@ -186,7 +320,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertIn("Do not switch branches", codex["display_command"])
 
     def test_nonzero_model_exit_marks_assignment_failed_and_releases_lease(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Exercise failure path",
             mission_id="bo-failure",
             provision=True,
@@ -215,7 +349,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertTrue(second["dry_run"])
 
     def test_cleanup_plan_refuses_dirty_agent_worktree(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Prepare cleanup evidence",
             mission_id="bo-cleanup",
             provision=True,
@@ -232,7 +366,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertFalse(plan["mutated_git"])
 
     def test_release_plan_blocks_missing_implementation_and_review(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Implement safely", mission_id="bo-release-blocked", provision=False
         )
         plan = self.office.release_plan(mission["mission_id"])
@@ -242,7 +376,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertFalse(plan["mutated_git"])
 
     def test_high_risk_release_also_requires_analysis(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Risky change",
             risk="high",
             mission_id="bo-analysis-gate",
@@ -261,7 +395,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertIn("required analysis incomplete", plan["reasons"])
 
     def test_release_rejects_noop_implementation_and_scope_violation(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Scoped change",
             mission_id="bo-scope-gate",
             owned_paths=["jarvis/**"],
@@ -285,7 +419,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertIn("codex-implementation changed files outside its lease", plan["reasons"])
 
     def test_expired_lease_requires_named_reclaimer(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Recover stale work",
             mission_id="bo-expired",
             provision=False,
@@ -304,7 +438,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertEqual(reclaimed["lease"]["reclaimed_by"], "Chris")
 
     def test_stale_revision_is_rejected(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Protect revisions", mission_id="bo-cas", provision=False
         )
         stale = self.office.load_mission(mission["mission_id"])
@@ -314,18 +448,20 @@ class BuildOfficeTests(unittest.TestCase):
             self.office.save_mission(stale, event="stale-update")
 
     def test_release_plan_becomes_approval_required_only_with_cross_evidence(self) -> None:
-        mission = self.office.init_mission(
-            request="Implement safely", mission_id="bo-release-ready", provision=False
+        mission = self._init_mission(
+            request="Implement safely", mission_id="bo-release-ready", provision=True
         )
-        state = self.office.load_mission(mission["mission_id"])
-        for assignment in state["assignments"]:
-            assignment["status"] = "completed"
-            assignment["evidence"] = {
-                "exit_code": 0,
-                "commit": "abc123",
-                "changed_files": ["jarvis/example.py"] if assignment["duty"] == "implementation" else [],
-            }
-        self.office.save_mission(state, event="test-completed")
+        self._complete_implementation_for_review(mission["mission_id"])
+        self.office.claim_assignment(
+            mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
+        )
+        self.office.submit_result(
+            mission["mission_id"],
+            "claude-review",
+            completed_by="Claude QA Office",
+            status="completed",
+            summary="Approved against the frozen target.",
+        )
         plan = self.office.release_plan(mission["mission_id"])
         self.assertEqual(plan["status"], "approval-required")
         self.assertEqual(plan["reasons"], [])
@@ -333,7 +469,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertFalse(plan["mutated_git"])
 
     def test_events_are_append_only_and_revision_increases(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Trace this", mission_id="bo-events", provision=False
         )
         before = mission["revision"]
@@ -344,7 +480,7 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertEqual([item["event"] for item in events], ["mission-created", "lease-acquired"])
 
     def test_inbox_shows_high_risk_analysis_before_implementation(self) -> None:
-        self.office.init_mission(
+        self._init_mission(
             request="Audit a risky change",
             risk="high",
             mission_id="bo-heartbeat-analysis",
@@ -355,9 +491,12 @@ class BuildOfficeTests(unittest.TestCase):
             [item["assignment_id"] for item in inbox["items"]],
             ["claude-analysis"],
         )
+        self.assertEqual(inbox["items"][0]["office"], "architect")
+        self.assertEqual(inbox["items"][0]["charter_version"], CHARTER_VERSION)
+        self.assertIn("JARVIS Architect Office", inbox["items"][0]["prompt"])
 
     def test_critical_implementation_stays_out_of_inbox_until_approved(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Critical implementation gate",
             risk="critical",
             mission_id="bo-heartbeat-critical",
@@ -378,20 +517,12 @@ class BuildOfficeTests(unittest.TestCase):
         )
 
     def test_claim_and_submit_result_complete_review_lane(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Heartbeat review flow",
             mission_id="bo-heartbeat-review",
-            provision=False,
+            provision=True,
         )
-        state = self.office.load_mission(mission["mission_id"])
-        implementation = self.office._find_assignment(state, "codex-implementation")
-        implementation["status"] = "completed"
-        implementation["evidence"] = {
-            "exit_code": 0,
-            "commit": "abc123",
-            "changed_files": ["jarvis/example.py"],
-        }
-        self.office.save_mission(state, event="test-implementation-complete")
+        self._complete_implementation_for_review(mission["mission_id"])
         inbox = self.office.office_inbox("claude")
         self.assertEqual([item["assignment_id"] for item in inbox["items"]], ["claude-review"])
         claimed = self.office.claim_assignment(
@@ -412,20 +543,12 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertEqual(plan["status"], "approval-required")
 
     def test_failed_review_submission_blocks_release(self) -> None:
-        mission = self.office.init_mission(
+        mission = self._init_mission(
             request="Blocked review flow",
             mission_id="bo-heartbeat-blocked",
-            provision=False,
+            provision=True,
         )
-        state = self.office.load_mission(mission["mission_id"])
-        implementation = self.office._find_assignment(state, "codex-implementation")
-        implementation["status"] = "completed"
-        implementation["evidence"] = {
-            "exit_code": 0,
-            "commit": "abc123",
-            "changed_files": ["jarvis/example.py"],
-        }
-        self.office.save_mission(state, event="test-implementation-complete")
+        self._complete_implementation_for_review(mission["mission_id"])
         self.office.claim_assignment(
             mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
         )
@@ -440,6 +563,74 @@ class BuildOfficeTests(unittest.TestCase):
         plan = self.office.release_plan(mission["mission_id"])
         self.assertEqual(plan["status"], "blocked")
         self.assertIn("claude-review is failed", plan["reasons"])
+
+    def test_review_refuses_target_changed_after_build_handoff(self) -> None:
+        mission = self._init_mission(
+            request="Review one immutable target",
+            mission_id="bo-moving-review-target",
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        implementation = self.office._find_assignment(
+            self.office.load_mission(mission["mission_id"]), "codex-implementation"
+        )
+        target = Path(implementation["worktree"]) / "jarvis" / "example.py"
+        target.write_text("VALUE = 2\n", encoding="utf-8")
+        self.assertEqual(self.office.office_inbox("claude")["items"], [])
+        with self.assertRaisesRegex(RuntimeError, "target changed"):
+            self.office.claim_assignment(
+                mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
+            )
+
+    def test_review_submission_refuses_target_changed_after_claim(self) -> None:
+        mission = self._init_mission(
+            request="Keep target fixed during review",
+            mission_id="bo-target-changed-after-claim",
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        self.office.claim_assignment(
+            mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
+        )
+        implementation = self.office._find_assignment(
+            self.office.load_mission(mission["mission_id"]), "codex-implementation"
+        )
+        target = Path(implementation["worktree"]) / "jarvis" / "example.py"
+        target.write_text("VALUE = 3\n", encoding="utf-8")
+        with self.assertRaisesRegex(RuntimeError, "target changed"):
+            self.office.submit_result(
+                mission["mission_id"],
+                "claude-review",
+                completed_by="Claude QA Office",
+                status="completed",
+                summary="This verdict must not be accepted.",
+            )
+
+    def test_release_refuses_target_changed_after_qa_verdict(self) -> None:
+        mission = self._init_mission(
+            request="Release only the reviewed target",
+            mission_id="bo-target-changed-after-verdict",
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        self.office.claim_assignment(
+            mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
+        )
+        self.office.submit_result(
+            mission["mission_id"],
+            "claude-review",
+            completed_by="Claude QA Office",
+            status="completed",
+            summary="Approved frozen target.",
+        )
+        implementation = self.office._find_assignment(
+            self.office.load_mission(mission["mission_id"]), "codex-implementation"
+        )
+        target = Path(implementation["worktree"]) / "jarvis" / "example.py"
+        target.write_text("VALUE = 4\n", encoding="utf-8")
+        plan = self.office.release_plan(mission["mission_id"])
+        self.assertEqual(plan["status"], "blocked")
+        self.assertIn("implementation review target changed after Build handoff", plan["reasons"])
 
 
 if __name__ == "__main__":

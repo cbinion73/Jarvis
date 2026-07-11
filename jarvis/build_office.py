@@ -18,6 +18,7 @@ from typing import Any, Iterator, Sequence
 import fcntl
 
 from .persistence import append_jsonl, atomic_write_json
+from .office_charters import CHARTER_VERSION, charter_for_duty, onboarding_brief, office_for_duty
 
 
 RISK_LEVELS = {"low", "medium", "high", "critical"}
@@ -246,12 +247,16 @@ class BuildOffice:
         *,
         writable: bool,
     ) -> dict[str, Any]:
+        office = office_for_duty(duty)
         branch_key = hashlib.sha256(f"{mission_id}:{assignment_id}".encode()).hexdigest()[:10]
         branch = f"build-office/{_slug(mission_id)}/{_slug(assignment_id)}-{branch_key}" if writable else ""
         return {
             "assignment_id": assignment_id,
             "provider": provider,
             "duty": duty,
+            "office": office,
+            "charter_version": CHARTER_VERSION,
+            "onboarding_brief": onboarding_brief(office),
             "writable": writable,
             "owned_paths": owned_paths,
             "forbidden_paths": [".git/**", "data/**", "**/.env", "**/*secret*"],
@@ -271,11 +276,13 @@ class BuildOffice:
         timeout_seconds: int = 1800,
         mission_id: str = "",
         implementer: str = "codex",
+        contract_ref: str = "",
         owned_paths: list[str] | None = None,
         provision: bool = True,
         dry_run: bool = False,
     ) -> dict[str, Any]:
         request = request.strip()
+        contract_ref = contract_ref.strip()
         risk = risk.strip().lower()
         if not request:
             raise ValueError("request is required")
@@ -292,6 +299,7 @@ class BuildOffice:
             raise RuntimeError("Build Office intake must run from the primary checkout, not a linked worktree.")
         mission_id = mission_id.strip() or f"bo-{_slug(request)}-{uuid.uuid4().hex[:8]}"
         baseline = self._git("rev-parse", "HEAD")
+        architecture_contract = self._freeze_contract(contract_ref, baseline)
         self._validate_owned_paths(list(owned_paths or ["**"]))
         assignments = self._default_assignments(
             mission_id,
@@ -299,9 +307,15 @@ class BuildOffice:
             implementer=implementer,
             owned_paths=owned_paths,
         )
+        if architecture_contract["status"] == "frozen":
+            for assignment in assignments:
+                assignment["forbidden_paths"] = sorted(
+                    set([*assignment["forbidden_paths"], architecture_contract["reference"]])
+                )
         now = _now_iso()
         mission = {
             "schema_version": 1,
+            "charter_version": CHARTER_VERSION,
             "mission_id": mission_id,
             "revision": 1,
             "request": request,
@@ -317,6 +331,7 @@ class BuildOffice:
             },
             "requires_cross_review": risk in {"medium", "high", "critical"},
             "routing": {"implementer": implementer, "reviewer": "claude" if implementer == "codex" else "codex"},
+            "architecture_contract": architecture_contract,
             "approvals": {"dispatch": risk != "critical", "dispatch_approved_at": ""},
             "assignments": assignments,
             "release": {"status": "blocked", "reasons": ["implementation incomplete"]},
@@ -333,6 +348,43 @@ class BuildOffice:
                 if assignment["writable"]:
                     self.provision_assignment(mission_id, assignment["assignment_id"], dry_run=dry_run)
         return self.load_mission(mission_id)
+
+    def _freeze_contract(self, contract_ref: str, baseline: str) -> dict[str, Any]:
+        if not contract_ref:
+            return {"reference": "", "status": "missing", "sha256": ""}
+        reference = Path(contract_ref)
+        if reference.is_absolute() or ".." in reference.parts:
+            raise ValueError("contract_ref must be a repository-relative path")
+        normalized = reference.as_posix().lstrip("./")
+        if not normalized:
+            raise ValueError("contract_ref must name a committed file")
+        cursor = self.repo_root
+        for component in Path(normalized).parts:
+            cursor = cursor / component
+            if cursor.is_symlink():
+                raise ValueError("contract_ref may not traverse a symlink")
+        try:
+            object_type = _run(
+                ["git", "cat-file", "-t", f"{baseline}:{normalized}"], cwd=self.repo_root
+            ).stdout.strip()
+            if object_type != "blob":
+                raise ValueError("contract_ref must name a committed file blob")
+            content = _run(
+                ["git", "show", f"{baseline}:{normalized}"], cwd=self.repo_root
+            ).stdout
+        except ValueError:
+            raise
+        except (subprocess.SubprocessError, OSError) as exc:
+            raise ValueError("contract_ref must name a file committed at the mission baseline") from exc
+        if not content.strip():
+            raise ValueError("contract_ref may not be empty")
+        return {
+            "reference": normalized,
+            "status": "frozen",
+            "sha256": hashlib.sha256(content.encode()).hexdigest(),
+            "baseline_commit": baseline,
+            "content": content,
+        }
 
     def load_mission(self, mission_id: str) -> dict[str, Any]:
         path = self._mission_path(mission_id)
@@ -393,6 +445,9 @@ class BuildOffice:
         if duty == "analysis":
             return True, "analysis is ready"
         if duty == "implementation":
+            contract = mission.get("architecture_contract") or {}
+            if contract.get("status") != "frozen" or not str(contract.get("reference") or "").strip():
+                return False, "awaiting frozen Architect contract"
             if mission.get("risk") == "critical" and not bool((mission.get("approvals") or {}).get("dispatch")):
                 return False, "awaiting dispatch approval"
             analyses = self._assignment_status(mission, "analysis")
@@ -405,6 +460,9 @@ class BuildOffice:
             implementations = self._assignment_status(mission, "implementation")
             if not implementations or any(item.get("status") != "completed" for item in implementations):
                 return False, "awaiting implementation evidence"
+            unchanged, reason = self._review_target_unchanged(mission, implementations[0])
+            if not unchanged:
+                return False, reason
             return True, "review is ready"
         return False, f"unknown duty: {duty}"
 
@@ -460,6 +518,9 @@ class BuildOffice:
                 for assignment in mission["assignments"]:
                     if not isinstance(assignment, dict) or assignment.get("provider") != provider:
                         continue
+                    expected_office = office_for_duty(str(assignment.get("duty") or ""))
+                    if assignment.get("office") and assignment.get("office") != expected_office:
+                        continue
                     ready, reason = self._assignment_ready(mission, assignment)
                     if not ready:
                         continue
@@ -467,8 +528,11 @@ class BuildOffice:
                         "mission_id": str(mission.get("mission_id") or ""),
                         "assignment_id": str(assignment.get("assignment_id") or ""),
                         "duty": str(assignment.get("duty") or ""),
+                        "office": str(assignment.get("office") or expected_office),
+                        "charter_version": str(assignment.get("charter_version") or mission.get("charter_version") or CHARTER_VERSION),
                         "risk": str(mission.get("risk") or ""),
                         "request": str(mission.get("request") or ""),
+                        "architecture_contract": dict(mission.get("architecture_contract") or {}),
                         "status": str(assignment.get("status") or ""),
                         "writable": bool(assignment.get("writable")),
                         "worktree": str(assignment.get("worktree") or ""),
@@ -638,9 +702,31 @@ class BuildOffice:
             return dict(assignment)
 
     def build_prompt(self, mission: dict[str, Any], assignment: dict[str, Any]) -> str:
+        charter = charter_for_duty(str(assignment.get("duty") or ""))
+        stored_office = str(assignment.get("office") or charter["office"])
+        if stored_office != charter["office"]:
+            raise ValueError(
+                f"Assignment office {stored_office} conflicts with duty {assignment.get('duty')}"
+            )
+        recorded_version = str(
+            assignment.get("charter_version")
+            or mission.get("charter_version")
+            or CHARTER_VERSION
+        )
+        contract = dict(mission.get("architecture_contract") or {})
+        contract_instruction = (
+            f"Frozen Architect contract: {contract.get('reference')} "
+            f"(sha256 {contract.get('sha256')}, baseline {contract.get('baseline_commit')}). "
+            "Follow this immutable recorded content before acting:\n"
+            f"<frozen-architect-contract>\n{contract.get('content')}\n</frozen-architect-contract>"
+            if contract.get("status") == "frozen"
+            else "Frozen Architect contract: MISSING. Build work must not begin."
+        )
         return "\n".join(
             [
-                "You are an assigned office in the JARVIS Build Office system.",
+                str(assignment.get("onboarding_brief") or onboarding_brief(charter["office"])),
+                f"This assignment is governed by recorded charter version: {recorded_version}",
+                contract_instruction,
                 f"Mission: {mission['request']}",
                 f"Duty: {assignment['duty']}",
                 f"Writable: {assignment['writable']}",
@@ -701,6 +787,9 @@ class BuildOffice:
             raise RuntimeError("Review target worktree is unavailable; refusing to review the wrong checkout.")
         elif planned["duty"] == "analysis" and not cwd.is_dir():
             cwd = self.repo_root
+        ready, reason = self._assignment_ready(mission, planned)
+        if not ready:
+            raise RuntimeError(f"Assignment is not ready: {reason}")
         assignment = self.acquire_lease(mission_id, assignment_id)
         mission = self.load_mission(mission_id)
         command = self.adapter_command(mission, assignment)
@@ -796,9 +885,58 @@ class BuildOffice:
             "completed_at": _now_iso(),
             "commit": commit,
             "changed_files": changed_files,
+            "target_fingerprint": self._worktree_fingerprint(cwd, changed_files),
             "stdout_tail": _redact_output(stdout[-8000:]),
             "stderr_tail": _redact_output(stderr[-4000:]),
         }
+
+    def _worktree_fingerprint(self, cwd: Path, changed_files: list[str]) -> str:
+        if not ((cwd / ".git").exists() or (cwd / ".git").is_file()):
+            return ""
+        try:
+            commit = _run(["git", "rev-parse", "HEAD"], cwd=cwd).stdout.strip()
+            status = _run(
+                ["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=cwd
+            ).stdout
+            tracked_diff = _run(["git", "diff", "--binary", "HEAD"], cwd=cwd).stdout
+        except (subprocess.SubprocessError, OSError):
+            return ""
+        digest = hashlib.sha256()
+        digest.update(commit.encode())
+        digest.update(b"\0")
+        digest.update(status.encode())
+        digest.update(b"\0tracked-diff\0")
+        digest.update(tracked_diff.encode())
+        for relative in sorted(set(changed_files)):
+            digest.update(b"\0path\0")
+            digest.update(relative.encode())
+            path = cwd / relative
+            if path.is_symlink():
+                digest.update(b"\0symlink\0")
+                digest.update(os.readlink(path).encode())
+            elif path.is_file():
+                digest.update(b"\0file\0")
+                try:
+                    digest.update(path.read_bytes())
+                except OSError:
+                    return ""
+            else:
+                digest.update(b"\0missing\0")
+        return digest.hexdigest()
+
+    def _review_target_unchanged(
+        self, mission: dict[str, Any], implementation: dict[str, Any]
+    ) -> tuple[bool, str]:
+        evidence = dict(implementation.get("evidence") or {})
+        recorded = str(evidence.get("target_fingerprint") or "")
+        changed_files = [str(item) for item in evidence.get("changed_files", [])]
+        worktree = Path(str(implementation.get("worktree") or ""))
+        if not recorded or not worktree.is_dir():
+            return False, "implementation review target is not frozen"
+        current = self._worktree_fingerprint(worktree, changed_files)
+        if not current or current != recorded:
+            return False, "implementation review target changed after Build handoff"
+        return True, "implementation review target is unchanged"
 
     def submit_result(
         self,
@@ -826,6 +964,14 @@ class BuildOffice:
             current_status = str(assignment.get("status") or "")
             if current_status in TERMINAL_ASSIGNMENT_STATES:
                 raise RuntimeError("Assignment is already terminal.")
+            if assignment.get("duty") == "review":
+                implementation = next(
+                    (item for item in mission["assignments"] if item.get("duty") == "implementation"),
+                    {},
+                )
+                unchanged, reason = self._review_target_unchanged(mission, implementation)
+                if not unchanged:
+                    raise RuntimeError(reason)
             base_evidence: dict[str, Any]
             if assignment.get("writable"):
                 worktree = Path(str(assignment.get("worktree") or ""))
@@ -881,10 +1027,17 @@ class BuildOffice:
             implementation = [a for a in mission["assignments"] if a["duty"] == "implementation"]
             analyses = [a for a in mission["assignments"] if a["duty"] == "analysis"]
             reviews = [a for a in mission["assignments"] if a["duty"] == "review"]
+            contract = mission.get("architecture_contract") or {}
+            if contract.get("status") != "frozen" or not str(contract.get("reference") or "").strip():
+                reasons.append("frozen Architect contract missing")
             if not implementation or any(a["status"] != "completed" for a in implementation):
                 reasons.append("implementation incomplete")
             if mission["requires_cross_review"] and (not reviews or any(a["status"] != "completed" for a in reviews)):
                 reasons.append("independent review incomplete")
+            if reviews and all(a["status"] == "completed" for a in reviews) and implementation:
+                unchanged, reason = self._review_target_unchanged(mission, implementation[0])
+                if not unchanged:
+                    reasons.append(reason)
             if mission["risk"] in {"high", "critical"} and (not analyses or any(a["status"] != "completed" for a in analyses)):
                 reasons.append("required analysis incomplete")
             for assignment in mission["assignments"]:
