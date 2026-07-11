@@ -53,6 +53,7 @@ data/agents/*_state_log.jsonl
 # Operational queues and live workstream state
 data/workstreams/
 data/workflow_runs/
+_bmad-output/build-office-runs/
 
 # Live weather / security advisories fetched at runtime
 data/weather/
@@ -79,6 +80,7 @@ data/settings/layout_state.json
 data/settings/sam_protocol_today.json
 data/settings/profiles/
 data/settings/layout_weights_cache.json
+data/settings/voice_runtime_status.json
 data/workshop/model_forge/
 
 # ── Xcode / Swift build artifacts ───────────────────────────────────────────
