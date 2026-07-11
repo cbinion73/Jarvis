@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
+import jarvis.build_office as build_office_module
 from jarvis.build_office import BuildOffice, scopes_overlap
 from jarvis.office_charters import CHARTER_VERSION
 
@@ -333,6 +334,107 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertIn("plan", claude["command"])
         self.assertIn("Do not switch branches", codex["display_command"])
 
+    def test_codex_review_dispatch_uses_supported_command_shape_and_exact_commit(self) -> None:
+        mission = self._init_mission(
+            request="Recover QA dispatch",
+            mission_id="bo-codex-review-shape",
+            risk="medium",
+            route_mode="no-claude",
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        review = self.office.dispatch(mission["mission_id"], "codex-review", dry_run=True)
+        command = review["command"]
+        self.assertEqual(command[:2], ["codex", "exec"])
+        self.assertIn("review", command)
+        self.assertIn("--commit", command)
+        self.assertEqual(
+            command[command.index("--commit") + 1],
+            implementation["evidence"]["commit"],
+        )
+        self.assertNotIn("-a", command)
+        self.assertNotIn("--ask-for-approval", command)
+
+    def test_review_scope_validation_preserves_dotfile_owned_paths(self) -> None:
+        mission = self._init_mission(
+            request="D0.1 review scope",
+            mission_id="bo-review-dotfile",
+            risk="medium",
+            route_mode="no-claude",
+            owned_paths=[
+                "deploy/docker-compose.yml",
+                ".env.example",
+                "scripts/verify_deploy_config.py",
+                "tests/test_deploy_config.py",
+            ],
+            provision=False,
+        )
+        review = self.office._find_assignment(mission, "codex-review")
+        violations = self.office._scope_violations(
+            review,
+            [
+                ".env.example",
+                "deploy/docker-compose.yml",
+                "scripts/verify_deploy_config.py",
+                "tests/test_deploy_config.py",
+            ],
+        )
+        self.assertEqual(violations, [])
+
+    def test_review_scope_validation_rejects_out_of_scope_and_forbidden_paths(self) -> None:
+        mission = self._init_mission(
+            request="D0.1 review scope",
+            mission_id="bo-review-scope-blocks",
+            risk="medium",
+            route_mode="no-claude",
+            owned_paths=["deploy/**", ".env.example"],
+            provision=False,
+        )
+        review = self.office._find_assignment(mission, "codex-review")
+        review["forbidden_paths"] = [".env.example", "deploy/docker-compose.yml"]
+        violations = self.office._scope_violations(
+            review,
+            [".env.example", "deploy/docker-compose.yml", "docs/outside.md"],
+        )
+        self.assertEqual(
+            violations,
+            [".env.example", "deploy/docker-compose.yml", "docs/outside.md"],
+        )
+
+    def test_review_process_mutation_blocks_completion(self) -> None:
+        mission = self._init_mission(
+            request="Detect QA mutation",
+            mission_id="bo-review-mutation",
+            risk="medium",
+            route_mode="no-claude",
+            owned_paths=["jarvis/**"],
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        target = Path(implementation["worktree"]) / "jarvis" / "example.py"
+        original_run = build_office_module._run
+
+        def fake_run(args, *, cwd, timeout=30, check=True):
+            if list(args[:2]) == ["codex", "exec"]:
+                target.write_text("VALUE = 99\n", encoding="utf-8")
+                return subprocess.CompletedProcess(
+                    args=list(args),
+                    returncode=0,
+                    stdout="reviewed",
+                    stderr="",
+                )
+            return original_run(args, cwd=cwd, timeout=timeout, check=check)
+
+        with patch("jarvis.build_office._run", side_effect=fake_run):
+            result = self.office.dispatch(mission["mission_id"], "codex-review")
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("review_target_error", result["evidence"])
+        self.assertIn("changed after Build handoff", result["evidence"]["review_target_error"])
+
     def test_nonzero_model_exit_marks_assignment_failed_and_releases_lease(self) -> None:
         mission = self._init_mission(
             request="Exercise failure path",
@@ -474,6 +576,103 @@ class BuildOfficeTests(unittest.TestCase):
         )
         self.assertEqual(reclaimed["status"], "expired")
         self.assertEqual(reclaimed["lease"]["reclaimed_by"], "Chris")
+
+    def test_recover_review_assignment_preserves_history_and_is_idempotent(self) -> None:
+        mission = self._init_mission(
+            request="Recover failed QA review",
+            mission_id="bo-review-recover",
+            risk="medium",
+            route_mode="no-claude",
+            owned_paths=[
+                ".env.example",
+                "deploy/docker-compose.yml",
+                "scripts/verify_deploy_config.py",
+                "tests/test_deploy_config.py",
+            ],
+            provision=False,
+        )
+        state = self.office.load_mission(mission["mission_id"])
+        review = self.office._find_assignment(state, "codex-review")
+        review["status"] = "running"
+        review["lease"] = {
+            "holder": "codex-office",
+            "acquired_at": datetime.now(timezone.utc).isoformat(),
+        }
+        review["evidence_history"] = [{"summary": "AC7 rejection"}]
+        review["evidence"] = {
+            "exit_code": 2,
+            "commit": "44185456511efdb07e4cd43e04cd4f651f2818d3",
+            "changed_files": [
+                ".env.example",
+                "deploy/docker-compose.yml",
+                "scripts/verify_deploy_config.py",
+                "tests/test_deploy_config.py",
+            ],
+            "target_fingerprint": "b53c182f7e883473825fdb4e3992e24a80622f6bcf66936a1dd641ded7537dbc",
+            "stderr_tail": "error: unexpected argument '-a' found",
+        }
+        self.office.save_mission(state, event="test-review-running")
+        recovered = self.office.recover_review_assignment(
+            mission["mission_id"],
+            "codex-review",
+            approved_by="Chris",
+            reason="unsupported codex flags",
+        )
+        self.assertEqual(recovered["status"], "planned")
+        self.assertEqual(recovered["evidence"], {})
+        self.assertEqual(len(recovered["evidence_history"]), 2)
+        self.assertEqual(
+            recovered["evidence_history"][-1]["stderr_tail"],
+            "error: unexpected argument '-a' found",
+        )
+        self.assertEqual(
+            recovered["evidence_history"][-1]["recovery_reason"],
+            "unsupported codex flags",
+        )
+        self.assertIn("released_at", recovered["lease"])
+        again = self.office.recover_review_assignment(
+            mission["mission_id"],
+            "codex-review",
+            approved_by="Chris",
+            reason="unsupported codex flags",
+        )
+        self.assertEqual(again["status"], "planned")
+        self.assertEqual(len(again["evidence_history"]), 2)
+
+    def test_recover_review_assignment_rejects_invalid_states(self) -> None:
+        mission = self._init_mission(
+            request="Reject invalid review recovery",
+            mission_id="bo-review-recover-invalid",
+            risk="medium",
+            route_mode="no-claude",
+            provision=False,
+        )
+        with self.assertRaisesRegex(RuntimeError, "recoverable state"):
+            self.office.recover_review_assignment(
+                mission["mission_id"],
+                "codex-review",
+                approved_by="Chris",
+                reason="try too early",
+            )
+        with self.assertRaisesRegex(RuntimeError, "non-writable review"):
+            self.office.recover_review_assignment(
+                mission["mission_id"],
+                "codex-implementation",
+                approved_by="Chris",
+                reason="wrong lane",
+            )
+        state = self.office.load_mission(mission["mission_id"])
+        review = self.office._find_assignment(state, "codex-review")
+        review["status"] = "completed"
+        review["evidence"] = {"summary": "approved"}
+        self.office.save_mission(state, event="test-review-complete")
+        with self.assertRaisesRegex(RuntimeError, "Successful completed reviews"):
+            self.office.recover_review_assignment(
+                mission["mission_id"],
+                "codex-review",
+                approved_by="Chris",
+                reason="should refuse",
+            )
 
     def test_stale_revision_is_rejected(self) -> None:
         mission = self._init_mission(
@@ -803,6 +1002,29 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertEqual(len(disposition_actions), 1)
         self.assertEqual(disposition_actions[0]["assignment_id"], "codex-implementation")
         self.assertIn("unsupported -a flag", disposition_actions[0]["detail"])
+
+    def test_release_blocks_review_target_baseline_mismatch(self) -> None:
+        mission = self._init_mission(
+            request="Release only the matching baseline",
+            mission_id="bo-review-baseline-mismatch",
+            risk="medium",
+            route_mode="no-claude",
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        implementation["evidence"]["baseline_commit"] = "different-baseline"
+        review = self.office._find_assignment(state, "codex-review")
+        review["status"] = "completed"
+        review["evidence"] = {"summary": "Approved frozen target."}
+        self.office.save_mission(state, event="test-review-baseline-mismatch")
+        plan = self.office.release_plan(mission["mission_id"])
+        self.assertEqual(plan["status"], "blocked")
+        self.assertIn(
+            "implementation review target baseline no longer matches durable Build evidence",
+            plan["reasons"],
+        )
 
 
 if __name__ == "__main__":

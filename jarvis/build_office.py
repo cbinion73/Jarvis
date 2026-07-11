@@ -27,6 +27,7 @@ TERMINAL_ASSIGNMENT_STATES = {"completed", "failed", "cancelled", "released"}
 WRITE_ASSIGNMENT_STATES = {"leased", "running"}
 MANUAL_RESULT_STATES = {"completed", "failed", "blocked"}
 OFFICE_HEARTBEAT_NAMES = {"architect"}
+RECOVERABLE_REVIEW_STATES = {"failed", "blocked", "leased", "running"}
 
 
 def _now_iso() -> str:
@@ -36,6 +37,14 @@ def _now_iso() -> str:
 def _slug(value: str) -> str:
     cleaned = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return cleaned[:48] or "mission"
+
+
+def _normalize_repo_path(value: str) -> str:
+    normalized = value.strip().replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    normalized = re.sub(r"/{2,}", "/", normalized)
+    return normalized.strip("/")
 
 
 def _run(
@@ -56,7 +65,7 @@ def _run(
 
 
 def _static_prefix(pattern: str) -> str:
-    normalized = pattern.strip().lstrip("./").casefold()
+    normalized = _normalize_repo_path(pattern).casefold()
     wildcard = min(
         [index for token in "*[?" if (index := normalized.find(token)) >= 0]
         or [len(normalized)]
@@ -68,8 +77,8 @@ def scopes_overlap(left: Sequence[str], right: Sequence[str]) -> bool:
     """Conservatively report whether two writable glob sets may touch one path."""
     for first in left:
         for second in right:
-            a = first.strip().lstrip("./").casefold()
-            b = second.strip().lstrip("./").casefold()
+            a = _normalize_repo_path(first).casefold()
+            b = _normalize_repo_path(second).casefold()
             if not a or not b:
                 return True
             if a == b or fnmatch.fnmatch(a, b) or fnmatch.fnmatch(b, a):
@@ -695,8 +704,8 @@ class BuildOffice:
             implementations = self._assignment_status(mission, "implementation")
             if not implementations or any(item.get("status") != "completed" for item in implementations):
                 return False, "awaiting implementation evidence"
-            unchanged, reason = self._review_target_unchanged(mission, implementations[0])
-            if not unchanged:
+            target_ready, reason, _ = self._review_target_state(mission, assignment)
+            if not target_ready:
                 return False, reason
             return True, "review is ready"
         return False, f"unknown duty: {duty}"
@@ -1161,6 +1170,83 @@ class BuildOffice:
             )
             return dict(assignment)
 
+    def recover_review_assignment(
+        self,
+        mission_id: str,
+        assignment_id: str,
+        *,
+        approved_by: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        approved_by = approved_by.strip()
+        reason = reason.strip()
+        if not approved_by:
+            raise ValueError("approved_by is required")
+        if not reason:
+            raise ValueError("reason is required")
+        with self._locked():
+            mission = self.load_mission(mission_id)
+            assignment = self._find_assignment(mission, assignment_id)
+            if assignment.get("writable"):
+                raise RuntimeError("Only non-writable review assignments can be recovered.")
+            if assignment.get("duty") != "review":
+                raise RuntimeError("Only review assignments can be recovered.")
+            status = str(assignment.get("status") or "")
+            recovery = dict(assignment.get("recovery") or {})
+            if (
+                status == "planned"
+                and recovery.get("approved_by") == approved_by
+                and recovery.get("reason") == reason
+            ):
+                return dict(assignment)
+            if status == "completed":
+                raise RuntimeError("Successful completed reviews may not be recovered.")
+            if status not in RECOVERABLE_REVIEW_STATES:
+                raise RuntimeError("Review assignment is not in a recoverable state.")
+            recovered_at = _now_iso()
+            history = [
+                dict(item)
+                for item in assignment.get("evidence_history", [])
+                if isinstance(item, dict)
+            ]
+            prior_evidence = dict(assignment.get("evidence") or {})
+            lease_snapshot = dict(assignment.get("lease") or {})
+            snapshot = {
+                **prior_evidence,
+                "recovered_from_status": status,
+                "recovered_by": approved_by,
+                "recovery_reason": reason,
+                "recovered_at": recovered_at,
+                "lease_snapshot": lease_snapshot,
+            }
+            if snapshot and (not history or history[-1] != snapshot):
+                history.append(snapshot)
+            assignment["evidence_history"] = history[-20:]
+            assignment["evidence"] = {}
+            assignment["status"] = "planned"
+            assignment["lease"] = {
+                **lease_snapshot,
+                "released_at": recovered_at,
+                "recovered_at": recovered_at,
+                "recovered_by": approved_by,
+                "recovery_reason": reason,
+            }
+            assignment["recovery"] = {
+                "approved_by": approved_by,
+                "reason": reason,
+                "recovered_at": recovered_at,
+                "from_status": status,
+            }
+            self.save_mission(
+                mission,
+                event="review-recovered",
+                assignment_id=assignment_id,
+                approved_by=approved_by,
+                reason=reason,
+                from_status=status,
+            )
+            return dict(assignment)
+
     def build_prompt(self, mission: dict[str, Any], assignment: dict[str, Any]) -> str:
         charter = charter_for_duty(str(assignment.get("duty") or ""))
         stored_office = str(assignment.get("office") or charter["office"])
@@ -1182,11 +1268,22 @@ class BuildOffice:
             if contract.get("status") == "frozen"
             else "Frozen Architect contract: MISSING. Build work must not begin."
         )
+        review_target_instruction = ""
+        if assignment.get("duty") == "review":
+            target_ready, _, target = self._review_target_state(mission, assignment)
+            if target_ready:
+                review_target_instruction = (
+                    "Immutable review target: "
+                    f"commit {target['commit']}, baseline {target['baseline_commit']}, "
+                    f"fingerprint {target['target_fingerprint']}, "
+                    f"changed files {', '.join(target['changed_files'])}."
+                )
         return "\n".join(
             [
                 str(assignment.get("onboarding_brief") or onboarding_brief(charter["office"])),
                 f"This assignment is governed by recorded charter version: {recorded_version}",
                 contract_instruction,
+                review_target_instruction,
                 f"Mission: {mission['request']}",
                 f"Duty: {assignment['duty']}",
                 f"Writable: {assignment['writable']}",
@@ -1215,19 +1312,38 @@ class BuildOffice:
                 prompt,
             ]
         elif assignment["provider"] == "codex":
-            command = [
-                "codex",
-                "exec",
-                "--ephemeral",
-                "--json",
-                "-C",
-                worktree,
-                "-s",
-                "workspace-write" if assignment["writable"] else "read-only",
-                "-a",
-                "never",
-                prompt,
-            ]
+            if assignment.get("duty") == "review":
+                target_ready, reason, target = self._review_target_state(mission, assignment)
+                if not target_ready:
+                    raise RuntimeError(f"Review assignment is not ready: {reason}")
+                command = [
+                    "codex",
+                    "exec",
+                    "--ephemeral",
+                    "--json",
+                    "-C",
+                    worktree,
+                    "-s",
+                    "read-only",
+                    "review",
+                    "--commit",
+                    target["commit"],
+                    "--title",
+                    f"{mission['mission_id']} immutable review",
+                    prompt,
+                ]
+            else:
+                command = [
+                    "codex",
+                    "exec",
+                    "--ephemeral",
+                    "--json",
+                    "-C",
+                    worktree,
+                    "-s",
+                    "workspace-write" if assignment["writable"] else "read-only",
+                    prompt,
+                ]
         else:
             raise ValueError(f"Unsupported provider: {assignment['provider']}")
         return command
@@ -1260,6 +1376,11 @@ class BuildOffice:
         timeout = int(mission["timeout_seconds"])
         if assignment["provider"] == "codex":
             timeout = min(timeout, max(60, int(float(mission["budget_usd"]) * 300)))
+        with self._locked():
+            mission = self.load_mission(mission_id)
+            assignment = self._find_assignment(mission, assignment_id)
+            assignment["status"] = "running"
+            self.save_mission(mission, event="assignment-started", assignment_id=assignment_id)
         try:
             completed = _run(command, cwd=cwd, timeout=timeout, check=False)
             evidence = self.capture_evidence(
@@ -1273,7 +1394,17 @@ class BuildOffice:
             violations = self._scope_violations(assignment, evidence["changed_files"])
             if violations:
                 evidence["scope_violations"] = violations
-            final_status = "completed" if completed.returncode == 0 and not violations else "failed"
+            review_error = ""
+            if assignment.get("duty") == "review":
+                target_ready, reason, _ = self._review_target_state(mission, assignment)
+                if not target_ready:
+                    review_error = reason
+                    evidence["review_target_error"] = reason
+            final_status = (
+                "completed"
+                if completed.returncode == 0 and not violations and not review_error
+                else "failed"
+            )
         except subprocess.TimeoutExpired as exc:
             evidence = {"started_at": started, "completed_at": _now_iso(), "timeout": True, "error": str(exc)}
             final_status = "failed"
@@ -1302,13 +1433,14 @@ class BuildOffice:
             return dict(mission["approvals"])
 
     def _scope_violations(self, assignment: dict[str, Any], changed_files: list[str]) -> list[str]:
-        if not assignment.get("writable"):
+        duty = str(assignment.get("duty") or "")
+        if not assignment.get("writable") and duty != "review":
             return list(changed_files)
         owned = [str(item).casefold() for item in assignment.get("owned_paths", [])]
         forbidden = [str(item).casefold() for item in assignment.get("forbidden_paths", [])]
         violations: list[str] = []
         for path in changed_files:
-            normalized = path.strip().lstrip("./").casefold()
+            normalized = _normalize_repo_path(path).casefold()
             allowed = any(fnmatch.fnmatch(normalized, pattern) for pattern in owned)
             denied = any(fnmatch.fnmatch(normalized, pattern) for pattern in forbidden)
             if not allowed or denied:
@@ -1343,12 +1475,66 @@ class BuildOffice:
             "exit_code": exit_code,
             "started_at": started,
             "completed_at": _now_iso(),
+            "baseline_commit": baseline_commit,
             "commit": commit,
             "changed_files": changed_files,
             "target_fingerprint": self._worktree_fingerprint(cwd, changed_files),
             "stdout_tail": _redact_output(stdout[-8000:]),
             "stderr_tail": _redact_output(stderr[-4000:]),
         }
+
+    def _review_target_state(
+        self,
+        mission: dict[str, Any],
+        review_assignment: dict[str, Any],
+    ) -> tuple[bool, str, dict[str, Any]]:
+        implementations = self._assignment_status(mission, "implementation")
+        if not implementations:
+            return False, "implementation review target is unavailable", {}
+        implementation = implementations[0]
+        evidence = dict(implementation.get("evidence") or {})
+        commit = str(evidence.get("commit") or "").strip()
+        changed_files = [str(item) for item in evidence.get("changed_files", [])]
+        fingerprint = str(evidence.get("target_fingerprint") or "").strip()
+        baseline_commit = str(
+            evidence.get("baseline_commit") or mission.get("baseline_commit") or ""
+        ).strip()
+        worktree = Path(str(implementation.get("worktree") or ""))
+        target = {
+            "commit": commit,
+            "baseline_commit": baseline_commit,
+            "changed_files": changed_files,
+            "target_fingerprint": fingerprint,
+        }
+        if not commit or not changed_files or not fingerprint or not worktree.is_dir():
+            return False, "implementation review target is not frozen", target
+        if baseline_commit != str(mission.get("baseline_commit") or ""):
+            return (
+                False,
+                "implementation review target baseline no longer matches durable Build evidence",
+                target,
+            )
+        try:
+            current_commit = _run(["git", "rev-parse", "HEAD"], cwd=worktree, timeout=15).stdout.strip()
+        except (subprocess.SubprocessError, OSError):
+            return False, "implementation review target is unavailable", target
+        if current_commit != commit:
+            return False, "implementation review target commit changed after Build handoff", target
+        violations = self._scope_violations(review_assignment, changed_files)
+        if violations:
+            target["scope_violations"] = violations
+            forbidden = [str(item).casefold() for item in review_assignment.get("forbidden_paths", [])]
+            if any(
+                fnmatch.fnmatch(_normalize_repo_path(path).casefold(), pattern)
+                for path in violations
+                for pattern in forbidden
+            ):
+                return False, "implementation review target includes forbidden paths", target
+            return False, "implementation review target changed files fall outside the review scope", target
+        current_fingerprint = self._worktree_fingerprint(worktree, changed_files)
+        if current_fingerprint != fingerprint:
+            return False, "implementation review target changed after Build handoff", target
+        return True, "implementation review target is unchanged", target
 
     def _worktree_fingerprint(self, cwd: Path, changed_files: list[str]) -> str:
         if not ((cwd / ".git").exists() or (cwd / ".git").is_file()):
@@ -1387,16 +1573,14 @@ class BuildOffice:
     def _review_target_unchanged(
         self, mission: dict[str, Any], implementation: dict[str, Any]
     ) -> tuple[bool, str]:
-        evidence = dict(implementation.get("evidence") or {})
-        recorded = str(evidence.get("target_fingerprint") or "")
-        changed_files = [str(item) for item in evidence.get("changed_files", [])]
-        worktree = Path(str(implementation.get("worktree") or ""))
-        if not recorded or not worktree.is_dir():
-            return False, "implementation review target is not frozen"
-        current = self._worktree_fingerprint(worktree, changed_files)
-        if not current or current != recorded:
-            return False, "implementation review target changed after Build handoff"
-        return True, "implementation review target is unchanged"
+        review_assignment = {
+            "duty": "review",
+            "writable": False,
+            "owned_paths": list(implementation.get("owned_paths") or []),
+            "forbidden_paths": list(implementation.get("forbidden_paths") or []),
+        }
+        ready, reason, _ = self._review_target_state(mission, review_assignment)
+        return ready, reason
 
     def submit_result(
         self,
@@ -1425,12 +1609,8 @@ class BuildOffice:
             if current_status in TERMINAL_ASSIGNMENT_STATES:
                 raise RuntimeError("Assignment is already terminal.")
             if assignment.get("duty") == "review":
-                implementation = next(
-                    (item for item in mission["assignments"] if item.get("duty") == "implementation"),
-                    {},
-                )
-                unchanged, reason = self._review_target_unchanged(mission, implementation)
-                if not unchanged:
+                target_ready, reason, _ = self._review_target_state(mission, assignment)
+                if not target_ready:
                     raise RuntimeError(reason)
             base_evidence: dict[str, Any]
             if assignment.get("writable"):
@@ -1455,10 +1635,15 @@ class BuildOffice:
                     "started_at": str((assignment.get("lease") or {}).get("acquired_at") or _now_iso()),
                     "completed_at": _now_iso(),
                     "commit": "",
+                    "baseline_commit": str(mission.get("baseline_commit") or ""),
                     "changed_files": [],
                     "stdout_tail": "",
                     "stderr_tail": "",
                 }
+                if assignment.get("duty") == "review":
+                    _, _, target = self._review_target_state(mission, assignment)
+                    if target:
+                        base_evidence.update(target)
             evidence = {
                 **base_evidence,
                 "summary": summary,
@@ -1494,9 +1679,9 @@ class BuildOffice:
                 reasons.append("implementation incomplete")
             if mission["requires_cross_review"] and (not reviews or any(a["status"] != "completed" for a in reviews)):
                 reasons.append("independent review incomplete")
-            if reviews and all(a["status"] == "completed" for a in reviews) and implementation:
-                unchanged, reason = self._review_target_unchanged(mission, implementation[0])
-                if not unchanged:
+            if reviews and implementation:
+                target_ready, reason, _ = self._review_target_state(mission, reviews[0])
+                if not target_ready:
                     reasons.append(reason)
             if analyses and mission["risk"] in {"high", "critical"} and any(
                 a["status"] != "completed" for a in analyses

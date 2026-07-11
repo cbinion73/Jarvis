@@ -84,15 +84,17 @@ python3 scripts/jarvis_build_office.py inbox claude
 python3 scripts/jarvis_build_office.py claim MISSION_ID ASSIGNMENT_ID --by "Claude QA Office"
 python3 scripts/jarvis_build_office.py approve-dispatch MISSION_ID --by Chris
 python3 scripts/jarvis_build_office.py reclaim-lease MISSION_ID ASSIGNMENT_ID --by Chris
+python3 scripts/jarvis_build_office.py recover-review MISSION_ID ASSIGNMENT_ID --by Chris --reason "unsupported review dispatch"
 python3 scripts/jarvis_build_office.py retry MISSION_ID ASSIGNMENT_ID --by Chris
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID codex-implementation --dry-run
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID claude-review --dry-run
+python3 scripts/jarvis_build_office.py dispatch MISSION_ID codex-review --dry-run
 python3 scripts/jarvis_build_office.py submit-result MISSION_ID ASSIGNMENT_ID --by "Claude QA Office" --status completed --summary "No blocking findings." --finding "Optional improvement"
 python3 scripts/jarvis_build_office.py release-plan MISSION_ID
 python3 scripts/jarvis_build_office.py cleanup-plan MISSION_ID
 ```
 
-`dispatch` without `--dry-run` invokes the installed CLI with the mission budget posture, timeout, worktree, scope, forbidden paths, and main-branch prohibition. Claude also receives explicit dangerous-Git tool denials. Codex runs under its workspace sandbox; because its CLI has no equivalent command denylist or dollar cap, post-run path/ref evidence and the budget-derived timeout remain mandatory compensating controls. Redacted output tails and Git evidence are persisted under `_bmad-output/build-office-runs/`, which is ignored by Git.
+`dispatch` without `--dry-run` invokes the installed CLI with the mission budget posture, timeout, worktree, scope, forbidden paths, and main-branch prohibition. Claude also receives explicit dangerous-Git tool denials. Codex implementation work runs under its workspace sandbox; Codex review work uses the installed `codex exec review --commit <sha>` lane in read-only mode so the immutable Build target is selected by exact commit without unsupported approval flags. Because the Codex CLI has no hard dollar-cap flag, post-run path/ref evidence and the budget-derived timeout remain mandatory compensating controls. Redacted output tails and Git evidence are persisted under `_bmad-output/build-office-runs/`, which is ignored by Git.
 
 ## Lifecycle
 
@@ -129,6 +131,7 @@ This gives Claude a durable pickup signal and a durable return path without requ
 ## Recovery
 
 - A timeout or non-zero exit marks the assignment failed and preserves evidence.
+- A failed, blocked, leased, or running non-writable review lane can be reset with `recover-review`; the current failure evidence is moved into bounded history together with recovery actor, reason, and lease snapshot before the assignment returns to `planned`.
 - A named human may retry failed writable work in its original isolated worktree; prior evidence remains in bounded history.
 - A collision marks the second assignment blocked before a model starts.
 - An expired writable lease remains blocking until Chris explicitly reclaims it.
