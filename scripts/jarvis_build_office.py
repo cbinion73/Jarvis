@@ -86,6 +86,19 @@ def build_parser() -> argparse.ArgumentParser:
     retry.add_argument("assignment_id")
     retry.add_argument("--by", required=True, dest="approved_by")
 
+    amend = sub.add_parser("amend-terminal-evidence")
+    amend.add_argument("mission_id")
+    amend.add_argument("assignment_id")
+    amend.add_argument("--by", required=True, dest="actor")
+    amend.add_argument("--reason", required=True)
+
+    supersede = sub.add_parser("supersede-assignment")
+    supersede.add_argument("mission_id")
+    supersede.add_argument("assignment_id")
+    supersede.add_argument("--by", required=True, dest="actor")
+    supersede.add_argument("--reason", required=True)
+    supersede.add_argument("--artifact", action="append", dest="artifacts")
+
     release = sub.add_parser("release-plan")
     release.add_argument("mission_id")
 
@@ -180,6 +193,21 @@ def main() -> int:
         elif args.command == "retry":
             payload = office.retry_assignment(
                 args.mission_id, args.assignment_id, approved_by=args.approved_by
+            )
+        elif args.command == "amend-terminal-evidence":
+            payload = office.amend_terminal_assignment_evidence(
+                args.mission_id,
+                args.assignment_id,
+                actor=args.actor,
+                reason=args.reason,
+            )
+        elif args.command == "supersede-assignment":
+            payload = office.supersede_assignment(
+                args.mission_id,
+                args.assignment_id,
+                actor=args.actor,
+                reason=args.reason,
+                artifacts=args.artifacts,
             )
         elif args.command == "release-plan":
             payload = office.release_plan(args.mission_id)

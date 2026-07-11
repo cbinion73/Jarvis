@@ -74,6 +74,74 @@ class BuildOfficeTests(unittest.TestCase):
         )
         self.office.save_mission(state, event="test-implementation-complete")
 
+    def _stage_terminal_amendment_fixture(
+        self,
+        mission_id: str,
+        *,
+        owned_paths: list[str] | None = None,
+        changed_file: str = "jarvis/example.py",
+        file_contents: str = "VALUE = 2\n",
+        status: str = "completed",
+        risk: str = "medium",
+        route_mode: str = "default",
+    ) -> tuple[dict[str, object], Path, str]:
+        mission = self._init_mission(
+            request="Terminal evidence amendment fixture",
+            mission_id=mission_id,
+            risk=risk,
+            route_mode=route_mode,
+            owned_paths=owned_paths,
+            provision=True,
+        )
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        worktree = Path(implementation["worktree"])
+        target = worktree / changed_file
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(file_contents, encoding="utf-8")
+        _git(worktree, "add", changed_file)
+        _git(worktree, "commit", "-m", "advance terminal evidence fixture")
+        new_commit = _git(worktree, "rev-parse", "HEAD")
+        implementation["status"] = status
+        implementation["evidence"] = {
+            "exit_code": 0,
+            "started_at": "2026-07-11T00:00:00+00:00",
+            "completed_at": "2026-07-11T00:01:00+00:00",
+            "baseline_commit": state["baseline_commit"],
+            "commit": state["baseline_commit"],
+            "changed_files": [changed_file],
+            "target_fingerprint": "stale-fingerprint",
+            "stdout_tail": "stale stdout",
+            "stderr_tail": "stale stderr",
+            "completed_by": "Build Office",
+        }
+        self.office.save_mission(state, event="test-terminal-evidence-staged")
+        return mission, worktree, new_commit
+
+    def _commit_superseding_evidence_artifacts(self) -> None:
+        artifacts = [
+            self.root
+            / "_bmad-output"
+            / "implementation-artifacts"
+            / "evidence"
+            / "CONTROL-PLANE-QA-DISPATCH-RECOVERY-AC7-AC9-EVIDENCE.md",
+            self.root
+            / "_bmad-output"
+            / "implementation-artifacts"
+            / "evidence"
+            / "D0-1-DEPLOYMENT-SECRET-HYGIENE-QA-REPAIR-APPROVAL.md",
+        ]
+        for artifact in artifacts:
+            artifact.parent.mkdir(parents=True, exist_ok=True)
+            artifact.write_text(f"{artifact.name}\n", encoding="utf-8")
+        _git(
+            self.root,
+            "add",
+            "_bmad-output/implementation-artifacts/evidence/CONTROL-PLANE-QA-DISPATCH-RECOVERY-AC7-AC9-EVIDENCE.md",
+            "_bmad-output/implementation-artifacts/evidence/D0-1-DEPLOYMENT-SECRET-HYGIENE-QA-REPAIR-APPROVAL.md",
+        )
+        _git(self.root, "commit", "-m", "add superseding evidence fixtures")
+
     def test_scope_overlap_is_conservative(self) -> None:
         self.assertTrue(scopes_overlap(["jarvis/**"], ["jarvis/runtime.py"]))
         self.assertTrue(scopes_overlap(["**"], ["tests/**"]))
@@ -1028,6 +1096,138 @@ class BuildOfficeTests(unittest.TestCase):
             "implementation review target baseline no longer matches durable Build evidence",
             plan["reasons"],
         )
+
+    def test_amend_terminal_evidence_updates_history_and_release_target(self) -> None:
+        mission, _, new_commit = self._stage_terminal_amendment_fixture(
+            "bo-terminal-amend",
+            route_mode="no-claude",
+        )
+        before = self.office.release_plan(mission["mission_id"])
+        self.assertIn("implementation review target commit changed after Build handoff", before["reasons"])
+        amended = self.office.amend_terminal_assignment_evidence(
+            mission["mission_id"],
+            "codex-implementation",
+            actor="Chris",
+            reason="stale terminal evidence corrected",
+        )
+        self.assertEqual(amended["status"], "completed")
+        self.assertEqual(amended["evidence"]["commit"], new_commit)
+        self.assertEqual(amended["evidence"]["amended_from_commit"], amended["evidence"]["baseline_commit"])
+        self.assertEqual(len(amended["evidence_history"]), 1)
+        history = amended["evidence_history"][0]
+        self.assertEqual(history["original_commit"], amended["evidence"]["amended_from_commit"])
+        self.assertEqual(history["original_baseline_commit"], amended["evidence"]["baseline_commit"])
+        self.assertEqual(history["original_changed_files"], ["jarvis/example.py"])
+        self.assertEqual(history["completion_actor"], "Build Office")
+        self.assertEqual(history["correction_actor"], "Chris")
+        self.assertEqual(history["correction_reason"], "stale terminal evidence corrected")
+        self.assertIn("correction_at", history)
+        review = self.office.dispatch(mission["mission_id"], "codex-review", dry_run=True)
+        command = review["command"]
+        self.assertEqual(command[command.index("--commit") + 1], new_commit)
+        after = self.office.release_plan(mission["mission_id"])
+        self.assertNotIn("implementation review target commit changed after Build handoff", after["reasons"])
+        self.assertIn("independent review incomplete", after["reasons"])
+
+    def test_amend_terminal_evidence_refuses_noop_baseline_commit(self) -> None:
+        mission = self._init_mission(
+            request="Reject a no-op amendment",
+            mission_id="bo-terminal-amend-noop",
+            provision=True,
+        )
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        implementation["status"] = "completed"
+        implementation["evidence"] = {
+            "exit_code": 0,
+            "started_at": "2026-07-11T00:00:00+00:00",
+            "completed_at": "2026-07-11T00:01:00+00:00",
+            "baseline_commit": state["baseline_commit"],
+            "commit": state["baseline_commit"],
+            "changed_files": [],
+            "target_fingerprint": "baseline-fingerprint",
+            "stdout_tail": "no-op",
+            "stderr_tail": "no-op",
+            "completed_by": "Build Office",
+        }
+        self.office.save_mission(state, event="test-terminal-evidence-noop")
+        with self.assertRaisesRegex(RuntimeError, "newer worktree commit"):
+            self.office.amend_terminal_assignment_evidence(
+                mission["mission_id"],
+                "codex-implementation",
+                actor="Chris",
+                reason="nothing changed",
+            )
+
+    def test_amend_terminal_evidence_refuses_out_of_scope_or_forbidden_changes(self) -> None:
+        mission, _, _ = self._stage_terminal_amendment_fixture(
+            "bo-terminal-amend-scope",
+            owned_paths=["jarvis/**"],
+            changed_file="docs/secret-notes.md",
+        )
+        with self.assertRaisesRegex(RuntimeError, "out-of-scope or forbidden changes"):
+            self.office.amend_terminal_assignment_evidence(
+                mission["mission_id"],
+                "codex-implementation",
+                actor="Chris",
+                reason="scope violation",
+            )
+
+    def test_superseded_failed_assignments_disappear_from_architect_heartbeat(self) -> None:
+        self._commit_superseding_evidence_artifacts()
+        first = self._init_mission(
+            request="Supersede recovery analysis",
+            risk="high",
+            mission_id="bo-control-plane-qa-dispatch-recovery-8117af25",
+            provision=False,
+        )
+        second = self._init_mission(
+            request="Supersede recovery implementation",
+            risk="medium",
+            mission_id="bo-control-plane-qa-dispatch-recovery-replacement-ac9d2a79",
+            provision=False,
+        )
+        for mission_id, assignment_id in [
+            (first["mission_id"], "claude-analysis"),
+            (second["mission_id"], "codex-implementation"),
+        ]:
+            state = self.office.load_mission(mission_id)
+            assignment = self.office._find_assignment(state, assignment_id)
+            assignment["status"] = "failed"
+            assignment["evidence"] = {
+                "exit_code": 1,
+                "started_at": "2026-07-11T00:00:00+00:00",
+                "completed_at": "2026-07-11T00:01:00+00:00",
+                "baseline_commit": state["baseline_commit"],
+                "commit": state["baseline_commit"],
+                "changed_files": ["jarvis/build_office.py"],
+                "stderr_tail": "superseded failure",
+                "stdout_tail": "superseded failure",
+                "completed_by": "Build Office",
+            }
+            self.office.save_mission(state, event="test-superseded-failure")
+            superseded = self.office.supersede_assignment(
+                mission_id,
+                assignment_id,
+                actor="Chris",
+                reason="committed durable evidence supersedes this failure",
+            )
+            self.assertEqual(superseded["status"], "superseded")
+            self.assertIn("_bmad-output/implementation-artifacts/evidence/", superseded["superseded_by_artifacts"][0])
+        heartbeat = self.office.office_heartbeat("architect", cadence_seconds=300)
+        disposition_actions = [
+            item for item in heartbeat["actions"] if item["kind"] == "assignment-needs-disposition"
+        ]
+        self.assertEqual(disposition_actions, [])
+        for mission_id, assignment_id in [
+            (first["mission_id"], "claude-analysis"),
+            (second["mission_id"], "codex-implementation"),
+        ]:
+            state = self.office.load_mission(mission_id)
+            assignment = self.office._find_assignment(state, assignment_id)
+            self.assertEqual(assignment["status"], "superseded")
+            self.assertEqual(assignment["evidence"]["stderr_tail"], "superseded failure")
+            self.assertTrue(assignment["superseded_by_artifacts"])
 
 
 if __name__ == "__main__":

@@ -86,6 +86,8 @@ python3 scripts/jarvis_build_office.py approve-dispatch MISSION_ID --by Chris
 python3 scripts/jarvis_build_office.py reclaim-lease MISSION_ID ASSIGNMENT_ID --by Chris
 python3 scripts/jarvis_build_office.py recover-review MISSION_ID ASSIGNMENT_ID --by Chris --reason "unsupported review dispatch"
 python3 scripts/jarvis_build_office.py retry MISSION_ID ASSIGNMENT_ID --by Chris
+python3 scripts/jarvis_build_office.py amend-terminal-evidence MISSION_ID ASSIGNMENT_ID --by Chris --reason "stale terminal evidence"
+python3 scripts/jarvis_build_office.py supersede-assignment MISSION_ID ASSIGNMENT_ID --by Chris --reason "committed durable evidence supersedes this failure" --artifact _bmad-output/implementation-artifacts/evidence/CONTROL-PLANE-QA-DISPATCH-RECOVERY-AC7-AC9-EVIDENCE.md
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID codex-implementation --dry-run
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID claude-review --dry-run
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID codex-review --dry-run
@@ -105,6 +107,8 @@ python3 scripts/jarvis_build_office.py cleanup-plan MISSION_ID
 5. Medium or higher risk remains blocked until the other provider completes review.
 6. `release-plan` reports whether the mission is blocked or ready for human approval; it never merges or pushes.
 7. `cleanup-plan` distinguishes clean removable worktrees from dirty or active worktrees. Removal remains an explicit approved operation.
+8. `amend-terminal-evidence` is the supported repair path for a terminal writable assignment whose stored evidence is stale or internally inconsistent. It preserves the prior current evidence in `evidence_history`, then replaces the current evidence with worktree-derived evidence from the isolated checkout.
+9. `supersede-assignment` is the supported closure path for a failed or blocked assignment that has been resolved elsewhere by committed durable evidence. It preserves the current evidence and records the superseding artifact refs instead of erasing the failure.
 
 ## Heartbeat pickup
 
@@ -117,6 +121,7 @@ python3 scripts/jarvis_build_office.py heartbeat architect --cadence-seconds 300
 ```
 
 Each pass reads mission files, records an office heartbeat signature under ignored runtime state, and returns either an idle no-op or exact next actions after material changes. Repeated unchanged states set `changed_since_last` to `false`, so the loop can stay cheap until something changes. The heartbeat does not merge, push, repair code, reclaim leases, delete worktrees, or silently change contracts; it surfaces ready Architect assignments, Build-to-Quality review handoffs, failed or blocked assignments needing Architect disposition, expired leases, and dirty-main blockers.
+The Architect heartbeat also closes known superseded recovery failures when their committed durable replacement evidence is present, so those stale actions stop paging Architect after the closure record lands.
 
 1. Architect or Build Office initializes the mission while Orchestration is benched.
 2. Every five minutes, the keeper loop runs `python3 scripts/jarvis_build_office.py heartbeat architect --cadence-seconds 300 --watch`. The first pass after a material mission-state change records route actions; unchanged cycles record a tiny no-op heartbeat and suppress repeat routing.

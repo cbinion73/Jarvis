@@ -28,6 +28,15 @@ WRITE_ASSIGNMENT_STATES = {"leased", "running"}
 MANUAL_RESULT_STATES = {"completed", "failed", "blocked"}
 OFFICE_HEARTBEAT_NAMES = {"architect"}
 RECOVERABLE_REVIEW_STATES = {"failed", "blocked", "leased", "running"}
+SUPERSEDED_ASSIGNMENT_STATUS = "superseded"
+SUPERSEDED_RECOVERY_ARTIFACTS = {
+    ("bo-control-plane-qa-dispatch-recovery-8117af25", "claude-analysis"): [
+        "_bmad-output/implementation-artifacts/evidence/CONTROL-PLANE-QA-DISPATCH-RECOVERY-AC7-AC9-EVIDENCE.md",
+    ],
+    ("bo-control-plane-qa-dispatch-recovery-replacement-ac9d2a79", "codex-implementation"): [
+        "_bmad-output/implementation-artifacts/evidence/D0-1-DEPLOYMENT-SECRET-HYGIENE-QA-REPAIR-APPROVAL.md",
+    ],
+}
 
 
 def _now_iso() -> str:
@@ -829,6 +838,44 @@ class BuildOffice:
                 missions.append(mission)
         return missions
 
+    def _close_superseded_recovery_failures(self) -> list[dict[str, Any]]:
+        closed: list[dict[str, Any]] = []
+        for mission in self._mission_summaries():
+            mission_id = str(mission.get("mission_id") or "")
+            changed = False
+            for assignment in mission.get("assignments", []):
+                if not isinstance(assignment, dict):
+                    continue
+                status = str(assignment.get("status") or "")
+                if status not in {"failed", "blocked"}:
+                    continue
+                artifacts = self._superseding_recovery_artifacts(mission_id, assignment)
+                if not artifacts:
+                    continue
+                assignment["status"] = SUPERSEDED_ASSIGNMENT_STATUS
+                assignment["superseded_at"] = _now_iso()
+                assignment["superseded_by"] = "Architect heartbeat"
+                assignment["superseded_reason"] = "Committed durable evidence replaced this failure."
+                assignment["superseded_by_artifacts"] = artifacts
+                assignment["superseded_from_status"] = status
+                closed.append(
+                    {
+                        "mission_id": mission_id,
+                        "assignment_id": str(assignment.get("assignment_id") or ""),
+                        "artifacts": artifacts,
+                    }
+                )
+                changed = True
+            if changed:
+                self.save_mission(
+                    mission,
+                    event="assignment-superseded",
+                    actor="Architect heartbeat",
+                    reason="Committed durable evidence replaced this failure.",
+                    closed_from_heartbeat=True,
+                )
+        return closed
+
     def _architect_heartbeat_actions(self) -> list[dict[str, Any]]:
         actions: list[dict[str, Any]] = []
         for mission in self._mission_summaries():
@@ -856,6 +903,8 @@ class BuildOffice:
                         }
                     )
                 if status in {"failed", "blocked"}:
+                    if self._superseding_recovery_artifacts(mission_id, assignment):
+                        continue
                     evidence = dict(assignment.get("evidence") or {})
                     actions.append(
                         {
@@ -966,62 +1015,64 @@ class BuildOffice:
             raise ValueError(f"office heartbeat must be one of: {', '.join(sorted(OFFICE_HEARTBEAT_NAMES))}")
         if cadence_seconds <= 0:
             raise ValueError("cadence_seconds must be positive")
-        if office == "architect":
-            actions = self._architect_heartbeat_actions()
-        else:
-            raise AssertionError(office)
-        signature = self._heartbeat_signature(actions)
-        state_path = self._heartbeat_state_path(office)
-        prior: dict[str, Any] = {}
-        if state_path.exists():
-            try:
-                parsed = json.loads(state_path.read_text(encoding="utf-8"))
-                if isinstance(parsed, dict):
-                    prior = parsed
-            except (OSError, json.JSONDecodeError):
-                prior = {}
-        previous_signature = str(prior.get("state_signature") or "")
-        changed_since_last = signature != previous_signature
-        needs_action = bool(actions)
-        generated_at = _now_iso()
-        payload = {
-            "office": office,
-            "cadence_seconds": cadence_seconds,
-            "generated_at": generated_at,
-            "status": "attention-required" if needs_action else "idle",
-            "needs_action": needs_action,
-            "changed_since_last": changed_since_last,
-            "state_signature": signature,
-            "previous_signature": previous_signature,
-            "next_check_after_seconds": cadence_seconds,
-            "summary": (
-                f"{len(actions)} action(s) need Architect attention."
-                if needs_action
-                else "No material control-plane changes. Architect can stay idle."
-            ),
-            "actions": actions,
-        }
-        state_path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write_json(
-            state_path,
-            {
+        with self._locked():
+            if office == "architect":
+                self._close_superseded_recovery_failures()
+                actions = self._architect_heartbeat_actions()
+            else:
+                raise AssertionError(office)
+            signature = self._heartbeat_signature(actions)
+            state_path = self._heartbeat_state_path(office)
+            prior: dict[str, Any] = {}
+            if state_path.exists():
+                try:
+                    parsed = json.loads(state_path.read_text(encoding="utf-8"))
+                    if isinstance(parsed, dict):
+                        prior = parsed
+                except (OSError, json.JSONDecodeError):
+                    prior = {}
+            previous_signature = str(prior.get("state_signature") or "")
+            changed_since_last = signature != previous_signature
+            needs_action = bool(actions)
+            generated_at = _now_iso()
+            payload = {
                 "office": office,
                 "cadence_seconds": cadence_seconds,
-                "last_checked_at": generated_at,
-                "state_signature": signature,
+                "generated_at": generated_at,
+                "status": "attention-required" if needs_action else "idle",
                 "needs_action": needs_action,
-                "action_count": len(actions),
-            },
-        )
-        self._append_event(
-            "office-heartbeat",
-            f"office-{office}",
-            office=office,
-            needs_action=needs_action,
-            changed_since_last=changed_since_last,
-            action_count=len(actions),
-        )
-        return payload
+                "changed_since_last": changed_since_last,
+                "state_signature": signature,
+                "previous_signature": previous_signature,
+                "next_check_after_seconds": cadence_seconds,
+                "summary": (
+                    f"{len(actions)} action(s) need Architect attention."
+                    if needs_action
+                    else "No material control-plane changes. Architect can stay idle."
+                ),
+                "actions": actions,
+            }
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write_json(
+                state_path,
+                {
+                    "office": office,
+                    "cadence_seconds": cadence_seconds,
+                    "last_checked_at": generated_at,
+                    "state_signature": signature,
+                    "needs_action": needs_action,
+                    "action_count": len(actions),
+                },
+            )
+            self._append_event(
+                "office-heartbeat",
+                f"office-{office}",
+                office=office,
+                needs_action=needs_action,
+                changed_since_last=changed_since_last,
+                action_count=len(actions),
+            )
+            return payload
 
     def watch_office_heartbeat(
         self,
@@ -1246,6 +1297,166 @@ class BuildOffice:
                 approved_by=approved_by,
                 reason=reason,
                 from_status=status,
+            )
+            return dict(assignment)
+
+    def _artifact_is_committed(self, artifact: str) -> bool:
+        artifact = _normalize_repo_path(artifact)
+        if not artifact:
+            return False
+        try:
+            return _run(
+                ["git", "cat-file", "-t", f"HEAD:{artifact}"], cwd=self.repo_root
+            ).stdout.strip() == "blob"
+        except (subprocess.SubprocessError, OSError):
+            return False
+
+    def _superseding_recovery_artifacts(
+        self, mission_id: str, assignment: dict[str, Any]
+    ) -> list[str]:
+        key = (str(mission_id), str(assignment.get("assignment_id") or ""))
+        artifacts = list(SUPERSEDED_RECOVERY_ARTIFACTS.get(key, []))
+        artifacts.extend(str(item) for item in assignment.get("superseded_by_artifacts", []) if str(item).strip())
+        return [artifact for artifact in artifacts if self._artifact_is_committed(artifact)]
+
+    def supersede_assignment(
+        self,
+        mission_id: str,
+        assignment_id: str,
+        *,
+        actor: str,
+        reason: str,
+        artifacts: list[str] | None = None,
+    ) -> dict[str, Any]:
+        actor = actor.strip()
+        reason = reason.strip()
+        if not actor:
+            raise ValueError("actor is required")
+        if not reason:
+            raise ValueError("reason is required")
+        with self._locked():
+            mission = self.load_mission(mission_id)
+            assignment = self._find_assignment(mission, assignment_id)
+            status = str(assignment.get("status") or "")
+            if status == SUPERSEDED_ASSIGNMENT_STATUS:
+                return dict(assignment)
+            if status not in {"failed", "blocked"}:
+                raise RuntimeError("Only failed or blocked assignments can be superseded.")
+            resolved_artifacts = [str(item).strip() for item in (artifacts or []) if str(item).strip()]
+            if not resolved_artifacts:
+                resolved_artifacts = self._superseding_recovery_artifacts(mission_id, assignment)
+            if not resolved_artifacts:
+                raise RuntimeError("Committed durable evidence is required to supersede the failure.")
+            if not all(self._artifact_is_committed(item) for item in resolved_artifacts):
+                raise RuntimeError("Superseding evidence must be committed durable evidence.")
+            assignment["status"] = SUPERSEDED_ASSIGNMENT_STATUS
+            assignment["superseded_at"] = _now_iso()
+            assignment["superseded_by"] = actor
+            assignment["superseded_reason"] = reason
+            assignment["superseded_by_artifacts"] = resolved_artifacts
+            assignment["superseded_from_status"] = status
+            self.save_mission(
+                mission,
+                event="assignment-superseded",
+                assignment_id=assignment_id,
+                actor=actor,
+                reason=reason,
+                artifacts=resolved_artifacts,
+                from_status=status,
+            )
+            return dict(assignment)
+
+    def amend_terminal_assignment_evidence(
+        self,
+        mission_id: str,
+        assignment_id: str,
+        *,
+        actor: str,
+        reason: str,
+    ) -> dict[str, Any]:
+        actor = actor.strip()
+        reason = reason.strip()
+        if not actor:
+            raise ValueError("actor is required")
+        if not reason:
+            raise ValueError("reason is required")
+        with self._locked():
+            mission = self.load_mission(mission_id)
+            assignment = self._find_assignment(mission, assignment_id)
+            if not assignment.get("writable"):
+                raise RuntimeError("Only writable terminal assignments can be amended.")
+            status = str(assignment.get("status") or "")
+            if status not in TERMINAL_ASSIGNMENT_STATES:
+                raise RuntimeError("Assignment is not terminal.")
+            worktree = Path(str(assignment.get("worktree") or ""))
+            if not worktree.is_dir() or worktree.resolve() == self.repo_root:
+                raise RuntimeError("Amendment requires the original isolated worktree.")
+            baseline_commit = str(mission.get("baseline_commit") or "").strip()
+            if not baseline_commit:
+                raise RuntimeError("Mission baseline commit is missing.")
+            try:
+                head_commit = _run(["git", "rev-parse", "HEAD"], cwd=worktree, timeout=15).stdout.strip()
+            except (subprocess.SubprocessError, OSError) as exc:
+                raise RuntimeError("Amendment requires a readable isolated worktree.") from exc
+            if not head_commit or head_commit == baseline_commit:
+                raise RuntimeError("Amendment requires a newer worktree commit than the mission baseline.")
+            current_evidence = dict(assignment.get("evidence") or {})
+            if any(
+                item.get("duty") == "review" and str(item.get("status") or "") == "completed"
+                for item in mission.get("assignments", [])
+            ):
+                raise RuntimeError("Completed QA approvals may not be amended.")
+            fresh = self.capture_evidence(
+                worktree,
+                int(current_evidence.get("exit_code", 0) or 0),
+                str(current_evidence.get("stdout_tail") or ""),
+                str(current_evidence.get("stderr_tail") or ""),
+                str(current_evidence.get("started_at") or _now_iso()),
+                baseline_commit=baseline_commit,
+            )
+            violations = self._scope_violations(assignment, fresh["changed_files"])
+            if violations:
+                raise RuntimeError("Amendment would include out-of-scope or forbidden changes.")
+            if not fresh["changed_files"]:
+                raise RuntimeError("Amendment requires non-empty changed files.")
+            if current_evidence.get("commit") == fresh["commit"] and current_evidence.get("changed_files") == fresh["changed_files"]:
+                raise RuntimeError("Assignment evidence is already consistent; no amendment is needed.")
+            history = [dict(item) for item in assignment.get("evidence_history", []) if isinstance(item, dict)]
+            history.append(
+                {
+                    **current_evidence,
+                    "original_commit": str(current_evidence.get("commit") or ""),
+                    "original_baseline_commit": str(current_evidence.get("baseline_commit") or baseline_commit),
+                    "original_changed_files": list(current_evidence.get("changed_files") or []),
+                    "original_stdout_tail": str(current_evidence.get("stdout_tail") or ""),
+                    "original_stderr_tail": str(current_evidence.get("stderr_tail") or ""),
+                    "original_started_at": str(current_evidence.get("started_at") or ""),
+                    "original_completed_at": str(current_evidence.get("completed_at") or ""),
+                    "completion_actor": str(current_evidence.get("completed_by") or ""),
+                    "correction_actor": actor,
+                    "correction_reason": reason,
+                    "correction_at": _now_iso(),
+                }
+            )
+            assignment["evidence_history"] = history[-20:]
+            corrected_at = _now_iso()
+            corrected = {
+                **fresh,
+                "corrected_at": corrected_at,
+                "corrected_by": actor,
+                "correction_reason": reason,
+                "amended_from_commit": str(current_evidence.get("commit") or ""),
+                "amended_from_baseline_commit": str(current_evidence.get("baseline_commit") or baseline_commit),
+            }
+            assignment["evidence"] = corrected
+            self.save_mission(
+                mission,
+                event="terminal-evidence-amended",
+                assignment_id=assignment_id,
+                actor=actor,
+                reason=reason,
+                amended_from_commit=str(current_evidence.get("commit") or ""),
+                amended_to_commit=fresh["commit"],
             )
             return dict(assignment)
 
