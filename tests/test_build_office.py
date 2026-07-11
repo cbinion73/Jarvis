@@ -602,6 +602,80 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertEqual(plan["status"], "blocked")
         self.assertIn("claude-review is failed", plan["reasons"])
 
+    def test_heartbeat_routes_ready_build_once_then_noops_unchanged_state(self) -> None:
+        mission = self._init_mission(
+            request="Heartbeat should route ready build",
+            mission_id="bo-heartbeat-route-build",
+            provision=True,
+        )
+        first = self.office.heartbeat(mission["mission_id"], actor="Architect heartbeat")
+        self.assertFalse(first["missions"][0]["unchanged"])
+        self.assertEqual(
+            [item["kind"] for item in first["missions"][0]["actions"]],
+            ["route-to-build", "waiting"],
+        )
+        self.assertEqual(
+            first["missions"][0]["actions"][0]["assignment_id"],
+            "codex-implementation",
+        )
+        second = self.office.heartbeat(mission["mission_id"], actor="Architect heartbeat")
+        self.assertTrue(second["missions"][0]["unchanged"])
+        self.assertEqual(second["missions"][0]["actions"], [])
+        self.assertEqual(second["missions"][0]["heartbeat"]["unchanged_cycles"], 1)
+        self.assertEqual(second["missions"][0]["heartbeat"]["suppressed_action_count"], 2)
+
+    def test_heartbeat_routes_completed_build_to_quality(self) -> None:
+        mission = self._init_mission(
+            request="Heartbeat should route quality",
+            mission_id="bo-heartbeat-route-quality",
+            provision=True,
+        )
+        self.office.heartbeat(mission["mission_id"], actor="Architect heartbeat")
+        self._complete_implementation_for_review(mission["mission_id"])
+        routed = self.office.heartbeat(mission["mission_id"], actor="Architect heartbeat")
+        actions = routed["missions"][0]["actions"]
+        self.assertEqual([item["kind"] for item in actions], ["route-to-quality"])
+        self.assertEqual(actions[0]["office"], "qa")
+        self.assertEqual(actions[0]["assignment_id"], "claude-review")
+
+    def test_heartbeat_sends_failed_review_to_architect_disposition(self) -> None:
+        mission = self._init_mission(
+            request="Heartbeat should escalate review findings",
+            mission_id="bo-heartbeat-review-disposition",
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        self.office.claim_assignment(
+            mission["mission_id"], "claude-review", claimed_by="Claude QA Office"
+        )
+        self.office.submit_result(
+            mission["mission_id"],
+            "claude-review",
+            completed_by="Claude QA Office",
+            status="failed",
+            summary="Blocking contract mismatch.",
+        )
+        routed = self.office.heartbeat(mission["mission_id"], actor="Architect heartbeat")
+        actions = routed["missions"][0]["actions"]
+        self.assertEqual([item["kind"] for item in actions], ["disposition-required"])
+        self.assertEqual(actions[0]["office"], "architect")
+
+    def test_heartbeat_can_dry_run_dispatch_ready_assignment(self) -> None:
+        mission = self._init_mission(
+            request="Heartbeat can preview dispatch",
+            mission_id="bo-heartbeat-dispatch-preview",
+            provision=True,
+        )
+        routed = self.office.heartbeat(
+            mission["mission_id"],
+            actor="Architect heartbeat",
+            dispatch_ready=True,
+            dry_run=True,
+        )
+        dispatches = routed["missions"][0]["dispatches"]
+        self.assertEqual([item["assignment_id"] for item in dispatches], ["codex-implementation"])
+        self.assertTrue(dispatches[0]["result"]["dry_run"])
+
     def test_review_refuses_target_changed_after_build_handoff(self) -> None:
         mission = self._init_mission(
             request="Review one immutable target",
@@ -669,6 +743,66 @@ class BuildOfficeTests(unittest.TestCase):
         plan = self.office.release_plan(mission["mission_id"])
         self.assertEqual(plan["status"], "blocked")
         self.assertIn("implementation review target changed after Build handoff", plan["reasons"])
+
+    def test_architect_heartbeat_is_idle_and_repeats_cheaply_when_nothing_changed(self) -> None:
+        first = self.office.office_heartbeat("architect", cadence_seconds=300)
+        second = self.office.office_heartbeat("architect", cadence_seconds=300)
+        self.assertEqual(first["status"], "idle")
+        self.assertFalse(first["needs_action"])
+        self.assertTrue(first["changed_since_last"])
+        self.assertEqual(second["status"], "idle")
+        self.assertFalse(second["needs_action"])
+        self.assertFalse(second["changed_since_last"])
+        self.assertEqual(second["next_check_after_seconds"], 300)
+
+    def test_architect_heartbeat_surfaces_ready_architect_assignment(self) -> None:
+        self._init_mission(
+            request="Architect should analyze this high risk mission",
+            risk="high",
+            mission_id="bo-architect-heartbeat-ready",
+            provision=False,
+        )
+        heartbeat = self.office.office_heartbeat("architect", cadence_seconds=300)
+        self.assertEqual(heartbeat["status"], "attention-required")
+        self.assertTrue(heartbeat["needs_action"])
+        self.assertTrue(heartbeat["changed_since_last"])
+        actions = {(item["kind"], item["assignment_id"]) for item in heartbeat["actions"]}
+        self.assertIn(("architect-assignment-ready", "claude-analysis"), actions)
+        self.assertIn("claim bo-architect-heartbeat-ready claude-analysis", heartbeat["actions"][0]["command"])
+
+    def test_architect_heartbeat_routes_completed_build_to_quality_review(self) -> None:
+        mission = self._init_mission(
+            request="Route completed implementation to Quality",
+            mission_id="bo-heartbeat-route-quality",
+            provision=True,
+        )
+        self._complete_implementation_for_review(mission["mission_id"])
+        heartbeat = self.office.office_heartbeat("architect", cadence_seconds=300)
+        route_actions = [
+            item for item in heartbeat["actions"] if item["kind"] == "route-build-to-quality"
+        ]
+        self.assertEqual(len(route_actions), 1)
+        self.assertEqual(route_actions[0]["assignment_id"], "claude-review")
+        self.assertIn("dispatch bo-heartbeat-route-quality claude-review --dry-run", route_actions[0]["command"])
+
+    def test_architect_heartbeat_surfaces_failed_assignment_for_disposition(self) -> None:
+        mission = self._init_mission(
+            request="Classify a failed build",
+            mission_id="bo-heartbeat-failed-assignment",
+            provision=False,
+        )
+        state = self.office.load_mission(mission["mission_id"])
+        implementation = self.office._find_assignment(state, "codex-implementation")
+        implementation["status"] = "failed"
+        implementation["evidence"] = {"stderr_tail": "unsupported -a flag"}
+        self.office.save_mission(state, event="test-failed-assignment")
+        heartbeat = self.office.office_heartbeat("architect", cadence_seconds=300)
+        disposition_actions = [
+            item for item in heartbeat["actions"] if item["kind"] == "assignment-needs-disposition"
+        ]
+        self.assertEqual(len(disposition_actions), 1)
+        self.assertEqual(disposition_actions[0]["assignment_id"], "codex-implementation")
+        self.assertIn("unsupported -a flag", disposition_actions[0]["detail"])
 
 
 if __name__ == "__main__":

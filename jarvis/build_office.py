@@ -8,6 +8,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import time
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -25,6 +26,7 @@ RISK_LEVELS = {"low", "medium", "high", "critical"}
 TERMINAL_ASSIGNMENT_STATES = {"completed", "failed", "cancelled", "released"}
 WRITE_ASSIGNMENT_STATES = {"leased", "running"}
 MANUAL_RESULT_STATES = {"completed", "failed", "blocked"}
+OFFICE_HEARTBEAT_NAMES = {"architect"}
 
 
 def _now_iso() -> str:
@@ -414,6 +416,19 @@ class BuildOffice:
             raise ValueError(f"Invalid mission shape: {mission_id}")
         return payload
 
+    def mission_ids(self) -> list[str]:
+        if not self.state_root.exists():
+            return []
+        mission_ids: list[str] = []
+        for path in sorted(self.state_root.glob("*/mission.json")):
+            try:
+                mission = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(mission, dict) and mission.get("mission_id"):
+                mission_ids.append(str(mission["mission_id"]))
+        return mission_ids
+
     def _validate_owned_paths(self, paths: list[str]) -> None:
         for pattern in paths:
             prefix = _static_prefix(pattern)
@@ -441,6 +456,211 @@ class BuildOffice:
         mission["updated_at"] = _now_iso()
         atomic_write_json(self._mission_path(str(mission["mission_id"])), mission)
         self._append_event(event, str(mission["mission_id"]), revision=mission["revision"], **details)
+
+    def _mission_state_signature(self, mission: dict[str, Any]) -> str:
+        relevant_assignments: list[dict[str, Any]] = []
+        for assignment in mission.get("assignments", []):
+            evidence = dict(assignment.get("evidence") or {})
+            relevant_assignments.append(
+                {
+                    "assignment_id": assignment.get("assignment_id"),
+                    "duty": assignment.get("duty"),
+                    "office": assignment.get("office"),
+                    "provider": assignment.get("provider"),
+                    "status": assignment.get("status"),
+                    "writable": assignment.get("writable"),
+                    "lease": {
+                        "holder": dict(assignment.get("lease") or {}).get("holder", ""),
+                        "expires_at": dict(assignment.get("lease") or {}).get("expires_at", ""),
+                    },
+                    "evidence": {
+                        "exit_code": evidence.get("exit_code"),
+                        "commit": evidence.get("commit", ""),
+                        "changed_files": evidence.get("changed_files", []),
+                        "scope_violations": evidence.get("scope_violations", []),
+                        "verdict": evidence.get("verdict", ""),
+                        "target_fingerprint": evidence.get("target_fingerprint", ""),
+                    },
+                }
+            )
+        payload = {
+            "mission_status": mission.get("status"),
+            "risk": mission.get("risk"),
+            "contract": {
+                "status": dict(mission.get("architecture_contract") or {}).get("status"),
+                "reference": dict(mission.get("architecture_contract") or {}).get("reference"),
+                "sha256": dict(mission.get("architecture_contract") or {}).get("sha256"),
+            },
+            "approvals": mission.get("approvals", {}),
+            "assignments": relevant_assignments,
+        }
+        return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+    def _heartbeat_actions(self, mission: dict[str, Any]) -> list[dict[str, Any]]:
+        actions: list[dict[str, Any]] = []
+        contract = dict(mission.get("architecture_contract") or {})
+        if contract.get("status") != "frozen" or not str(contract.get("reference") or "").strip():
+            actions.append(
+                {
+                    "kind": "awaiting-architect-contract",
+                    "office": "architect",
+                    "summary": "Build remains blocked until Architect supplies a frozen committed contract.",
+                }
+            )
+        for assignment in mission.get("assignments", []):
+            assignment_id = str(assignment.get("assignment_id") or "")
+            duty = str(assignment.get("duty") or "")
+            office = str(assignment.get("office") or office_for_duty(duty))
+            status = str(assignment.get("status") or "")
+            ready, reason = self._assignment_ready(mission, assignment)
+            if ready:
+                kind = {
+                    "analysis": "route-to-architect",
+                    "implementation": "route-to-build",
+                    "review": "route-to-quality",
+                }.get(duty, "route-ready-assignment")
+                actions.append(
+                    {
+                        "kind": kind,
+                        "office": office,
+                        "assignment_id": assignment_id,
+                        "provider": str(assignment.get("provider") or ""),
+                        "summary": reason,
+                    }
+                )
+            elif status in {"planned", "provisioned"} and reason:
+                actions.append(
+                    {
+                        "kind": "waiting",
+                        "office": office,
+                        "assignment_id": assignment_id,
+                        "provider": str(assignment.get("provider") or ""),
+                        "summary": reason,
+                    }
+                )
+            if status in {"failed", "blocked"}:
+                target_office = "architect" if duty == "review" else "orchestration"
+                actions.append(
+                    {
+                        "kind": "disposition-required" if duty == "review" else "repair-or-retry-required",
+                        "office": target_office,
+                        "assignment_id": assignment_id,
+                        "provider": str(assignment.get("provider") or ""),
+                        "summary": f"{assignment_id} is {status}; route for supported disposition.",
+                    }
+                )
+            expires_at = str((assignment.get("lease") or {}).get("expires_at", ""))
+            if status in WRITE_ASSIGNMENT_STATES and expires_at:
+                try:
+                    expired = datetime.fromisoformat(expires_at) < datetime.now(timezone.utc)
+                except ValueError:
+                    expired = False
+                    actions.append(
+                        {
+                            "kind": "lease-recovery-required",
+                            "office": "orchestration",
+                            "assignment_id": assignment_id,
+                            "summary": "Lease expiry is invalid; manual recovery required.",
+                        }
+                    )
+                if expired:
+                    actions.append(
+                        {
+                            "kind": "lease-recovery-required",
+                            "office": "orchestration",
+                            "assignment_id": assignment_id,
+                            "summary": "Lease expired; reclaim through the recorded recovery path.",
+                        }
+                    )
+        if self._repo_changes():
+            actions.append(
+                {
+                    "kind": "main-dirty",
+                    "office": "orchestration",
+                    "summary": "Main checkout is dirty; intake and release gates remain blocked.",
+                }
+            )
+        return actions
+
+    def heartbeat(
+        self,
+        mission_id: str | None = None,
+        *,
+        actor: str = "Architect heartbeat",
+        interval_seconds: int = 300,
+        dispatch_ready: bool = False,
+        dry_run: bool = True,
+    ) -> dict[str, Any]:
+        actor = actor.strip() or "Architect heartbeat"
+        mission_ids = [mission_id] if mission_id else self.mission_ids()
+        summaries: list[dict[str, Any]] = []
+        for current_id in mission_ids:
+            with self._locked():
+                mission = self.load_mission(str(current_id))
+                signature = self._mission_state_signature(mission)
+                prior = dict(mission.get("heartbeat") or {})
+                unchanged = signature == str(prior.get("last_state_signature") or "")
+                detected_actions = self._heartbeat_actions(mission)
+                actions = [] if unchanged else detected_actions
+                route_actions = [item for item in actions if str(item.get("kind", "")).startswith("route-to-")]
+                heartbeat_state = {
+                    "last_at": _now_iso(),
+                    "last_by": actor,
+                    "interval_seconds": int(interval_seconds),
+                    "last_state_signature": signature,
+                    "unchanged_cycles": int(prior.get("unchanged_cycles", 0)) + 1 if unchanged else 0,
+                    "last_action_count": len(actions),
+                    "suppressed_action_count": len(detected_actions) if unchanged else 0,
+                    "last_route_count": len(route_actions),
+                }
+                mission["heartbeat"] = heartbeat_state
+                self.save_mission(
+                    mission,
+                    event="heartbeat-noop" if unchanged and not actions else "heartbeat-routed",
+                    actor=actor,
+                    unchanged=unchanged,
+                    action_count=len(actions),
+                    route_count=len(route_actions),
+                )
+            summary: dict[str, Any] = {
+                "mission_id": str(current_id),
+                "unchanged": unchanged,
+                "heartbeat": heartbeat_state,
+                "actions": actions,
+            }
+            if dispatch_ready:
+                dispatches: list[dict[str, Any]] = []
+                latest = self.load_mission(str(current_id))
+                for action in route_actions:
+                    assignment_id = str(action.get("assignment_id") or "")
+                    if not assignment_id:
+                        continue
+                    try:
+                        dispatches.append(
+                            {
+                                "assignment_id": assignment_id,
+                                "dry_run": dry_run,
+                                "result": self.dispatch(str(current_id), assignment_id, dry_run=dry_run),
+                            }
+                        )
+                    except (RuntimeError, ValueError, KeyError) as exc:
+                        dispatches.append(
+                            {
+                                "assignment_id": assignment_id,
+                                "dry_run": dry_run,
+                                "error": str(exc),
+                            }
+                        )
+                summary["dispatches"] = dispatches
+            summaries.append(summary)
+        return {
+            "ok": True,
+            "generated_at": _now_iso(),
+            "actor": actor,
+            "interval_seconds": int(interval_seconds),
+            "mission_count": len(summaries),
+            "missions": summaries,
+        }
 
     @staticmethod
     def _find_assignment(mission: dict[str, Any], assignment_id: str) -> dict[str, Any]:
@@ -582,6 +802,231 @@ class BuildOffice:
                     items.append(payload)
         items.sort(key=lambda item: (item["risk"], item["mission_id"], item["assignment_id"]))
         return {"provider": provider, "generated_at": _now_iso(), "items": items}
+
+    def _heartbeat_state_path(self, office: str) -> Path:
+        return self.state_root / "heartbeats" / f"{office}.json"
+
+    def _mission_summaries(self) -> list[dict[str, Any]]:
+        missions: list[dict[str, Any]] = []
+        if not self.state_root.exists():
+            return missions
+        for path in sorted(self.state_root.glob("*/mission.json")):
+            try:
+                mission = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if isinstance(mission, dict) and isinstance(mission.get("assignments"), list):
+                missions.append(mission)
+        return missions
+
+    def _architect_heartbeat_actions(self) -> list[dict[str, Any]]:
+        actions: list[dict[str, Any]] = []
+        for mission in self._mission_summaries():
+            mission_id = str(mission.get("mission_id") or "")
+            assignments = [item for item in mission.get("assignments", []) if isinstance(item, dict)]
+            for assignment in assignments:
+                assignment_id = str(assignment.get("assignment_id") or "")
+                duty = str(assignment.get("duty") or "")
+                status = str(assignment.get("status") or "")
+                office = str(assignment.get("office") or office_for_duty(duty) if duty else "")
+                ready, reason = self._assignment_ready(mission, assignment)
+                if office == "architect" and ready:
+                    actions.append(
+                        {
+                            "kind": "architect-assignment-ready",
+                            "mission_id": mission_id,
+                            "assignment_id": assignment_id,
+                            "severity": "action",
+                            "summary": f"{assignment_id} is ready for Architect pickup.",
+                            "command": (
+                                "python3 scripts/jarvis_build_office.py claim "
+                                f"{mission_id} {assignment_id} --by architect-office"
+                            ),
+                            "detail": reason,
+                        }
+                    )
+                if status in {"failed", "blocked"}:
+                    evidence = dict(assignment.get("evidence") or {})
+                    actions.append(
+                        {
+                            "kind": "assignment-needs-disposition",
+                            "mission_id": mission_id,
+                            "assignment_id": assignment_id,
+                            "severity": "action",
+                            "summary": f"{assignment_id} is {status}; Architect must classify the finding or failure.",
+                            "detail": str(
+                                evidence.get("summary")
+                                or evidence.get("stderr_tail")
+                                or evidence.get("provision_error")
+                                or evidence.get("collision")
+                                or ""
+                            )[-1000:],
+                        }
+                    )
+                expires_at = str((assignment.get("lease") or {}).get("expires_at") or "")
+                if status in WRITE_ASSIGNMENT_STATES and expires_at:
+                    try:
+                        expired = datetime.fromisoformat(expires_at) < datetime.now(timezone.utc)
+                    except ValueError:
+                        expired = True
+                    if expired:
+                        actions.append(
+                            {
+                                "kind": "lease-needs-recovery",
+                                "mission_id": mission_id,
+                                "assignment_id": assignment_id,
+                                "severity": "action",
+                                "summary": f"{assignment_id} has an expired or invalid lease.",
+                                "command": (
+                                    "python3 scripts/jarvis_build_office.py reclaim-lease "
+                                    f"{mission_id} {assignment_id} --by Chris"
+                                ),
+                            }
+                        )
+            implementations = [item for item in assignments if item.get("duty") == "implementation"]
+            reviews = [item for item in assignments if item.get("duty") == "review"]
+            if implementations and all(item.get("status") == "completed" for item in implementations):
+                for review in reviews:
+                    if review.get("status") in {"planned", "provisioned"}:
+                        ready, reason = self._assignment_ready(mission, review)
+                        if ready:
+                            actions.append(
+                                {
+                                    "kind": "route-build-to-quality",
+                                    "mission_id": mission_id,
+                                    "assignment_id": str(review.get("assignment_id") or ""),
+                                    "severity": "action",
+                                    "summary": "Build evidence is complete and Quality review is ready.",
+                                    "command": (
+                                        "python3 scripts/jarvis_build_office.py dispatch "
+                                        f"{mission_id} {review.get('assignment_id')} --dry-run"
+                                    ),
+                                    "detail": reason,
+                                }
+                            )
+            if mission.get("status") in {"blocked", "failed"}:
+                actions.append(
+                    {
+                        "kind": "mission-needs-architect-attention",
+                        "mission_id": mission_id,
+                        "assignment_id": "",
+                        "severity": "action",
+                        "summary": f"Mission is {mission.get('status')}; Architect should classify the blocker.",
+                    }
+                )
+        if self._repo_changes():
+            actions.append(
+                {
+                    "kind": "main-checkout-dirty",
+                    "mission_id": "",
+                    "assignment_id": "",
+                    "severity": "blocker",
+                    "summary": "Main checkout is dirty; mission intake and release gates are blocked.",
+                    "command": "git status --short",
+                }
+            )
+        return sorted(
+            actions,
+            key=lambda item: (
+                str(item.get("severity") or ""),
+                str(item.get("mission_id") or ""),
+                str(item.get("assignment_id") or ""),
+                str(item.get("kind") or ""),
+            ),
+        )
+
+    @staticmethod
+    def _heartbeat_signature(actions: list[dict[str, Any]]) -> str:
+        stable_actions = [
+            {
+                "kind": item.get("kind", ""),
+                "mission_id": item.get("mission_id", ""),
+                "assignment_id": item.get("assignment_id", ""),
+                "summary": item.get("summary", ""),
+                "detail": item.get("detail", ""),
+            }
+            for item in actions
+        ]
+        payload = json.dumps(stable_actions, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(payload.encode()).hexdigest()
+
+    def office_heartbeat(self, office: str = "architect", *, cadence_seconds: int = 300) -> dict[str, Any]:
+        office = office.strip().lower()
+        if office not in OFFICE_HEARTBEAT_NAMES:
+            raise ValueError(f"office heartbeat must be one of: {', '.join(sorted(OFFICE_HEARTBEAT_NAMES))}")
+        if cadence_seconds <= 0:
+            raise ValueError("cadence_seconds must be positive")
+        if office == "architect":
+            actions = self._architect_heartbeat_actions()
+        else:
+            raise AssertionError(office)
+        signature = self._heartbeat_signature(actions)
+        state_path = self._heartbeat_state_path(office)
+        prior: dict[str, Any] = {}
+        if state_path.exists():
+            try:
+                parsed = json.loads(state_path.read_text(encoding="utf-8"))
+                if isinstance(parsed, dict):
+                    prior = parsed
+            except (OSError, json.JSONDecodeError):
+                prior = {}
+        previous_signature = str(prior.get("state_signature") or "")
+        changed_since_last = signature != previous_signature
+        needs_action = bool(actions)
+        generated_at = _now_iso()
+        payload = {
+            "office": office,
+            "cadence_seconds": cadence_seconds,
+            "generated_at": generated_at,
+            "status": "attention-required" if needs_action else "idle",
+            "needs_action": needs_action,
+            "changed_since_last": changed_since_last,
+            "state_signature": signature,
+            "previous_signature": previous_signature,
+            "next_check_after_seconds": cadence_seconds,
+            "summary": (
+                f"{len(actions)} action(s) need Architect attention."
+                if needs_action
+                else "No material control-plane changes. Architect can stay idle."
+            ),
+            "actions": actions,
+        }
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write_json(
+            state_path,
+            {
+                "office": office,
+                "cadence_seconds": cadence_seconds,
+                "last_checked_at": generated_at,
+                "state_signature": signature,
+                "needs_action": needs_action,
+                "action_count": len(actions),
+            },
+        )
+        self._append_event(
+            "office-heartbeat",
+            f"office-{office}",
+            office=office,
+            needs_action=needs_action,
+            changed_since_last=changed_since_last,
+            action_count=len(actions),
+        )
+        return payload
+
+    def watch_office_heartbeat(
+        self,
+        office: str = "architect",
+        *,
+        cadence_seconds: int = 300,
+        max_iterations: int = 0,
+    ) -> Iterator[dict[str, Any]]:
+        iterations = 0
+        while True:
+            iterations += 1
+            yield self.office_heartbeat(office, cadence_seconds=cadence_seconds)
+            if max_iterations and iterations >= max_iterations:
+                return
+            time.sleep(cadence_seconds)
 
     def _active_write_assignments(self, *, exclude: tuple[str, str] | None = None) -> Iterator[tuple[str, dict[str, Any]]]:
         if not self.state_root.exists():

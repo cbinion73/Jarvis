@@ -44,6 +44,15 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status")
     status.add_argument("mission_id")
 
+    heartbeat = sub.add_parser("heartbeat")
+    heartbeat.add_argument("mission_id", nargs="?")
+    heartbeat.add_argument("--by", default="Architect heartbeat", dest="actor")
+    heartbeat.add_argument("--interval-seconds", "--cadence-seconds", type=int, default=300)
+    heartbeat.add_argument("--dispatch-ready", action="store_true")
+    heartbeat.add_argument("--execute", action="store_true")
+    heartbeat.add_argument("--watch", action="store_true")
+    heartbeat.add_argument("--max-iterations", type=int, default=0)
+
     inbox = sub.add_parser("inbox")
     inbox.add_argument("provider", choices=["claude", "codex"])
 
@@ -120,6 +129,27 @@ def main() -> int:
             )
         elif args.command == "status":
             payload = office.load_mission(args.mission_id)
+        elif args.command == "heartbeat":
+            target = str(args.mission_id or "").strip().lower()
+            if target == "architect":
+                if args.watch:
+                    for item in office.watch_office_heartbeat(
+                        "architect",
+                        cadence_seconds=args.interval_seconds,
+                        max_iterations=args.max_iterations,
+                    ):
+                        _print(item)
+                        sys.stdout.flush()
+                    return 0
+                payload = office.office_heartbeat("architect", cadence_seconds=args.interval_seconds)
+            else:
+                payload = office.heartbeat(
+                    args.mission_id,
+                    actor=args.actor,
+                    interval_seconds=args.interval_seconds,
+                    dispatch_ready=args.dispatch_ready,
+                    dry_run=not args.execute,
+                )
         elif args.command == "inbox":
             payload = office.office_inbox(args.provider)
         elif args.command == "claim":
