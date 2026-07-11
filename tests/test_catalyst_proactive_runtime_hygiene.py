@@ -116,6 +116,54 @@ class CatalystProactiveRuntimeHygieneTests(unittest.TestCase):
         ).stdout
         self.assertEqual(after, before)
 
+    def test_absolute_source_catalyst_root_writes_to_ignored_runtime_state(self) -> None:
+        seed_path = self._cwd / "data" / "catalyst" / "proactive_surfacing_runs.json"
+        seed_before = seed_path.read_text(encoding="utf-8")
+        runtime_path = self._cwd / "data" / "state" / "catalyst" / "proactive_surfacing_runs.json"
+
+        before = subprocess.run(
+            ["git", "status", "--short"],
+            check=True,
+            capture_output=True,
+            text=True,
+            cwd=self._cwd,
+        ).stdout
+        try:
+            store = CatalystStore(self._cwd / "data" / "catalyst")
+            support = CatalystSupport(_FakeConfig(), _FakeOpenAIClient(), store)
+            result = support.proactive_surfacing(
+                actor="Chris",
+                horizon="today",
+                context="absolute clean-tree regression",
+            )
+
+            self.assertEqual(store.proactive_path, runtime_path)
+            self.assertTrue(runtime_path.exists())
+            runtime_records = json.loads(runtime_path.read_text(encoding="utf-8"))
+            self.assertEqual(runtime_records[-1]["run_id"], result["run_id"])
+            self.assertEqual(seed_path.read_text(encoding="utf-8"), seed_before)
+
+            check_ignore = subprocess.run(
+                ["git", "check-ignore", "-q", str(runtime_path.relative_to(self._cwd))],
+                cwd=self._cwd,
+            )
+            self.assertEqual(check_ignore.returncode, 0)
+
+            after = subprocess.run(
+                ["git", "status", "--short"],
+                check=True,
+                capture_output=True,
+                text=True,
+                cwd=self._cwd,
+            ).stdout
+            self.assertEqual(after, before)
+        finally:
+            if runtime_path.exists():
+                runtime_path.unlink()
+            for directory in [runtime_path.parent, runtime_path.parent.parent]:
+                if directory.exists() and not any(directory.iterdir()):
+                    directory.rmdir()
+
 
 if __name__ == "__main__":
     unittest.main()

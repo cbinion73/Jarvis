@@ -45,10 +45,19 @@ class CatalystStore:
 
     @staticmethod
     def _resolve_runtime_root(root: Path) -> Path:
-        if root.as_posix().rstrip("/") == "data/catalyst":
+        normalized = root.expanduser()
+        parts = normalized.parts
+        is_source_catalyst_root = (
+            normalized.as_posix().rstrip("/") == "data/catalyst"
+            or len(parts) >= 2
+            and parts[-2:] == ("data", "catalyst")
+        )
+        if is_source_catalyst_root:
             override = os.getenv("JARVIS_CATALYST_RUNTIME_ROOT", "").strip()
             if override:
                 return Path(override)
+            if normalized.is_absolute():
+                return normalized.parent / "state" / "catalyst"
             return Path(tempfile.gettempdir()) / "jarvis" / "catalyst"
         return root
 
