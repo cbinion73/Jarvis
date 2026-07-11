@@ -38,6 +38,20 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertTrue(scopes_overlap(["**"], ["tests/**"]))
         self.assertFalse(scopes_overlap(["jarvis/**"], ["docs/**"]))
 
+    def test_owned_scope_rejects_nested_symlink_alias(self) -> None:
+        (self.root / "jarvis").mkdir()
+        (self.root / "vendor").mkdir()
+        (self.root / "vendor" / "link").symlink_to(self.root / "jarvis", target_is_directory=True)
+        _git(self.root, "add", "vendor/link")
+        _git(self.root, "commit", "-m", "add symlink fixture")
+        with self.assertRaisesRegex(ValueError, "traverse a symlink"):
+            self.office.init_mission(
+                request="Reject aliased scope",
+                mission_id="bo-symlink",
+                owned_paths=["vendor/link/**"],
+                provision=False,
+            )
+
     @patch("jarvis.build_office.shutil.which")
     def test_doctor_reports_cli_and_git_truth(self, which) -> None:
         which.side_effect = lambda command: f"/usr/bin/{command}"
@@ -189,6 +203,16 @@ class BuildOfficeTests(unittest.TestCase):
         self.assertEqual(assignment["status"], "failed")
         self.assertEqual(assignment["evidence"]["exit_code"], 7)
         self.assertIn("released_at", assignment["lease"])
+        retried = self.office.retry_assignment(
+            mission["mission_id"], "codex-implementation", approved_by="Chris"
+        )
+        self.assertEqual(retried["status"], "provisioned")
+        self.assertEqual(retried["retry_count"], 1)
+        self.assertEqual(retried["evidence_history"][0]["exit_code"], 7)
+        second = self.office.dispatch(
+            mission["mission_id"], "codex-implementation", dry_run=True
+        )
+        self.assertTrue(second["dry_run"])
 
     def test_cleanup_plan_refuses_dirty_agent_worktree(self) -> None:
         mission = self.office.init_mission(

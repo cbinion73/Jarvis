@@ -351,8 +351,12 @@ class BuildOffice:
             if not prefix:
                 continue
             candidate = self.repo_root / prefix
-            if candidate.is_symlink():
-                raise ValueError(f"owned path may not start at a symlink: {pattern}")
+            relative = Path(prefix)
+            cursor = self.repo_root
+            for component in relative.parts:
+                cursor = cursor / component
+                if cursor.is_symlink():
+                    raise ValueError(f"owned path may not traverse a symlink: {pattern}")
             try:
                 candidate.resolve().relative_to(self.repo_root)
             except ValueError as exc:
@@ -495,6 +499,44 @@ class BuildOffice:
                 "reclaimed_by": approved_by,
             }
             self.save_mission(mission, event="lease-reclaimed", assignment_id=assignment_id, approved_by=approved_by)
+            return dict(assignment)
+
+    def retry_assignment(self, mission_id: str, assignment_id: str, *, approved_by: str) -> dict[str, Any]:
+        approved_by = approved_by.strip()
+        if not approved_by:
+            raise ValueError("approved_by is required")
+        with self._locked():
+            mission = self.load_mission(mission_id)
+            assignment = self._find_assignment(mission, assignment_id)
+            if not assignment.get("writable"):
+                raise RuntimeError("Only writable assignments use the retry lifecycle.")
+            if assignment.get("status") not in {"failed", "expired", "blocked"}:
+                raise RuntimeError("Assignment is not in a retryable state.")
+            worktree = Path(str(assignment.get("worktree", "")))
+            if not worktree.is_dir() or worktree.resolve() == self.repo_root:
+                raise RuntimeError("Retry requires the original isolated worktree.")
+            branch = _run(
+                ["git", "branch", "--show-current"], cwd=worktree, timeout=15
+            ).stdout.strip()
+            if branch != assignment.get("branch"):
+                raise RuntimeError("Retry worktree is on the wrong branch.")
+            prior = dict(assignment.get("evidence") or {})
+            history = [dict(item) for item in assignment.get("evidence_history", []) if isinstance(item, dict)]
+            if prior:
+                history.append(prior)
+            assignment["evidence_history"] = history[-20:]
+            assignment["evidence"] = {}
+            assignment["lease"] = {}
+            assignment["status"] = "provisioned"
+            assignment["retry_count"] = int(assignment.get("retry_count", 0)) + 1
+            assignment["retry_approved_by"] = approved_by
+            assignment["retry_approved_at"] = _now_iso()
+            self.save_mission(
+                mission,
+                event="assignment-retry-approved",
+                assignment_id=assignment_id,
+                approved_by=approved_by,
+            )
             return dict(assignment)
 
     def build_prompt(self, mission: dict[str, Any], assignment: dict[str, Any]) -> str:

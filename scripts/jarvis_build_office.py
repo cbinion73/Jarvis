@@ -52,6 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
     reclaim.add_argument("assignment_id")
     reclaim.add_argument("--by", required=True, dest="approved_by")
 
+    retry = sub.add_parser("retry")
+    retry.add_argument("mission_id")
+    retry.add_argument("assignment_id")
+    retry.add_argument("--by", required=True, dest="approved_by")
+
     release = sub.add_parser("release-plan")
     release.add_argument("mission_id")
 
@@ -88,6 +93,10 @@ def main() -> int:
             payload = office.approve_dispatch(args.mission_id, approved_by=args.approved_by)
         elif args.command == "reclaim-lease":
             payload = office.reclaim_expired_lease(
+                args.mission_id, args.assignment_id, approved_by=args.approved_by
+            )
+        elif args.command == "retry":
+            payload = office.retry_assignment(
                 args.mission_id, args.assignment_id, approved_by=args.approved_by
             )
         elif args.command == "release-plan":

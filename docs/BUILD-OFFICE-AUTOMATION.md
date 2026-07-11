@@ -76,6 +76,7 @@ python3 scripts/jarvis_build_office.py init "Implement the bounded request" --ri
 python3 scripts/jarvis_build_office.py status MISSION_ID
 python3 scripts/jarvis_build_office.py approve-dispatch MISSION_ID --by Chris
 python3 scripts/jarvis_build_office.py reclaim-lease MISSION_ID ASSIGNMENT_ID --by Chris
+python3 scripts/jarvis_build_office.py retry MISSION_ID ASSIGNMENT_ID --by Chris
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID codex-implementation --dry-run
 python3 scripts/jarvis_build_office.py dispatch MISSION_ID claude-review --dry-run
 python3 scripts/jarvis_build_office.py release-plan MISSION_ID
@@ -97,6 +98,7 @@ python3 scripts/jarvis_build_office.py cleanup-plan MISSION_ID
 ## Recovery
 
 - A timeout or non-zero exit marks the assignment failed and preserves evidence.
+- A named human may retry failed writable work in its original isolated worktree; prior evidence remains in bounded history.
 - A collision marks the second assignment blocked before a model starts.
 - An expired writable lease remains blocking until Chris explicitly reclaims it.
 - A dirty main checkout blocks intake or release planning.

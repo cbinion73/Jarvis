@@ -79,7 +79,7 @@ The pilot uses a single-writer state lock plus optimistic revision numbers. Assi
 - `python3 scripts/jarvis_build_office.py demo --dry-run` -- produces a complete mission, isolated assignment plan, cross-review gate, and cleanup plan without paid execution or main mutation.
 - `git status --short` -- only intentional source/spec changes remain.
 
-**Observed:** 21 focused tests passed; the complete JARVIS suite passed with 2,219 tests, 3 skipped, and 35 subtests; a clean temporary-repository demo produced both provider assignments, a blocked evidence gate, and `mutated_git: false`.
+**Observed:** 22 focused tests passed; the complete JARVIS suite passed with 2,220 tests, 3 skipped, and 35 subtests; a clean temporary-repository demo produced both provider assignments, a blocked evidence gate, and `mutated_git: false`.
 
 ## Suggested Review Order
 
