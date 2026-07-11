@@ -354,8 +354,8 @@ class BuildOfficeTests(unittest.TestCase):
             command[command.index("--commit") + 1],
             implementation["evidence"]["commit"],
         )
-        self.assertEqual(command[-1], "-")
-        self.assertEqual(review["stdin"], "[prompt via stdin]")
+        self.assertEqual(command[-2:], ["--title", "bo-codex-review-shape immutable review"])
+        self.assertEqual(review["stdin"], "")
         self.assertNotIn("-a", command)
         self.assertNotIn("--ask-for-approval", command)
 
@@ -422,8 +422,7 @@ class BuildOfficeTests(unittest.TestCase):
 
         def fake_run(args, *, cwd, timeout=30, check=True, input_text=None):
             if list(args[:2]) == ["codex", "exec"]:
-                self.assertEqual(args[-1], "-")
-                self.assertIn("Frozen Architect contract", input_text or "")
+                self.assertIsNone(input_text)
                 target.write_text("VALUE = 99\n", encoding="utf-8")
                 return subprocess.CompletedProcess(
                     args=list(args),

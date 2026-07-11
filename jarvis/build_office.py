@@ -1332,7 +1332,6 @@ class BuildOffice:
                     target["commit"],
                     "--title",
                     f"{mission['mission_id']} immutable review",
-                    "-",
                 ]
             else:
                 command = [
@@ -1371,11 +1370,7 @@ class BuildOffice:
         assignment = self.acquire_lease(mission_id, assignment_id)
         mission = self.load_mission(mission_id)
         command = self.adapter_command(mission, assignment)
-        stdin = (
-            self.build_prompt(mission, assignment)
-            if assignment.get("provider") == "codex" and assignment.get("duty") == "review"
-            else None
-        )
+        stdin = None
         if dry_run:
             self.release_lease(mission_id, assignment_id, status="provisioned" if assignment["writable"] else "planned")
             return {
