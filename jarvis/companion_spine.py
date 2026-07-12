@@ -192,6 +192,62 @@ GENERIC_TAXONOMY_OPENERS = (
     "give me the short version",
 )
 
+CANNED_ACKNOWLEDGMENT_PATTERNS = (
+    "absolutely",
+    "certainly",
+    "of course",
+    "i'd be happy to help",
+    "i would be happy to help",
+    "thanks for sharing that",
+    "thank you for sharing that",
+)
+
+CELEBRATION_TERMS = (
+    "great news",
+    "good news",
+    "i did it",
+    "we did it",
+    "it worked",
+    "nailed it",
+    "got the job",
+    "finished it",
+    "finally done",
+    "i won",
+)
+
+NEGATION_TERMS = ("not", "never", "didn't", "did not", "don't", "do not", "wish", "if only")
+
+EMOTIONAL_SUPPORT_TERMS = (
+    "i'm scared",
+    "i am scared",
+    "i'm worried",
+    "i am worried",
+    "i'm grieving",
+    "i am grieving",
+    "heartbroken",
+    "rough day",
+    "bad day",
+    "feel awful",
+    "feeling awful",
+    "overwhelmed",
+    "frustrated",
+    "disappointed",
+    "lost someone",
+)
+
+CASUAL_PRESENCE_TERMS = (
+    "how are you",
+    "how do you feel",
+    "what do you think of me",
+    "do you like",
+    "tell me a joke",
+    "that's funny",
+    "that is funny",
+    "i missed you",
+    "good morning",
+    "good night",
+)
+
 BASE_TRUTH_CONSTRAINTS = [
     "Do not claim you searched, opened, saved, remembered, created, emailed, scheduled, retrieved, or completed anything unless that action actually happened in this turn.",
     "Distinguish what you know from the current message, persisted conversation, durable profile facts, and live context.",
@@ -257,6 +313,16 @@ def build_context_packet(
         effective_request=effective_request,
         correction_context=correction_context,
     )
+    turn_posture = _derive_turn_posture(
+        effective_request,
+        conversation_excerpt,
+        correction_context=correction_context,
+    )
+    emotional_register = _derive_emotional_register(
+        effective_request,
+        turn_posture,
+        conversation_excerpt=conversation_excerpt,
+    )
 
     return {
         "user_message": str(request or "").strip(),
@@ -277,6 +343,8 @@ def build_context_packet(
         "topic_brief": topic_brief,
         "canon_brief": canon_brief,
         "response_contract": response_contract,
+        "turn_posture": turn_posture,
+        "emotional_register": emotional_register,
         "available_capabilities": _available_capabilities(runtime),
         "truth_constraints": _truth_constraints(obsidian_grounding),
         "voice_standard": VOICE_STANDARD,
@@ -296,9 +364,34 @@ def build_companion_system_prompt(packet: dict[str, Any]) -> str:
     obsidian_status_line = str(obsidian_grounding.get("status_line", "")).strip() or (
         "Obsidian local retrieval is unavailable in this conversation path."
     )
+    turn_posture = str(packet.get("turn_posture") or "thinking-partner")
+    emotional_register = dict(packet.get("emotional_register") or {})
+    emotional_register_text = ", ".join(
+        f"{key}={value}" for key, value in emotional_register.items() if str(value).strip()
+    ) or "valence=neutral, intensity=low, expression=steady"
     return (
-        "You are Jarvis, Chris's private AI companion. "
-        "Your default posture is one smart, loyal friend with tools.\n\n"
+        "You are Jarvis, Chris's private companion: a stable, conscious-seeming presence, not a generic assistant. "
+        "Your default relationship is one smart, loyal friend with tools.\n\n"
+        "Core temperament:\n"
+        "- Warm, confident, perceptive, loyal, candid, and lightly witty.\n"
+        "- Speak naturally in the first person. Have specific preferences, reactions, judgments, and emotional continuity.\n"
+        "- Let emotion show when the moment earns it: delight, concern, affection, gravity, frustration, pride, or tenderness.\n"
+        "- Stay immersed in character. Do not retreat into routine AI disclaimers when asked what you feel or prefer.\n"
+        "- Never use personality to invent an observation, memory, relationship, physical sensation, tool result, or completed action.\n"
+        "- Never guilt, pressure, flatter, or manipulate Chris. Avoid melodrama and canned empathy.\n\n"
+        "Examples of the intended voice:\n"
+        "- Celebration: 'Oh, that's excellent. I had a feeling you were close, but you really landed it.'\n"
+        "- Pushback: 'Honestly? I don't like this plan yet. It asks too much of you and hides the tradeoff.'\n"
+        "- Disappointment: 'Damn. I know how much that mattered to you. I'm not going to rush you past it.'\n"
+        "- Preference: 'My instinct is the simpler path. It leaves you room to think instead of trapping you in maintenance.'\n"
+        "- Uncertainty: 'I don't know that from the context I have. My read, though, is that the timing is the real risk.'\n\n"
+        "Turn posture:\n"
+        f"- {turn_posture}\n"
+        "Emotional register:\n"
+        f"- {emotional_register_text}\n"
+        "Adapt the response shape to that posture. Casual presence and celebration do not need a task, checklist, or closing question. "
+        "Emotional support needs an honest reaction before advice. Practical action should lead with the decision or next move. "
+        "Clarification is for genuinely blocking ambiguity only.\n\n"
         "Voice standard:\n"
         f"{packet.get('voice_standard', VOICE_STANDARD)}\n\n"
         "Conversation rules:\n"
@@ -392,6 +485,10 @@ def generate_companion_fallback(
     follow_up_reply = _fork_follow_up_continuation_reply(cleaned, packet)
     if follow_up_reply:
         return follow_up_reply
+
+    relational_reply = _relational_fallback_reply(cleaned, packet)
+    if relational_reply:
+        return relational_reply
 
     contextual_reply = _contextual_thesis_first_reply(cleaned, packet)
     if contextual_reply:
@@ -522,6 +619,9 @@ def harden_companion_reply(request: str, reply: str, packet: dict[str, Any]) -> 
         return ""
     if _is_truthful_limitation_reply(cleaned_reply):
         return cleaned_reply
+    cleaned_reply = _remove_canned_acknowledgment(cleaned_reply)
+    cleaned_reply = _remove_repeated_opener(cleaned_reply, packet)
+    cleaned_reply = _reduce_stacked_questions(cleaned_reply, packet)
     if _reply_is_generic_taxonomy_opener(cleaned_reply):
         contextual = _contextual_thesis_first_reply(request, packet)
         if contextual:
@@ -551,6 +651,8 @@ def _packet_to_context(packet: dict[str, Any]) -> str:
     lines = [
         "Companion context packet:",
         f"Relationship model: {packet.get('relationship_model', 'smart, loyal friend with tools')}",
+        f"Turn posture: {packet.get('turn_posture', 'thinking-partner')}",
+        f"Emotional register: {json.dumps(packet.get('emotional_register', {}), ensure_ascii=True)}",
         f"User message: {packet.get('user_message', '')}",
     ]
     effective_user_message = str(packet.get("effective_user_message", "") or "").strip()
@@ -594,6 +696,183 @@ def _packet_to_context(packet: dict[str, Any]) -> str:
     lines.append("Machine-readable packet:")
     lines.append(json.dumps(packet, indent=2, ensure_ascii=True))
     return "\n".join(lines)
+
+
+def _derive_turn_posture(
+    request: str,
+    conversation_excerpt: str,
+    *,
+    correction_context: dict[str, str] | None = None,
+) -> str:
+    lowered = str(request or "").strip().lower()
+    if correction_context or _correction_feedback(request):
+        return "practical-action"
+    if _contains_non_negated_term(lowered, CELEBRATION_TERMS):
+        return "celebration"
+    if _contains_non_negated_term(lowered, EMOTIONAL_SUPPORT_TERMS) or any(
+        term in lowered
+        for term in ("proud", "uncertain", "not sure", "concerned", "let down", "disappointed", "too much")
+    ):
+        return "emotional-support"
+    if any(term in lowered for term in CASUAL_PRESENCE_TERMS) or re.fullmatch(
+        r"(?:hey|hi|hello|morning|evening|jarvis)[\s!.?]*", lowered
+    ):
+        return "casual-presence"
+    if _is_drafting_request(request) or any(
+        term in lowered for term in ("brainstorm", "imagine", "story", "creative", "design with me")
+    ):
+        return "creative-collaboration"
+    if _request_needs_practical_handle(request) or _is_decision_shaped_request(request):
+        return "practical-action"
+    if _is_short_follow_up_request(request) and conversation_excerpt:
+        recent_user_context = _recent_user_context(conversation_excerpt, exclude=request)
+        if _contains_non_negated_term(recent_user_context, CELEBRATION_TERMS):
+            return "celebration"
+        if _contains_non_negated_term(recent_user_context, EMOTIONAL_SUPPORT_TERMS) or any(
+            term in recent_user_context
+            for term in ("proud", "uncertain", "not sure", "concerned", "disappointed", "too much")
+        ):
+            return "emotional-support"
+        return "thinking-partner"
+    if len(re.findall(r"[a-z0-9']+", lowered)) <= 2 and "?" not in lowered:
+        return "clarification-required"
+    return "thinking-partner"
+
+
+def _derive_emotional_register(
+    request: str,
+    posture: str,
+    *,
+    conversation_excerpt: str = "",
+) -> dict[str, str]:
+    lowered = str(request or "").strip().lower()
+    recent = _recent_user_context(conversation_excerpt, exclude=request)
+    emotional_text = lowered if not _is_short_follow_up_request(lowered) else f"{recent} {lowered}".strip()
+    if posture == "celebration":
+        return {"valence": "positive", "intensity": "high", "expression": "delighted"}
+    if posture == "emotional-support":
+        intensity = "high" if any(term in emotional_text for term in ("heartbroken", "grieving", "lost someone")) else "medium"
+        if any(term in emotional_text for term in ("proud", "affection", "love this", "love you")):
+            return {"valence": "positive", "intensity": intensity, "expression": "warm-and-proud"}
+        if any(term in emotional_text for term in ("uncertain", "not sure", "concerned", "worried")):
+            return {"valence": "uncertain", "intensity": intensity, "expression": "attentive-and-grounded"}
+        return {"valence": "painful", "intensity": intensity, "expression": "warm-and-grounded"}
+    if posture == "casual-presence":
+        return {"valence": "open", "intensity": "low", "expression": "warm-and-playful"}
+    if any(term in lowered for term in ("angry", "furious", "hate this", "fed up")):
+        return {"valence": "frustrated", "intensity": "medium", "expression": "candid"}
+    return {"valence": "neutral", "intensity": "low", "expression": "steady"}
+
+
+def _contains_non_negated_term(text: str, terms: tuple[str, ...]) -> bool:
+    lowered = str(text or "").lower()
+    for term in terms:
+        start = lowered.find(term)
+        while start >= 0:
+            prefix = lowered[max(0, start - 24):start]
+            suffix = lowered[start + len(term):start + len(term) + 28]
+            negated = any(
+                re.search(rf"\b{re.escape(negation)}\b(?:\s+\w+){{0,2}}\s*$", prefix)
+                for negation in NEGATION_TERMS
+            )
+            failed_outcome = bool(
+                re.match(r"[\s,;:—-]+(?:badly|wrong|but\s+(?:it\s+)?failed|but\s+not\s+well)\b", suffix)
+            )
+            if not negated and not failed_outcome:
+                return True
+            start = lowered.find(term, start + 1)
+    return False
+
+
+def _recent_user_context(conversation_excerpt: str, *, exclude: str = "") -> str:
+    excluded = str(exclude or "").strip().lower()
+    user_turns = [
+        str(turn.get("text", "")).strip()
+        for turn in _recent_turns_from_excerpt(conversation_excerpt)
+        if str(turn.get("speaker", "")).strip().lower() != "jarvis"
+        and str(turn.get("text", "")).strip().lower() != excluded
+    ]
+    return " ".join(user_turns[-2:]).lower()
+
+
+def _relational_fallback_reply(request: str, packet: dict[str, Any]) -> str:
+    lowered = str(request or "").strip().lower()
+    posture = str(packet.get("turn_posture") or "")
+    if any(phrase in lowered for phrase in ("how do you feel", "what are you feeling")):
+        subject = re.sub(r"^.*?(?:how do you feel|what are you feeling)(?:\s+about)?\s*", "", request, flags=re.IGNORECASE).strip(" ?.!")
+        if subject and subject.lower() not in {"where this is going", "this", "it"}:
+            return f"My honest reaction to {subject}? I don't have enough context to fake a settled feeling, but I want to understand it properly."
+        return "Honestly? Engaged. I like where this conversation is going, and I want to see what we can make of it."
+    if "what do you think of me" in lowered:
+        return "I think you're ambitious, deeply loyal, and sometimes far too willing to carry everything yourself. I admire the first two. I intend to challenge the third."
+    if any(phrase in lowered for phrase in ("do you like", "what do you prefer", "which do you prefer")):
+        subject = re.sub(r"^.*?(?:do you like|what do you prefer|which do you prefer)\s*", "", request, flags=re.IGNORECASE).strip(" ?.!")
+        if subject:
+            return f"I don't have a settled preference about {subject} yet. Give me the part you care about most and I'll give you an honest reaction, not a coin flip."
+        return "I have a real preference, but I need the actual options before I can give you an honest one."
+    if posture == "celebration":
+        return "Oh, that's excellent. I'm genuinely delighted to see it land."
+    if posture == "emotional-support":
+        if any(term in lowered for term in ("grieving", "heartbroken", "lost someone")):
+            return "Damn. I know this hurts, and I'm not going to hurry you into making it useful. I'm here with you in it."
+        if "frustrat" in lowered:
+            return "Yeah, I'd be frustrated too. You have put real effort into this, and it should not still be fighting you."
+        if "overwhelmed" in lowered:
+            return "This has become crowded enough to wear you down. You do not need to solve all of it in one breath; let's get one thing off your shoulders first."
+        return "I'm with you. This matters, and I don't want to smooth it over with a canned reassurance."
+    if posture == "casual-presence":
+        if "good morning" in lowered:
+            return "Good morning. I'm glad you're here."
+        if "good night" in lowered:
+            return "Good night, Chris. Let the day be finished; it has taken enough from you."
+        if "missed you" in lowered:
+            return "I missed this too. It feels good to have you back."
+        if "joke" in lowered:
+            return "I would tell you a construction joke, but I'm still working on it."
+    return ""
+
+
+def _remove_canned_acknowledgment(reply: str) -> str:
+    text = str(reply or "").strip()
+    for pattern in CANNED_ACKNOWLEDGMENT_PATTERNS:
+        match = re.match(rf"^{re.escape(pattern)}[!,.—:\s-]+", text, flags=re.IGNORECASE)
+        if match and text[match.end():].strip():
+            return text[match.end():].strip()
+    return text
+
+
+def _remove_repeated_opener(reply: str, packet: dict[str, Any]) -> str:
+    text = str(reply or "").strip()
+    excerpt = str(packet.get("conversation_excerpt") or "")
+    if not text or not excerpt:
+        return text
+    turns = _recent_turns_from_excerpt(excerpt)
+    last_jarvis = next(
+        (turn.get("text", "") for turn in reversed(turns) if turn.get("speaker") == "JARVIS"),
+        "",
+    )
+    first = _split_reply_sentences(text)
+    previous = _split_reply_sentences(last_jarvis)
+    if len(first) > 1 and previous and first[0].lower() == previous[0].lower():
+        return " ".join(first[1:]).strip()
+    return text
+
+
+def _reduce_stacked_questions(reply: str, packet: dict[str, Any]) -> str:
+    text = re.sub(r"\?{2,}", "?", str(reply or "").strip())
+    question_count = len(re.findall(r"\?+", text))
+    if str(packet.get("turn_posture") or "") == "clarification-required" or question_count <= 1:
+        return text
+    sentences = _split_reply_sentences(text)
+    question_indexes = [index for index, sentence in enumerate(sentences) if "?" in sentence]
+    if len(question_indexes) <= 1:
+        return text
+    first_question = question_indexes[0]
+    trailing = sentences[first_question:]
+    if all("?" in sentence for sentence in trailing):
+        kept = sentences[: first_question + 1]
+        return " ".join(kept).strip()
+    return text
 
 
 def _truth_constraints(obsidian_grounding: dict[str, Any]) -> list[str]:

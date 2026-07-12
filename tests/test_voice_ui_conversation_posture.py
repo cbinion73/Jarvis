@@ -1,6 +1,8 @@
 import unittest
 from pathlib import Path
 
+from jarvis.companion_spine import generate_companion_fallback, harden_companion_reply
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -68,6 +70,22 @@ class VoiceUiConversationPostureTests(unittest.TestCase):
         self.assertIn("for (let index = 0; index < event.results.length; index += 1) {{", text)
         self.assertIn("scheduleSpeechTurnCommit(recognizer, {{ wakeGuardMode, spoken }});", text)
         self.assertIn("clearRecognitionCommitTimer();", text)
+
+    def test_conscious_persona_replies_remain_speakable(self) -> None:
+        celebration = generate_companion_fallback(
+            "We did it! The launch worked.",
+            {"turn_posture": "celebration", "conversation_excerpt": ""},
+        )
+        hardened = harden_companion_reply(
+            "Help me think this through.",
+            "Absolutely! The simpler path is stronger. What is fixed? What can move?",
+            {"turn_posture": "thinking-partner", "conversation_excerpt": ""},
+        )
+        for reply in (celebration, hardened):
+            with self.subTest(reply=reply):
+                self.assertNotIn("\n- ", reply)
+                self.assertNotIn("**", reply)
+                self.assertLessEqual(reply.count("?"), 1)
 
     def test_ios_speech_recognition_uses_conversation_friendly_hints(self) -> None:
         text = (

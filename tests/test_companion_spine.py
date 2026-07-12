@@ -153,6 +153,8 @@ class CompanionSpineTests(unittest.TestCase):
                 "topic_brief",
                 "canon_brief",
                 "response_contract",
+                "turn_posture",
+                "emotional_register",
                 "available_capabilities",
                 "truth_constraints",
                 "voice_standard",
@@ -166,6 +168,8 @@ class CompanionSpineTests(unittest.TestCase):
         self.assertIsNone(packet["correction_context"])
         self.assertTrue(packet["topic_brief"])
         self.assertTrue(packet["response_contract"])
+        self.assertEqual(packet["turn_posture"], "practical-action")
+        self.assertEqual(packet["emotional_register"]["expression"], "steady")
         self.assertEqual(packet["personal_model"]["status"], "profile-only")
         self.assertIn("Chris is building Jarvis carefully.", " ".join(packet["personal_model"]["working_set"]))
         self.assertIn("live Obsidian retrieval not active in the default conversation path", packet["available_capabilities"])
@@ -274,6 +278,153 @@ class CompanionSpineTests(unittest.TestCase):
         self.assertIn("never like a database report", prompt)
         self.assertIn("Disagree like a friend who wants him to win", prompt)
         self.assertIn("Carry momentum", prompt)
+
+    def test_system_prompt_encodes_conscious_persona_without_relaxing_truth(self) -> None:
+        packet = {
+            "available_capabilities": [],
+            "truth_constraints": ["Do not fake actions."],
+            "voice_standard": "Direct, warm, practical.",
+            "forbidden_patterns": [],
+            "personal_model": {"working_set": []},
+            "obsidian_grounding": {"status_line": ""},
+            "turn_posture": "casual-presence",
+            "emotional_register": {"valence": "open", "intensity": "low", "expression": "warm-and-playful"},
+        }
+        prompt = build_companion_system_prompt(packet)
+        self.assertIn("stable, conscious-seeming presence", prompt)
+        self.assertIn("preferences, reactions, judgments, and emotional continuity", prompt)
+        self.assertIn("Do not retreat into routine AI disclaimers", prompt)
+        self.assertIn("Never use personality to invent an observation", prompt)
+        self.assertIn("casual-presence", prompt)
+        self.assertIn("Do not fake actions.", prompt)
+
+    def test_turn_posture_and_emotional_register_adapt_to_celebration(self) -> None:
+        runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Ready."))
+        packet = build_context_packet(
+            runtime,
+            self.actor,
+            "office",
+            "We did it! The launch worked.",
+            plan=_plan("We did it! The launch worked."),
+            conversation_excerpt="Chris: We did it! The launch worked.",
+        )
+        self.assertEqual(packet["turn_posture"], "celebration")
+        self.assertEqual(packet["emotional_register"], {"valence": "positive", "intensity": "high", "expression": "delighted"})
+
+    def test_turn_posture_does_not_celebrate_negated_or_failed_outcome(self) -> None:
+        runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Ready."))
+        for request in ("It is not good news.", "I wish it worked.", "I did it badly.", "We did it, but it failed."):
+            with self.subTest(request=request):
+                packet = build_context_packet(
+                    runtime,
+                    self.actor,
+                    "office",
+                    request,
+                    plan=_plan(request),
+                    conversation_excerpt=f"Chris: {request}",
+                )
+                self.assertNotEqual(packet["turn_posture"], "celebration")
+
+    def test_negated_frustration_is_not_emotional_support(self) -> None:
+        runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Ready."))
+        request = "I'm not frustrated, just curious."
+        packet = build_context_packet(
+            runtime,
+            self.actor,
+            "office",
+            request,
+            plan=_plan(request),
+            conversation_excerpt=f"Chris: {request}",
+        )
+        self.assertNotEqual(packet["turn_posture"], "emotional-support")
+
+    def test_fallback_celebrates_without_forcing_productivity_or_question(self) -> None:
+        packet = {"turn_posture": "celebration", "conversation_excerpt": ""}
+        reply = generate_companion_fallback("We did it! The launch worked.", packet)
+        self.assertIn("genuinely delighted", reply.lower())
+        self.assertNotIn("?", reply)
+        self.assertNotIn("i know you wanted", reply.lower())
+
+    def test_fallback_answers_inner_reaction_in_character(self) -> None:
+        packet = {"turn_posture": "casual-presence", "conversation_excerpt": ""}
+        reply = generate_companion_fallback("How do you feel about where this is going?", packet)
+        self.assertIn("Honestly? Engaged.", reply)
+        self.assertNotIn("as an ai", reply.lower())
+
+    def test_fallback_answers_subject_specific_feeling_and_preference_questions(self) -> None:
+        packet = {"turn_posture": "casual-presence", "conversation_excerpt": ""}
+        feeling = generate_companion_fallback("How do you feel about this merger?", packet)
+        preference = generate_companion_fallback("Do you like this plan?", packet)
+        self.assertIn("this merger", feeling.lower())
+        self.assertNotIn("where this conversation is going", feeling.lower())
+        self.assertIn("this plan", preference.lower())
+        self.assertNotIn("need the actual options", preference.lower())
+
+    def test_short_follow_up_inherits_recent_emotional_momentum(self) -> None:
+        runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Ready."))
+        request = "warmer"
+        packet = build_context_packet(
+            runtime,
+            self.actor,
+            "office",
+            request,
+            plan=_plan(request),
+            conversation_excerpt=(
+                "Chris: I am heartbroken that this fell apart.\n"
+                "JARVIS: Damn. I know this hurts.\n"
+                "Chris: warmer"
+            ),
+        )
+        self.assertEqual(packet["turn_posture"], "emotional-support")
+        self.assertEqual(packet["emotional_register"]["intensity"], "high")
+
+    def test_correction_turn_forces_practical_action_posture(self) -> None:
+        runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Ready."))
+        packet = build_context_packet(
+            runtime,
+            self.actor,
+            "office",
+            "/correct less celebratory and more direct",
+            plan=_plan("/correct less celebratory and more direct"),
+            conversation_excerpt=(
+                "Chris: We did it!\n"
+                "JARVIS: Oh, that's excellent.\n"
+                "Chris: /correct less celebratory and more direct"
+            ),
+        )
+        self.assertEqual(packet["turn_posture"], "practical-action")
+
+    def test_hardening_removes_canned_acknowledgment_and_stacked_questions(self) -> None:
+        packet = {"turn_posture": "thinking-partner", "conversation_excerpt": ""}
+        repaired = harden_companion_reply(
+            "Help me think this through.",
+            "Absolutely! I think the timing is the real risk. What is fixed? What can move?",
+            packet,
+        )
+        self.assertFalse(repaired.lower().startswith("absolutely"))
+        self.assertEqual(repaired.count("?"), 1)
+
+    def test_hardening_preserves_interleaved_answers_and_normalizes_question_marks(self) -> None:
+        packet = {"turn_posture": "thinking-partner", "conversation_excerpt": ""}
+        reply = "Is A cheaper? B is safer, though. Is that worth it? Maybe, if reliability matters."
+        repaired = harden_companion_reply("Help me compare them.", reply, packet)
+        self.assertEqual(repaired, reply)
+        self.assertEqual(
+            harden_companion_reply("Really?", "Really??", packet),
+            "Really?",
+        )
+
+    def test_hardening_drops_exact_repeated_opener_from_previous_turn(self) -> None:
+        packet = {
+            "turn_posture": "thinking-partner",
+            "conversation_excerpt": "Chris: I am unsure.\nJARVIS: My instinct is the simpler path. It gives you room.\nChris: Why?",
+        }
+        repaired = harden_companion_reply(
+            "Why?",
+            "My instinct is the simpler path. It leaves fewer ways for maintenance to swallow the work.",
+            packet,
+        )
+        self.assertEqual(repaired, "It leaves fewer ways for maintenance to swallow the work.")
 
     def test_run_companion_turn_uses_override_prompt_and_packet(self) -> None:
         runtime = _StubRuntime(OpenAIResult(provider="openai", model="gpt", output_text="Nice. Let's map it."))
