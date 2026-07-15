@@ -55,6 +55,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
+    volumes:
+      - ghostwritr_uploads:/app/public/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,5 +131,6 @@ networks:
 volumes:
   jarvis_data:
   chronicle_snapshots:
+  ghostwritr_uploads:
   postgres_data:
   redis_data:
